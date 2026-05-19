@@ -1019,6 +1019,22 @@ def compute_confluence_score(signal_type: str, market: dict, mtf: dict) -> tuple
         elif sig_dn and bb_pos == "below_lower": score -= 8; factors.append(f"BB ❌ ниже нижней при шорте")
         else: factors.append(f"BB ⚪ {bb.get('icon','⚪')} [%B:{bb.get('pct_b',0.5):.2f}]")
 
+    # Long/Short ratio (+8 / -8)
+    ls = market.get("ls_ratio", {})
+    taker = ls.get("taker_ratio")
+    if taker is not None:
+        if   sig_up and taker > 1.1: score += 8;  factors.append(f"Taker ✅ buyers доминируют [{taker:.2f}]")
+        elif sig_dn and taker < 0.9: score += 8;  factors.append(f"Taker ✅ sellers доминируют [{taker:.2f}]")
+        elif sig_up and taker < 0.9: score -= 8;  factors.append(f"Taker ❌ sellers при лонге [{taker:.2f}]")
+        elif sig_dn and taker > 1.1: score -= 8;  factors.append(f"Taker ❌ buyers при шорте [{taker:.2f}]")
+
+    # Liquidations domination (+5 / -5)
+    liqs = market.get("liquidations", {})
+    if liqs.get("liq_total_usd", 0) > 100_000:
+        dom = liqs.get("liq_dom", "")
+        if   sig_up and dom == "long":  score += 5;  factors.append(f"Liqs ✅ лонги ликвидированы — контрариан лонг")
+        elif sig_dn and dom == "short": score += 5;  factors.append(f"Liqs ✅ шорты ликвидированы — контрариан шорт")
+
     return max(0, min(100, score)), factors
 
 
@@ -1147,6 +1163,88 @@ def _binance_book(symbol: str, depth: int = 500) -> dict:
         return {}
 
 
+# ─── LONG/SHORT RATIO + LIQUIDATIONS ─────────────────────────────────────────
+
+def _ls_ratio(symbol: str) -> dict:
+    """Long/Short account ratio from Bybit + Binance (1H latest)."""
+    out = {}
+    # Bybit
+    try:
+        r = requests.get(
+            f"{BYBIT}/v5/market/account-ratio",
+            params={"symbol": symbol, "category": "linear",
+                    "period": "1h", "limit": 1}, timeout=6,
+        )
+        item = r.json()["result"]["list"][0]
+        out["bybit_long"]  = round(float(item["buyRatio"])  * 100, 1)
+        out["bybit_short"] = round(float(item["sellRatio"]) * 100, 1)
+    except Exception as e:
+        log.warning(f"Bybit L/S ratio {symbol}: {e}")
+
+    # Binance global L/S account ratio
+    try:
+        r = requests.get(
+            f"{BINANCE_FAPI}/futures/data/globalLongShortAccountRatio",
+            params={"symbol": symbol, "period": "1h", "limit": 1}, timeout=6,
+        )
+        item = r.json()[0]
+        out["bnb_long"]  = round(float(item["longAccount"])  * 100, 1)
+        out["bnb_short"] = round(float(item["shortAccount"]) * 100, 1)
+        out["bnb_ratio"] = round(float(item["longShortRatio"]), 3)
+    except Exception as e:
+        log.warning(f"Binance L/S ratio {symbol}: {e}")
+
+    # Binance taker buy/sell volume ratio (aggression indicator)
+    try:
+        r = requests.get(
+            f"{BINANCE_FAPI}/futures/data/takerlongshortRatio",
+            params={"symbol": symbol, "period": "1h", "limit": 1}, timeout=6,
+        )
+        item = r.json()[0]
+        out["taker_ratio"] = round(float(item["buySellRatio"]), 3)
+        out["taker_buy"]   = round(float(item["buyVol"]), 1)
+        out["taker_sell"]  = round(float(item["sellVol"]), 1)
+    except Exception as e:
+        log.warning(f"Binance taker ratio {symbol}: {e}")
+
+    return out
+
+
+def _liq_stats(symbol: str) -> dict:
+    """Recent liquidations from Binance public force orders (last ~100)."""
+    out = {}
+    try:
+        r = requests.get(
+            f"{BINANCE_FAPI}/fapi/v1/forceOrders",
+            params={"symbol": symbol, "limit": 100}, timeout=6,
+        )
+        orders = r.json()
+        if not isinstance(orders, list):
+            return out
+
+        cutoff = (time.time() - 3600) * 1000  # last 1 hour
+        liq_long_usd  = 0.0   # long liquidated (SELL orders)
+        liq_short_usd = 0.0   # short liquidated (BUY orders)
+
+        for o in orders:
+            if float(o.get("time", 0)) < cutoff:
+                continue
+            usd = float(o.get("origQty", 0)) * float(o.get("price", 0))
+            if o.get("side") == "SELL":
+                liq_long_usd  += usd   # long position liquidated
+            else:
+                liq_short_usd += usd   # short position liquidated
+
+        out["liq_long_usd"]  = liq_long_usd
+        out["liq_short_usd"] = liq_short_usd
+        out["liq_total_usd"] = liq_long_usd + liq_short_usd
+        out["liq_dom"]       = "long" if liq_long_usd > liq_short_usd else "short"
+    except Exception as e:
+        log.warning(f"Binance force orders {symbol}: {e}")
+
+    return out
+
+
 # ─── COMBINED FETCH (parallel) ────────────────────────────────────────────────
 
 def fetch_market(symbol: str) -> dict:
@@ -1158,7 +1256,7 @@ def fetch_market(symbol: str) -> dict:
     coin = base.replace("USDT", "")
     deribit_currency = coin if coin in ("BTC", "ETH") else None
 
-    with ThreadPoolExecutor(max_workers=9) as ex:
+    with ThreadPoolExecutor(max_workers=11) as ex:
         f_bybit   = ex.submit(_bybit_data, base)
         f_k1h     = ex.submit(_klines, base, "60",  250)
         f_k4h     = ex.submit(_klines, base, "240", 250)
@@ -1166,6 +1264,8 @@ def fetch_market(symbol: str) -> dict:
         f_hl      = ex.submit(_hl_data, base)
         f_bnb     = ex.submit(_binance_book, base)
         f_macro   = ex.submit(get_macro)
+        f_ls      = ex.submit(_ls_ratio, base)
+        f_liq     = ex.submit(_liq_stats, base)
         f_options = ex.submit(_deribit_options, deribit_currency) if deribit_currency else None
 
     bybit    = f_bybit.result()
@@ -1175,6 +1275,8 @@ def fetch_market(symbol: str) -> dict:
     hl       = f_hl.result()
     liq_bnb  = f_bnb.result()
     macro    = f_macro.result()
+    ls       = f_ls.result()
+    liqs     = f_liq.result()
     options  = f_options.result() if f_options else {}
     session  = get_session()
 
@@ -1202,6 +1304,8 @@ def fetch_market(symbol: str) -> dict:
         "turtle_4h":            tz_4h,
         "indicators":           indicators,
         "liquidity":            liq_bnb,
+        "ls_ratio":             ls,
+        "liquidations":         liqs,
         "options":              options,
         "macro":                macro,
         "session":              session,
@@ -1316,6 +1420,35 @@ def market_summary_text(symbol: str, m: dict) -> str:
         mp_str   = f" | Max Pain ${mp:,.0f} ({exp})" if mp else ""
         opt_str  = f"\n• Options (Deribit): P/C {pcr_icon}{pcr:.2f}{mp_str}"
 
+    ls = m.get("ls_ratio", {})
+    ls_str = ""
+    if ls:
+        bybit_l = ls.get("bybit_long")
+        bnb_l   = ls.get("bnb_long")
+        taker   = ls.get("taker_ratio")
+        parts   = []
+        if bybit_l is not None:
+            icon = "🟢" if bybit_l > 55 else ("🔴" if bybit_l < 45 else "⚪")
+            parts.append(f"Bybit {icon}L:{bybit_l:.0f}%/S:{ls['bybit_short']:.0f}%")
+        if bnb_l is not None:
+            icon = "🟢" if bnb_l > 55 else ("🔴" if bnb_l < 45 else "⚪")
+            parts.append(f"BNB {icon}L:{bnb_l:.0f}%/S:{ls['bnb_short']:.0f}%")
+        if taker is not None:
+            icon = "🟢" if taker > 1.1 else ("🔴" if taker < 0.9 else "⚪")
+            parts.append(f"Taker {icon}{taker:.2f}")
+        ls_str = "\n• L/S Ratio: " + " | ".join(parts) if parts else ""
+
+    liqs = m.get("liquidations", {})
+    liq_str2 = ""
+    if liqs.get("liq_total_usd", 0) > 0:
+        total = liqs["liq_total_usd"]
+        ll    = liqs.get("liq_long_usd", 0)
+        ls_   = liqs.get("liq_short_usd", 0)
+        dom   = liqs.get("liq_dom", "")
+        dom_icon = "🔴 лонги" if dom == "long" else "🟢 шорты"
+        liq_str2 = (f"\n• Ликвидации 1H: ${total/1e6:.2f}M"
+                    f" (🔴L:${ll/1e6:.2f}M · 🟢S:${ls_/1e6:.2f}M) домин:{dom_icon}")
+
     return (
         f"• Цена: ${price:,.2f} ({chg:+.2f}% 24h)\n"
         f"• Funding Bybit (8h): {fr_b:+.4f}% — {fr_tag(fr_b)}\n"
@@ -1333,6 +1466,8 @@ def market_summary_text(symbol: str, m: dict) -> str:
         f"{ind_str}"
         f"{liq_str}"
         f"{opt_str}"
+        f"{ls_str}"
+        f"{liq_str2}"
         f"{macro_str}"
         f"{sess_str}"
     )
@@ -2067,6 +2202,23 @@ def build_signal_message(data: dict, market: dict, llm_text: str, quality: int,
         mp_str   = f" | MaxPain ${mp:,.0f} ({exp})" if mp else ""
         opt_line = f"\n━━ Options (Deribit) ━\n  P/C: {pcr_icon} {pcr:.2f}{mp_str}"
 
+    ls   = market.get("ls_ratio", {})
+    liqs = market.get("liquidations", {})
+    flow_line = ""
+    parts = []
+    if ls.get("bybit_long") is not None:
+        icon = "🟢" if ls["bybit_long"] > 55 else ("🔴" if ls["bybit_long"] < 45 else "⚪")
+        parts.append(f"L/S {icon}{ls['bybit_long']:.0f}/{ls['bybit_short']:.0f}%")
+    if ls.get("taker_ratio") is not None:
+        ti = "🟢" if ls["taker_ratio"] > 1.1 else ("🔴" if ls["taker_ratio"] < 0.9 else "⚪")
+        parts.append(f"Taker {ti}{ls['taker_ratio']:.2f}")
+    if liqs.get("liq_total_usd", 0) > 0:
+        total = liqs["liq_total_usd"]
+        dom   = "🔴L" if liqs["liq_dom"] == "long" else "🟢S"
+        parts.append(f"Liqs ${total/1e6:.2f}M dom:{dom}")
+    if parts:
+        flow_line = "\n━━ Flow / Liqs ━━━━\n  " + " | ".join(parts)
+
     macro = market.get("macro", {})
     macro_line = ""
     if macro.get("fg_value") is not None:
@@ -2104,6 +2256,7 @@ def build_signal_message(data: dict, market: dict, llm_text: str, quality: int,
         f"{ind_line}"
         f"{liq_line}"
         f"{opt_line}"
+        f"{flow_line}"
         f"{macro_line}"
         f"{sess_line}\n"
         f"━━ 🧠 Анализ LLM ━━\n"
