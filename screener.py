@@ -298,6 +298,21 @@ def _bybit_data(symbol: str) -> dict:
     except Exception as e:
         log.warning(f"Bybit ticker {symbol}: {e}")
 
+    # Fallback: Binance Futures ticker if Bybit price is 0
+    if not out.get("price"):
+        try:
+            tk = requests.get(
+                f"{BINANCE_FAPI}/fapi/v1/ticker/24hr",
+                params={"symbol": symbol}, timeout=6,
+            ).json()
+            out["price"]      = float(tk.get("lastPrice", 0))
+            out["change_24h"] = float(tk.get("priceChangePercent", 0))
+            out["vol_24h"]    = float(tk.get("volume", 0))
+            out["source"]     = "binance"
+            log.info(f"Bybit ticker fallback → Binance for {symbol}")
+        except Exception as e:
+            log.warning(f"Binance ticker fallback {symbol}: {e}")
+
     try:
         items = requests.get(
             f"{BYBIT}/v5/market/open-interest",
@@ -314,11 +329,46 @@ def _bybit_data(symbol: str) -> dict:
         log.warning(f"Bybit OI {symbol}: {e}")
         out.setdefault("oi_chg", 0.0)
 
+    # Fallback: Binance Futures funding rate if Bybit funding is missing
+    if not out.get("funding"):
+        try:
+            fr = requests.get(
+                f"{BINANCE_FAPI}/fapi/v1/premiumIndex",
+                params={"symbol": symbol}, timeout=6,
+            ).json()
+            out["funding"] = float(fr.get("lastFundingRate", 0))
+        except Exception:
+            out.setdefault("funding", 0.0)
+
     return out
 
 
+# Bybit interval → Binance Futures interval mapping
+_BNB_INTERVAL = {
+    "1": "1m", "3": "3m", "5": "5m", "15": "15m", "30": "30m",
+    "60": "1h", "120": "2h", "240": "4h", "D": "1d", "W": "1w",
+}
+
+
+def _klines_binance(symbol: str, interval: str, limit: int = 100) -> list:
+    """Binance Futures klines as fallback. Oldest→newest."""
+    bnb_interval = _BNB_INTERVAL.get(interval, interval)
+    try:
+        r = requests.get(
+            f"{BINANCE_FAPI}/fapi/v1/klines",
+            params={"symbol": symbol, "interval": bnb_interval, "limit": limit},
+            timeout=8,
+        )
+        rows = r.json()  # already oldest→newest, each row: [openTime,o,h,l,c,v,...]
+        return [{"o": float(x[1]), "h": float(x[2]), "l": float(x[3]),
+                 "c": float(x[4]), "v": float(x[5])} for x in rows]
+    except Exception as e:
+        log.warning(f"Binance klines {symbol} {interval}: {e}")
+        return []
+
+
 def _klines(symbol: str, interval: str, limit: int = 100) -> list:
-    """Candles oldest→newest: [{o,h,l,c,v}, ...]"""
+    """Candles oldest→newest: [{o,h,l,c,v}, ...]. Bybit primary, Binance fallback."""
     try:
         r = requests.get(
             f"{BYBIT}/v5/market/kline",
@@ -327,11 +377,14 @@ def _klines(symbol: str, interval: str, limit: int = 100) -> list:
         )
         rows = r.json()["result"]["list"]   # newest first
         rows.reverse()
-        return [{"o": float(x[1]), "h": float(x[2]), "l": float(x[3]),
-                 "c": float(x[4]), "v": float(x[5])} for x in rows]
+        result = [{"o": float(x[1]), "h": float(x[2]), "l": float(x[3]),
+                   "c": float(x[4]), "v": float(x[5])} for x in rows]
+        if result:
+            return result
+        log.warning(f"Bybit klines empty {symbol} {interval}, trying Binance")
     except Exception as e:
-        log.warning(f"Klines {symbol} {interval}: {e}")
-        return []
+        log.warning(f"Bybit klines {symbol} {interval}: {e} — trying Binance")
+    return _klines_binance(symbol, interval, limit)
 
 
 # ─── CVD ─────────────────────────────────────────────────────────────────────
