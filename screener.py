@@ -359,16 +359,55 @@ def _klines_binance(symbol: str, interval: str, limit: int = 100) -> list:
             params={"symbol": symbol, "interval": bnb_interval, "limit": limit},
             timeout=8,
         )
-        rows = r.json()  # already oldest→newest, each row: [openTime,o,h,l,c,v,...]
+        data = r.json()
+        if not isinstance(data, list) or not data:
+            return []
         return [{"o": float(x[1]), "h": float(x[2]), "l": float(x[3]),
-                 "c": float(x[4]), "v": float(x[5])} for x in rows]
+                 "c": float(x[4]), "v": float(x[5])} for x in data]
     except Exception as e:
         log.warning(f"Binance klines {symbol} {interval}: {e}")
         return []
 
 
+_HL_INTERVAL = {
+    "1": "1m", "5": "5m", "15": "15m", "30": "30m",
+    "60": "1h", "120": "2h", "240": "4h", "D": "1d", "W": "1w",
+}
+_HL_INTERVAL_MS = {
+    "1m": 60_000, "5m": 300_000, "15m": 900_000, "30m": 1_800_000,
+    "1h": 3_600_000, "2h": 7_200_000, "4h": 14_400_000,
+    "1d": 86_400_000, "1w": 604_800_000,
+}
+
+
+def _klines_hl(symbol: str, interval: str, limit: int = 100) -> list:
+    """Hyperliquid candle snapshot as last-resort fallback. Oldest→newest."""
+    coin = symbol.replace("USDT", "")
+    hl_iv = _HL_INTERVAL.get(interval, "1h")
+    ms    = _HL_INTERVAL_MS.get(hl_iv, 3_600_000)
+    end   = int(time.time() * 1000)
+    start = end - limit * ms
+    try:
+        r = requests.post(
+            HL,
+            json={"type": "candleSnapshot",
+                  "req": {"coin": coin, "interval": hl_iv,
+                          "startTime": start, "endTime": end}},
+            timeout=10,
+        )
+        candles = r.json()
+        if not isinstance(candles, list) or not candles:
+            return []
+        return [{"o": float(c["o"]), "h": float(c["h"]), "l": float(c["l"]),
+                 "c": float(c["c"]), "v": float(c["v"])} for c in candles]
+    except Exception as e:
+        log.warning(f"HL candles {symbol} {interval}: {e}")
+        return []
+
+
 def _klines(symbol: str, interval: str, limit: int = 100) -> list:
-    """Candles oldest→newest: [{o,h,l,c,v}, ...]. Bybit primary, Binance fallback."""
+    """Candles oldest→newest. Chain: Bybit → Binance Futures → Hyperliquid."""
+    # 1. Bybit
     try:
         r = requests.get(
             f"{BYBIT}/v5/market/kline",
@@ -381,10 +420,20 @@ def _klines(symbol: str, interval: str, limit: int = 100) -> list:
                    "c": float(x[4]), "v": float(x[5])} for x in rows]
         if result:
             return result
-        log.warning(f"Bybit klines empty {symbol} {interval}, trying Binance")
     except Exception as e:
-        log.warning(f"Bybit klines {symbol} {interval}: {e} — trying Binance")
-    return _klines_binance(symbol, interval, limit)
+        log.warning(f"Bybit klines {symbol} {interval}: {e}")
+
+    # 2. Binance Futures
+    result = _klines_binance(symbol, interval, limit)
+    if result:
+        log.info(f"Klines {symbol} {interval}: using Binance")
+        return result
+
+    # 3. Hyperliquid
+    result = _klines_hl(symbol, interval, limit)
+    if result:
+        log.info(f"Klines {symbol} {interval}: using HL")
+    return result
 
 
 # ─── CVD ─────────────────────────────────────────────────────────────────────
@@ -2299,6 +2348,42 @@ def cmd_scan(chat_id: int):
     threading.Thread(target=run_auto_scan, daemon=True).start()
 
 
+def cmd_debug(chat_id: int):
+    """Test all API endpoints and report which ones are reachable."""
+    tg_send("🔧 Проверяю API endpoints...", chat_id=chat_id)
+    lines = ["🔧 <b>API Debug</b>", "━━━━━━━━━━━━━━━━━━━━"]
+
+    tests = [
+        ("Bybit ticker",  lambda: requests.get(f"{BYBIT}/v5/market/tickers",
+            params={"symbol":"BTCUSDT","category":"linear"}, timeout=6
+            ).json()["result"]["list"][0]["lastPrice"]),
+        ("Bybit klines",  lambda: len(requests.get(f"{BYBIT}/v5/market/kline",
+            params={"symbol":"BTCUSDT","interval":"60","limit":"5","category":"linear"},
+            timeout=6).json()["result"]["list"])),
+        ("Binance ticker", lambda: requests.get(f"{BINANCE_FAPI}/fapi/v1/ticker/24hr",
+            params={"symbol":"BTCUSDT"}, timeout=6).json()["lastPrice"]),
+        ("Binance klines", lambda: len(requests.get(f"{BINANCE_FAPI}/fapi/v1/klines",
+            params={"symbol":"BTCUSDT","interval":"1h","limit":"5"}, timeout=6).json())),
+        ("HL candles",     lambda: len(requests.post(HL, timeout=8,
+            json={"type":"candleSnapshot","req":{"coin":"BTC","interval":"1h",
+            "startTime": int(time.time()*1000)-5*3_600_000,
+            "endTime": int(time.time()*1000)}}).json())),
+        ("CoinGecko",      lambda: requests.get("https://api.coingecko.com/api/v3/global",
+            timeout=6).json()["data"]["market_cap_percentage"]["btc"]),
+        ("Fear&Greed",     lambda: requests.get("https://api.alternative.me/fng/?limit=1",
+            timeout=6).json()["data"][0]["value"]),
+    ]
+
+    for name, fn in tests:
+        try:
+            val = fn()
+            lines.append(f"✅ {name}: {val}")
+        except Exception as e:
+            lines.append(f"❌ {name}: {str(e)[:60]}")
+
+    tg_send("\n".join(lines), chat_id=chat_id)
+
+
 def cmd_help(chat_id: int):
     tg_send(
         "🤖 <b>Crypto Screener Pro v3 — команды</b>\n"
@@ -2403,6 +2488,7 @@ def handle_update(update: dict):
     elif cmd == "/stats":              cmd_stats(chat_id)
     elif cmd == "/top":                cmd_top(chat_id)
     elif cmd == "/movers":             cmd_movers(chat_id)
+    elif cmd == "/debug":              cmd_debug(chat_id)
     elif cmd in ("/help", "/start"):   cmd_help(chat_id)
 
 
