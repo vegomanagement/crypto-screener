@@ -882,11 +882,21 @@ _COIN_RE = re.compile(
     re.IGNORECASE,
 )
 
-_TF_RE  = re.compile(r'\b(1m|3m|5m|15m|30m|1h|2h|4h|1d|1w)\b', re.IGNORECASE)
+_TF_RE  = re.compile(
+    r'\b(1m|3m|5m|15m|30m|1h|2h|4h|1d|1w|m5|m15|m30|h1|h4|d1)\b',
+    re.IGNORECASE,
+)
 _TF_MAP = {
-    "1m": "1", "3m": "3", "5m": "5", "15m": "15", "30m": "30",
-    "1h": "60", "2h": "120", "4h": "240", "1d": "D", "1w": "W",
+    # Standard
+    "1m":"1","3m":"3","5m":"5","15m":"15","30m":"30",
+    "1h":"60","2h":"120","4h":"240","1d":"D","1w":"W",
+    # Alternative formats: M15, H4, D1
+    "m5":"5","m15":"15","m30":"30",
+    "h1":"60","h4":"240","d1":"D",
 }
+# Canonical sort order for display
+_TF_ORDER = {"1":0,"3":1,"5":2,"15":3,"30":4,"60":5,"120":6,"240":7,"D":8,"W":9}
+DEFAULT_ANALYSIS_TFS = ["15", "60", "240", "D"]   # M15 · 1H · 4H · D1
 
 
 def _normalize_symbol(raw: str) -> str:
@@ -933,12 +943,11 @@ def cmd_chat(chat_id: int, text: str):
     text_low = text.lower()
 
     ticker     = _extract_ticker(text)
-    tf_matches = _TF_RE.findall(text_low)
-    tf         = _TF_MAP.get(tf_matches[0].lower(), "60") if tf_matches else "60"
+    tfs        = [_TF_MAP[m.lower()] for m in _TF_RE.findall(text_low)]
     has_intent = any(kw in text_low for kw in _ANALYSIS_KW)
 
     if has_intent and ticker:
-        cmd_analyze_symbol(chat_id, ticker, tf)
+        cmd_analyze_symbol(chat_id, ticker, tfs or None)
         return
 
     # Regular chat — provide market context for detected ticker
@@ -1116,27 +1125,133 @@ R:R ratio:     1 : X.X
 
 Используй точные цифры из предоставленных данных рынка. Никакой воды."""
 
+SYSTEM_ANALYZE_MULTI = """\
+Ты — профессиональный крипто-аналитик prop firm (SMC, ICT, Wyckoff, MTF confluence).
+Дай мультитаймфреймный анализ и ОДНУ итоговую торговую идею.
+
+Строгий формат (только русский язык):
+
+📊 ПО ТАЙМФРЕЙМАМ:
+[M15] [bias + ключевое наблюдение — 1 предложение]
+[1H]  [bias + ключевое наблюдение]
+[4H]  [bias + ключевое наблюдение]
+[D1]  [bias + ключевое наблюдение]
+(пиши только те ТФ, которые есть в данных)
+
+🧭 ОБЩИЙ BIAS: [BULLISH / BEARISH / НЕЙТРАЛЬНЫЙ]
+[1-2 предложения почему — согласованность ТФ, ключевые уровни]
+
+📍 ТОРГОВАЯ ИДЕЯ: [LONG / SHORT / НЕЙТРАЛЬНО — ЖДЁМ]
+Зона входа:    $X,XXX – $X,XXX
+Стоп-лосс:     $X,XXX  (-X.X%)
+Тейк-профит 1: $X,XXX  (+X.X%)
+Тейк-профит 2: $X,XXX  (+X.X%)
+R:R ratio:     1 : X.X
+Уверенность:   X/10
+
+⚠️ ГЛАВНЫЙ РИСК: [одно конкретное предложение]
+
+Используй точные цифры. Никакой воды."""
+
 
 def _parse_symbol_tf(args: str) -> tuple:
     """
-    Parse any ticker/TF combination → ('BTCUSDT', '60').
-    Handles: BTC · SOL 4H · ETHUSDT.P · ETH/USDT 1H · SOLUSDT.P 4h
+    Parse ticker + zero/one/many TFs from user input.
+    Returns (symbol, tfs_list).
+    tfs_list == [] means "use all default TFs".
+
+    Examples:
+      "ETH"          → ("ETHUSDT", [])         → all default TFs
+      "ETH 4H"       → ("ETHUSDT", ["240"])     → single TF
+      "ETH 15m 4H"   → ("ETHUSDT", ["15","240"])→ two TFs
+      "SOLUSDT.P 1H" → ("SOLUSDT", ["60"])
     """
+    # Extended map including M5/H4/D1 style
     tf_map = {
-        "1M": "1", "3M": "3", "5M": "5", "15M": "15", "30M": "30",
-        "1H": "60", "2H": "120", "4H": "240", "1D": "D", "1W": "W",
+        "1M":"1","3M":"3","5M":"5","15M":"15","30M":"30",
+        "1H":"60","2H":"120","4H":"240","1D":"D","1W":"W",
+        "M5":"5","M15":"15","M30":"30",
+        "H1":"60","H4":"240","D1":"D",
     }
-    # Detect TF first (from words like "4H", "1D" etc.)
-    tf = "60"
+    # Collect ALL TF tokens found
+    tfs = []
     for p in args.upper().split():
         if p in tf_map:
-            tf = tf_map[p]
+            tfs.append(tf_map[p])
 
-    # Detect symbol using the universal extractor
+    # If none found via uppercase, try lowercase regex
+    if not tfs:
+        tfs = [_TF_MAP[m.lower()] for m in _TF_RE.findall(args)]
+
     symbol = _extract_ticker(args)
     if not symbol:
         symbol = SYMBOLS[0] if SYMBOLS else "BTCUSDT"
-    return symbol, tf
+
+    # Deduplicate while preserving order
+    seen, tfs_unique = set(), []
+    for t in tfs:
+        if t not in seen:
+            seen.add(t); tfs_unique.append(t)
+
+    return symbol, tfs_unique
+
+
+def _tf_snapshot(candles: list, tf: str) -> dict:
+    """Compute key indicators for a single TF from raw OHLCV candles."""
+    if len(candles) < 22:
+        return {"tf": tf, "tf_label": TF_LABEL.get(tf, tf), "error": True}
+    prices = [c["c"] for c in candles]
+    ema20  = _ema(prices, 20)
+    bias   = "bull" if prices[-1] > ema20[-1] else "bear"
+    return {
+        "tf":       tf,
+        "tf_label": TF_LABEL.get(tf, tf),
+        "bias":     bias,
+        "cvd":      compute_cvd(candles),
+        "vp":       compute_volume_profile(candles),
+        "turtle":   compute_turtle_zone(candles) if len(candles) >= 200 else {},
+        "signals":  detect_signals(candles),
+        "close":    candles[-1]["c"],
+    }
+
+
+def llm_multi_tf_analysis(market: dict, tf_snapshots: list, symbol: str) -> str:
+    mkt_text = market_summary_text(symbol, market)
+
+    tf_text = ""
+    for snap in tf_snapshots:
+        if snap.get("error"):
+            tf_text += f"\n[{snap['tf_label']}] — недостаточно данных"
+            continue
+        bias_str = "🟢 BULL" if snap["bias"] == "bull" else "🔴 BEAR"
+        cvd      = snap.get("cvd", {})
+        cvd_str  = f"CVD:{'📈' if cvd.get('trend')=='up' else '📉'}" if cvd.get("trend") else "CVD:❓"
+        vp       = snap.get("vp", {})
+        vp_str   = f"POC:${vp['poc']:,.0f}" if vp.get("poc") else ""
+        tz       = snap.get("turtle", {})
+        tz_str   = f"TZ:{tz['icon']}[{tz['pct_from_mean']:+.1f}%]" if tz.get("zone") else ""
+        sigs     = snap.get("signals", [])
+        sig_str  = f"⚡{','.join(sigs)}" if sigs else "no signals"
+        tf_text += (f"\n[{snap['tf_label']}] {bias_str} | {cvd_str}"
+                    + (f" | {vp_str}" if vp_str else "")
+                    + (f" | {tz_str}" if tz_str else "")
+                    + f" | {sig_str}")
+
+    prompt = (
+        f"Пара: {symbol.replace('USDT','')}/USDT.P — Мультитаймфреймный анализ\n\n"
+        f"Глобальные данные рынка:\n{mkt_text}\n\n"
+        f"Данные по таймфреймам:{tf_text}\n\n"
+        "Проведи мультитаймфреймный анализ и дай единую торговую идею."
+    )
+    try:
+        resp = ai.messages.create(
+            model=LLM_MODEL_SMART, max_tokens=900, system=SYSTEM_ANALYZE_MULTI,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return resp.content[0].text.strip()
+    except Exception as e:
+        log.error(f"LLM multi-TF: {e}")
+        return f"⚠️ Ошибка: {e}"
 
 
 def llm_full_analysis(market: dict, symbol: str, tf: str = "60") -> str:
@@ -1177,50 +1292,106 @@ def llm_full_analysis(market: dict, symbol: str, tf: str = "60") -> str:
         return f"⚠️ Ошибка анализа: {e}"
 
 
-def cmd_analyze_symbol(chat_id: int, symbol: str, tf: str = "60"):
+def cmd_analyze_symbol(chat_id: int, symbol: str, tfs: list = None):
+    """
+    tfs=None or []  → multi-TF: DEFAULT_ANALYSIS_TFS (M15·1H·4H·D1)
+    tfs=["240"]     → single TF: detailed analysis for 4H only
+    tfs=["15","240"]→ multi-TF: only the specified TFs
+    """
+    requested = tfs if tfs else DEFAULT_ANALYSIS_TFS
     sym_short = symbol.replace("USDT", "")
-    tf_label  = TF_LABEL.get(tf, tf)
-    tg_send(f"🔍 Анализирую {sym_short}/USDT.P [{tf_label}]...", chat_id=chat_id)
+
+    if len(requested) == 1:
+        tf_label = TF_LABEL.get(requested[0], requested[0])
+        tg_send(f"🔍 Анализирую {sym_short}/USDT.P [{tf_label}]...", chat_id=chat_id)
+    else:
+        labels = " · ".join(TF_LABEL.get(t, t) for t in requested)
+        tg_send(f"🔍 Мульти-ТФ анализ {sym_short}/USDT.P\n[{labels}]...", chat_id=chat_id)
+
     try:
         market = fetch_market(symbol)
     except Exception as e:
         tg_send(f"❌ Не могу получить данные по {sym_short}: {e}", chat_id=chat_id)
         return
 
-    analysis = llm_full_analysis(market, symbol, tf)
-    price    = market.get("price", 0)
-    b        = market.get("bybit", {})
-    hl       = market.get("hl", {})
-    fr_b     = b.get("funding", 0) * 100
-    oi_chg   = b.get("oi_chg", 0)
-    cvd      = market.get("cvd", {})
-    biases   = market.get("ema_biases", {})
+    price  = market.get("price", 0)
+    b      = market.get("bybit", {})
+    fr_b   = b.get("funding", 0) * 100
+    oi_chg = b.get("oi_chg", 0)
+    now_str = datetime.now(timezone.utc).strftime("%H:%M UTC")
 
-    cvd_icon = "📈" if cvd.get("trend") == "up" else ("📉" if cvd.get("trend") == "down" else "➡️")
-    mtf_str  = " | ".join(
-        f"{t}:{'🟢' if b=='bull' else ('🔴' if b=='bear' else '❓')}"
-        for t, b in biases.items()
-    )
-    tz_parts = []
-    for tz_key, tf_name in [("turtle_1h", "1H"), ("turtle_4h", "4H")]:
-        tz = market.get(tz_key, {})
-        if tz:
-            tz_parts.append(f"{tf_name}:{tz['icon']}[{tz['pct_from_mean']:+.1f}%]")
-    tz_str = "  TZ: " + " | ".join(tz_parts) + "\n" if tz_parts else ""
+    if len(requested) == 1:
+        # ── Single TF: detailed analysis ─────────────────────────────────────
+        tf       = requested[0]
+        tf_label = TF_LABEL.get(tf, tf)
+        biases   = market.get("ema_biases", {})
+        cvd      = market.get("cvd", {})
+        cvd_icon = "📈" if cvd.get("trend") == "up" else ("📉" if cvd.get("trend") == "down" else "➡️")
+        mtf_str  = " | ".join(
+            f"{t}:{'🟢' if bv=='bull' else ('🔴' if bv=='bear' else '❓')}"
+            for t, bv in biases.items()
+        )
+        tz_parts = [
+            f"{tname}:{market[tk]['icon']}[{market[tk]['pct_from_mean']:+.1f}%]"
+            for tk, tname in [("turtle_1h","1H"),("turtle_4h","4H")]
+            if market.get(tk)
+        ]
+        tz_line = "  TZ: " + " | ".join(tz_parts) + "\n" if tz_parts else ""
+        analysis = llm_full_analysis(market, symbol, tf)
+        tg_send(
+            f"🎯 <b>Анализ {sym_short}/USDT.P</b> [{tf_label}]\n"
+            f"━━━━━━━━━━━━━━━━━━\n"
+            f"💰 ${price:,.2f}  ({market.get('change_24h',0):+.2f}% 24h)\n"
+            f"📊 MTF: {mtf_str}\n"
+            f"{tz_line}"
+            f"CVD: {cvd_icon}  |  FR: {fr_b:+.4f}%  |  OI: {oi_chg:+.2f}%\n"
+            f"━━━━━━━━━━━━━━━━━━\n"
+            f"{analysis}\n"
+            f"━━━━━━━━━━━━━━━━━━\n"
+            f"<i>Bybit + HL · {now_str}</i>",
+            chat_id=chat_id,
+        )
 
-    tg_send(
-        f"🎯 <b>Анализ {sym_short}/USDT.P</b> [{tf_label}]\n"
-        f"━━━━━━━━━━━━━━━━━━\n"
-        f"💰 ${price:,.2f}  ({market.get('change_24h',0):+.2f}% 24h)\n"
-        f"📊 MTF: {mtf_str}\n"
-        f"{tz_str}"
-        f"CVD: {cvd_icon}  |  FR: {fr_b:+.4f}%  |  OI: {oi_chg:+.2f}%\n"
-        f"━━━━━━━━━━━━━━━━━━\n"
-        f"{analysis}\n"
-        f"━━━━━━━━━━━━━━━━━━\n"
-        f"<i>Bybit + HL · {datetime.now(timezone.utc).strftime('%H:%M UTC')}</i>",
-        chat_id=chat_id,
-    )
+    else:
+        # ── Multi-TF: fetch each TF in parallel, then one LLM call ───────────
+        with ThreadPoolExecutor(max_workers=len(requested)) as ex:
+            futures = {ex.submit(_klines, symbol, tf, 250): tf for tf in requested}
+
+        snapshots = []
+        for fut, tf in futures.items():
+            snapshots.append(_tf_snapshot(fut.result(), tf))
+        snapshots.sort(key=lambda s: _TF_ORDER.get(s["tf"], 99))
+
+        # Build compact per-TF summary for the message header
+        tf_lines = []
+        for snap in snapshots:
+            if snap.get("error"):
+                tf_lines.append(f"  {snap['tf_label']:<4} ❓ нет данных")
+                continue
+            b_icon  = "🟢" if snap["bias"] == "bull" else "🔴"
+            cvd_i   = "📈" if snap.get("cvd",{}).get("trend")=="up" else "📉"
+            tz      = snap.get("turtle", {})
+            tz_s    = f" TZ:{tz['icon']}[{tz['pct_from_mean']:+.1f}%]" if tz.get("zone") else ""
+            sigs    = snap.get("signals", [])
+            sig_s   = f" ⚡{'|'.join(sigs[:2])}" if sigs else ""
+            tf_lines.append(f"  {snap['tf_label']:<4} {b_icon} EMA | CVD:{cvd_i}{tz_s}{sig_s}")
+
+        analysis = llm_multi_tf_analysis(market, snapshots, symbol)
+        labels   = " · ".join(TF_LABEL.get(t, t) for t in requested)
+        tg_send(
+            f"🎯 <b>Мульти-ТФ {sym_short}/USDT.P</b>\n"
+            f"<i>{labels}</i>\n"
+            f"━━━━━━━━━━━━━━━━━━\n"
+            f"💰 ${price:,.2f}  ({market.get('change_24h',0):+.2f}% 24h)\n"
+            f"FR: {fr_b:+.4f}%  |  OI: {oi_chg:+.2f}%\n"
+            f"━━ По таймфреймам ━\n"
+            + "\n".join(tf_lines)
+            + f"\n━━━━━━━━━━━━━━━━━━\n"
+            f"{analysis}\n"
+            f"━━━━━━━━━━━━━━━━━━\n"
+            f"<i>Bybit + HL · {now_str}</i>",
+            chat_id=chat_id,
+        )
 
 
 def llm_digest(signals: list, market_ctx: str) -> str:
@@ -1499,15 +1670,16 @@ def cmd_analyze(chat_id: int, args: str):
     if not args:
         tg_send(
             "❓ Примеры:\n"
-            "/analyze BTC\n"
-            "/analyze SOL 4H\n"
-            "/analyze ETH 1H\n\n"
-            "Или просто напиши: <i>анализируй BTC 4H</i>",
+            "/analyze ETH          — все ТФ: M15 · 1H · 4H · D1\n"
+            "/analyze SOL 4H       — только 4H\n"
+            "/analyze BTC 15m 4H   — M15 + 4H\n\n"
+            "Или просто напиши:\n"
+            "<i>анализируй ETH</i>  или  <i>analyze SOL 4H</i>",
             chat_id=chat_id,
         )
         return
-    symbol, tf = _parse_symbol_tf(args)
-    cmd_analyze_symbol(chat_id, symbol, tf)
+    symbol, tfs = _parse_symbol_tf(args)
+    cmd_analyze_symbol(chat_id, symbol, tfs or None)
 
 
 def cmd_alert_add(chat_id: int, args: str):
