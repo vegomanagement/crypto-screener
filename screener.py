@@ -1096,6 +1096,11 @@ def cmd_digest(chat_id: int):
     )
 
 
+def cmd_scan(chat_id: int):
+    tg_send("🔍 Запускаю ручное сканирование...", chat_id=chat_id)
+    threading.Thread(target=run_auto_scan, daemon=True).start()
+
+
 def cmd_help(chat_id: int):
     tg_send(
         "🤖 <b>Crypto Screener Pro — команды</b>\n"
@@ -1103,6 +1108,7 @@ def cmd_help(chat_id: int):
         "/status   — рынок: цена, CVD, VP, MTF, F&G, сессия\n"
         "/history  — последние 10 сигналов из БД\n"
         "/digest   — дневной дайджест с LLM анализом\n"
+        "/scan     — ручной запуск автосканера прямо сейчас\n"
         "/ask [вопрос] — задай вопрос о рынке\n\n"
         "📸 <b>Анализ графика:</b> просто пришли скриншот!\n"
         "Можно добавить подпись: <i>BTC 4H — думаю шорт отсюда</i>\n"
@@ -1173,6 +1179,7 @@ def handle_update(update: dict):
     elif cmd == "/history":            cmd_history(chat_id)
     elif cmd == "/ask":                cmd_ask(chat_id, args)
     elif cmd == "/digest":             cmd_digest(chat_id)
+    elif cmd == "/scan":               cmd_scan(chat_id)
     elif cmd in ("/help", "/start"):   cmd_help(chat_id)
 
 
@@ -1195,6 +1202,127 @@ def telegram_polling():
             time.sleep(5)
 
 
+# ─── AUTO SCANNER ─────────────────────────────────────────────────────────────
+
+SCAN_COOLDOWN_MIN = 60          # minutes between same signal on same symbol+tf
+SCAN_INTERVALS    = ["15", "60", "240"]
+SCAN_MIN_CONF     = 40          # skip signals below this confluence score
+
+_scan_cooldown: dict = {}
+_scan_lock = threading.Lock()
+
+
+def detect_signals(candles: list) -> list:
+    """
+    Detect SMC signals from OHLCV candles (oldest→newest).
+    Returns list of signal type strings found on the last closed candle.
+    """
+    if len(candles) < 22:
+        return []
+
+    lookback = 20
+    prev     = candles[-lookback - 1 : -1]   # 20 completed candles before last
+    last     = candles[-1]
+    signals  = []
+
+    prev_high = max(x["h"] for x in prev)
+    prev_low  = min(x["l"] for x in prev)
+    close_now = last["c"]
+
+    # ── BOS / CHoCH ─────────────────────────────────────────────────────────
+    # Trend direction: compare close at start vs end of lookback window
+    trend_up = candles[-lookback - 1]["c"] < candles[-2]["c"]
+
+    if close_now > prev_high:
+        signals.append("BOS_BULL" if trend_up else "CHOCH_BULL")
+    elif close_now < prev_low:
+        signals.append("BOS_BEAR" if not trend_up else "CHOCH_BEAR")
+
+    # ── FVG (3-candle gap) ───────────────────────────────────────────────────
+    c2, c1, c0 = candles[-3], candles[-2], candles[-1]
+    if c0["l"] > c2["h"]:
+        signals.append("FVG_BULL")
+    elif c0["h"] < c2["l"]:
+        signals.append("FVG_BEAR")
+
+    # ── Liquidity Sweep ──────────────────────────────────────────────────────
+    if last["h"] > prev_high and last["c"] < prev_high:
+        signals.append("LIQ_SWEEP_H")
+    if last["l"] < prev_low and last["c"] > prev_low:
+        signals.append("LIQ_SWEEP_L")
+
+    return signals
+
+
+def run_auto_scan():
+    log.info("🔍 Автосканер: начинаю сканирование...")
+    now = time.time()
+
+    for symbol in SYMBOLS:
+        base   = symbol if symbol.endswith("USDT") else symbol + "USDT"
+        market = None   # lazy-fetch once per symbol
+
+        for interval in SCAN_INTERVALS:
+            candles = _klines(base, interval, 60)
+            if not candles:
+                continue
+
+            detected = detect_signals(candles)
+            if not detected:
+                continue
+
+            # Fetch market data once per symbol (shared across TFs)
+            if market is None:
+                try:
+                    market = fetch_market(base)
+                except Exception as e:
+                    log.warning(f"Auto-scan fetch_market {base}: {e}")
+                    break
+
+            for sig_type in detected:
+                key = f"{base}_{interval}_{sig_type}"
+                with _scan_lock:
+                    if now - _scan_cooldown.get(key, 0) < SCAN_COOLDOWN_MIN * 60:
+                        log.info(f"  Cooldown: {sig_type} {base} {interval}")
+                        continue
+                    _scan_cooldown[key] = now
+
+                price = market.get("price") or candles[-1]["c"]
+
+                # Confluence
+                sig_up    = any(x in sig_type for x in ("BULL", "LONG", "SWEEP_L"))
+                sig_dn    = any(x in sig_type for x in ("BEAR", "SHORT", "SWEEP_H"))
+                direction = "long" if sig_up else ("short" if sig_dn else "neutral")
+                biases    = market.get("ema_biases", {})
+                mtf       = check_mtf_confluence(biases, direction) if direction != "neutral" else {}
+                conf_score, conf_factors = compute_confluence_score(sig_type, market, mtf)
+
+                if conf_score < SCAN_MIN_CONF:
+                    log.info(f"  Low conf {conf_score}/100: {sig_type} {base} {interval}")
+                    continue
+
+                sig_data = {"signal": sig_type, "symbol": base,
+                            "tf": interval, "price": price}
+                recent           = db_recent(hours=4, limit=6)
+                llm_text, quality = llm_analyze_signal(
+                    sig_data, market, recent, conf_score, conf_factors
+                )
+
+                db_save(base, interval, sig_type, price, sig_data, llm_text, quality)
+
+                if quality < MIN_QUALITY:
+                    continue
+
+                msg = "🤖 <b>[АВТОСКАНЕР]</b>\n" + build_signal_message(
+                    sig_data, market, llm_text, quality, conf_score, conf_factors
+                )
+                tg_send(msg)
+                log.info(f"  ✅ {sig_type} {base} {interval} "
+                         f"Q:{quality}/10 Conf:{conf_score}/100")
+
+    log.info("🔍 Автосканер: завершено")
+
+
 # ─── DAILY DIGEST ─────────────────────────────────────────────────────────────
 
 def run_daily_digest():
@@ -1204,6 +1332,9 @@ def run_daily_digest():
 
 def start_scheduler():
     schedule.every().day.at(DIGEST_TIME).do(run_daily_digest)
+    schedule.every(15).minutes.do(run_auto_scan)
+    time.sleep(15)          # short delay so Flask is fully up first
+    run_auto_scan()         # run once immediately on startup
     while True:
         schedule.run_pending()
         time.sleep(30)
@@ -1228,11 +1359,12 @@ if __name__ == "__main__":
     tg_send(
         "🤖 <b>Crypto Screener Pro v2 запущен</b>\n"
         "━━━━━━━━━━━━━━━━━\n"
-        "📡 Жду алерты от TradingView\n"
+        "📡 TradingView webhook: активен\n"
+        "🔍 Автосканер: каждые 15 мин (BOS · CHoCH · FVG · Sweep)\n"
         "🧠 LLM: Claude активен\n"
-        "📊 Новое: CVD · Volume Profile · MTF EMA · Fear&Greed · Confluence Score\n"
+        "📊 CVD · Volume Profile · MTF EMA · Fear&Greed · Confluence\n"
         f"⏰ Дайджест: каждый день в {DIGEST_TIME} UTC\n\n"
-        "Команды: /help"
+        "Команды: /help  |  /scan — ручной запуск"
     )
     log.info(f"🚀 Запуск v2 | порт {PORT} | дайджест {DIGEST_TIME} UTC")
 
