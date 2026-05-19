@@ -1103,6 +1103,8 @@ def fetch_market(symbol: str) -> dict:
         "options":              options,
         "macro":                macro,
         "session":              session,
+        # raw klines reused by cmd_analyze_symbol (avoids duplicate API calls)
+        "_klines": {"60": k1h, "240": k4h, "D": k1d},
     }
 
 
@@ -1760,13 +1762,20 @@ def cmd_analyze_symbol(chat_id: int, symbol: str, tfs: list = None):
         )
 
     else:
-        # ── Multi-TF: fetch each TF in parallel, then one LLM call ───────────
-        with ThreadPoolExecutor(max_workers=len(requested)) as ex:
-            futures = {ex.submit(_klines, symbol, tf, 250): tf for tf in requested}
+        # ── Multi-TF: reuse klines already in market, fetch only missing TFs ──
+        cached = market.get("_klines", {})   # {"60": [...], "240": [...], "D": [...]}
+        missing_tfs = [tf for tf in requested if tf not in cached]
+
+        if missing_tfs:
+            with ThreadPoolExecutor(max_workers=len(missing_tfs)) as ex:
+                new_futs = {ex.submit(_klines, symbol, tf, 250): tf for tf in missing_tfs}
+            for fut, tf in new_futs.items():
+                cached[tf] = fut.result()
 
         snapshots = []
-        for fut, tf in futures.items():
-            snapshots.append(_tf_snapshot(fut.result(), tf))
+        for tf in requested:
+            candles = cached.get(tf, [])
+            snapshots.append(_tf_snapshot(candles, tf))
         snapshots.sort(key=lambda s: _TF_ORDER.get(s["tf"], 99))
 
         # Build compact per-TF summary for the message header
