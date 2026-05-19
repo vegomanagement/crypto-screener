@@ -757,9 +757,33 @@ def get_macro() -> dict:
         log.warning(f"Fear&Greed: {e}")
 
     try:
-        d = requests.get("https://api.coingecko.com/api/v3/global", timeout=8).json()["data"]["market_cap_percentage"]
-        out["btc_dom"] = round(d.get("btc", 0), 2)
-        out["eth_dom"] = round(d.get("eth", 0), 2)
+        cg = requests.get("https://api.coingecko.com/api/v3/global", timeout=8).json()["data"]
+        dom = cg.get("market_cap_percentage", {})
+        total = cg.get("total_market_cap", {}).get("usd", 0)
+
+        btc_dom  = dom.get("btc", 0)
+        eth_dom  = dom.get("eth", 0)
+        usdt_dom = dom.get("usdt", 0)
+        usdc_dom = dom.get("usdc", 0)
+
+        # TOTAL2 = excl BTC; TOTAL3 = excl BTC+ETH
+        total2 = total * (1 - btc_dom / 100) if total else 0
+        total3 = total * (1 - btc_dom / 100 - eth_dom / 100) if total else 0
+
+        # OTHERS ≈ TOTAL3 minus visible large alts (BNB, XRP, SOL, etc.)
+        stables = {"usdt", "usdc", "busd", "dai", "tusd"}
+        big_alts_dom = sum(v for k, v in dom.items()
+                           if k not in {"btc", "eth"} and k not in stables)
+        others = total * big_alts_dom / 100 if total else 0
+
+        out["btc_dom"]    = round(btc_dom, 2)
+        out["eth_dom"]    = round(eth_dom, 2)
+        out["usdt_dom"]   = round(usdt_dom + usdc_dom, 2)  # combined stablecoin %
+        out["total_mcap"] = total
+        out["total2"]     = total2
+        out["total3"]     = total3
+        out["others"]     = others
+        out["mcap_chg24"] = round(cg.get("market_cap_change_percentage_24h_usd", 0), 2)
     except Exception as e:
         log.warning(f"Dominance: {e}")
 
@@ -1369,6 +1393,27 @@ def market_summary_text(symbol: str, m: dict) -> str:
         macro_str = (f"\n• F&G: {macro['fg_icon']} {macro['fg_label']} [{macro['fg_value']}]"
                      + (f" | BTC Dom: {macro.get('btc_dom')}%" if macro.get("btc_dom") else ""))
 
+    def _t(v):
+        """Format market cap: $2.31T / $890B"""
+        if v >= 1e12: return f"${v/1e12:.2f}T"
+        if v >= 1e9:  return f"${v/1e9:.1f}B"
+        return f"${v/1e6:.0f}M"
+
+    mstruct_str = ""
+    if macro.get("total_mcap"):
+        chg  = macro.get("mcap_chg24", 0)
+        chgi = "📈" if chg >= 0 else "📉"
+        usdt_d = macro.get("usdt_dom", 0)
+        usdt_i = "🔴" if usdt_d > 7 else ("🟡" if usdt_d > 5 else "🟢")  # high = money on sidelines
+        mstruct_str = (
+            f"\n• Market Structure:"
+            f"\n  TOTAL:  {_t(macro['total_mcap'])} ({chgi}{chg:+.1f}% 24h)"
+            f"\n  TOTAL2: {_t(macro['total2'])}  TOTAL3: {_t(macro['total3'])}"
+            f"\n  OTHERS: {_t(macro['others'])}"
+            f"\n  BTC Dom: {macro['btc_dom']}%  ETH: {macro.get('eth_dom',0)}%  "
+            f"Stables: {usdt_i}{usdt_d}%"
+        )
+
     sess_str = f"\n• Session: {sess.get('icon','')} {sess.get('name','')} [{sess.get('quality','?')}/5]"
 
     tz_str = ""
@@ -1468,6 +1513,7 @@ def market_summary_text(symbol: str, m: dict) -> str:
         f"{opt_str}"
         f"{ls_str}"
         f"{liq_str2}"
+        f"{mstruct_str}"
         f"{macro_str}"
         f"{sess_str}"
     )
@@ -2501,6 +2547,53 @@ def cmd_scan(chat_id: int):
     threading.Thread(target=run_auto_scan, daemon=True).start()
 
 
+def cmd_market(chat_id: int):
+    """Show TOTAL / TOTAL2 / TOTAL3 / OTHERS / dominance snapshot."""
+    macro = get_macro()
+
+    def _t(v):
+        if v >= 1e12: return f"${v/1e12:.2f}T"
+        if v >= 1e9:  return f"${v/1e9:.1f}B"
+        return f"${v/1e6:.0f}M"
+
+    total = macro.get("total_mcap", 0)
+    if not total:
+        tg_send("❌ Нет данных CoinGecko.", chat_id=chat_id)
+        return
+
+    chg    = macro.get("mcap_chg24", 0)
+    chgi   = "📈" if chg >= 0 else "📉"
+    btcd   = macro.get("btc_dom", 0)
+    ethd   = macro.get("eth_dom", 0)
+    usdt_d = macro.get("usdt_dom", 0)
+    t2     = macro.get("total2", 0)
+    t3     = macro.get("total3", 0)
+    others = macro.get("others", 0)
+    ts     = datetime.now(timezone.utc).strftime("%H:%M UTC")
+
+    # Alt season proxy: if BTC dom < 50% → alt season
+    alt_signal = "🟢 Alt Season" if btcd < 50 else ("🔴 BTC Season" if btcd > 58 else "⚪ Transition")
+    # Stablecoin signal: high = money on sidelines = potential inflow
+    stable_sig = "🟢 Много денег на сайдлайне" if usdt_d > 7 else ("⚪ Нейтрально" if usdt_d > 5 else "🔴 Деньги в работе")
+
+    tg_send(
+        f"🌍 <b>Market Structure</b>  <i>{ts}</i>\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
+        f"📊 <b>TOTAL</b>:  {_t(total)}  {chgi}{chg:+.1f}% 24h\n"
+        f"📊 <b>TOTAL2</b>: {_t(t2)}  <i>(excl BTC)</i>\n"
+        f"📊 <b>TOTAL3</b>: {_t(t3)}  <i>(excl BTC+ETH)</i>\n"
+        f"📊 <b>OTHERS</b>: {_t(others)}  <i>(alt caps)</i>\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
+        f"🟠 BTC Dom:    <b>{btcd}%</b>\n"
+        f"⚪ ETH Dom:    <b>{ethd}%</b>\n"
+        f"💵 Stables Dom: <b>{usdt_d}%</b>  {stable_sig}\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
+        f"{alt_signal}\n"
+        f"<i>Fear&Greed: {macro.get('fg_icon','')} {macro.get('fg_label','')} [{macro.get('fg_value','?')}]</i>",
+        chat_id=chat_id,
+    )
+
+
 def cmd_debug(chat_id: int):
     """Test all API endpoints and report which ones are reachable."""
     tg_send("🔧 Проверяю API endpoints...", chat_id=chat_id)
@@ -2547,6 +2640,7 @@ def cmd_help(chat_id: int):
         "/status              — рынок: CVD, VP, MTF, F&G\n"
         "/ask [вопрос]        — вопрос о рынке\n\n"
         "📈 <b>Рынок</b>\n"
+        "/market              — TOTAL/TOTAL2/TOTAL3/OTHERS + доминации\n"
         "/top                 — топ гейнеры/лузеры + объём (24H)\n"
         "/movers              — движения 1H по watchlist\n\n"
         "🔔 <b>Price Alerts</b>\n"
@@ -2641,6 +2735,7 @@ def handle_update(update: dict):
     elif cmd == "/stats":              cmd_stats(chat_id)
     elif cmd == "/top":                cmd_top(chat_id)
     elif cmd == "/movers":             cmd_movers(chat_id)
+    elif cmd == "/market":             cmd_market(chat_id)
     elif cmd == "/debug":              cmd_debug(chat_id)
     elif cmd in ("/help", "/start"):   cmd_help(chat_id)
 
