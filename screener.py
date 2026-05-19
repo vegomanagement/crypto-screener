@@ -114,18 +114,47 @@ def db_init():
                 triggered    INTEGER DEFAULT 0
             )
         """)
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS signal_outcomes (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                signal_id   INTEGER NOT NULL,
+                symbol      TEXT    NOT NULL,
+                signal_type TEXT    NOT NULL,
+                direction   TEXT    NOT NULL,
+                entry_price REAL    NOT NULL,
+                entry_ts    TEXT    NOT NULL,
+                price_1h    REAL,
+                price_4h    REAL,
+                price_24h   REAL,
+                pct_1h      REAL,
+                pct_4h      REAL,
+                pct_24h     REAL,
+                done        INTEGER DEFAULT 0
+            )
+        """)
         c.commit()
     log.info("DB инициализирована")
 
 def db_save(symbol, tf, sig_type, price, raw, llm_text, quality=0):
     ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M")
     with _db_lock, db_conn() as c:
-        c.execute(
+        cur = c.execute(
             "INSERT INTO signals(ts,symbol,tf,signal_type,price,raw_json,llm_text,quality)"
             " VALUES(?,?,?,?,?,?,?,?)",
             (ts, symbol, tf, sig_type, price, json.dumps(raw), llm_text, quality),
         )
+        signal_id = cur.lastrowid
         c.commit()
+
+    # Auto-track outcome for directional signals
+    sig_up = any(x in sig_type for x in ("BULL", "LONG", "SWEEP_L", "CHOCH_BULL"))
+    sig_dn = any(x in sig_type for x in ("BEAR", "SHORT", "SWEEP_H", "CHOCH_BEAR"))
+    if sig_up or sig_dn:
+        direction = "bull" if sig_up else "bear"
+        try:
+            db_outcome_add(signal_id, symbol, sig_type, direction, float(price or 0))
+        except Exception as e:
+            log.warning(f"db_outcome_add: {e}")
 
 def db_recent(hours=4, limit=8):
     since = (datetime.now(timezone.utc) - timedelta(hours=hours)).strftime("%Y-%m-%d %H:%M")
@@ -195,6 +224,53 @@ def db_alert_trigger(alert_id: int):
         c.commit()
 
 
+# ─── SIGNAL OUTCOMES DB ───────────────────────────────────────────────────────
+
+def db_outcome_add(signal_id: int, symbol: str, signal_type: str,
+                   direction: str, entry_price: float):
+    ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M")
+    with _db_lock, db_conn() as c:
+        c.execute(
+            "INSERT INTO signal_outcomes"
+            "(signal_id,symbol,signal_type,direction,entry_price,entry_ts)"
+            " VALUES(?,?,?,?,?,?)",
+            (signal_id, symbol, signal_type, direction, entry_price, ts),
+        )
+        c.commit()
+
+
+def db_outcomes_pending() -> list:
+    """Return outcomes where 1H/4H/24H checks are not yet done."""
+    with _db_lock, db_conn() as c:
+        return c.execute(
+            "SELECT id,symbol,signal_type,direction,entry_price,entry_ts,"
+            "price_1h,price_4h,price_24h,done FROM signal_outcomes WHERE done=0"
+        ).fetchall()
+
+
+def db_outcome_update(outcome_id: int, field: str, price: float, pct: float):
+    done_check = ""
+    if field == "price_24h":
+        done_check = ", done=1"
+    with _db_lock, db_conn() as c:
+        c.execute(
+            f"UPDATE signal_outcomes SET {field}=?, pct_{field[6:]}=?{done_check}"
+            " WHERE id=?",
+            (price, pct, outcome_id),
+        )
+        c.commit()
+
+
+def db_stats(days: int = 30) -> list:
+    since = (datetime.now(timezone.utc) - timedelta(days=days)).strftime("%Y-%m-%d %H:%M")
+    with _db_lock, db_conn() as c:
+        return c.execute(
+            "SELECT signal_type,direction,pct_4h FROM signal_outcomes"
+            " WHERE entry_ts>=? AND pct_4h IS NOT NULL",
+            (since,),
+        ).fetchall()
+
+
 def db_alerts_active() -> list:
     with _db_lock, db_conn() as c:
         return c.execute(
@@ -204,8 +280,9 @@ def db_alerts_active() -> list:
 
 # ─── MARKET DATA — BYBIT ─────────────────────────────────────────────────────
 
-BYBIT = "https://api.bybit.com"
-HL    = "https://api.hyperliquid.xyz/info"
+BYBIT       = "https://api.bybit.com"
+HL          = "https://api.hyperliquid.xyz/info"
+BINANCE_FAPI = "https://fapi.binance.com"
 
 def _bybit_data(symbol: str) -> dict:
     out = {"source": "bybit"}
@@ -425,6 +502,110 @@ def compute_turtle_zone(candles: list, length: int = 200,
     }
 
 
+# ─── TECHNICAL INDICATORS ─────────────────────────────────────────────────────
+
+def compute_rsi(closes: list, period: int = 14) -> float:
+    """RSI with Wilder's smoothing."""
+    if len(closes) < period + 1:
+        return 50.0
+    deltas = [closes[i] - closes[i - 1] for i in range(1, len(closes))]
+    gains  = [max(d, 0.0) for d in deltas]
+    losses = [max(-d, 0.0) for d in deltas]
+    avg_g  = sum(gains[:period]) / period
+    avg_l  = sum(losses[:period]) / period
+    for i in range(period, len(gains)):
+        avg_g = (avg_g * (period - 1) + gains[i])  / period
+        avg_l = (avg_l * (period - 1) + losses[i]) / period
+    if avg_l == 0:
+        return 100.0
+    return round(100 - 100 / (1 + avg_g / avg_l), 2)
+
+
+def compute_macd(closes: list, fast: int = 12, slow: int = 26,
+                 signal: int = 9) -> dict:
+    """MACD line, signal line, histogram, trend, and cross detection."""
+    if len(closes) < slow + signal:
+        return {}
+    ema_f    = _ema(closes, fast)
+    ema_s    = _ema(closes, slow)
+    macd_l   = [f - s for f, s in zip(ema_f, ema_s)]
+    signal_l = _ema(macd_l, signal)
+    hist     = macd_l[-1] - signal_l[-1]
+    prev_h   = macd_l[-2] - signal_l[-2]
+    if   hist > 0 and prev_h <= 0: cross = "golden"
+    elif hist < 0 and prev_h >= 0: cross = "death"
+    else:                           cross = "none"
+    return {
+        "macd":      round(macd_l[-1],   6),
+        "signal":    round(signal_l[-1], 6),
+        "histogram": round(hist,         6),
+        "trend":     "bull" if macd_l[-1] > signal_l[-1] else "bear",
+        "cross":     cross,
+    }
+
+
+def compute_bollinger(closes: list, period: int = 20,
+                      num_std: float = 2.0) -> dict:
+    """Bollinger Bands: upper/middle/lower + price position + %B."""
+    if len(closes) < period:
+        return {}
+    recent  = closes[-period:]
+    sma     = sum(recent) / period
+    std     = (sum((x - sma) ** 2 for x in recent) / period) ** 0.5
+    upper   = sma + num_std * std
+    lower   = sma - num_std * std
+    price   = closes[-1]
+    pct_b   = (price - lower) / (upper - lower) if upper != lower else 0.5
+    width   = (upper - lower) / sma * 100
+    if   price >= upper: pos, icon = "above_upper", "🔴"
+    elif price <= lower: pos, icon = "below_lower", "🟢"
+    elif price > sma:    pos, icon = "upper_half",  "⚪"
+    else:                pos, icon = "lower_half",  "⚪"
+    return {
+        "upper":   round(upper, 2),
+        "middle":  round(sma,   2),
+        "lower":   round(lower, 2),
+        "position": pos,
+        "icon":    icon,
+        "pct_b":   round(pct_b, 3),
+        "width":   round(width, 2),
+    }
+
+
+def compute_stochastic(candles: list, k_period: int = 14,
+                        d_period: int = 3) -> dict:
+    """Fast Stochastic %K and smoothed %D."""
+    if len(candles) < k_period + d_period:
+        return {}
+    raw_k = []
+    for i in range(d_period):
+        end    = len(candles) - (d_period - 1 - i)
+        window = candles[end - k_period : end]
+        hi = max(c["h"] for c in window)
+        lo = min(c["l"] for c in window)
+        raw_k.append(50.0 if hi == lo
+                     else (window[-1]["c"] - lo) / (hi - lo) * 100)
+    k = raw_k[-1]
+    d = sum(raw_k) / len(raw_k)
+    if   k > 80: signal, icon = "overbought", "🔴"
+    elif k < 20: signal, icon = "oversold",   "🟢"
+    else:        signal, icon = "neutral",     "⚪"
+    return {"k": round(k, 1), "d": round(d, 1), "signal": signal, "icon": icon}
+
+
+def compute_indicators(candles: list) -> dict:
+    """Bundle all technical indicators from OHLCV candles."""
+    if len(candles) < 35:
+        return {}
+    closes = [c["c"] for c in candles]
+    return {
+        "rsi":   compute_rsi(closes),
+        "macd":  compute_macd(closes),
+        "bb":    compute_bollinger(closes),
+        "stoch": compute_stochastic(candles),
+    }
+
+
 def check_mtf_confluence(biases: dict, direction: str) -> dict:
     want    = "bull" if direction == "long" else "bear"
     aligned = sum(1 for b in biases.values() if b == want)
@@ -504,6 +685,7 @@ def compute_confluence_score(signal_type: str, market: dict, mtf: dict) -> tuple
     price   = market.get("price", 0)
     tz_1h   = market.get("turtle_1h", {})
     tz_4h   = market.get("turtle_4h", {})
+    indic   = market.get("indicators", {})
 
     score, factors = 50, []
 
@@ -618,6 +800,42 @@ def compute_confluence_score(signal_type: str, market: dict, mtf: dict) -> tuple
         else:
             factors.append(f"TZ {tf_name} ⚪ Нейтральная [{pct:+.1f}% от mean]")
 
+    # RSI (+10 aligned extreme / -10 opposite extreme)
+    rsi = indic.get("rsi")
+    if rsi is not None:
+        if sig_up and rsi < 30:
+            score += 10; factors.append(f"RSI ✅ перепродан [{rsi:.0f}] — хороший лонг")
+        elif sig_dn and rsi > 70:
+            score += 10; factors.append(f"RSI ✅ перекуплен [{rsi:.0f}] — хороший шорт")
+        elif sig_up and rsi > 70:
+            score -= 10; factors.append(f"RSI ❌ перекуплен [{rsi:.0f}] — рискованный лонг")
+        elif sig_dn and rsi < 30:
+            score -= 10; factors.append(f"RSI ❌ перепродан [{rsi:.0f}] — рискованный шорт")
+        else:
+            factors.append(f"RSI ⚪ [{rsi:.0f}]")
+
+    # MACD (+10 cross aligned / +5 trend aligned / -5 trend opposite)
+    macd = indic.get("macd", {})
+    if macd:
+        cross = macd.get("cross", "none")
+        trend = macd.get("trend", "")
+        if   cross == "golden" and sig_up: score += 10; factors.append("MACD ✅ золотой крест")
+        elif cross == "death"  and sig_dn: score += 10; factors.append("MACD ✅ мёртвый крест")
+        elif trend == "bull"   and sig_up: score +=  5; factors.append("MACD 🟡 бычий тренд")
+        elif trend == "bear"   and sig_dn: score +=  5; factors.append("MACD 🟡 медвежий тренд")
+        elif trend == "bear"   and sig_up: score -=  5; factors.append("MACD ❌ медвежий при лонге")
+        elif trend == "bull"   and sig_dn: score -=  5; factors.append("MACD ❌ бычий при шорте")
+
+    # Bollinger Bands (+8 at extreme / -8 at wrong extreme)
+    bb = indic.get("bb", {})
+    bb_pos = bb.get("position", "")
+    if bb_pos:
+        if   sig_up and bb_pos == "below_lower": score += 8; factors.append(f"BB ✅ ниже нижней полосы [%B:{bb['pct_b']:.2f}]")
+        elif sig_dn and bb_pos == "above_upper": score += 8; factors.append(f"BB ✅ выше верхней полосы [%B:{bb['pct_b']:.2f}]")
+        elif sig_up and bb_pos == "above_upper": score -= 8; factors.append(f"BB ❌ выше верхней при лонге")
+        elif sig_dn and bb_pos == "below_lower": score -= 8; factors.append(f"BB ❌ ниже нижней при шорте")
+        else: factors.append(f"BB ⚪ {bb.get('icon','⚪')} [%B:{bb.get('pct_b',0.5):.2f}]")
+
     return max(0, min(100, score)), factors
 
 
@@ -699,6 +917,53 @@ def _hl_data(symbol: str) -> dict:
     return out
 
 
+# ─── BINANCE LIQUIDITY ────────────────────────────────────────────────────────
+
+def _binance_book(symbol: str, depth: int = 500) -> dict:
+    """
+    Binance Futures orderbook: find liquidity walls + bid/ask imbalance.
+    Wall threshold: $500K USD at a single price level.
+    """
+    try:
+        r = requests.get(
+            f"{BINANCE_FAPI}/fapi/v1/depth",
+            params={"symbol": symbol, "limit": depth}, timeout=8,
+        )
+        data = r.json()
+        if "bids" not in data:
+            return {}
+
+        bids = [[float(p), float(q)] for p, q in data["bids"]]
+        asks = [[float(p), float(q)] for p, q in data["asks"]]
+
+        WALL_USD = 500_000  # $500K+
+
+        def find_walls(levels):
+            walls = []
+            for price, qty in levels:
+                usd = price * qty
+                if usd >= WALL_USD:
+                    walls.append({"price": price, "usd_m": round(usd / 1e6, 2)})
+            return sorted(walls, key=lambda x: x["usd_m"], reverse=True)[:4]
+
+        bid_walls = find_walls(bids)
+        ask_walls = find_walls(asks)
+        bid_depth = sum(p * q for p, q in bids[:50])
+        ask_depth = sum(p * q for p, q in asks[:50])
+        ratio     = round(bid_depth / ask_depth, 3) if ask_depth > 0 else 1.0
+
+        return {
+            "bid_walls": bid_walls,
+            "ask_walls": ask_walls,
+            "bid_depth": bid_depth,
+            "ask_depth": ask_depth,
+            "ratio":     ratio,
+        }
+    except Exception as e:
+        log.warning(f"Binance book {symbol}: {e}")
+        return {}
+
+
 # ─── COMBINED FETCH (parallel) ────────────────────────────────────────────────
 
 def fetch_market(symbol: str) -> dict:
@@ -706,27 +971,30 @@ def fetch_market(symbol: str) -> dict:
     if not base.endswith("USDT"):
         base += "USDT"
 
-    with ThreadPoolExecutor(max_workers=7) as ex:
+    with ThreadPoolExecutor(max_workers=8) as ex:
         f_bybit = ex.submit(_bybit_data, base)
-        f_k1h   = ex.submit(_klines, base, "60",  250)   # 250 for Turtle Zone
+        f_k1h   = ex.submit(_klines, base, "60",  250)
         f_k4h   = ex.submit(_klines, base, "240", 250)
         f_k1d   = ex.submit(_klines, base, "D",    50)
         f_hl    = ex.submit(_hl_data, base)
+        f_bnb   = ex.submit(_binance_book, base)
         f_macro = ex.submit(get_macro)
 
-    bybit   = f_bybit.result()
-    k1h     = f_k1h.result()
-    k4h     = f_k4h.result()
-    k1d     = f_k1d.result()
-    hl      = f_hl.result()
-    macro   = f_macro.result()
-    session = get_session()
+    bybit    = f_bybit.result()
+    k1h      = f_k1h.result()
+    k4h      = f_k4h.result()
+    k1d      = f_k1d.result()
+    hl       = f_hl.result()
+    liq_bnb  = f_bnb.result()
+    macro    = f_macro.result()
+    session  = get_session()
 
     cvd        = compute_cvd(k1h)
     vp         = compute_volume_profile(k1h)
     ema_biases = get_ema_biases(k1h, k4h, k1d)
     tz_1h      = compute_turtle_zone(k1h)
     tz_4h      = compute_turtle_zone(k4h)
+    indicators = compute_indicators(k1h)
 
     fr_div    = abs(bybit.get("funding", 0) - hl.get("funding", 0)) * 100
     fr_signal = fr_div > 0.005
@@ -743,6 +1011,8 @@ def fetch_market(symbol: str) -> dict:
         "ema_biases":           ema_biases,
         "turtle_1h":            tz_1h,
         "turtle_4h":            tz_4h,
+        "indicators":           indicators,
+        "liquidity":            liq_bnb,
         "macro":                macro,
         "session":              session,
     }
@@ -812,6 +1082,38 @@ def market_summary_text(symbol: str, m: dict) -> str:
             tz_str += (f"\n• Turtle Zone {tf_name}: {tz['icon']} {tz['label']}"
                        f" [{tz['pct_from_mean']:+.1f}% от mean ${tz['mean']:,.0f}]")
 
+    ind = m.get("indicators", {})
+    ind_str = ""
+    if ind:
+        rsi   = ind.get("rsi", 0)
+        macd  = ind.get("macd", {})
+        bb    = ind.get("bb", {})
+        stoch = ind.get("stoch", {})
+        rsi_icon = "🔴" if rsi > 70 else ("🟢" if rsi < 30 else "⚪")
+        macd_icon = "📈" if macd.get("trend") == "bull" else "📉"
+        cross_str = f" [{macd.get('cross','')}]" if macd.get("cross") != "none" else ""
+        ind_str = (
+            f"\n• Индикаторы (1H): RSI14:{rsi_icon}{rsi:.0f}"
+            f" | MACD:{macd_icon}{cross_str}"
+            f" | BB:{bb.get('icon','⚪')}[%B:{bb.get('pct_b',0.5):.2f}]"
+            f" | Stoch:{stoch.get('icon','⚪')}K:{stoch.get('k',50):.0f}"
+        )
+
+    liq = m.get("liquidity", {})
+    liq_str = ""
+    if liq:
+        ratio = liq.get("ratio", 1.0)
+        r_icon = "🟢" if ratio > 1.1 else ("🔴" if ratio < 0.9 else "⚪")
+        bw = liq.get("bid_walls", [])
+        aw = liq.get("ask_walls", [])
+        bw_str = " · ".join(f"${w['price']:,.0f}(${w['usd_m']:.1f}M)" for w in bw[:2]) or "—"
+        aw_str = " · ".join(f"${w['price']:,.0f}(${w['usd_m']:.1f}M)" for w in aw[:2]) or "—"
+        liq_str = (
+            f"\n• Ликвидность Binance: bid/ask {r_icon}{ratio:.2f}"
+            f"\n  Bid стены: 🟢 {bw_str}"
+            f"\n  Ask стены: 🔴 {aw_str}"
+        )
+
     return (
         f"• Цена: ${price:,.2f} ({chg:+.2f}% 24h)\n"
         f"• Funding Bybit (8h): {fr_b:+.4f}% — {fr_tag(fr_b)}\n"
@@ -826,6 +1128,8 @@ def market_summary_text(symbol: str, m: dict) -> str:
         f"{vp_str}"
         f"{mtf_str}"
         f"{tz_str}"
+        f"{ind_str}"
+        f"{liq_str}"
         f"{macro_str}"
         f"{sess_str}"
     )
@@ -1203,10 +1507,14 @@ def _tf_snapshot(candles: list, tf: str) -> dict:
     prices = [c["c"] for c in candles]
     ema20  = _ema(prices, 20)
     bias   = "bull" if prices[-1] > ema20[-1] else "bear"
+    rsi    = compute_rsi(prices) if len(prices) >= 15 else None
+    macd   = compute_macd(prices) if len(prices) >= 35 else {}
     return {
         "tf":       tf,
         "tf_label": TF_LABEL.get(tf, tf),
         "bias":     bias,
+        "rsi":      rsi,
+        "macd":     macd,
         "cvd":      compute_cvd(candles),
         "vp":       compute_volume_profile(candles),
         "turtle":   compute_turtle_zone(candles) if len(candles) >= 200 else {},
@@ -1505,6 +1813,40 @@ def build_signal_message(data: dict, market: dict, llm_text: str, quality: int,
         if tz:
             tz_line += f"\n  TZ {tf_name}: {tz['icon']} {tz['label']} [{tz['pct_from_mean']:+.1f}%]"
 
+    ind = market.get("indicators", {})
+    ind_line = ""
+    if ind:
+        rsi   = ind.get("rsi", 50)
+        macd  = ind.get("macd", {})
+        bb    = ind.get("bb", {})
+        stoch = ind.get("stoch", {})
+        ri = "🔴" if rsi > 70 else ("🟢" if rsi < 30 else "⚪")
+        mi = "📈" if macd.get("trend") == "bull" else "📉"
+        cx = f"[{macd.get('cross')}]" if macd.get("cross") not in ("none", None, "") else ""
+        ind_line = (
+            f"\n━━ Индикаторы (1H) ━\n"
+            f"  RSI14: {ri} {rsi:.0f}"
+            f"  |  MACD: {mi}{cx}\n"
+            f"  BB: {bb.get('icon','⚪')} %B:{bb.get('pct_b',0.5):.2f}"
+            f"  |  Stoch: {stoch.get('icon','⚪')} K:{stoch.get('k',50):.0f} D:{stoch.get('d',50):.0f}"
+        )
+
+    liq = market.get("liquidity", {})
+    liq_line = ""
+    if liq:
+        ratio  = liq.get("ratio", 1.0)
+        r_icon = "🟢" if ratio > 1.1 else ("🔴" if ratio < 0.9 else "⚪")
+        bw     = liq.get("bid_walls", [])[:2]
+        aw     = liq.get("ask_walls", [])[:2]
+        bw_s   = " · ".join(f"${w['price']:,.0f}(${w['usd_m']:.1f}M)" for w in bw) or "нет"
+        aw_s   = " · ".join(f"${w['price']:,.0f}(${w['usd_m']:.1f}M)" for w in aw) or "нет"
+        liq_line = (
+            f"\n━━ Ликвидность (BNB) ━\n"
+            f"  Bid/Ask: {r_icon} {ratio:.2f}\n"
+            f"  🟢 Bid стены: {bw_s}\n"
+            f"  🔴 Ask стены: {aw_s}"
+        )
+
     macro = market.get("macro", {})
     macro_line = ""
     if macro.get("fg_value") is not None:
@@ -1539,6 +1881,8 @@ def build_signal_message(data: dict, market: dict, llm_text: str, quality: int,
         f"{vp_line}"
         f"{mtf_line}"
         f"{tz_line}"
+        f"{ind_line}"
+        f"{liq_line}"
         f"{macro_line}"
         f"{sess_line}\n"
         f"━━ 🧠 Анализ LLM ━━\n"
@@ -1800,6 +2144,7 @@ def cmd_help(chat_id: int):
         "⚙️ <b>Прочее</b>\n"
         "/scan                — ручной запуск автосканера\n"
         "/history             — последние 10 сигналов\n"
+        "/stats               — win-rate по типам сигналов (30д)\n"
         "/digest              — дневной дайджест\n\n"
         "💬 <b>Свободный чат — пиши без команд!</b>\n"
         "<i>анализируй BTC 4H</i>     → полный разбор\n"
@@ -1880,6 +2225,7 @@ def handle_update(update: dict):
     elif cmd == "/alert":              cmd_alert_add(chat_id, args)
     elif cmd == "/alerts":             cmd_alert_list(chat_id)
     elif cmd == "/delalert":           cmd_alert_delete(chat_id, args)
+    elif cmd == "/stats":              cmd_stats(chat_id)
     elif cmd in ("/help", "/start"):   cmd_help(chat_id)
 
 
@@ -2064,6 +2410,113 @@ def check_price_alerts():
             log.info(f"Alert fired: {symbol} {direction} ${target} (now ${price})")
 
 
+# ─── SIGNAL OUTCOME CHECKER ───────────────────────────────────────────────────
+
+def check_signal_outcomes():
+    """Check pending signal outcomes at 1H / 4H / 24H intervals."""
+    pending = db_outcomes_pending()
+    if not pending:
+        return
+
+    now = datetime.now(timezone.utc)
+    updated = 0
+
+    for row in pending:
+        oid, symbol, sig_type, direction, entry_price, entry_ts, \
+            p1h, p4h, p24h, done = row
+
+        try:
+            entry_dt = datetime.strptime(entry_ts, "%Y-%m-%d %H:%M").replace(
+                tzinfo=timezone.utc
+            )
+        except ValueError:
+            continue
+
+        elapsed = (now - entry_dt).total_seconds() / 3600  # hours
+
+        # Fetch current price once
+        try:
+            tk = requests.get(
+                f"{BYBIT}/v5/market/tickers",
+                params={"symbol": symbol, "category": "linear"},
+                timeout=5,
+            ).json()["result"]["list"][0]
+            cur_price = float(tk["lastPrice"])
+        except Exception as e:
+            log.warning(f"Outcome price fetch {symbol}: {e}")
+            continue
+
+        pct = ((cur_price - entry_price) / entry_price * 100) if entry_price else 0
+        if direction == "bear":
+            pct = -pct  # positive = winner for short
+
+        if elapsed >= 1 and p1h is None:
+            db_outcome_update(oid, "price_1h", cur_price, pct)
+            updated += 1
+
+        if elapsed >= 4 and p4h is None:
+            db_outcome_update(oid, "price_4h", cur_price, pct)
+            updated += 1
+
+        if elapsed >= 24 and p24h is None:
+            db_outcome_update(oid, "price_24h", cur_price, pct)
+            updated += 1
+
+    if updated:
+        log.info(f"Signal outcomes updated: {updated} records")
+
+
+def cmd_stats(chat_id: int):
+    """Show win-rate statistics by signal type (last 30 days)."""
+    rows = db_stats(days=30)
+    if not rows:
+        tg_send(
+            "📊 Статистика пока пуста.\n"
+            "Она появится после того, как сигналы отработают 4H.",
+            chat_id=chat_id,
+        )
+        return
+
+    # Aggregate by signal_type
+    from collections import defaultdict
+    stats: dict[str, dict] = defaultdict(lambda: {"wins": 0, "losses": 0, "pcts": []})
+
+    for sig_type, direction, pct_4h in rows:
+        key = sig_type
+        stats[key]["pcts"].append(pct_4h)
+        if pct_4h >= 0:
+            stats[key]["wins"] += 1
+        else:
+            stats[key]["losses"] += 1
+
+    lines = [
+        "📊 <b>Win-rate по сигналам (30 дней, 4H)</b>",
+        "━━━━━━━━━━━━━━━━━━━━",
+    ]
+    total_w = total_l = 0
+    for sig_type, d in sorted(stats.items(), key=lambda x: -(x[1]["wins"] + x[1]["losses"])):
+        w, l  = d["wins"], d["losses"]
+        total = w + l
+        wr    = w / total * 100
+        avg   = sum(d["pcts"]) / len(d["pcts"])
+        icon  = "🟢" if wr >= 55 else ("🟡" if wr >= 45 else "🔴")
+        lines.append(
+            f"{icon} <b>{sig_type}</b>  {wr:.0f}% ({w}W/{l}L)  avg {avg:+.1f}%"
+        )
+        total_w += w
+        total_l += l
+
+    grand_total = total_w + total_l
+    grand_wr    = total_w / grand_total * 100 if grand_total else 0
+    lines += [
+        "━━━━━━━━━━━━━━━━━━━━",
+        f"<b>Всего:</b> {grand_wr:.0f}% ({total_w}W/{total_l}L из {grand_total} сигналов)",
+        f"<i>Период: последние 30 дней · checkpoint: 4H</i>",
+    ]
+
+    tg_send("\n".join(lines), chat_id=chat_id)
+
+
 # ─── DAILY DIGEST ─────────────────────────────────────────────────────────────
 
 def run_daily_digest():
@@ -2075,6 +2528,7 @@ def start_scheduler():
     schedule.every().day.at(DIGEST_TIME).do(run_daily_digest)
     schedule.every(15).minutes.do(run_auto_scan)
     schedule.every(1).minutes.do(check_price_alerts)
+    schedule.every(30).minutes.do(check_signal_outcomes)
     time.sleep(15)          # short delay so Flask is fully up first
     run_auto_scan()         # run once immediately on startup
     while True:
