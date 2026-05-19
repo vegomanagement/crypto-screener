@@ -7,6 +7,7 @@ TradingView Webhooks → CVD + VP + MTF + Macro → Claude LLM → Telegram
 import base64
 import json
 import logging
+import math
 import re
 import sqlite3
 import threading
@@ -351,6 +352,79 @@ def get_ema_biases(k1h: list, k4h: list, k1d: list) -> dict:
     return {"1H": bias(k1h), "4H": bias(k4h), "1D": bias(k1d)}
 
 
+# ─── TURTLE ZONE (Ehlers 2-Pole Log Envelope) ────────────────────────────────
+
+def _ehlers_2pole(values: list, length: int) -> list:
+    """Ehlers 2-pole Super Smoother filter — low-lag low-pass filter."""
+    a1 = math.exp(-math.sqrt(2) * math.pi / length)
+    c2 = 2 * a1 * math.cos(math.sqrt(2) * math.pi / length)
+    c3 = -(a1 ** 2)
+    c1 = 1 - c2 - c3
+    out = [values[0], values[0]]
+    for i in range(2, len(values)):
+        out.append(c1 * (values[i] + values[i - 1]) / 2 + c2 * out[-1] + c3 * out[-2])
+    return out
+
+
+def compute_turtle_zone(candles: list, length: int = 200,
+                         inner_amp: float = 5.6, outer_amp: float = 9.6) -> dict:
+    """
+    Turtle Zone: Ehlers-smoothed log-price envelope.
+    Zones tell whether price is cheap (lower) or expensive (upper) vs history.
+    Needs at least `length` candles; returns {} if insufficient data.
+    """
+    if len(candles) < length:
+        return {}
+
+    # Log-transform source: hlc3
+    log_src = [math.log((c["h"] + c["l"] + c["c"]) / 3) for c in candles]
+
+    # Log true range (percentage-based ATR)
+    log_tr = []
+    for i, c in enumerate(candles):
+        tr = math.log(c["h"]) - math.log(c["l"])
+        if i > 0:
+            pc = candles[i - 1]["c"]
+            tr = max(tr,
+                     abs(math.log(c["h"]) - math.log(pc)),
+                     abs(math.log(c["l"]) - math.log(pc)))
+        log_tr.append(tr)
+
+    mean_log  = _ehlers_2pole(log_src, length)[-1]
+    tr_smooth = _ehlers_2pole(log_tr,  length)[-1]
+
+    price        = candles[-1]["c"]
+    price_mean   = math.exp(mean_log)
+    upper_inner  = math.exp(mean_log + inner_amp * tr_smooth)
+    upper_outer  = math.exp(mean_log + outer_amp * tr_smooth)
+    lower_inner  = math.exp(mean_log - inner_amp * tr_smooth)
+    lower_outer  = math.exp(mean_log - outer_amp * tr_smooth)
+    pct_from_mean = (price / price_mean - 1) * 100
+
+    if price >= upper_outer:
+        zone, icon, label = "extreme_upper", "🚨", "Экстремальная перекупленность"
+    elif price >= upper_inner:
+        zone, icon, label = "upper", "🔴", "Верхняя зона (перекупленность)"
+    elif price <= lower_outer:
+        zone, icon, label = "extreme_lower", "🚨", "Экстремальная перепроданность"
+    elif price <= lower_inner:
+        zone, icon, label = "lower", "🟢", "Нижняя зона (перепроданность)"
+    else:
+        zone, icon, label = "neutral", "⚪", "Нейтральная зона"
+
+    return {
+        "zone":          zone,
+        "icon":          icon,
+        "label":         label,
+        "mean":          round(price_mean, 2),
+        "upper_inner":   round(upper_inner, 2),
+        "upper_outer":   round(upper_outer, 2),
+        "lower_inner":   round(lower_inner, 2),
+        "lower_outer":   round(lower_outer, 2),
+        "pct_from_mean": round(pct_from_mean, 2),
+    }
+
+
 def check_mtf_confluence(biases: dict, direction: str) -> dict:
     want    = "bull" if direction == "long" else "bear"
     aligned = sum(1 for b in biases.values() if b == want)
@@ -428,6 +502,8 @@ def compute_confluence_score(signal_type: str, market: dict, mtf: dict) -> tuple
     macro   = market.get("macro", {})
     session = market.get("session", {})
     price   = market.get("price", 0)
+    tz_1h   = market.get("turtle_1h", {})
+    tz_4h   = market.get("turtle_4h", {})
 
     score, factors = 50, []
 
@@ -516,6 +592,31 @@ def compute_confluence_score(signal_type: str, market: dict, mtf: dict) -> tuple
         score += 5; factors.append(f"OI ✅ {oi_chg:+.2f}% позиции открываются")
     elif (sig_up and oi_chg < -0.5) or (sig_dn and oi_chg > 0.5):
         score -= 5; factors.append(f"OI ❌ {oi_chg:+.2f}% позиции закрываются")
+
+    # Turtle Zone (+15 aligned / +8 extreme / -10 opposite / -15 extreme opposite)
+    for tz, tf_name in [(tz_1h, "1H"), (tz_4h, "4H")]:
+        z = tz.get("zone", "")
+        if not z:
+            continue
+        pct = tz.get("pct_from_mean", 0)
+        if sig_up and z in ("lower", "extreme_lower"):
+            pts = 15 if z == "extreme_lower" else 10
+            score += pts
+            factors.append(f"TZ {tf_name} ✅ {tz['icon']} {tz['label']} [{pct:+.1f}%]")
+        elif sig_dn and z in ("upper", "extreme_upper"):
+            pts = 15 if z == "extreme_upper" else 10
+            score += pts
+            factors.append(f"TZ {tf_name} ✅ {tz['icon']} {tz['label']} [{pct:+.1f}%]")
+        elif sig_up and z in ("upper", "extreme_upper"):
+            pts = -15 if z == "extreme_upper" else -10
+            score += pts
+            factors.append(f"TZ {tf_name} ❌ {tz['icon']} Цена перегрета [{pct:+.1f}%]")
+        elif sig_dn and z in ("lower", "extreme_lower"):
+            pts = -15 if z == "extreme_lower" else -10
+            score += pts
+            factors.append(f"TZ {tf_name} ❌ {tz['icon']} Цена перепродана [{pct:+.1f}%]")
+        else:
+            factors.append(f"TZ {tf_name} ⚪ Нейтральная [{pct:+.1f}% от mean]")
 
     return max(0, min(100, score)), factors
 
@@ -607,8 +708,8 @@ def fetch_market(symbol: str) -> dict:
 
     with ThreadPoolExecutor(max_workers=7) as ex:
         f_bybit = ex.submit(_bybit_data, base)
-        f_k1h   = ex.submit(_klines, base, "60",  100)
-        f_k4h   = ex.submit(_klines, base, "240",  50)
+        f_k1h   = ex.submit(_klines, base, "60",  250)   # 250 for Turtle Zone
+        f_k4h   = ex.submit(_klines, base, "240", 250)
         f_k1d   = ex.submit(_klines, base, "D",    50)
         f_hl    = ex.submit(_hl_data, base)
         f_macro = ex.submit(get_macro)
@@ -624,22 +725,26 @@ def fetch_market(symbol: str) -> dict:
     cvd        = compute_cvd(k1h)
     vp         = compute_volume_profile(k1h)
     ema_biases = get_ema_biases(k1h, k4h, k1d)
+    tz_1h      = compute_turtle_zone(k1h)
+    tz_4h      = compute_turtle_zone(k4h)
 
     fr_div    = abs(bybit.get("funding", 0) - hl.get("funding", 0)) * 100
     fr_signal = fr_div > 0.005
 
     return {
-        "bybit":               bybit,
-        "hl":                  hl,
-        "price":               bybit.get("price") or hl.get("price", 0),
-        "change_24h":          bybit.get("change_24h", 0),
-        "fr_divergence":       fr_div,
+        "bybit":                bybit,
+        "hl":                   hl,
+        "price":                bybit.get("price") or hl.get("price", 0),
+        "change_24h":           bybit.get("change_24h", 0),
+        "fr_divergence":        fr_div,
         "fr_divergence_signal": fr_signal,
-        "cvd":                 cvd,
-        "vp":                  vp,
-        "ema_biases":          ema_biases,
-        "macro":               macro,
-        "session":             session,
+        "cvd":                  cvd,
+        "vp":                   vp,
+        "ema_biases":           ema_biases,
+        "turtle_1h":            tz_1h,
+        "turtle_4h":            tz_4h,
+        "macro":                macro,
+        "session":              session,
     }
 
 
@@ -700,6 +805,13 @@ def market_summary_text(symbol: str, m: dict) -> str:
 
     sess_str = f"\n• Session: {sess.get('icon','')} {sess.get('name','')} [{sess.get('quality','?')}/5]"
 
+    tz_str = ""
+    for tf_key, tf_name in [("turtle_1h", "1H"), ("turtle_4h", "4H")]:
+        tz = m.get(tf_key, {})
+        if tz:
+            tz_str += (f"\n• Turtle Zone {tf_name}: {tz['icon']} {tz['label']}"
+                       f" [{tz['pct_from_mean']:+.1f}% от mean ${tz['mean']:,.0f}]")
+
     return (
         f"• Цена: ${price:,.2f} ({chg:+.2f}% 24h)\n"
         f"• Funding Bybit (8h): {fr_b:+.4f}% — {fr_tag(fr_b)}\n"
@@ -713,6 +825,7 @@ def market_summary_text(symbol: str, m: dict) -> str:
         f"{cvd_str}"
         f"{vp_str}"
         f"{mtf_str}"
+        f"{tz_str}"
         f"{macro_str}"
         f"{sess_str}"
     )
@@ -1045,12 +1158,19 @@ def cmd_analyze_symbol(chat_id: int, symbol: str, tf: str = "60"):
         f"{t}:{'🟢' if b=='bull' else ('🔴' if b=='bear' else '❓')}"
         for t, b in biases.items()
     )
+    tz_parts = []
+    for tz_key, tf_name in [("turtle_1h", "1H"), ("turtle_4h", "4H")]:
+        tz = market.get(tz_key, {})
+        if tz:
+            tz_parts.append(f"{tf_name}:{tz['icon']}[{tz['pct_from_mean']:+.1f}%]")
+    tz_str = "  TZ: " + " | ".join(tz_parts) + "\n" if tz_parts else ""
 
     tg_send(
         f"🎯 <b>Анализ {sym_short}/USDT.P</b> [{tf_label}]\n"
         f"━━━━━━━━━━━━━━━━━━\n"
         f"💰 ${price:,.2f}  ({market.get('change_24h',0):+.2f}% 24h)\n"
         f"📊 MTF: {mtf_str}\n"
+        f"{tz_str}"
         f"CVD: {cvd_icon}  |  FR: {fr_b:+.4f}%  |  OI: {oi_chg:+.2f}%\n"
         f"━━━━━━━━━━━━━━━━━━\n"
         f"{analysis}\n"
@@ -1165,6 +1285,12 @@ def build_signal_message(data: dict, market: dict, llm_text: str, quality: int,
         parts = [f"{tf}:{'🟢' if b=='bull' else ('🔴' if b=='bear' else '❓')}" for tf, b in biases.items()]
         mtf_line = "\n  MTF: " + " ".join(parts)
 
+    tz_line = ""
+    for tz_key, tf_name in [("turtle_1h", "1H"), ("turtle_4h", "4H")]:
+        tz = market.get(tz_key, {})
+        if tz:
+            tz_line += f"\n  TZ {tf_name}: {tz['icon']} {tz['label']} [{tz['pct_from_mean']:+.1f}%]"
+
     macro = market.get("macro", {})
     macro_line = ""
     if macro.get("fg_value") is not None:
@@ -1198,6 +1324,7 @@ def build_signal_message(data: dict, market: dict, llm_text: str, quality: int,
         f"{cvd_line}"
         f"{vp_line}"
         f"{mtf_line}"
+        f"{tz_line}"
         f"{macro_line}"
         f"{sess_line}\n"
         f"━━ 🧠 Анализ LLM ━━\n"
