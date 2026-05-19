@@ -18,11 +18,24 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone, timedelta
 from flask import Flask, request, jsonify
 
-from config import (
-    TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, ANTHROPIC_API_KEY,
-    LLM_MODEL_FAST, LLM_MODEL_SMART,
-    PORT, SYMBOLS, DIGEST_TIME, DB_PATH, MIN_QUALITY,
-)
+try:
+    from config import (
+        TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, ANTHROPIC_API_KEY,
+        LLM_MODEL_FAST, LLM_MODEL_SMART,
+        PORT, SYMBOLS, DIGEST_TIME, DB_PATH, MIN_QUALITY,
+    )
+except ImportError:
+    import os as _os
+    TELEGRAM_TOKEN    = _os.environ.get("TELEGRAM_TOKEN",   "YOUR_BOT_TOKEN")
+    TELEGRAM_CHAT_ID  = _os.environ.get("TELEGRAM_CHAT_ID", "YOUR_CHAT_ID")
+    ANTHROPIC_API_KEY = _os.environ.get("ANTHROPIC_API_KEY", "YOUR_ANTHROPIC_KEY")
+    LLM_MODEL_FAST    = _os.environ.get("LLM_MODEL_FAST",  "claude-haiku-4-5-20251001")
+    LLM_MODEL_SMART   = _os.environ.get("LLM_MODEL_SMART", "claude-sonnet-4-6")
+    PORT              = int(_os.environ.get("PORT", 5001))
+    SYMBOLS           = [s.strip() for s in _os.environ.get("SYMBOLS", "BTCUSDT,ETHUSDT").split(",")]
+    DIGEST_TIME       = _os.environ.get("DIGEST_TIME", "08:00")
+    DB_PATH           = _os.environ.get("DB_PATH", "signals.db")
+    MIN_QUALITY       = int(_os.environ.get("MIN_QUALITY", 0))
 
 # ─── LOGGING ──────────────────────────────────────────────────────────────────
 logging.basicConfig(
