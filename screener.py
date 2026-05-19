@@ -864,6 +864,61 @@ SYSTEM_CHART = """\
 Максимум 6–8 предложений. Без воды, без приветствий."""
 
 
+# ─── TICKER HELPERS ───────────────────────────────────────────────────────────
+
+# Step 1: catch explicit pair formats — BTCUSDT, ETH/USDT, SOLUSDT.P, BTC-USDT
+_PAIR_RE = re.compile(r'\b([A-Z0-9]{2,12})[-/]?USDT(?:\.P)?\b', re.IGNORECASE)
+
+# Step 2: fallback — known standalone coin names (expanded list)
+_COIN_RE = re.compile(
+    r'\b(BTC|ETH|SOL|BNB|XRP|ADA|AVAX|DOT|MATIC|LINK|DOGE|LTC|UNI|ATOM|'
+    r'NEAR|FTM|ARB|OP|APT|SUI|SEI|TIA|INJ|PEPE|WIF|TON|HBAR|RENDER|BONK|'
+    r'FLOKI|TRUMP|EIGEN|GOAT|PNUT|MEME|TURBO|ACT|NEIRO|POPCAT|DOGS|CATI|'
+    r'DRIFT|ZETA|MEW|MOG|BOME|NOT|SAGA|AEVO|BLUR|GMX|DYDX|SNX|CRV|AAVE|'
+    r'COMP|MKR|LDO|RPL|FXS|CVX|BAL|YFI|SUSHI|UNI|1INCH|ENS|IMX|GODS|'
+    r'SAND|MANA|AXS|GALA|ILV|ALICE|FLOW|CHZ|ENJ|AUDIO|ROSE|KAVA|BAND|'
+    r'ZRX|STORJ|ANKR|CELR|SKL|NKN|CTSI|LRC|OMG|REN|KNC|OCEAN|FET|AGIX|'
+    r'RNDR|GRT|API3|MASK|BADGER|ALPHA|PERP|DODO|MDX|RAY|SRM|MNGO|STEP)\b',
+    re.IGNORECASE,
+)
+
+_TF_RE  = re.compile(r'\b(1m|3m|5m|15m|30m|1h|2h|4h|1d|1w)\b', re.IGNORECASE)
+_TF_MAP = {
+    "1m": "1", "3m": "3", "5m": "5", "15m": "15", "30m": "30",
+    "1h": "60", "2h": "120", "4h": "240", "1d": "D", "1w": "W",
+}
+
+
+def _normalize_symbol(raw: str) -> str:
+    """Convert any ticker format to XXXUSDT for Bybit API."""
+    s = raw.upper().strip()
+    s = s.replace(".P", "").replace("/", "").replace("-", "")
+    if s.endswith("PERP"):
+        s = s[:-4]
+    if s.endswith("USDT"):
+        return s
+    if s.endswith("USD"):       # BTCUSD → BTCUSDT
+        return s[:-3] + "USDT"
+    return s + "USDT"
+
+
+def _extract_ticker(text: str) -> str | None:
+    """
+    Extract first ticker from any text format.
+    Handles: BTCUSDT · ETHUSDT.P · BTC/USDT · ETH-USDT.P · standalone BTC
+    Returns normalized 'BTCUSDT' or None.
+    """
+    # Priority 1: explicit pair (BTCUSDT, ETH/USDT.P, SOL-USDT …)
+    m = _PAIR_RE.search(text)
+    if m:
+        return _normalize_symbol(m.group(0))
+    # Priority 2: known standalone coin name
+    m = _COIN_RE.search(text)
+    if m:
+        return _normalize_symbol(m.group(1))
+    return None
+
+
 # ─── FREE-FORM CHAT ───────────────────────────────────────────────────────────
 
 _ANALYSIS_KW = {
@@ -871,41 +926,26 @@ _ANALYSIS_KW = {
     "посмотри", "покажи", "check", "смотри", "входить", "шортить",
     "лонговать", "покупать", "продавать", "что думаешь", "что скажешь",
 }
-_TICKER_RE = re.compile(
-    r'\b(BTC|ETH|SOL|BNB|XRP|ADA|AVAX|DOT|MATIC|LINK|DOGE|LTC|UNI|ATOM|'
-    r'NEAR|FTM|ARB|OP|APT|SUI|SEI|TIA|INJ|PEPE|WIF|TON|HBAR|TRUMP|RENDER)\b',
-    re.IGNORECASE,
-)
-_TF_RE  = re.compile(r'\b(1m|3m|5m|15m|30m|1h|2h|4h|1d|1w)\b', re.IGNORECASE)
-_TF_MAP = {
-    "1m":"1","3m":"3","5m":"5","15m":"15","30m":"30",
-    "1h":"60","2h":"120","4h":"240","1d":"D","1w":"W",
-}
 
 
 def cmd_chat(chat_id: int, text: str):
     """Handle any free-form message: detect intent and route accordingly."""
     text_low = text.lower()
 
-    tickers = [t.upper() for t in _TICKER_RE.findall(text)]
-    ticker  = tickers[0] if tickers else None
-
+    ticker     = _extract_ticker(text)
     tf_matches = _TF_RE.findall(text_low)
-    tf = _TF_MAP.get(tf_matches[0].lower(), "60") if tf_matches else "60"
-
+    tf         = _TF_MAP.get(tf_matches[0].lower(), "60") if tf_matches else "60"
     has_intent = any(kw in text_low for kw in _ANALYSIS_KW)
 
     if has_intent and ticker:
-        symbol = ticker if ticker.endswith("USDT") else ticker + "USDT"
-        cmd_analyze_symbol(chat_id, symbol, tf)
+        cmd_analyze_symbol(chat_id, ticker, tf)
         return
 
-    # Regular chat: provide market context for mentioned ticker
+    # Regular chat — provide market context for detected ticker
     tg_send("💬 Думаю...", chat_id=chat_id)
-    sym = (ticker + "USDT" if ticker and not ticker.endswith("USDT")
-           else (ticker or SYMBOLS[0]))
-    m   = fetch_market(sym)
-    ctx = f"{sym}:\n{market_summary_text(sym, m)}"
+    sym    = ticker or SYMBOLS[0]
+    m      = fetch_market(sym)
+    ctx    = f"{sym}:\n{market_summary_text(sym, m)}"
     answer = llm_ask(text, ctx, db_last_n(8))
     tg_send(f"🧠 {answer}", chat_id=chat_id)
 
@@ -1078,19 +1118,22 @@ R:R ratio:     1 : X.X
 
 
 def _parse_symbol_tf(args: str) -> tuple:
-    """Parse 'BTC', 'SOL 4H', 'ETHUSDT 1H' → ('BTCUSDT', '60')"""
+    """
+    Parse any ticker/TF combination → ('BTCUSDT', '60').
+    Handles: BTC · SOL 4H · ETHUSDT.P · ETH/USDT 1H · SOLUSDT.P 4h
+    """
     tf_map = {
         "1M": "1", "3M": "3", "5M": "5", "15M": "15", "30M": "30",
         "1H": "60", "2H": "120", "4H": "240", "1D": "D", "1W": "W",
     }
-    symbol, tf = "", "60"
-    for p in args.strip().upper().split():
+    # Detect TF first (from words like "4H", "1D" etc.)
+    tf = "60"
+    for p in args.upper().split():
         if p in tf_map:
             tf = tf_map[p]
-        elif p.endswith("USDT"):
-            symbol = p
-        elif re.match(r'^[A-Z]{2,10}$', p):
-            symbol = p + "USDT"
+
+    # Detect symbol using the universal extractor
+    symbol = _extract_ticker(args)
     if not symbol:
         symbol = SYMBOLS[0] if SYMBOLS else "BTCUSDT"
     return symbol, tf
@@ -1473,23 +1516,31 @@ def cmd_alert_add(chat_id: int, args: str):
     /alert ETH < 3200      → below
     /alert SOL > 200       → above
     """
-    m = re.match(
-        r'^([A-Z]{2,10}(?:USDT)?)\s*([<>])?\s*([\d,\.]+)$',
-        args.strip().upper(),
-    )
+    # Parse: [TICKER] [</>/nothing] [PRICE]
+    # e.g. "BTC 105000", "ETHUSDT.P < 3200", "SOL > 200"
+    m = re.search(r'([<>])\s*([\d,\.]+)|([\d,\.]+)', args)
     if not m:
         tg_send(
             "❓ Формат:\n"
-            "/alert BTC 105000   — уведомит когда BTC достигнет $105,000\n"
-            "/alert ETH &lt; 3200   — когда ETH упадёт ниже $3,200\n"
-            "/alert SOL &gt; 200    — когда SOL поднимется выше $200",
+            "/alert BTC 105000      — уведомит при $105,000\n"
+            "/alert ETH &lt; 3200      — когда ETH упадёт ниже\n"
+            "/alert SOLUSDT &gt; 200   — когда SOL поднимется выше",
             chat_id=chat_id,
         )
         return
 
-    sym, op, price_str = m.group(1), m.group(2), m.group(3)
-    symbol = sym if sym.endswith("USDT") else sym + "USDT"
-    target = float(price_str.replace(",", ""))
+    ticker = _extract_ticker(args)
+    if not ticker:
+        tg_send("❓ Не могу распознать тикер. Пример: /alert BTC 105000", chat_id=chat_id)
+        return
+    symbol = ticker
+
+    op        = m.group(1) or ""
+    price_str = (m.group(2) or m.group(3) or "0").replace(",", "")
+    if not price_str or float(price_str) == 0:
+        tg_send("❓ Укажи цену. Пример: /alert BTC 105000", chat_id=chat_id)
+        return
+    target = float(price_str)
 
     # Get current price to auto-detect direction when operator omitted
     try:
@@ -1598,12 +1649,10 @@ def cmd_analyze_chart(chat_id: int, photos: list, caption: str):
         tg_send("❌ Не удалось загрузить фото. Попробуй ещё раз.", chat_id=chat_id)
         return
 
-    # Guess symbol from caption (e.g. "BTC", "ETH", "btcusdt")
-    cap_upper = caption.upper()
-    symbol = next(
-        (s for s in SYMBOLS if s.replace("USDT","") in cap_upper or s in cap_upper),
-        SYMBOLS[0],
-    )
+    # Detect symbol from caption using universal extractor
+    symbol = _extract_ticker(caption) if caption else None
+    if not symbol:
+        symbol = SYMBOLS[0]
 
     market = fetch_market(symbol)
     result = llm_analyze_chart(img_b64, media_type, caption, market, symbol)
@@ -1683,9 +1732,9 @@ def telegram_polling():
 
 # ─── AUTO SCANNER ─────────────────────────────────────────────────────────────
 
-SCAN_COOLDOWN_MIN = 60          # minutes between same signal on same symbol+tf
-SCAN_INTERVALS    = ["15", "60", "240"]
-SCAN_MIN_CONF     = 40          # skip signals below this confluence score
+SCAN_COOLDOWN_MIN = 60                        # minutes between same signal on same symbol+tf
+SCAN_INTERVALS    = ["5", "15", "60", "240", "D"]   # M5 · M15 · 1H · 4H · D1
+SCAN_MIN_CONF     = 40                        # skip signals below this confluence score
 
 _scan_cooldown: dict = {}
 _scan_lock = threading.Lock()
@@ -1742,7 +1791,7 @@ def run_auto_scan():
         market = None   # lazy-fetch once per symbol
 
         for interval in SCAN_INTERVALS:
-            candles = _klines(base, interval, 60)
+            candles = _klines(base, interval, 250)
             if not candles:
                 continue
 
