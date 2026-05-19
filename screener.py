@@ -102,6 +102,17 @@ def db_init():
                 quality     INTEGER DEFAULT 0
             )
         """)
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS price_alerts (
+                id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                chat_id      TEXT    NOT NULL,
+                symbol       TEXT    NOT NULL,
+                direction    TEXT    NOT NULL,
+                target_price REAL    NOT NULL,
+                created_at   TEXT    NOT NULL,
+                triggered    INTEGER DEFAULT 0
+            )
+        """)
         c.commit()
     log.info("DB инициализирована")
 
@@ -142,6 +153,53 @@ def db_last_n(n=10):
             " ORDER BY ts DESC LIMIT ?", (n,)
         ).fetchall()
     return rows
+
+
+# ─── PRICE ALERTS DB ──────────────────────────────────────────────────────────
+
+def db_alert_add(chat_id: str, symbol: str, direction: str, price: float) -> int:
+    ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M")
+    with _db_lock, db_conn() as c:
+        cur = c.execute(
+            "INSERT INTO price_alerts(chat_id,symbol,direction,target_price,created_at)"
+            " VALUES(?,?,?,?,?)",
+            (str(chat_id), symbol, direction, price, ts),
+        )
+        c.commit()
+        return cur.lastrowid
+
+
+def db_alert_list(chat_id: str) -> list:
+    with _db_lock, db_conn() as c:
+        return c.execute(
+            "SELECT id,symbol,direction,target_price,created_at FROM price_alerts"
+            " WHERE chat_id=? AND triggered=0 ORDER BY id",
+            (str(chat_id),),
+        ).fetchall()
+
+
+def db_alert_delete(alert_id: int, chat_id: str) -> bool:
+    with _db_lock, db_conn() as c:
+        cur = c.execute(
+            "DELETE FROM price_alerts WHERE id=? AND chat_id=?",
+            (alert_id, str(chat_id)),
+        )
+        c.commit()
+        return cur.rowcount > 0
+
+
+def db_alert_trigger(alert_id: int):
+    with _db_lock, db_conn() as c:
+        c.execute("UPDATE price_alerts SET triggered=1 WHERE id=?", (alert_id,))
+        c.commit()
+
+
+def db_alerts_active() -> list:
+    with _db_lock, db_conn() as c:
+        return c.execute(
+            "SELECT id,chat_id,symbol,direction,target_price FROM price_alerts"
+            " WHERE triggered=0"
+        ).fetchall()
 
 # ─── MARKET DATA — BYBIT ─────────────────────────────────────────────────────
 
@@ -693,6 +751,52 @@ SYSTEM_CHART = """\
 Максимум 6–8 предложений. Без воды, без приветствий."""
 
 
+# ─── FREE-FORM CHAT ───────────────────────────────────────────────────────────
+
+_ANALYSIS_KW = {
+    "анализируй", "analyze", "analyse", "разбери", "разбор", "анализ",
+    "посмотри", "покажи", "check", "смотри", "входить", "шортить",
+    "лонговать", "покупать", "продавать", "что думаешь", "что скажешь",
+}
+_TICKER_RE = re.compile(
+    r'\b(BTC|ETH|SOL|BNB|XRP|ADA|AVAX|DOT|MATIC|LINK|DOGE|LTC|UNI|ATOM|'
+    r'NEAR|FTM|ARB|OP|APT|SUI|SEI|TIA|INJ|PEPE|WIF|TON|HBAR|TRUMP|RENDER)\b',
+    re.IGNORECASE,
+)
+_TF_RE  = re.compile(r'\b(1m|3m|5m|15m|30m|1h|2h|4h|1d|1w)\b', re.IGNORECASE)
+_TF_MAP = {
+    "1m":"1","3m":"3","5m":"5","15m":"15","30m":"30",
+    "1h":"60","2h":"120","4h":"240","1d":"D","1w":"W",
+}
+
+
+def cmd_chat(chat_id: int, text: str):
+    """Handle any free-form message: detect intent and route accordingly."""
+    text_low = text.lower()
+
+    tickers = [t.upper() for t in _TICKER_RE.findall(text)]
+    ticker  = tickers[0] if tickers else None
+
+    tf_matches = _TF_RE.findall(text_low)
+    tf = _TF_MAP.get(tf_matches[0].lower(), "60") if tf_matches else "60"
+
+    has_intent = any(kw in text_low for kw in _ANALYSIS_KW)
+
+    if has_intent and ticker:
+        symbol = ticker if ticker.endswith("USDT") else ticker + "USDT"
+        cmd_analyze_symbol(chat_id, symbol, tf)
+        return
+
+    # Regular chat: provide market context for mentioned ticker
+    tg_send("💬 Думаю...", chat_id=chat_id)
+    sym = (ticker + "USDT" if ticker and not ticker.endswith("USDT")
+           else (ticker or SYMBOLS[0]))
+    m   = fetch_market(sym)
+    ctx = f"{sym}:\n{market_summary_text(sym, m)}"
+    answer = llm_ask(text, ctx, db_last_n(8))
+    tg_send(f"🧠 {answer}", chat_id=chat_id)
+
+
 def _tg_download_photo(file_id: str) -> tuple:
     """Download Telegram photo, return (base64_str, media_type)."""
     try:
@@ -829,6 +933,131 @@ def llm_ask(question: str, market_ctx: str, recent: list, model=LLM_MODEL_SMART)
         return resp.content[0].text.strip()
     except Exception as e:
         return f"⚠️ Ошибка: {e}"
+
+
+SYSTEM_ANALYZE = """\
+Ты — профессиональный крипто-аналитик уровня prop firm (SMC, ICT, Wyckoff, Order Flow, CVD).
+Дай полный технический анализ и конкретную торговую идею на основе реальных данных рынка.
+
+Строгий формат ответа (только русский язык):
+
+📊 АНАЛИЗ:
+[2-3 предложения: структура рынка, тренд, ключевые уровни]
+
+⚡ КЛЮЧЕВЫЕ ФАКТОРЫ:
+• [фактор из CVD / VP / MTF / Funding / OI / Book]
+• [ещё фактор]
+• [ещё фактор]
+• [ещё фактор]
+
+📍 ТОРГОВАЯ ИДЕЯ: [LONG / SHORT / НЕЙТРАЛЬНО — ЖДЁМ]
+Зона входа:    $X,XXX – $X,XXX
+Стоп-лосс:     $X,XXX  (-X.X%)
+Тейк-профит 1: $X,XXX  (+X.X%)
+Тейк-профит 2: $X,XXX  (+X.X%)
+R:R ratio:     1 : X.X
+Уверенность:   X/10
+
+⚠️ ГЛАВНЫЙ РИСК:
+[одно конкретное предложение]
+
+Используй точные цифры из предоставленных данных рынка. Никакой воды."""
+
+
+def _parse_symbol_tf(args: str) -> tuple:
+    """Parse 'BTC', 'SOL 4H', 'ETHUSDT 1H' → ('BTCUSDT', '60')"""
+    tf_map = {
+        "1M": "1", "3M": "3", "5M": "5", "15M": "15", "30M": "30",
+        "1H": "60", "2H": "120", "4H": "240", "1D": "D", "1W": "W",
+    }
+    symbol, tf = "", "60"
+    for p in args.strip().upper().split():
+        if p in tf_map:
+            tf = tf_map[p]
+        elif p.endswith("USDT"):
+            symbol = p
+        elif re.match(r'^[A-Z]{2,10}$', p):
+            symbol = p + "USDT"
+    if not symbol:
+        symbol = SYMBOLS[0] if SYMBOLS else "BTCUSDT"
+    return symbol, tf
+
+
+def llm_full_analysis(market: dict, symbol: str, tf: str = "60") -> str:
+    tf_label   = TF_LABEL.get(tf, tf)
+    mkt_text   = market_summary_text(symbol, market)
+    biases     = market.get("ema_biases", {})
+    cvd        = market.get("cvd", {})
+
+    # Derive likely direction from available signals for confluence
+    bull_pts = sum([
+        cvd.get("trend") == "up",
+        biases.get("4H") == "bull",
+        biases.get("1D") == "bull",
+    ])
+    direction = "long" if bull_pts >= 2 else "short"
+    mtf_check = check_mtf_confluence(biases, direction)
+    sig_key   = "BOS_BULL" if direction == "long" else "BOS_BEAR"
+    conf_score, conf_factors = compute_confluence_score(sig_key, market, mtf_check)
+
+    conf_text = (
+        f"\nConfluence Score: {conf_score}/100\n"
+        + "\n".join(f"  {f}" for f in conf_factors)
+    )
+    prompt = (
+        f"Пара: {symbol.replace('USDT','')}/USDT.P | Таймфрейм: {tf_label}\n\n"
+        f"Данные рынка:\n{mkt_text}\n"
+        f"{conf_text}\n\n"
+        "Проведи полный анализ и дай торговую идею."
+    )
+    try:
+        resp = ai.messages.create(
+            model=LLM_MODEL_SMART, max_tokens=750, system=SYSTEM_ANALYZE,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return resp.content[0].text.strip()
+    except Exception as e:
+        log.error(f"LLM full analysis: {e}")
+        return f"⚠️ Ошибка анализа: {e}"
+
+
+def cmd_analyze_symbol(chat_id: int, symbol: str, tf: str = "60"):
+    sym_short = symbol.replace("USDT", "")
+    tf_label  = TF_LABEL.get(tf, tf)
+    tg_send(f"🔍 Анализирую {sym_short}/USDT.P [{tf_label}]...", chat_id=chat_id)
+    try:
+        market = fetch_market(symbol)
+    except Exception as e:
+        tg_send(f"❌ Не могу получить данные по {sym_short}: {e}", chat_id=chat_id)
+        return
+
+    analysis = llm_full_analysis(market, symbol, tf)
+    price    = market.get("price", 0)
+    b        = market.get("bybit", {})
+    hl       = market.get("hl", {})
+    fr_b     = b.get("funding", 0) * 100
+    oi_chg   = b.get("oi_chg", 0)
+    cvd      = market.get("cvd", {})
+    biases   = market.get("ema_biases", {})
+
+    cvd_icon = "📈" if cvd.get("trend") == "up" else ("📉" if cvd.get("trend") == "down" else "➡️")
+    mtf_str  = " | ".join(
+        f"{t}:{'🟢' if b=='bull' else ('🔴' if b=='bear' else '❓')}"
+        for t, b in biases.items()
+    )
+
+    tg_send(
+        f"🎯 <b>Анализ {sym_short}/USDT.P</b> [{tf_label}]\n"
+        f"━━━━━━━━━━━━━━━━━━\n"
+        f"💰 ${price:,.2f}  ({market.get('change_24h',0):+.2f}% 24h)\n"
+        f"📊 MTF: {mtf_str}\n"
+        f"CVD: {cvd_icon}  |  FR: {fr_b:+.4f}%  |  OI: {oi_chg:+.2f}%\n"
+        f"━━━━━━━━━━━━━━━━━━\n"
+        f"{analysis}\n"
+        f"━━━━━━━━━━━━━━━━━━\n"
+        f"<i>Bybit + HL · {datetime.now(timezone.utc).strftime('%H:%M UTC')}</i>",
+        chat_id=chat_id,
+    )
 
 
 def llm_digest(signals: list, market_ctx: str) -> str:
@@ -1096,6 +1325,109 @@ def cmd_digest(chat_id: int):
     )
 
 
+def cmd_analyze(chat_id: int, args: str):
+    if not args:
+        tg_send(
+            "❓ Примеры:\n"
+            "/analyze BTC\n"
+            "/analyze SOL 4H\n"
+            "/analyze ETH 1H\n\n"
+            "Или просто напиши: <i>анализируй BTC 4H</i>",
+            chat_id=chat_id,
+        )
+        return
+    symbol, tf = _parse_symbol_tf(args)
+    cmd_analyze_symbol(chat_id, symbol, tf)
+
+
+def cmd_alert_add(chat_id: int, args: str):
+    """
+    /alert BTC 105000      → above (auto-detect direction)
+    /alert ETH < 3200      → below
+    /alert SOL > 200       → above
+    """
+    m = re.match(
+        r'^([A-Z]{2,10}(?:USDT)?)\s*([<>])?\s*([\d,\.]+)$',
+        args.strip().upper(),
+    )
+    if not m:
+        tg_send(
+            "❓ Формат:\n"
+            "/alert BTC 105000   — уведомит когда BTC достигнет $105,000\n"
+            "/alert ETH &lt; 3200   — когда ETH упадёт ниже $3,200\n"
+            "/alert SOL &gt; 200    — когда SOL поднимется выше $200",
+            chat_id=chat_id,
+        )
+        return
+
+    sym, op, price_str = m.group(1), m.group(2), m.group(3)
+    symbol = sym if sym.endswith("USDT") else sym + "USDT"
+    target = float(price_str.replace(",", ""))
+
+    # Get current price to auto-detect direction when operator omitted
+    try:
+        tk = requests.get(
+            f"{BYBIT}/v5/market/tickers",
+            params={"symbol": symbol, "category": "linear"}, timeout=5,
+        ).json()["result"]["list"][0]
+        current = float(tk["lastPrice"])
+    except Exception:
+        current = 0.0
+
+    if op == "<":
+        direction = "below"
+    elif op == ">":
+        direction = "above"
+    else:
+        direction = "above" if target > current else "below"
+
+    alert_id  = db_alert_add(chat_id, symbol, direction, target)
+    sym_short = symbol.replace("USDT", "")
+    arrow     = "📈" if direction == "above" else "📉"
+    cur_str   = f"\nТекущая цена: ${current:,.2f}" if current else ""
+    tg_send(
+        f"✅ <b>Алерт #{alert_id} создан</b>\n"
+        f"{arrow} {sym_short}/USDT.P "
+        f"{'выше' if direction == 'above' else 'ниже'} <b>${target:,.0f}</b>"
+        f"{cur_str}",
+        chat_id=chat_id,
+    )
+
+
+def cmd_alert_list(chat_id: int):
+    alerts = db_alert_list(str(chat_id))
+    if not alerts:
+        tg_send("📭 Активных алертов нет.\n\nСоздать: /alert BTC 105000", chat_id=chat_id)
+        return
+    lines = []
+    for aid, sym, direction, target, ts in alerts:
+        arrow = "📈" if direction == "above" else "📉"
+        sym_s = sym.replace("USDT", "")
+        lines.append(
+            f"#{aid}  {arrow} {sym_s} "
+            f"{'>' if direction=='above' else '<'} ${target:,.0f}"
+            f"  <i>{ts}</i>"
+        )
+    tg_send(
+        f"🔔 <b>Активные алерты ({len(alerts)}):</b>\n"
+        + "\n".join(lines)
+        + "\n\nУдалить: /delalert [ID]",
+        chat_id=chat_id,
+    )
+
+
+def cmd_alert_delete(chat_id: int, args: str):
+    try:
+        alert_id = int(args.strip())
+    except ValueError:
+        tg_send("❓ Пример: /delalert 3", chat_id=chat_id)
+        return
+    if db_alert_delete(alert_id, str(chat_id)):
+        tg_send(f"🗑 Алерт #{alert_id} удалён.", chat_id=chat_id)
+    else:
+        tg_send(f"❌ Алерт #{alert_id} не найден.", chat_id=chat_id)
+
+
 def cmd_scan(chat_id: int):
     tg_send("🔍 Запускаю ручное сканирование...", chat_id=chat_id)
     threading.Thread(target=run_auto_scan, daemon=True).start()
@@ -1103,17 +1435,27 @@ def cmd_scan(chat_id: int):
 
 def cmd_help(chat_id: int):
     tg_send(
-        "🤖 <b>Crypto Screener Pro — команды</b>\n"
-        "━━━━━━━━━━━━━━━━━\n"
-        "/status   — рынок: цена, CVD, VP, MTF, F&G, сессия\n"
-        "/history  — последние 10 сигналов из БД\n"
-        "/digest   — дневной дайджест с LLM анализом\n"
-        "/scan     — ручной запуск автосканера прямо сейчас\n"
-        "/ask [вопрос] — задай вопрос о рынке\n\n"
-        "📸 <b>Анализ графика:</b> просто пришли скриншот!\n"
-        "Можно добавить подпись: <i>BTC 4H — думаю шорт отсюда</i>\n"
-        "LLM сравнит твой взгляд с реальными данными рынка.\n\n"
-        "<i>Пример: /ask стоит ли сейчас шортить ETH?</i>",
+        "🤖 <b>Crypto Screener Pro v3 — команды</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "📊 <b>Анализ</b>\n"
+        "/analyze BTC         — полный анализ + торговая идея\n"
+        "/analyze SOL 4H      — анализ на конкретном ТФ\n"
+        "/status              — рынок: CVD, VP, MTF, F&G\n"
+        "/ask [вопрос]        — вопрос о рынке\n\n"
+        "🔔 <b>Price Alerts</b>\n"
+        "/alert BTC 105000    — уведомить при $105K\n"
+        "/alert ETH &lt; 3200    — уведомить при падении\n"
+        "/alerts              — список активных алертов\n"
+        "/delalert 3          — удалить алерт #3\n\n"
+        "⚙️ <b>Прочее</b>\n"
+        "/scan                — ручной запуск автосканера\n"
+        "/history             — последние 10 сигналов\n"
+        "/digest              — дневной дайджест\n\n"
+        "💬 <b>Свободный чат — пиши без команд!</b>\n"
+        "<i>анализируй BTC 4H</i>     → полный разбор\n"
+        "<i>что думаешь об ETH?</i>   → LLM ответит с данными\n\n"
+        "📸 <b>Фото графика:</b> пришли скриншот + подпись\n"
+        "<i>BTC 4H — думаю шорт отсюда</i>",
         chat_id=chat_id,
     )
 
@@ -1166,7 +1508,13 @@ def handle_update(update: dict):
 
     # ── Text commands ──────────────────────────────────────────────────────────
     text = (msg.get("text") or "").strip()
-    if not text or not text.startswith("/"):
+    if not text:
+        return
+
+    # Free-form message (not a command) → chat handler
+    if not text.startswith("/"):
+        log.info(f"← Сообщение от {chat_id}: {text[:80]!r}")
+        threading.Thread(target=cmd_chat, args=(chat_id, text), daemon=True).start()
         return
 
     parts = text.split(None, 1)
@@ -1178,8 +1526,12 @@ def handle_update(update: dict):
     if cmd == "/status":               cmd_status(chat_id)
     elif cmd == "/history":            cmd_history(chat_id)
     elif cmd == "/ask":                cmd_ask(chat_id, args)
+    elif cmd == "/analyze":            cmd_analyze(chat_id, args)
     elif cmd == "/digest":             cmd_digest(chat_id)
     elif cmd == "/scan":               cmd_scan(chat_id)
+    elif cmd == "/alert":              cmd_alert_add(chat_id, args)
+    elif cmd == "/alerts":             cmd_alert_list(chat_id)
+    elif cmd == "/delalert":           cmd_alert_delete(chat_id, args)
     elif cmd in ("/help", "/start"):   cmd_help(chat_id)
 
 
@@ -1323,6 +1675,47 @@ def run_auto_scan():
     log.info("🔍 Автосканер: завершено")
 
 
+# ─── PRICE ALERT CHECKER ──────────────────────────────────────────────────────
+
+def check_price_alerts():
+    alerts = db_alerts_active()
+    if not alerts:
+        return
+
+    # Fetch prices for all unique symbols in one pass
+    symbols = list({row[2] for row in alerts})
+    prices: dict = {}
+    for sym in symbols:
+        try:
+            tk = requests.get(
+                f"{BYBIT}/v5/market/tickers",
+                params={"symbol": sym, "category": "linear"}, timeout=5,
+            ).json()["result"]["list"][0]
+            prices[sym] = float(tk["lastPrice"])
+        except Exception:
+            pass
+
+    for alert_id, chat_id, symbol, direction, target in alerts:
+        price = prices.get(symbol)
+        if price is None:
+            continue
+        triggered = (
+            (direction == "above" and price >= target)
+            or (direction == "below" and price <= target)
+        )
+        if triggered:
+            db_alert_trigger(alert_id)
+            sym_short = symbol.replace("USDT", "")
+            arrow     = "📈" if direction == "above" else "📉"
+            tg_send(
+                f"🔔 <b>Price Alert!</b>\n"
+                f"{arrow} <b>{sym_short}/USDT.P</b> = <b>${price:,.2f}</b>\n"
+                f"Твой алерт: {'выше' if direction=='above' else 'ниже'} ${target:,.0f}",
+                chat_id=int(chat_id),
+            )
+            log.info(f"Alert fired: {symbol} {direction} ${target} (now ${price})")
+
+
 # ─── DAILY DIGEST ─────────────────────────────────────────────────────────────
 
 def run_daily_digest():
@@ -1333,6 +1726,7 @@ def run_daily_digest():
 def start_scheduler():
     schedule.every().day.at(DIGEST_TIME).do(run_daily_digest)
     schedule.every(15).minutes.do(run_auto_scan)
+    schedule.every(1).minutes.do(check_price_alerts)
     time.sleep(15)          # short delay so Flask is fully up first
     run_auto_scan()         # run once immediately on startup
     while True:
@@ -1357,14 +1751,16 @@ if __name__ == "__main__":
     threading.Thread(target=start_scheduler,  daemon=True).start()
 
     tg_send(
-        "🤖 <b>Crypto Screener Pro v2 запущен</b>\n"
-        "━━━━━━━━━━━━━━━━━\n"
+        "🤖 <b>Crypto Screener Pro v3 запущен</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
         "📡 TradingView webhook: активен\n"
         "🔍 Автосканер: каждые 15 мин (BOS · CHoCH · FVG · Sweep)\n"
-        "🧠 LLM: Claude активен\n"
-        "📊 CVD · Volume Profile · MTF EMA · Fear&Greed · Confluence\n"
+        "🔔 Price Alerts: проверка каждую минуту\n"
+        "🧠 LLM: Claude активен (чат без команд!)\n"
+        "📊 CVD · VP · MTF · Торговые идеи с R:R\n"
         f"⏰ Дайджест: каждый день в {DIGEST_TIME} UTC\n\n"
-        "Команды: /help  |  /scan — ручной запуск"
+        "Новое: /analyze BTC · /alert · свободный чат\n"
+        "Справка: /help"
     )
     log.info(f"🚀 Запуск v2 | порт {PORT} | дайджест {DIGEST_TIME} UTC")
 
