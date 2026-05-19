@@ -668,6 +668,87 @@ def get_macro() -> dict:
     return out
 
 
+# ─── DERIBIT OPTIONS ──────────────────────────────────────────────────────────
+
+DERIBIT = "https://www.deribit.com/api/v2/public"
+
+_deribit_cache: dict = {"ts": 0.0, "BTC": {}, "ETH": {}}
+_deribit_lock  = threading.Lock()
+DERIBIT_TTL    = 900  # 15 min
+
+
+def _deribit_options(currency: str = "BTC") -> dict:
+    currency = currency.upper()
+    with _deribit_lock:
+        if time.time() - _deribit_cache["ts"] < DERIBIT_TTL and _deribit_cache.get(currency):
+            return dict(_deribit_cache[currency])
+
+    out: dict = {}
+    try:
+        r = requests.get(
+            f"{DERIBIT}/get_book_summary_by_currency",
+            params={"currency": currency, "kind": "option"},
+            timeout=8,
+        )
+        books = r.json().get("result", [])
+        if not books:
+            return out
+
+        # Put/Call ratio by open interest
+        call_oi = sum(float(b.get("open_interest", 0)) for b in books if b["instrument_name"].endswith("-C"))
+        put_oi  = sum(float(b.get("open_interest", 0)) for b in books if b["instrument_name"].endswith("-P"))
+        out["pc_ratio"] = round(put_oi / call_oi, 3) if call_oi else 0.0
+        out["call_oi"]  = call_oi
+        out["put_oi"]   = put_oi
+
+        # Max Pain: strike that minimises total payout to option buyers
+        now_dt = datetime.now(timezone.utc)
+        expiries: dict = {}  # expiry_str → {"C": {strike: oi}, "P": {strike: oi}, "dt": datetime}
+
+        for b in books:
+            parts = b["instrument_name"].split("-")
+            if len(parts) != 4:
+                continue
+            _, exp_str, strike_str, opt_type = parts
+            if opt_type not in ("C", "P"):
+                continue
+            try:
+                strike = float(strike_str)
+                oi     = float(b.get("open_interest", 0))
+                exp_dt = datetime.strptime(exp_str, "%d%b%y").replace(tzinfo=timezone.utc)
+            except ValueError:
+                continue
+            if exp_dt < now_dt:
+                continue
+            if exp_str not in expiries:
+                expiries[exp_str] = {"C": {}, "P": {}, "dt": exp_dt}
+            expiries[exp_str][opt_type][strike] = expiries[exp_str][opt_type].get(strike, 0.0) + oi
+
+        if expiries:
+            nearest = min(expiries, key=lambda e: expiries[e]["dt"])
+            ed       = expiries[nearest]
+            strikes  = sorted(set(list(ed["C"]) + list(ed["P"])))
+
+            if strikes:
+                min_pain, mp_strike = float("inf"), strikes[0]
+                for S in strikes:
+                    pain = (sum(max(0.0, S - K) * v for K, v in ed["C"].items())
+                            + sum(max(0.0, K - S) * v for K, v in ed["P"].items()))
+                    if pain < min_pain:
+                        min_pain, mp_strike = pain, S
+                out["max_pain"]       = mp_strike
+                out["nearest_expiry"] = nearest
+
+    except Exception as e:
+        log.warning(f"Deribit {currency}: {e}")
+
+    with _deribit_lock:
+        _deribit_cache["ts"]     = time.time()
+        _deribit_cache[currency] = out
+
+    return out
+
+
 # ─── CONFLUENCE SCORE ─────────────────────────────────────────────────────────
 
 def compute_confluence_score(signal_type: str, market: dict, mtf: dict) -> tuple:
@@ -971,14 +1052,19 @@ def fetch_market(symbol: str) -> dict:
     if not base.endswith("USDT"):
         base += "USDT"
 
-    with ThreadPoolExecutor(max_workers=8) as ex:
-        f_bybit = ex.submit(_bybit_data, base)
-        f_k1h   = ex.submit(_klines, base, "60",  250)
-        f_k4h   = ex.submit(_klines, base, "240", 250)
-        f_k1d   = ex.submit(_klines, base, "D",    50)
-        f_hl    = ex.submit(_hl_data, base)
-        f_bnb   = ex.submit(_binance_book, base)
-        f_macro = ex.submit(get_macro)
+    # Fetch Deribit options for BTC/ETH only (not every altcoin)
+    coin = base.replace("USDT", "")
+    deribit_currency = coin if coin in ("BTC", "ETH") else None
+
+    with ThreadPoolExecutor(max_workers=9) as ex:
+        f_bybit   = ex.submit(_bybit_data, base)
+        f_k1h     = ex.submit(_klines, base, "60",  250)
+        f_k4h     = ex.submit(_klines, base, "240", 250)
+        f_k1d     = ex.submit(_klines, base, "D",    50)
+        f_hl      = ex.submit(_hl_data, base)
+        f_bnb     = ex.submit(_binance_book, base)
+        f_macro   = ex.submit(get_macro)
+        f_options = ex.submit(_deribit_options, deribit_currency) if deribit_currency else None
 
     bybit    = f_bybit.result()
     k1h      = f_k1h.result()
@@ -987,6 +1073,7 @@ def fetch_market(symbol: str) -> dict:
     hl       = f_hl.result()
     liq_bnb  = f_bnb.result()
     macro    = f_macro.result()
+    options  = f_options.result() if f_options else {}
     session  = get_session()
 
     cvd        = compute_cvd(k1h)
@@ -1013,6 +1100,7 @@ def fetch_market(symbol: str) -> dict:
         "turtle_4h":            tz_4h,
         "indicators":           indicators,
         "liquidity":            liq_bnb,
+        "options":              options,
         "macro":                macro,
         "session":              session,
     }
@@ -1114,6 +1202,16 @@ def market_summary_text(symbol: str, m: dict) -> str:
             f"\n  Ask стены: 🔴 {aw_str}"
         )
 
+    opt = m.get("options", {})
+    opt_str = ""
+    if opt:
+        pcr      = opt.get("pc_ratio", 0)
+        pcr_icon = "🔴" if pcr > 1.2 else ("🟢" if pcr < 0.8 else "⚪")
+        mp       = opt.get("max_pain")
+        exp      = opt.get("nearest_expiry", "")
+        mp_str   = f" | Max Pain ${mp:,.0f} ({exp})" if mp else ""
+        opt_str  = f"\n• Options (Deribit): P/C {pcr_icon}{pcr:.2f}{mp_str}"
+
     return (
         f"• Цена: ${price:,.2f} ({chg:+.2f}% 24h)\n"
         f"• Funding Bybit (8h): {fr_b:+.4f}% — {fr_tag(fr_b)}\n"
@@ -1130,6 +1228,7 @@ def market_summary_text(symbol: str, m: dict) -> str:
         f"{tz_str}"
         f"{ind_str}"
         f"{liq_str}"
+        f"{opt_str}"
         f"{macro_str}"
         f"{sess_str}"
     )
@@ -1847,6 +1946,16 @@ def build_signal_message(data: dict, market: dict, llm_text: str, quality: int,
             f"  🔴 Ask стены: {aw_s}"
         )
 
+    opt = market.get("options", {})
+    opt_line = ""
+    if opt:
+        pcr      = opt.get("pc_ratio", 0)
+        pcr_icon = "🔴" if pcr > 1.2 else ("🟢" if pcr < 0.8 else "⚪")
+        mp       = opt.get("max_pain")
+        exp      = opt.get("nearest_expiry", "")
+        mp_str   = f" | MaxPain ${mp:,.0f} ({exp})" if mp else ""
+        opt_line = f"\n━━ Options (Deribit) ━\n  P/C: {pcr_icon} {pcr:.2f}{mp_str}"
+
     macro = market.get("macro", {})
     macro_line = ""
     if macro.get("fg_value") is not None:
@@ -1883,6 +1992,7 @@ def build_signal_message(data: dict, market: dict, llm_text: str, quality: int,
         f"{tz_line}"
         f"{ind_line}"
         f"{liq_line}"
+        f"{opt_line}"
         f"{macro_line}"
         f"{sess_line}\n"
         f"━━ 🧠 Анализ LLM ━━\n"
@@ -2136,6 +2246,9 @@ def cmd_help(chat_id: int):
         "/analyze SOL 4H      — анализ на конкретном ТФ\n"
         "/status              — рынок: CVD, VP, MTF, F&G\n"
         "/ask [вопрос]        — вопрос о рынке\n\n"
+        "📈 <b>Рынок</b>\n"
+        "/top                 — топ гейнеры/лузеры + объём (24H)\n"
+        "/movers              — движения 1H по watchlist\n\n"
         "🔔 <b>Price Alerts</b>\n"
         "/alert BTC 105000    — уведомить при $105K\n"
         "/alert ETH &lt; 3200    — уведомить при падении\n"
@@ -2226,6 +2339,8 @@ def handle_update(update: dict):
     elif cmd == "/alerts":             cmd_alert_list(chat_id)
     elif cmd == "/delalert":           cmd_alert_delete(chat_id, args)
     elif cmd == "/stats":              cmd_stats(chat_id)
+    elif cmd == "/top":                cmd_top(chat_id)
+    elif cmd == "/movers":             cmd_movers(chat_id)
     elif cmd in ("/help", "/start"):   cmd_help(chat_id)
 
 
@@ -2410,6 +2525,126 @@ def check_price_alerts():
             log.info(f"Alert fired: {symbol} {direction} ${target} (now ${price})")
 
 
+# ─── TOP COINS ────────────────────────────────────────────────────────────────
+
+def cmd_top(chat_id: int):
+    """Show top gainers/losers and volume leaders from Bybit (24H)."""
+    tg_send("📊 Загружаю топ монет...", chat_id=chat_id)
+    try:
+        r = requests.get(
+            f"{BYBIT}/v5/market/tickers",
+            params={"category": "linear"},
+            timeout=8,
+        )
+        tickers = r.json()["result"]["list"]
+        # Only USDT perps with meaningful volume
+        usdt = [t for t in tickers
+                if t["symbol"].endswith("USDT") and float(t.get("volume24h", 0)) > 500_000]
+
+        def pct(t): return float(t.get("price24hPcnt", 0)) * 100
+        def fmt(t, show_vol=False):
+            sym   = t["symbol"].replace("USDT", "")
+            p     = pct(t)
+            price = float(t.get("lastPrice", 0))
+            icon  = "🚀" if p >= 5 else ("📈" if p > 0 else ("💥" if p <= -5 else "📉"))
+            vol   = float(t.get("volume24h", 0))
+            vol_s = f"  vol ${vol/1e6:.0f}M" if show_vol else ""
+            return f"{icon} <b>{sym}</b>  ${price:,.4g}  {p:+.1f}%{vol_s}"
+
+        gainers = sorted(usdt, key=pct, reverse=True)[:7]
+        losers  = sorted(usdt, key=pct)[:7]
+        by_vol  = sorted(usdt, key=lambda t: float(t.get("volume24h", 0)), reverse=True)[:7]
+
+        ts = datetime.now(timezone.utc).strftime("%H:%M UTC")
+        lines = [
+            f"📊 <b>Топ Bybit Perpetuals · 24H</b>  <i>{ts}</i>",
+            "━━━━━━━━━━━━━━━━━━━━",
+            "🚀 <b>Топ гейнеры</b>",
+        ] + [fmt(t) for t in gainers] + [
+            "",
+            "💀 <b>Топ лузеры</b>",
+        ] + [fmt(t) for t in losers] + [
+            "",
+            "💰 <b>Топ по объёму (24H)</b>",
+        ] + [fmt(t, show_vol=True) for t in by_vol]
+
+        tg_send("\n".join(lines), chat_id=chat_id)
+    except Exception as e:
+        log.error(f"cmd_top: {e}")
+        tg_send(f"❌ Ошибка: {e}", chat_id=chat_id)
+
+
+# ─── MOVERS ───────────────────────────────────────────────────────────────────
+
+import os as _os2
+MOVERS_THRESHOLD = float(_os2.environ.get("MOVERS_THRESHOLD", "3.0"))
+MOVERS_WATCHLIST = list(dict.fromkeys(
+    SYMBOLS + ["SOLUSDT", "BNBUSDT", "XRPUSDT", "DOGEUSDT",
+               "AVAXUSDT", "LINKUSDT", "DOTUSDT", "NEARUSDT", "APTUSDT"]
+))
+
+
+def cmd_movers(chat_id: int):
+    """Show 1H price changes for the watchlist."""
+    tg_send("⚡ Проверяю движения (1H)...", chat_id=chat_id)
+    results = []
+    for symbol in MOVERS_WATCHLIST:
+        try:
+            candles = _klines(symbol, "60", limit=2)
+            if len(candles) < 2:
+                continue
+            prev, cur = candles[-2]["c"], candles[-1]["c"]
+            if prev <= 0:
+                continue
+            pct = (cur - prev) / prev * 100
+            results.append((symbol.replace("USDT", ""), cur, pct))
+        except Exception:
+            pass
+
+    if not results:
+        tg_send("❌ Нет данных", chat_id=chat_id)
+        return
+
+    results.sort(key=lambda x: -abs(x[2]))
+    ts = datetime.now(timezone.utc).strftime("%H:%M UTC")
+    lines = [f"⚡ <b>Движения 1H · Watchlist</b>  <i>{ts}</i>",
+             "━━━━━━━━━━━━━━━━━━━━"]
+    for sym, price, p in results:
+        icon = "🚀" if p >= 3 else ("📈" if p > 0 else ("💥" if p <= -3 else "📉"))
+        lines.append(f"{icon} <b>{sym}</b>  ${price:,.4g}  {p:+.1f}%")
+    tg_send("\n".join(lines), chat_id=chat_id)
+
+
+def check_movers():
+    """Auto-alert when a watchlist coin moves ≥ MOVERS_THRESHOLD% in 1H."""
+    alerts = []
+    for symbol in MOVERS_WATCHLIST:
+        try:
+            candles = _klines(symbol, "60", limit=2)
+            if len(candles) < 2:
+                continue
+            prev, cur = candles[-2]["c"], candles[-1]["c"]
+            if prev <= 0:
+                continue
+            pct = (cur - prev) / prev * 100
+            if abs(pct) >= MOVERS_THRESHOLD:
+                alerts.append((symbol.replace("USDT", ""), cur, pct))
+        except Exception:
+            pass
+
+    if not alerts:
+        return
+
+    alerts.sort(key=lambda x: -abs(x[2]))
+    ts    = datetime.now(timezone.utc).strftime("%H:%M UTC")
+    lines = [f"⚡ <b>Mover Alert · {ts}</b>", "━━━━━━━━━━━━━━━━━━━━"]
+    for sym, price, p in alerts:
+        icon = "🚀" if p > 0 else "💥"
+        lines.append(f"{icon} <b>{sym}</b>  ${price:,.4g}  <b>{p:+.1f}%</b> за 1H")
+    tg_send("\n".join(lines))
+    log.info(f"Movers alert: {len(alerts)} монет  threshold={MOVERS_THRESHOLD}%")
+
+
 # ─── SIGNAL OUTCOME CHECKER ───────────────────────────────────────────────────
 
 def check_signal_outcomes():
@@ -2529,6 +2764,7 @@ def start_scheduler():
     schedule.every(15).minutes.do(run_auto_scan)
     schedule.every(1).minutes.do(check_price_alerts)
     schedule.every(30).minutes.do(check_signal_outcomes)
+    schedule.every(5).minutes.do(check_movers)
     time.sleep(15)          # short delay so Flask is fully up first
     run_auto_scan()         # run once immediately on startup
     while True:
