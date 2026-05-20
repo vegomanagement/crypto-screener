@@ -1198,6 +1198,30 @@ def compute_confluence_score(signal_type: str, market: dict, mtf: dict) -> tuple
         elif sig_dn and bb_pos == "below_lower": score -= 8; factors.append(f"BB ❌ ниже нижней при шорте")
         else: factors.append(f"BB ⚪ {bb.get('icon','⚪')} [%B:{bb.get('pct_b',0.5):.2f}]")
 
+    # Pivot Points (+8 near key level)
+    piv = market.get("pivots", {})
+    if piv and piv.get("price"):
+        cur_price = piv["price"]
+        ns = piv.get("nearest_sup")
+        nr = piv.get("nearest_res")
+        if ns and sig_up:
+            dist_pct = abs(cur_price - ns[1]) / cur_price * 100
+            if dist_pct < 1.5:
+                score += 8; factors.append(f"Pivot ✅ цена у поддержки {ns[0]}:${ns[1]:,.0f} ({dist_pct:.1f}%)")
+        if nr and sig_dn:
+            dist_pct = abs(nr[1] - cur_price) / cur_price * 100
+            if dist_pct < 1.5:
+                score += 8; factors.append(f"Pivot ✅ цена у сопротивления {nr[0]}:${nr[1]:,.0f} ({dist_pct:.1f}%)")
+
+    # Funding rate trend (+5 aligned / -5 opposite)
+    fr_hist = market.get("fr_history", {})
+    if fr_hist.get("trend"):
+        fr_trend = fr_hist["trend"]
+        if   sig_up and fr_trend == "falling": score += 5;  factors.append("FR Trend ✅ funding падает → шорты закрываются")
+        elif sig_dn and fr_trend == "rising":  score += 5;  factors.append("FR Trend ✅ funding растёт → лонги перегреты")
+        elif sig_up and fr_trend == "rising":  score -= 5;  factors.append("FR Trend ⚠️ funding растёт → лонги перегреты")
+        elif sig_dn and fr_trend == "falling": score -= 5;  factors.append("FR Trend ⚠️ funding падает при шорте")
+
     # RSI Divergence (+12 / -12) — strong reversal signal
     rsi_div = indic.get("rsi_div", "none")
     if rsi_div == "bullish" and sig_up:
@@ -1391,6 +1415,80 @@ def _binance_book(symbol: str, depth: int = 500) -> dict:
         return {}
 
 
+# ─── PIVOT POINTS ────────────────────────────────────────────────────────────
+
+def compute_pivot_points(daily_candles: list) -> dict:
+    """
+    Classic Pivot Points from previous day's H/L/C.
+    Returns P, R1-R3, S1-S3 and nearby levels relative to current price.
+    """
+    if len(daily_candles) < 2:
+        return {}
+    prev  = daily_candles[-2]   # previous completed day
+    cur   = daily_candles[-1]
+    H, L, C = prev["h"], prev["l"], prev["c"]
+    price = cur["c"]
+
+    P  = (H + L + C) / 3
+    R1 = 2 * P - L
+    R2 = P + (H - L)
+    R3 = H + 2 * (P - L)
+    S1 = 2 * P - H
+    S2 = P - (H - L)
+    S3 = L - 2 * (H - P)
+
+    levels = {"P": P, "R1": R1, "R2": R2, "R3": R3,
+              "S1": S1, "S2": S2, "S3": S3}
+
+    # Find nearest support (below price) and resistance (above price)
+    supports    = {k: v for k, v in levels.items() if v < price}
+    resistances = {k: v for k, v in levels.items() if v > price}
+    nearest_sup = max(supports.items(),    key=lambda x: x[1]) if supports    else None
+    nearest_res = min(resistances.items(), key=lambda x: x[1]) if resistances else None
+
+    return {
+        "P": round(P, 2), "R1": round(R1, 2), "R2": round(R2, 2), "R3": round(R3, 2),
+        "S1": round(S1, 2), "S2": round(S2, 2), "S3": round(S3, 2),
+        "nearest_sup": (nearest_sup[0], round(nearest_sup[1], 2)) if nearest_sup else None,
+        "nearest_res": (nearest_res[0], round(nearest_res[1], 2)) if nearest_res else None,
+        "price": price,
+    }
+
+
+# ─── FUNDING RATE TREND ───────────────────────────────────────────────────────
+
+def _funding_history(symbol: str, limit: int = 8) -> dict:
+    """
+    Fetch last `limit` funding rate snapshots from Bybit (every 8H).
+    Returns trend: 'rising', 'falling', 'neutral' + last value.
+    """
+    out = {}
+    try:
+        r = requests.get(
+            f"{BYBIT}/v5/market/funding/history",
+            params={"symbol": symbol, "category": "linear", "limit": limit},
+            timeout=6,
+        )
+        items = r.json()["result"]["list"]   # newest first
+        if len(items) < 4:
+            return out
+        rates = [float(x["fundingRate"]) * 100 for x in reversed(items)]  # oldest→newest
+        avg_old = sum(rates[:len(rates)//2]) / (len(rates)//2)
+        avg_new = sum(rates[len(rates)//2:]) / (len(rates)//2)
+        diff    = avg_new - avg_old
+        trend   = "rising" if diff > 0.001 else ("falling" if diff < -0.001 else "neutral")
+        out = {
+            "rates":   [round(r, 4) for r in rates],
+            "current": round(rates[-1], 4),
+            "trend":   trend,
+            "diff":    round(diff, 4),
+            "icon":    "📈" if trend == "rising" else ("📉" if trend == "falling" else "➡️"),
+        }
+    except Exception as e:
+        log.warning(f"Funding history {symbol}: {e}")
+    return out
+
+
 # ─── LONG/SHORT RATIO + LIQUIDATIONS ─────────────────────────────────────────
 
 def _ls_ratio(symbol: str) -> dict:
@@ -1484,7 +1582,7 @@ def fetch_market(symbol: str) -> dict:
     coin = base.replace("USDT", "")
     deribit_currency = coin if coin in ("BTC", "ETH") else None
 
-    with ThreadPoolExecutor(max_workers=11) as ex:
+    with ThreadPoolExecutor(max_workers=12) as ex:
         f_bybit   = ex.submit(_bybit_data, base)
         f_k1h     = ex.submit(_klines, base, "60",  250)
         f_k4h     = ex.submit(_klines, base, "240", 250)
@@ -1494,6 +1592,7 @@ def fetch_market(symbol: str) -> dict:
         f_macro   = ex.submit(get_macro)
         f_ls      = ex.submit(_ls_ratio, base)
         f_liq     = ex.submit(_liq_stats, base)
+        f_fr      = ex.submit(_funding_history, base)
         f_options = ex.submit(_deribit_options, deribit_currency) if deribit_currency else None
 
     bybit    = f_bybit.result()
@@ -1505,6 +1604,7 @@ def fetch_market(symbol: str) -> dict:
     macro    = f_macro.result()
     ls       = f_ls.result()
     liqs     = f_liq.result()
+    fr_hist  = f_fr.result()
     options  = f_options.result() if f_options else {}
     session  = get_session()
 
@@ -1515,6 +1615,7 @@ def fetch_market(symbol: str) -> dict:
     tz_4h      = compute_turtle_zone(k4h)
     indicators = compute_indicators(k1h)
     vwap       = compute_vwap(k1h)
+    pivots     = compute_pivot_points(k1d)
 
     fr_div    = abs(bybit.get("funding", 0) - hl.get("funding", 0)) * 100
     fr_signal = fr_div > 0.005
@@ -1533,6 +1634,8 @@ def fetch_market(symbol: str) -> dict:
         "turtle_4h":            tz_4h,
         "indicators":           indicators,
         "vwap":                 vwap,
+        "pivots":               pivots,
+        "fr_history":           fr_hist,
         "liquidity":            liq_bnb,
         "ls_ratio":             ls,
         "liquidations":         liqs,
@@ -1657,6 +1760,23 @@ def market_summary_text(symbol: str, m: dict) -> str:
             f" | ATR:{atr:,.2f}({atr_pct:.2f}%){extras_str}"
         )
 
+    piv = m.get("pivots", {})
+    piv_str = ""
+    if piv:
+        ns = piv.get("nearest_sup")
+        nr = piv.get("nearest_res")
+        sup_s = f"{ns[0]}:${ns[1]:,.0f}" if ns else "—"
+        res_s = f"{nr[0]}:${nr[1]:,.0f}" if nr else "—"
+        piv_str = (f"\n• Pivot Points (Daily): P=${piv['P']:,.0f}"
+                   f" | Sup:{sup_s} | Res:{res_s}")
+
+    fr_hist = m.get("fr_history", {})
+    fr_hist_str = ""
+    if fr_hist:
+        rates_s = " → ".join(f"{r:+.4f}%" for r in fr_hist.get("rates", [])[-4:])
+        fr_hist_str = (f"\n• Funding Trend: {fr_hist['icon']} {fr_hist['trend'].upper()}"
+                       f" [{rates_s}]")
+
     vwap = m.get("vwap", {})
     vwap_str = ""
     if vwap:
@@ -1754,6 +1874,8 @@ def market_summary_text(symbol: str, m: dict) -> str:
         f"{mtf_str}"
         f"{tz_str}"
         f"{ind_str}"
+        f"{piv_str}"
+        f"{fr_hist_str}"
         f"{vwap_str}"
         f"{liq_str}"
         f"{opt_str}"
@@ -2478,6 +2600,18 @@ def build_signal_message(data: dict, market: dict, llm_text: str, quality: int,
             f"{div_s}{ecr_s}{vol_s}"
         ).rstrip("\n")
 
+    piv = market.get("pivots", {})
+    piv_line = ""
+    if piv:
+        ns = piv.get("nearest_sup")
+        nr = piv.get("nearest_res")
+        sup_s = f"{ns[0]}:${ns[1]:,.0f}" if ns else "—"
+        res_s = f"{nr[0]}:${nr[1]:,.0f}" if nr else "—"
+        fr_h  = market.get("fr_history", {})
+        fr_s  = f"  FR trend: {fr_h['icon']} {fr_h['trend']}" if fr_h else ""
+        piv_line = (f"\n━━ Pivot + FR Trend ━\n"
+                    f"  P: ${piv['P']:,.0f} | Sup: {sup_s} | Res: {res_s}{fr_s}")
+
     vwap = market.get("vwap", {})
     vwap_line = ""
     if vwap:
@@ -2574,6 +2708,7 @@ def build_signal_message(data: dict, market: dict, llm_text: str, quality: int,
         f"{mtf_line}"
         f"{tz_line}"
         f"{ind_line}"
+        f"{piv_line}"
         f"{vwap_line}"
         f"{liq_line}"
         f"{opt_line}"
@@ -2822,6 +2957,102 @@ def cmd_scan(chat_id: int):
     threading.Thread(target=run_auto_scan, daemon=True).start()
 
 
+def cmd_risk(chat_id: int, args: str):
+    """
+    Risk calculator. Usage:
+      /risk BTC 76000 74000
+      /risk BTC 76000 74000 80000
+      /risk BTC 76000 sl=74000 tp=80000 account=10000 risk=2
+    """
+    import re as _re
+    text = args.strip()
+
+    # Extract symbol
+    sym_match = _re.match(r'([A-Za-z]+)', text)
+    if not sym_match:
+        tg_send("❌ Укажи тикер. Пример: /risk BTC 76000 74000", chat_id=chat_id)
+        return
+    coin = sym_match.group(1).upper()
+    rest = text[sym_match.end():].strip()
+
+    # Parse named params
+    def _get(key, default=None):
+        m = _re.search(rf'{key}=([0-9.]+)', rest, _re.IGNORECASE)
+        return float(m.group(1)) if m else default
+
+    account = _get("account", 10_000.0)
+    risk_pct = _get("risk",   1.0)
+    entry    = _get("entry")
+    sl       = _get("sl")
+    tp       = _get("tp")
+
+    # Positional fallback (numbers without key=)
+    nums = [float(x) for x in _re.findall(r'\b(\d+(?:\.\d+)?)\b', rest)
+            if float(x) > 10]  # filter out e.g. risk=1
+    if entry is None and nums:      entry = nums[0]
+    if sl    is None and len(nums) > 1: sl = nums[1]
+    if tp    is None and len(nums) > 2: tp = nums[2]
+
+    if entry is None or sl is None:
+        tg_send(
+            "❌ Нужны entry и stop loss.\n"
+            "Пример: <code>/risk BTC 76000 74000</code>\n"
+            "Или: <code>/risk BTC entry=76000 sl=74000 tp=80000 account=10000 risk=1</code>",
+            chat_id=chat_id,
+        )
+        return
+
+    sl_dist  = abs(entry - sl)
+    sl_pct   = sl_dist / entry * 100
+    risk_usd = account * risk_pct / 100
+    qty_usd  = risk_usd / (sl_pct / 100) if sl_pct > 0 else 0
+    qty_coin = qty_usd / entry if entry > 0 else 0
+    leverage = qty_usd / account if account > 0 else 0
+    direction = "🟢 LONG" if entry > sl else "🔴 SHORT"
+
+    rr_str = ""
+    if tp:
+        tp_dist = abs(tp - entry)
+        tp_pct  = tp_dist / entry * 100
+        rr      = tp_dist / sl_dist if sl_dist > 0 else 0
+        profit  = risk_usd * rr
+        rr_str  = (f"\nTake Profit:  ${tp:,.2f}  ({tp_pct:+.2f}%)"
+                   f"\nR:R Ratio:    1 : {rr:.1f}"
+                   f"\nПотенциал:    +${profit:,.0f}")
+
+    # Fetch ATR for context
+    atr_str = ""
+    try:
+        symbol  = coin + "USDT"
+        candles = _klines(symbol, "60", 50)
+        if candles:
+            atr = compute_atr(candles)
+            atr_pct_val = atr / entry * 100
+            sl_in_atr   = sl_dist / atr if atr > 0 else 0
+            atr_str = (f"\n━━━━━━━━━━━━━━━━━━\n"
+                       f"📏 ATR(14) 1H: ${atr:,.2f} ({atr_pct_val:.2f}%)\n"
+                       f"Стоп = {sl_in_atr:.1f}× ATR "
+                       f"{'✅ норма' if 0.5 <= sl_in_atr <= 2.5 else ('⚠️ тесный' if sl_in_atr < 0.5 else '⚠️ широкий')}")
+    except Exception:
+        pass
+
+    tg_send(
+        f"💰 <b>Risk Calculator — {coin}/USDT.P</b>\n"
+        f"━━━━━━━━━━━━━━━━━━\n"
+        f"Направление:  {direction}\n"
+        f"Entry:        ${entry:,.2f}\n"
+        f"Stop Loss:    ${sl:,.2f}  ({sl_pct:.2f}%)"
+        f"{rr_str}\n"
+        f"━━━━━━━━━━━━━━━━━━\n"
+        f"📊 <b>Позиция (риск {risk_pct}% от ${account:,.0f})</b>\n"
+        f"Риск $:       ${risk_usd:,.0f}\n"
+        f"Размер позиции: ${qty_usd:,.0f}  ({qty_coin:.4f} {coin})\n"
+        f"Плечо:        ~{leverage:.1f}x"
+        f"{atr_str}",
+        chat_id=chat_id,
+    )
+
+
 def cmd_market(chat_id: int):
     """Show TOTAL / TOTAL2 / TOTAL3 / OTHERS / dominance snapshot."""
     macro = get_macro()
@@ -2916,6 +3147,9 @@ def cmd_help(chat_id: int):
         "/ask [вопрос]        — вопрос о рынке\n\n"
         "📈 <b>Рынок</b>\n"
         "/market              — TOTAL/TOTAL2/TOTAL3/OTHERS + доминации\n"
+        "/risk BTC 76000 74000       — калькулятор позиции\n"
+        "/risk BTC 76000 74000 80000 — с тейк-профитом\n"
+        "/risk BTC entry=76000 sl=74000 account=5000 risk=2\n\n"
         "/top                 — топ гейнеры/лузеры + объём (24H)\n"
         "/movers              — движения 1H по watchlist\n\n"
         "🔔 <b>Price Alerts</b>\n"
@@ -3010,6 +3244,7 @@ def handle_update(update: dict):
     elif cmd == "/stats":              cmd_stats(chat_id)
     elif cmd == "/top":                cmd_top(chat_id)
     elif cmd == "/movers":             cmd_movers(chat_id)
+    elif cmd == "/risk":               cmd_risk(chat_id, args)
     elif cmd == "/market":             cmd_market(chat_id)
     elif cmd == "/debug":              cmd_debug(chat_id)
     elif cmd in ("/help", "/start"):   cmd_help(chat_id)
