@@ -2761,9 +2761,9 @@ def telegram_polling():
 
 # ─── AUTO SCANNER ─────────────────────────────────────────────────────────────
 
-SCAN_COOLDOWN_MIN = 60                        # minutes between same signal on same symbol+tf
-SCAN_INTERVALS    = ["5", "15", "60", "240", "D"]   # M5 · M15 · 1H · 4H · D1
-SCAN_MIN_CONF     = 40                        # skip signals below this confluence score
+SCAN_COOLDOWN_MIN = 120                       # minutes between same signal on same symbol+tf
+SCAN_INTERVALS    = ["15", "60", "240", "D"]  # M15 · 1H · 4H · D1  (M5 removed — too noisy)
+SCAN_MIN_CONF     = 55                        # skip signals below this confluence score
 
 _scan_cooldown: dict = {}
 _scan_lock = threading.Lock()
