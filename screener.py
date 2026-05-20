@@ -708,6 +708,66 @@ def compute_indicators(candles: list) -> dict:
     }
 
 
+def compute_vwap(candles: list) -> dict:
+    """
+    Daily and Weekly VWAP with ±1σ / ±2σ bands from 1H candles (oldest→newest).
+    Uses current UTC time to slice the correct window — no timestamps needed.
+    """
+    if len(candles) < 2:
+        return {}
+
+    now   = datetime.now(timezone.utc)
+    price = candles[-1]["c"]
+
+    def _bands(window: list) -> dict:
+        if not window:
+            return {}
+        tp_vol = sum((c["h"] + c["l"] + c["c"]) / 3 * c["v"] for c in window)
+        vol    = sum(c["v"] for c in window)
+        if vol == 0:
+            return {}
+        vwap = tp_vol / vol
+        var  = sum(((c["h"] + c["l"] + c["c"]) / 3 - vwap) ** 2 * c["v"]
+                   for c in window) / vol
+        std  = var ** 0.5
+        return {
+            "vwap":   round(vwap, 2),
+            "upper2": round(vwap + 2 * std, 2),
+            "upper1": round(vwap + std, 2),
+            "lower1": round(vwap - std, 2),
+            "lower2": round(vwap - 2 * std, 2),
+        }
+
+    def _position(p: float, b: dict) -> str:
+        if p > b["upper2"]: return "extreme_upper"
+        if p > b["upper1"]: return "upper"
+        if p > b["vwap"]:   return "premium"
+        if p < b["lower2"]: return "extreme_lower"
+        if p < b["lower1"]: return "lower"
+        return "discount"
+
+    hours_today = max(1, now.hour + 1)
+    hours_week  = max(1, now.weekday() * 24 + now.hour + 1)
+
+    out = {}
+
+    d = _bands(candles[-min(hours_today, len(candles)):])
+    if d:
+        pos = _position(price, d)
+        out["daily"]     = d
+        out["daily_pos"] = pos
+        out["daily_pct"] = round((price - d["vwap"]) / d["vwap"] * 100, 2)
+
+    w = _bands(candles[-min(hours_week, len(candles)):])
+    if w:
+        pos = _position(price, w)
+        out["weekly"]     = w
+        out["weekly_pos"] = pos
+        out["weekly_pct"] = round((price - w["vwap"]) / w["vwap"] * 100, 2)
+
+    return out
+
+
 def check_mtf_confluence(biases: dict, direction: str) -> dict:
     want    = "bull" if direction == "long" else "bear"
     aligned = sum(1 for b in biases.values() if b == want)
@@ -1043,6 +1103,29 @@ def compute_confluence_score(signal_type: str, market: dict, mtf: dict) -> tuple
         elif sig_dn and bb_pos == "below_lower": score -= 8; factors.append(f"BB ❌ ниже нижней при шорте")
         else: factors.append(f"BB ⚪ {bb.get('icon','⚪')} [%B:{bb.get('pct_b',0.5):.2f}]")
 
+    # VWAP (+10 in discount for long / premium for short, -8 opposite, +5 extreme band)
+    vwap = market.get("vwap", {})
+    if vwap.get("daily_pos"):
+        pos = vwap["daily_pos"]
+        pct = vwap.get("daily_pct", 0)
+        in_discount = pos in ("discount", "lower", "extreme_lower")
+        in_premium  = pos in ("premium", "upper", "extreme_upper")
+        is_extreme  = pos in ("extreme_lower", "extreme_upper")
+        if sig_up and in_discount:
+            score += 10 + (5 if is_extreme else 0)
+            factors.append(f"VWAP ✅ цена в дисконте [{pct:+.1f}%] — хорошая точка лонга")
+        elif sig_dn and in_premium:
+            score += 10 + (5 if is_extreme else 0)
+            factors.append(f"VWAP ✅ цена в премиуме [{pct:+.1f}%] — хорошая точка шорта")
+        elif sig_up and in_premium:
+            score -= 8
+            factors.append(f"VWAP ❌ покупка в премиуме [{pct:+.1f}%] — переплата")
+        elif sig_dn and in_discount:
+            score -= 8
+            factors.append(f"VWAP ❌ шорт в дисконте [{pct:+.1f}%] — контртренд")
+        else:
+            factors.append(f"VWAP ⚪ у уровня [{pct:+.1f}%]")
+
     # Long/Short ratio (+8 / -8)
     ls = market.get("ls_ratio", {})
     taker = ls.get("taker_ratio")
@@ -1310,6 +1393,7 @@ def fetch_market(symbol: str) -> dict:
     tz_1h      = compute_turtle_zone(k1h)
     tz_4h      = compute_turtle_zone(k4h)
     indicators = compute_indicators(k1h)
+    vwap       = compute_vwap(k1h)
 
     fr_div    = abs(bybit.get("funding", 0) - hl.get("funding", 0)) * 100
     fr_signal = fr_div > 0.005
@@ -1327,6 +1411,7 @@ def fetch_market(symbol: str) -> dict:
         "turtle_1h":            tz_1h,
         "turtle_4h":            tz_4h,
         "indicators":           indicators,
+        "vwap":                 vwap,
         "liquidity":            liq_bnb,
         "ls_ratio":             ls,
         "liquidations":         liqs,
@@ -1440,6 +1525,34 @@ def market_summary_text(symbol: str, m: dict) -> str:
             f" | Stoch:{stoch.get('icon','⚪')}K:{stoch.get('k',50):.0f}"
         )
 
+    vwap = m.get("vwap", {})
+    vwap_str = ""
+    if vwap:
+        _pos_icon = {
+            "extreme_upper": "🔴🔴", "upper": "🔴", "premium": "🟡",
+            "discount": "🟡", "lower": "🟢", "extreme_lower": "🟢🟢",
+        }
+        _pos_label = {
+            "extreme_upper": "Extreme Premium +2σ",
+            "upper":         "Premium +1σ",
+            "premium":       "Premium",
+            "discount":      "Discount",
+            "lower":         "Discount -1σ",
+            "extreme_lower": "Extreme Discount -2σ",
+        }
+        parts = []
+        if vwap.get("daily"):
+            d   = vwap["daily"]
+            pos = vwap.get("daily_pos", "")
+            pct = vwap.get("daily_pct", 0)
+            parts.append(f"D-VWAP ${d['vwap']:,.0f} {_pos_icon.get(pos,'⚪')} {pct:+.1f}% [{_pos_label.get(pos,'')}]")
+        if vwap.get("weekly"):
+            w   = vwap["weekly"]
+            pos = vwap.get("weekly_pos", "")
+            pct = vwap.get("weekly_pct", 0)
+            parts.append(f"W-VWAP ${w['vwap']:,.0f} {pct:+.1f}%")
+        vwap_str = "\n• VWAP: " + " | ".join(parts) if parts else ""
+
     liq = m.get("liquidity", {})
     liq_str = ""
     if liq:
@@ -1509,6 +1622,7 @@ def market_summary_text(symbol: str, m: dict) -> str:
         f"{mtf_str}"
         f"{tz_str}"
         f"{ind_str}"
+        f"{vwap_str}"
         f"{liq_str}"
         f"{opt_str}"
         f"{ls_str}"
@@ -2222,6 +2336,24 @@ def build_signal_message(data: dict, market: dict, llm_text: str, quality: int,
             f"  |  Stoch: {stoch.get('icon','⚪')} K:{stoch.get('k',50):.0f} D:{stoch.get('d',50):.0f}"
         )
 
+    vwap = market.get("vwap", {})
+    vwap_line = ""
+    if vwap:
+        parts = []
+        _vi = {"extreme_upper":"🔴🔴","upper":"🔴","premium":"🟡",
+               "discount":"🟡","lower":"🟢","extreme_lower":"🟢🟢"}
+        if vwap.get("daily"):
+            d   = vwap["daily"]
+            pos = vwap.get("daily_pos","")
+            pct = vwap.get("daily_pct", 0)
+            parts.append(f"Daily ${d['vwap']:,.0f} {_vi.get(pos,'⚪')}{pct:+.1f}%")
+        if vwap.get("weekly"):
+            w   = vwap["weekly"]
+            pct = vwap.get("weekly_pct", 0)
+            parts.append(f"Weekly ${w['vwap']:,.0f} {pct:+.1f}%")
+        if parts:
+            vwap_line = "\n━━ VWAP ━━━━━━━━━━━\n  " + " | ".join(parts)
+
     liq = market.get("liquidity", {})
     liq_line = ""
     if liq:
@@ -2300,6 +2432,7 @@ def build_signal_message(data: dict, market: dict, llm_text: str, quality: int,
         f"{mtf_line}"
         f"{tz_line}"
         f"{ind_line}"
+        f"{vwap_line}"
         f"{liq_line}"
         f"{opt_line}"
         f"{flow_line}"
