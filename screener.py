@@ -25,6 +25,7 @@ try:
         LLM_MODEL_FAST, LLM_MODEL_SMART,
         PORT, SYMBOLS, DIGEST_TIME, DB_PATH, MIN_QUALITY,
     )
+    CRYPTOPANIC_KEY = getattr(__import__("config"), "CRYPTOPANIC_KEY", "")
 except ImportError:
     import os as _os
     TELEGRAM_TOKEN    = _os.environ.get("TELEGRAM_TOKEN",   "YOUR_BOT_TOKEN")
@@ -37,6 +38,7 @@ except ImportError:
     DIGEST_TIME       = _os.environ.get("DIGEST_TIME", "08:00")
     DB_PATH           = _os.environ.get("DB_PATH", "signals.db")
     MIN_QUALITY       = int(_os.environ.get("MIN_QUALITY", 0))
+    CRYPTOPANIC_KEY   = _os.environ.get("CRYPTOPANIC_KEY", "")
 
 # ─── LOGGING ──────────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -781,6 +783,47 @@ def detect_volume_spike(candles: list, threshold: float = 2.5,
         return False
     avg = sum(c["v"] for c in candles[-(avg_period + 1):-1]) / avg_period
     return avg > 0 and candles[-1]["v"] > avg * threshold
+
+
+# ─── BTC CORRELATION ─────────────────────────────────────────────────────────
+
+def _pearson(xs: list, ys: list) -> float:
+    """Pearson correlation coefficient for two equal-length sequences."""
+    n = len(xs)
+    if n < 3:
+        return 0.0
+    mx, my = sum(xs) / n, sum(ys) / n
+    num = sum((x - mx) * (y - my) for x, y in zip(xs, ys))
+    dx  = sum((x - mx) ** 2 for x in xs) ** 0.5
+    dy  = sum((y - my) ** 2 for y in ys) ** 0.5
+    return round(num / (dx * dy), 3) if dx * dy else 0.0
+
+
+def compute_btc_correlation(sym_candles: list, btc_candles: list) -> dict:
+    """Pearson r between symbol and BTC on last 24H / 7D of 1H closes."""
+    sym_c = [c["c"] for c in sym_candles]
+    btc_c = [c["c"] for c in btc_candles]
+
+    def _corr(n):
+        if min(len(sym_c), len(btc_c)) < max(n, 5):
+            return None
+        return _pearson(sym_c[-n:], btc_c[-n:])
+
+    def _label(r):
+        if r is None:    return "n/a"
+        if r >= 0.85:    return "🔗 очень высокая"
+        if r >= 0.65:    return "↑ высокая"
+        if r >= 0.40:    return "~ средняя"
+        if r >= 0.10:    return "↓ низкая"
+        if r >= -0.10:   return "➡️ нет"
+        return           "↙ обратная"
+
+    r24 = _corr(24)
+    r7d = _corr(168)
+    return {
+        "r24h": r24, "label24h": _label(r24),
+        "r7d":  r7d, "label7d":  _label(r7d),
+    }
 
 
 def compute_indicators(candles: list) -> dict:
@@ -1582,7 +1625,8 @@ def fetch_market(symbol: str) -> dict:
     coin = base.replace("USDT", "")
     deribit_currency = coin if coin in ("BTC", "ETH") else None
 
-    with ThreadPoolExecutor(max_workers=12) as ex:
+    need_btc_corr = base != "BTCUSDT"
+    with ThreadPoolExecutor(max_workers=13) as ex:
         f_bybit   = ex.submit(_bybit_data, base)
         f_k1h     = ex.submit(_klines, base, "60",  250)
         f_k4h     = ex.submit(_klines, base, "240", 250)
@@ -1594,6 +1638,7 @@ def fetch_market(symbol: str) -> dict:
         f_liq     = ex.submit(_liq_stats, base)
         f_fr      = ex.submit(_funding_history, base)
         f_options = ex.submit(_deribit_options, deribit_currency) if deribit_currency else None
+        f_btc_k1h = ex.submit(_klines, "BTCUSDT", "60", 250) if need_btc_corr else None
 
     bybit    = f_bybit.result()
     k1h      = f_k1h.result()
@@ -1606,9 +1651,11 @@ def fetch_market(symbol: str) -> dict:
     liqs     = f_liq.result()
     fr_hist  = f_fr.result()
     options  = f_options.result() if f_options else {}
+    btc_k1h  = f_btc_k1h.result() if f_btc_k1h else []
     session  = get_session()
 
     cvd        = compute_cvd(k1h)
+    btc_corr   = compute_btc_correlation(k1h, btc_k1h) if need_btc_corr and btc_k1h else None
     vp         = compute_volume_profile(k1h)
     ema_biases = get_ema_biases(k1h, k4h, k1d)
     tz_1h      = compute_turtle_zone(k1h)
@@ -1642,6 +1689,7 @@ def fetch_market(symbol: str) -> dict:
         "options":              options,
         "macro":                macro,
         "session":              session,
+        "btc_corr":             btc_corr,
         # raw klines reused by cmd_analyze_symbol (avoids duplicate API calls)
         "_klines": {"60": k1h, "240": k4h, "D": k1d},
     }
@@ -2443,6 +2491,20 @@ def cmd_analyze_symbol(chat_id: int, symbol: str, tfs: list = None):
             sig_s   = f" ⚡{'|'.join(sigs[:2])}" if sigs else ""
             tf_lines.append(f"  {snap['tf_label']:<4} {b_icon} EMA | CVD:{cvd_i}{tz_s}{sig_s}")
 
+        # BTC Correlation line
+        btc_corr = market.get("btc_corr")
+        if btc_corr:
+            r24 = btc_corr.get("r24h")
+            r7d = btc_corr.get("r7d")
+            corr_line = (
+                f"🔗 BTC corr: "
+                f"24H={r24:+.2f} ({btc_corr['label24h']})  "
+                f"7D={r7d:+.2f} ({btc_corr['label7d']})\n"
+                if r24 is not None else ""
+            )
+        else:
+            corr_line = ""
+
         analysis = llm_multi_tf_analysis(market, snapshots, symbol)
         labels   = " · ".join(TF_LABEL.get(t, t) for t in requested)
         tg_send(
@@ -2451,6 +2513,7 @@ def cmd_analyze_symbol(chat_id: int, symbol: str, tfs: list = None):
             f"━━━━━━━━━━━━━━━━━━\n"
             f"💰 ${price:,.2f}  ({market.get('change_24h',0):+.2f}% 24h)\n"
             f"FR: {fr_b:+.4f}%  |  OI: {oi_chg:+.2f}%\n"
+            f"{corr_line}"
             f"━━ По таймфреймам ━\n"
             + "\n".join(tf_lines)
             + f"\n━━━━━━━━━━━━━━━━━━\n"
@@ -2458,6 +2521,19 @@ def cmd_analyze_symbol(chat_id: int, symbol: str, tfs: list = None):
             f"━━━━━━━━━━━━━━━━━━\n"
             f"<i>Bybit + HL · {now_str}</i>",
             chat_id=chat_id,
+        )
+
+        # ── Inline buttons: drill down to a specific TF ───────────────────────
+        cb_sym = sym_short  # e.g. "BTC", "ETH"
+        tg_send(
+            "⏱ Детальный анализ по таймфрейму:",
+            chat_id=chat_id,
+            reply_markup={"inline_keyboard": [[
+                {"text": "📊 15M", "callback_data": f"analyze:{cb_sym}:15"},
+                {"text": "📊 1H",  "callback_data": f"analyze:{cb_sym}:60"},
+                {"text": "📊 4H",  "callback_data": f"analyze:{cb_sym}:240"},
+                {"text": "📊 D1",  "callback_data": f"analyze:{cb_sym}:D"},
+            ]]},
         )
 
 
@@ -2487,20 +2563,36 @@ def llm_digest(signals: list, market_ctx: str) -> str:
 
 # ─── TELEGRAM ─────────────────────────────────────────────────────────────────
 
-def tg_send(text: str, chat_id=None) -> bool:
+def tg_send(text: str, chat_id=None, reply_markup: dict = None) -> bool:
     cid = chat_id or TELEGRAM_CHAT_ID
+    payload = {
+        "chat_id": cid, "text": text,
+        "parse_mode": "HTML", "disable_web_page_preview": True,
+    }
+    if reply_markup:
+        payload["reply_markup"] = reply_markup
     try:
         r = requests.post(
             f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
-            json={"chat_id": cid, "text": text,
-                  "parse_mode": "HTML", "disable_web_page_preview": True},
-            timeout=10,
+            json=payload, timeout=10,
         )
         r.raise_for_status()
         return True
     except Exception as e:
         log.error(f"Telegram send: {e}")
         return False
+
+
+def _tg_answer_callback(callback_id: str) -> None:
+    """Dismiss the inline button loading spinner."""
+    try:
+        requests.post(
+            f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/answerCallbackQuery",
+            json={"callback_query_id": callback_id},
+            timeout=5,
+        )
+    except Exception:
+        pass
 
 
 # ─── MESSAGE BUILDER ─────────────────────────────────────────────────────────
@@ -3158,6 +3250,8 @@ def cmd_help(chat_id: int):
         "/alerts              — список активных алертов\n"
         "/delalert 3          — удалить алерт #3\n\n"
         "⚙️ <b>Прочее</b>\n"
+        "/news                — последние новости (CryptoPanic)\n"
+        "/news ETH            — новости по монете\n"
         "/scan                — ручной запуск автосканера\n"
         "/history             — последние 10 сигналов\n"
         "/stats               — win-rate по типам сигналов (30д)\n"
@@ -3201,7 +3295,102 @@ def cmd_analyze_chart(chat_id: int, photos: list, caption: str):
     )
 
 
+# ─── CRYPTOPANIC NEWS ─────────────────────────────────────────────────────────
+
+_news_cache: dict = {}          # {"BTCETH": (timestamp, [posts])}
+_NEWS_TTL = 300                 # 5 min cache
+
+def _news_cryptopanic(currencies: str = "BTC,ETH", limit: int = 5) -> list:
+    """Fetch latest posts from CryptoPanic (requires CRYPTOPANIC_KEY env var)."""
+    if not CRYPTOPANIC_KEY:
+        return []
+    key = currencies.replace(",", "")
+    ts, cached = _news_cache.get(key, (0, []))
+    if time.time() - ts < _NEWS_TTL:
+        return cached[:limit]
+    try:
+        r = requests.get(
+            "https://cryptopanic.com/api/v1/posts/",
+            params={"auth_token": CRYPTOPANIC_KEY, "currencies": currencies,
+                    "public": "true", "filter": "rising"},
+            timeout=8,
+        )
+        posts = r.json().get("results", [])
+        result = [
+            {"title": p["title"], "url": p["url"],
+             "source": p.get("source", {}).get("title", ""),
+             "sentiment": "🟢" if p.get("votes", {}).get("positive", 0) > p.get("votes", {}).get("negative", 0) else "🔴"}
+            for p in posts
+        ]
+        _news_cache[key] = (time.time(), result)
+        return result[:limit]
+    except Exception as e:
+        log.warning(f"CryptoPanic {currencies}: {e}")
+        return []
+
+
+def cmd_news(chat_id: int, args: str):
+    """Show latest CryptoPanic news for a coin."""
+    ticker  = _extract_ticker(args) if args else None
+    coin    = ticker.replace("USDT", "") if ticker else None
+    currencies = coin or "BTC,ETH"
+
+    if not CRYPTOPANIC_KEY:
+        tg_send(
+            "❌ <b>CryptoPanic не настроен</b>\n"
+            "Добавь переменную <code>CRYPTOPANIC_KEY</code> в Railway → Variables.\n"
+            "Бесплатный ключ: cryptopanic.com/api",
+            chat_id=chat_id,
+        )
+        return
+
+    news = _news_cryptopanic(currencies)
+    if not news:
+        tg_send(f"📰 Новостей по {currencies} не найдено.", chat_id=chat_id)
+        return
+
+    lines = [f"📰 <b>Новости: {currencies}</b>  <i>(CryptoPanic)</i>"]
+    for i, n in enumerate(news, 1):
+        lines.append(f"\n{i}. {n['sentiment']} <a href=\"{n['url']}\">{n['title']}</a>")
+        if n["source"]:
+            lines.append(f"   <i>— {n['source']}</i>")
+    lines.append(f"\n<i>{datetime.now(timezone.utc).strftime('%H:%M UTC')}</i>")
+    tg_send("\n".join(lines), chat_id=chat_id)
+
+
+# ─── INLINE CALLBACK HANDLER ──────────────────────────────────────────────────
+
+def _handle_callback(cb: dict):
+    """Dispatch inline keyboard button presses."""
+    chat_id = cb.get("message", {}).get("chat", {}).get("id")
+    data    = cb.get("data", "")
+    cb_id   = cb.get("id", "")
+
+    _tg_answer_callback(cb_id)   # dismiss spinner immediately
+
+    if not chat_id:
+        return
+
+    # format: "analyze:BTC:60"
+    if data.startswith("analyze:"):
+        parts = data.split(":")
+        if len(parts) == 3:
+            _, sym_short, tf = parts
+            symbol = sym_short + "USDT"
+            threading.Thread(
+                target=cmd_analyze_symbol,
+                args=(chat_id, symbol, [tf]),
+                daemon=True,
+            ).start()
+
+
 def handle_update(update: dict):
+    # ── Inline button press ────────────────────────────────────────────────────
+    if "callback_query" in update:
+        try:    _handle_callback(update["callback_query"])
+        except Exception as e: log.error(f"callback_query: {e}")
+        return
+
     msg     = update.get("message", {})
     chat_id = msg.get("chat", {}).get("id")
     if not chat_id:
@@ -3247,6 +3436,7 @@ def handle_update(update: dict):
     elif cmd == "/risk":               cmd_risk(chat_id, args)
     elif cmd == "/market":             cmd_market(chat_id)
     elif cmd == "/debug":              cmd_debug(chat_id)
+    elif cmd == "/news":               cmd_news(chat_id, args)
     elif cmd in ("/help", "/start"):   cmd_help(chat_id)
 
 
@@ -3257,7 +3447,7 @@ def telegram_polling():
         try:
             r = requests.get(
                 f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/getUpdates",
-                params={"offset": offset, "timeout": 25, "allowed_updates": ["message", "message_with_photo"]},
+                params={"offset": offset, "timeout": 25, "allowed_updates": ["message", "callback_query"]},
                 timeout=30,
             )
             for upd in r.json().get("result", []):
