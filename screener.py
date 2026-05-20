@@ -12,6 +12,7 @@ import re
 import sqlite3
 import threading
 import time
+import xml.etree.ElementTree as ET
 import schedule
 import requests
 import anthropic
@@ -25,7 +26,6 @@ try:
         LLM_MODEL_FAST, LLM_MODEL_SMART,
         PORT, SYMBOLS, DIGEST_TIME, DB_PATH, MIN_QUALITY,
     )
-    CRYPTOPANIC_KEY = getattr(__import__("config"), "CRYPTOPANIC_KEY", "")
 except ImportError:
     import os as _os
     TELEGRAM_TOKEN    = _os.environ.get("TELEGRAM_TOKEN",   "YOUR_BOT_TOKEN")
@@ -38,7 +38,6 @@ except ImportError:
     DIGEST_TIME       = _os.environ.get("DIGEST_TIME", "08:00")
     DB_PATH           = _os.environ.get("DB_PATH", "signals.db")
     MIN_QUALITY       = int(_os.environ.get("MIN_QUALITY", 0))
-    CRYPTOPANIC_KEY   = _os.environ.get("CRYPTOPANIC_KEY", "")
 
 # ─── LOGGING ──────────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -3250,7 +3249,7 @@ def cmd_help(chat_id: int):
         "/alerts              — список активных алертов\n"
         "/delalert 3          — удалить алерт #3\n\n"
         "⚙️ <b>Прочее</b>\n"
-        "/news                — последние новости (CryptoPanic)\n"
+        "/news                — последние новости (CoinDesk · CT · CryptoSlate)\n"
         "/news ETH            — новости по монете\n"
         "/scan                — ручной запуск автосканера\n"
         "/history             — последние 10 сигналов\n"
@@ -3295,65 +3294,99 @@ def cmd_analyze_chart(chat_id: int, photos: list, caption: str):
     )
 
 
-# ─── CRYPTOPANIC NEWS ─────────────────────────────────────────────────────────
+# ─── NEWS (free RSS — no API key needed) ─────────────────────────────────────
 
-_news_cache: dict = {}          # {"BTCETH": (timestamp, [posts])}
-_NEWS_TTL = 300                 # 5 min cache
+_NEWS_FEEDS = [
+    ("CoinDesk",       "https://www.coindesk.com/arc/outboundfeeds/rss/"),
+    ("Cointelegraph",  "https://cointelegraph.com/rss"),
+    ("CryptoSlate",    "https://cryptoslate.com/feed/"),
+]
+_news_cache: dict = {}   # {filter_key: (timestamp, [items])}
+_NEWS_TTL = 300          # 5 min cache
 
-def _news_cryptopanic(currencies: str = "BTC,ETH", limit: int = 5) -> list:
-    """Fetch latest posts from CryptoPanic (requires CRYPTOPANIC_KEY env var)."""
-    if not CRYPTOPANIC_KEY:
+
+def _fetch_rss(url: str) -> list:
+    """Parse RSS feed, return list of {title, url, source} dicts."""
+    try:
+        r = requests.get(url, timeout=8, headers={"User-Agent": "Mozilla/5.0"})
+        root = ET.fromstring(r.content)
+        ns   = {"atom": "http://www.w3.org/2005/Atom"}
+        items = root.findall(".//item") or root.findall(".//atom:entry", ns)
+        out = []
+        for item in items[:10]:
+            title = (item.findtext("title") or item.findtext("atom:title", namespaces=ns) or "").strip()
+            link  = (item.findtext("link")  or item.findtext("atom:link",  namespaces=ns) or "").strip()
+            # <atom:link> can be an element with href attribute
+            if not link:
+                el = item.find("atom:link", ns)
+                link = (el.get("href", "") if el is not None else "")
+            if title and link:
+                out.append({"title": title, "url": link})
+        return out
+    except Exception as e:
+        log.debug(f"RSS {url}: {e}")
         return []
-    key = currencies.replace(",", "")
-    ts, cached = _news_cache.get(key, (0, []))
+
+
+def _news_rss(keyword: str = "", limit: int = 6) -> list:
+    """Merge RSS feeds, optionally filter by keyword, deduplicate, return top N."""
+    cache_key = keyword.upper() or "ALL"
+    ts, cached = _news_cache.get(cache_key, (0, []))
     if time.time() - ts < _NEWS_TTL:
         return cached[:limit]
-    try:
-        r = requests.get(
-            "https://cryptopanic.com/api/v1/posts/",
-            params={"auth_token": CRYPTOPANIC_KEY, "currencies": currencies,
-                    "public": "true", "filter": "rising"},
-            timeout=8,
-        )
-        posts = r.json().get("results", [])
-        result = [
-            {"title": p["title"], "url": p["url"],
-             "source": p.get("source", {}).get("title", ""),
-             "sentiment": "🟢" if p.get("votes", {}).get("positive", 0) > p.get("votes", {}).get("negative", 0) else "🔴"}
-            for p in posts
-        ]
-        _news_cache[key] = (time.time(), result)
-        return result[:limit]
-    except Exception as e:
-        log.warning(f"CryptoPanic {currencies}: {e}")
-        return []
+
+    all_items = []
+    with ThreadPoolExecutor(max_workers=len(_NEWS_FEEDS)) as ex:
+        futures = {ex.submit(_fetch_rss, url): name for name, url in _NEWS_FEEDS}
+    for fut, name in futures.items():
+        for item in fut.result():
+            item["source"] = name
+            all_items.append(item)
+
+    # Filter by keyword if given (case-insensitive title match)
+    if keyword:
+        kw = keyword.upper()
+        all_items = [i for i in all_items if kw in i["title"].upper()]
+
+    # Deduplicate by title prefix
+    seen, deduped = set(), []
+    for item in all_items:
+        key = item["title"][:40].lower()
+        if key not in seen:
+            seen.add(key)
+            deduped.append(item)
+
+    _news_cache[cache_key] = (time.time(), deduped)
+    return deduped[:limit]
 
 
 def cmd_news(chat_id: int, args: str):
-    """Show latest CryptoPanic news for a coin."""
+    """Show latest crypto news from free RSS feeds."""
     ticker  = _extract_ticker(args) if args else None
-    coin    = ticker.replace("USDT", "") if ticker else None
-    currencies = coin or "BTC,ETH"
+    coin    = ticker.replace("USDT", "") if ticker else ""
+    label   = coin if coin else "крипто"
 
-    if not CRYPTOPANIC_KEY:
-        tg_send(
-            "❌ <b>CryptoPanic не настроен</b>\n"
-            "Добавь переменную <code>CRYPTOPANIC_KEY</code> в Railway → Variables.\n"
-            "Бесплатный ключ: cryptopanic.com/api",
-            chat_id=chat_id,
-        )
-        return
+    tg_send(f"📰 Загружаю новости по {label}...", chat_id=chat_id)
+    news = _news_rss(keyword=coin, limit=6)
 
-    news = _news_cryptopanic(currencies)
     if not news:
-        tg_send(f"📰 Новостей по {currencies} не найдено.", chat_id=chat_id)
-        return
+        if coin:
+            # Fallback: general news if no coin-specific results
+            news = _news_rss(keyword="", limit=6)
+            if news:
+                tg_send(
+                    f"ℹ️ Статей именно по {coin} не нашлось — показываю общие новости.",
+                    chat_id=chat_id,
+                )
+        if not news:
+            tg_send("📰 Нет свежих новостей. Попробуй позже.", chat_id=chat_id)
+            return
 
-    lines = [f"📰 <b>Новости: {currencies}</b>  <i>(CryptoPanic)</i>"]
+    sources = ", ".join(sorted({n["source"] for n in news}))
+    lines   = [f"📰 <b>Новости: {label.upper() or 'крипто'}</b>  <i>({sources})</i>"]
     for i, n in enumerate(news, 1):
-        lines.append(f"\n{i}. {n['sentiment']} <a href=\"{n['url']}\">{n['title']}</a>")
-        if n["source"]:
-            lines.append(f"   <i>— {n['source']}</i>")
+        lines.append(f"\n{i}. <a href=\"{n['url']}\">{n['title']}</a>")
+        lines.append(f"   <i>— {n['source']}</i>")
     lines.append(f"\n<i>{datetime.now(timezone.utc).strftime('%H:%M UTC')}</i>")
     tg_send("\n".join(lines), chat_id=chat_id)
 
