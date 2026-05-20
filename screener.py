@@ -75,6 +75,11 @@ SIGNAL_META = {
     "WEEKLY_OPEN":       ("📅", "Weekly Open тест",       "⚡ УРОВЕНЬ"),
     "MONTHLY_OPEN":      ("📅", "Monthly Open тест",      "⚡ УРОВЕНЬ"),
     "ALERT":             ("📢", "TV Алерт",               "⚡ ВНИМАНИЕ"),
+    "RSI_DIV_BULL":      ("📐", "RSI Бычья дивергенция",  "🟢 BULLISH"),
+    "RSI_DIV_BEAR":      ("📐", "RSI Медвежья дивергенция","🔴 BEARISH"),
+    "EMA_CROSS_BULL":    ("✨", "EMA 9/21 Golden Cross",   "🟢 BULLISH"),
+    "EMA_CROSS_BEAR":    ("💀", "EMA 9/21 Death Cross",    "🔴 BEARISH"),
+    "VOL_SPIKE":         ("🔊", "Volume Spike",            "⚡ ВНИМАНИЕ"),
 }
 
 TF_LABEL = {
@@ -695,16 +700,106 @@ def compute_stochastic(candles: list, k_period: int = 14,
     return {"k": round(k, 1), "d": round(d, 1), "signal": signal, "icon": icon}
 
 
+def compute_atr(candles: list, period: int = 14) -> float:
+    """Average True Range (Wilder's smoothing)."""
+    if len(candles) < period + 1:
+        return 0.0
+    trs = [max(candles[i]["h"] - candles[i]["l"],
+               abs(candles[i]["h"] - candles[i-1]["c"]),
+               abs(candles[i]["l"] - candles[i-1]["c"]))
+           for i in range(1, len(candles))]
+    atr = sum(trs[:period]) / period
+    for tr in trs[period:]:
+        atr = (atr * (period - 1) + tr) / period
+    return round(atr, 4)
+
+
+def detect_rsi_divergence(candles: list, rsi_period: int = 14,
+                          lookback: int = 30) -> str:
+    """
+    Detect regular RSI divergence over recent candles.
+    Returns: 'bullish', 'bearish', or 'none'
+    """
+    if len(candles) < rsi_period + lookback + 2:
+        return "none"
+
+    window   = candles[-lookback:]
+    closes   = [c["c"] for c in window]
+    rsi_vals = [compute_rsi([c["c"] for c in candles[:-(lookback - i - 1) or None]])
+                for i in range(lookback)]
+
+    # Find two most recent swing highs and lows (simple: just compare last vs earlier peak)
+    def find_swing_high(prices, rsi, n=5):
+        best_i = max(range(n, len(prices) - 1),
+                     key=lambda i: prices[i], default=None)
+        prev_i = max(range(1, best_i) if best_i else range(0),
+                     key=lambda i: prices[i], default=None)
+        return (prev_i, best_i) if prev_i is not None and best_i is not None else (None, None)
+
+    def find_swing_low(prices, rsi, n=5):
+        best_i = min(range(n, len(prices) - 1),
+                     key=lambda i: prices[i], default=None)
+        prev_i = min(range(1, best_i) if best_i else range(0),
+                     key=lambda i: prices[i], default=None)
+        return (prev_i, best_i) if prev_i is not None and best_i is not None else (None, None)
+
+    # Bearish: price makes higher high, RSI makes lower high
+    i1, i2 = find_swing_high(closes, rsi_vals)
+    if (i1 is not None and i2 is not None
+            and closes[i2] > closes[i1]
+            and rsi_vals[i2] < rsi_vals[i1] - 3):
+        return "bearish"
+
+    # Bullish: price makes lower low, RSI makes higher low
+    i1, i2 = find_swing_low(closes, rsi_vals)
+    if (i1 is not None and i2 is not None
+            and closes[i2] < closes[i1]
+            and rsi_vals[i2] > rsi_vals[i1] + 3):
+        return "bullish"
+
+    return "none"
+
+
+def check_ema_cross(candles: list, fast: int = 9, slow: int = 21) -> str:
+    """Detect EMA cross on the last two closed candles. Returns 'golden'/'death'/'none'."""
+    closes = [c["c"] for c in candles]
+    if len(closes) < slow + 2:
+        return "none"
+    ef = _ema(closes, fast)
+    es = _ema(closes, slow)
+    if ef[-2] < es[-2] and ef[-1] > es[-1]:
+        return "golden"
+    if ef[-2] > es[-2] and ef[-1] < es[-1]:
+        return "death"
+    return "none"
+
+
+def detect_volume_spike(candles: list, threshold: float = 2.5,
+                        avg_period: int = 20) -> bool:
+    """True if last candle volume > threshold × average of prior avg_period candles."""
+    if len(candles) < avg_period + 1:
+        return False
+    avg = sum(c["v"] for c in candles[-(avg_period + 1):-1]) / avg_period
+    return avg > 0 and candles[-1]["v"] > avg * threshold
+
+
 def compute_indicators(candles: list) -> dict:
     """Bundle all technical indicators from OHLCV candles."""
     if len(candles) < 35:
         return {}
     closes = [c["c"] for c in candles]
+    price  = closes[-1]
+    atr    = compute_atr(candles)
     return {
-        "rsi":   compute_rsi(closes),
-        "macd":  compute_macd(closes),
-        "bb":    compute_bollinger(closes),
-        "stoch": compute_stochastic(candles),
+        "rsi":          compute_rsi(closes),
+        "macd":         compute_macd(closes),
+        "bb":           compute_bollinger(closes),
+        "stoch":        compute_stochastic(candles),
+        "atr":          atr,
+        "atr_pct":      round(atr / price * 100, 3) if price else 0,
+        "rsi_div":      detect_rsi_divergence(candles),
+        "ema_cross":    check_ema_cross(candles),
+        "vol_spike":    detect_volume_spike(candles),
     }
 
 
@@ -1102,6 +1197,32 @@ def compute_confluence_score(signal_type: str, market: dict, mtf: dict) -> tuple
         elif sig_up and bb_pos == "above_upper": score -= 8; factors.append(f"BB ❌ выше верхней при лонге")
         elif sig_dn and bb_pos == "below_lower": score -= 8; factors.append(f"BB ❌ ниже нижней при шорте")
         else: factors.append(f"BB ⚪ {bb.get('icon','⚪')} [%B:{bb.get('pct_b',0.5):.2f}]")
+
+    # RSI Divergence (+12 / -12) — strong reversal signal
+    rsi_div = indic.get("rsi_div", "none")
+    if rsi_div == "bullish" and sig_up:
+        score += 12; factors.append("RSI Div ✅ бычья дивергенция — разворот вверх")
+    elif rsi_div == "bearish" and sig_dn:
+        score += 12; factors.append("RSI Div ✅ медвежья дивергенция — разворот вниз")
+    elif rsi_div == "bearish" and sig_up:
+        score -= 12; factors.append("RSI Div ❌ медвежья дивергенция против лонга")
+    elif rsi_div == "bullish" and sig_dn:
+        score -= 12; factors.append("RSI Div ❌ бычья дивергенция против шорта")
+
+    # EMA 9/21 Cross (+8 aligned / -8 opposite)
+    ema_cross = indic.get("ema_cross", "none")
+    if ema_cross == "golden" and sig_up:
+        score += 8;  factors.append("EMA ✨ Golden Cross 9/21 подтверждает лонг")
+    elif ema_cross == "death" and sig_dn:
+        score += 8;  factors.append("EMA 💀 Death Cross 9/21 подтверждает шорт")
+    elif ema_cross == "golden" and sig_dn:
+        score -= 8;  factors.append("EMA ✨ Golden Cross против шорта")
+    elif ema_cross == "death" and sig_up:
+        score -= 8;  factors.append("EMA 💀 Death Cross против лонга")
+
+    # Volume Spike (+5 as attention signal)
+    if indic.get("vol_spike"):
+        score += 5; factors.append("🔊 Volume Spike — повышенный интерес")
 
     # VWAP (+10 in discount for long / premium for short, -8 opposite, +5 extreme band)
     vwap = market.get("vwap", {})
@@ -1518,11 +1639,22 @@ def market_summary_text(symbol: str, m: dict) -> str:
         rsi_icon = "🔴" if rsi > 70 else ("🟢" if rsi < 30 else "⚪")
         macd_icon = "📈" if macd.get("trend") == "bull" else "📉"
         cross_str = f" [{macd.get('cross','')}]" if macd.get("cross") != "none" else ""
+        atr     = ind.get("atr", 0)
+        atr_pct = ind.get("atr_pct", 0)
+        div     = ind.get("rsi_div", "none")
+        ecross  = ind.get("ema_cross", "none")
+        vspike  = ind.get("vol_spike", False)
+        extras  = []
+        if div != "none":    extras.append(f"RSI Div:{'🟢' if div=='bullish' else '🔴'}{div}")
+        if ecross != "none": extras.append(f"EMA9/21:{'✨golden' if ecross=='golden' else '💀death'}")
+        if vspike:           extras.append("🔊VolSpike")
+        extras_str = " | " + " | ".join(extras) if extras else ""
         ind_str = (
             f"\n• Индикаторы (1H): RSI14:{rsi_icon}{rsi:.0f}"
             f" | MACD:{macd_icon}{cross_str}"
             f" | BB:{bb.get('icon','⚪')}[%B:{bb.get('pct_b',0.5):.2f}]"
             f" | Stoch:{stoch.get('icon','⚪')}K:{stoch.get('k',50):.0f}"
+            f" | ATR:{atr:,.2f}({atr_pct:.2f}%){extras_str}"
         )
 
     vwap = m.get("vwap", {})
@@ -2328,13 +2460,23 @@ def build_signal_message(data: dict, market: dict, llm_text: str, quality: int,
         ri = "🔴" if rsi > 70 else ("🟢" if rsi < 30 else "⚪")
         mi = "📈" if macd.get("trend") == "bull" else "📉"
         cx = f"[{macd.get('cross')}]" if macd.get("cross") not in ("none", None, "") else ""
+        atr     = ind.get("atr", 0)
+        atr_pct = ind.get("atr_pct", 0)
+        div     = ind.get("rsi_div", "none")
+        ecross  = ind.get("ema_cross", "none")
+        vspike  = ind.get("vol_spike", False)
+        div_s   = f"  📐 RSI Div: {'🟢 BULL' if div=='bullish' else '🔴 BEAR'}\n" if div != "none" else ""
+        ecr_s   = f"  {'✨' if ecross=='golden' else '💀'} EMA9/21: {'Golden ✅' if ecross=='golden' else 'Death ❌'}\n" if ecross != "none" else ""
+        vol_s   = f"  🔊 Volume Spike!\n" if vspike else ""
         ind_line = (
             f"\n━━ Индикаторы (1H) ━\n"
             f"  RSI14: {ri} {rsi:.0f}"
             f"  |  MACD: {mi}{cx}\n"
             f"  BB: {bb.get('icon','⚪')} %B:{bb.get('pct_b',0.5):.2f}"
-            f"  |  Stoch: {stoch.get('icon','⚪')} K:{stoch.get('k',50):.0f} D:{stoch.get('d',50):.0f}"
-        )
+            f"  |  Stoch: {stoch.get('icon','⚪')} K:{stoch.get('k',50):.0f}\n"
+            f"  ATR14: {atr:,.2f} ({atr_pct:.2f}%)\n"
+            f"{div_s}{ecr_s}{vol_s}"
+        ).rstrip("\n")
 
     vwap = market.get("vwap", {})
     vwap_line = ""
@@ -2940,6 +3082,22 @@ def detect_signals(candles: list) -> list:
         signals.append("LIQ_SWEEP_H")
     if last["l"] < prev_low and last["c"] > prev_low:
         signals.append("LIQ_SWEEP_L")
+
+    # ── EMA 9/21 Cross ───────────────────────────────────────────────────────
+    if len(candles) >= 23:
+        cross = check_ema_cross(candles)
+        if cross == "golden": signals.append("EMA_CROSS_BULL")
+        elif cross == "death": signals.append("EMA_CROSS_BEAR")
+
+    # ── RSI Divergence ───────────────────────────────────────────────────────
+    if len(candles) >= 50:
+        div = detect_rsi_divergence(candles)
+        if div == "bullish":  signals.append("RSI_DIV_BULL")
+        elif div == "bearish": signals.append("RSI_DIV_BEAR")
+
+    # ── Volume Spike ─────────────────────────────────────────────────────────
+    if detect_volume_spike(candles):
+        signals.append("VOL_SPIKE")
 
     return signals
 
