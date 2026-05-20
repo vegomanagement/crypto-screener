@@ -2582,6 +2582,40 @@ def tg_send(text: str, chat_id=None, reply_markup: dict = None) -> bool:
         return False
 
 
+def _register_bot_commands() -> None:
+    """Register slash commands so Telegram shows them in the / menu."""
+    commands = [
+        {"command": "analyze",  "description": "Анализ монеты: /analyze BTC или /analyze ETH 4H"},
+        {"command": "status",   "description": "Рынок: CVD, VP, MTF EMA, Fear&Greed"},
+        {"command": "market",   "description": "TOTAL / TOTAL2 / доминации / альткоины"},
+        {"command": "risk",     "description": "Калькулятор позиции: /risk BTC 76000 74000"},
+        {"command": "news",     "description": "Последние новости: /news или /news ETH"},
+        {"command": "top",      "description": "Топ гейнеры / лузеры / объём (24H)"},
+        {"command": "movers",   "description": "Движения 1H по watchlist"},
+        {"command": "ask",      "description": "Вопрос о рынке: /ask что думаешь о BTC?"},
+        {"command": "alert",    "description": "Ценовой алерт: /alert BTC 105000"},
+        {"command": "alerts",   "description": "Список активных алертов"},
+        {"command": "delalert", "description": "Удалить алерт: /delalert 3"},
+        {"command": "stats",    "description": "Win-rate по типам сигналов (30 дней)"},
+        {"command": "history",  "description": "Последние 10 сигналов из БД"},
+        {"command": "digest",   "description": "Дневной дайджест с LLM-анализом"},
+        {"command": "scan",     "description": "Ручной запуск автосканера"},
+        {"command": "help",     "description": "Список всех команд"},
+    ]
+    try:
+        r = requests.post(
+            f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/setMyCommands",
+            json={"commands": commands},
+            timeout=10,
+        )
+        if r.json().get("ok"):
+            log.info("✅ Telegram bot commands registered")
+        else:
+            log.warning(f"setMyCommands: {r.text}")
+    except Exception as e:
+        log.warning(f"setMyCommands error: {e}")
+
+
 def _tg_answer_callback(callback_id: str) -> None:
     """Dismiss the inline button loading spinner."""
     try:
@@ -3929,6 +3963,7 @@ if __name__ == "__main__":
         exit(1)
 
     db_init()
+    _register_bot_commands()
 
     threading.Thread(target=telegram_polling, daemon=True).start()
     threading.Thread(target=start_scheduler,  daemon=True).start()
