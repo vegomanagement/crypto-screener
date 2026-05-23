@@ -1,0 +1,370 @@
+"""
+decision.py — детерминистский торговый движок.
+
+Принимает сырой сигнал TradingView + рыночный контекст + confluence score
+и выдаёт ЖЁСТКИЙ verdict с уровнями Entry/SL/TP/RR.
+
+LLM на следующем этапе будет ТОЛЬКО объяснять verdict, не менять его —
+это устраняет противоречия в выводе.
+
+Формат уровней: ATR-based, риск якорим к цене на момент сигнала.
+  entry_zone = price ± 0.3 × ATR     (зона для лимитной заявки)
+  sl         = price ∓ 1.0 × ATR     (risk = 1.0 × ATR)
+  tp1/tp2/tp3 = price ± 1.5 / 2.5 / 4.0 × ATR
+  → RR(TP1) = 1.5,  RR(TP2) = 2.5,  RR(TP3) = 4.0
+"""
+
+from typing import List
+
+# ─── ATR коэффициенты ─────────────────────────────────────────────────────
+ATR_ENTRY_ZONE = 0.3   # ширина entry zone (для лимитной заявки)
+ATR_SL_DIST    = 1.0   # SL от цены — определяет величину риска
+ATR_TP1_DIST   = 1.5   # → RR = 1.5
+ATR_TP2_DIST   = 2.5   # → RR = 2.5
+ATR_TP3_DIST   = 4.0   # → RR = 4.0
+
+# ─── Veto / гейтинг пороги ────────────────────────────────────────────────
+CONFLUENCE_WAIT_THRESHOLD = 55
+MIN_RR_FOR_TRADE          = 1.5
+MAX_CONTRADICTIONS        = 3
+
+# Veto штрафы к confidence
+RSI_OVERBOUGHT_LONG  = 75
+RSI_OVERSOLD_SHORT   = 25
+RSI_VETO_PENALTY     = 20
+
+MTF_AGAINST_PENALTY  = 15
+
+FUNDING_OVERHEATED   = 0.0005  # 0.05%
+FUNDING_VETO_PENALTY = 10
+
+MACD_VETO_PENALTY    = 8
+RSI_DIV_VETO_PENALTY = 12
+TZ_EXTREME_PENALTY   = 10
+
+# ─── Парсинг направления из типа сигнала ─────────────────────────────────
+LONG_TOKENS  = ("BULL", "LONG", "SWEEP_L", "EQL")
+SHORT_TOKENS = ("BEAR", "SHORT", "SWEEP_H", "EQH")
+
+
+def parse_direction(signal_type: str) -> str:
+    s = (signal_type or "").upper()
+    if any(t in s for t in LONG_TOKENS):
+        return "long"
+    if any(t in s for t in SHORT_TOKENS):
+        return "short"
+    return "neutral"
+
+
+# ─── Основной движок ──────────────────────────────────────────────────────
+
+def make_decision(
+    signal_type: str,
+    price: float,
+    market: dict,
+    mtf: dict,
+    confluence_score: int,
+    confluence_factors: List[str],
+) -> dict:
+    """
+    Возвращает структурированный verdict:
+
+      verdict:    "LONG" | "SHORT" | "WAIT" | "SKIP"
+      direction:  "long" | "short" | "neutral"
+      entry:      {"min": float, "max": float} | None
+      sl, tp1-3:  float | None
+      rr1-3:      float | None
+      confidence: int 0-100
+      veto_reasons: list[str]
+      key_factors:  list[str]
+      atr:        float
+      reason:     str
+    """
+    direction = parse_direction(signal_type)
+    indic     = market.get("indicators", {}) or {}
+    atr       = float(indic.get("atr", 0) or 0)
+
+    base = {
+        "verdict":      "WAIT",
+        "direction":    direction,
+        "entry":        None,
+        "sl":           None,
+        "tp1": None, "tp2": None, "tp3": None,
+        "rr1": None, "rr2": None, "rr3": None,
+        "confidence":   0,
+        "veto_reasons": [],
+        "key_factors":  [],
+        "atr":          atr,
+        "reason":       "",
+    }
+
+    if direction == "neutral":
+        base["reason"] = "Сигнал без направления (info-only)"
+        return base
+
+    if atr <= 0 or price <= 0:
+        base["verdict"] = "SKIP"
+        base["reason"]  = "Нет ATR/цены — невозможно рассчитать риск"
+        return base
+
+    levels = _compute_levels(price, atr, direction)
+    base.update(levels)
+
+    vetoes = _collect_vetoes(direction, market, mtf)
+    base["veto_reasons"] = [v["text"] for v in vetoes]
+
+    penalty    = sum(v["penalty"] for v in vetoes)
+    confidence = max(0, min(100, int(confluence_score) - penalty))
+    base["confidence"]  = confidence
+    base["key_factors"] = _extract_key_factors(confluence_factors, limit=3)
+
+    rr1 = levels.get("rr1") or 0
+    if rr1 < MIN_RR_FOR_TRADE:
+        base["verdict"] = "SKIP"
+        base["reason"]  = f"RR до TP1 = {rr1:.2f} < {MIN_RR_FOR_TRADE}"
+        _strip_levels(base)
+        return base
+
+    if confluence_score < CONFLUENCE_WAIT_THRESHOLD:
+        base["verdict"] = "WAIT"
+        base["reason"]  = (f"Confluence {confluence_score}/100 < "
+                           f"{CONFLUENCE_WAIT_THRESHOLD} — мало подтверждений")
+        _strip_levels(base)
+        return base
+
+    if len(vetoes) >= MAX_CONTRADICTIONS:
+        base["verdict"] = "WAIT"
+        base["reason"]  = (f"{len(vetoes)} противоречий — лучше переждать "
+                           f"подтверждение")
+        _strip_levels(base)
+        return base
+
+    base["verdict"] = "LONG" if direction == "long" else "SHORT"
+    base["reason"]  = (f"Confluence {confluence_score}/100 · "
+                       f"RR(TP1)={rr1:.2f} · confidence {confidence}/100")
+    return base
+
+
+# ─── Расчёт уровней (ATR-based) ───────────────────────────────────────────
+
+def _compute_levels(price: float, atr: float, direction: str) -> dict:
+    zone_d = atr * ATR_ENTRY_ZONE
+    sl_d   = atr * ATR_SL_DIST
+    t1_d   = atr * ATR_TP1_DIST
+    t2_d   = atr * ATR_TP2_DIST
+    t3_d   = atr * ATR_TP3_DIST
+
+    digits = _price_digits(price)
+
+    def r(x):
+        return round(x, digits)
+
+    entry_min = r(price - zone_d)
+    entry_max = r(price + zone_d)
+
+    if direction == "long":
+        sl   = r(price - sl_d)
+        tp1  = r(price + t1_d)
+        tp2  = r(price + t2_d)
+        tp3  = r(price + t3_d)
+        risk = price - sl
+    else:
+        sl   = r(price + sl_d)
+        tp1  = r(price - t1_d)
+        tp2  = r(price - t2_d)
+        tp3  = r(price - t3_d)
+        risk = sl - price
+
+    if risk <= 0:
+        return {
+            "entry": {"min": entry_min, "max": entry_max},
+            "sl": sl, "tp1": tp1, "tp2": tp2, "tp3": tp3,
+            "rr1": 0.0, "rr2": 0.0, "rr3": 0.0,
+        }
+
+    return {
+        "entry": {"min": entry_min, "max": entry_max},
+        "sl":  sl, "tp1": tp1, "tp2": tp2, "tp3": tp3,
+        "rr1": round(abs(tp1 - price) / risk, 2),
+        "rr2": round(abs(tp2 - price) / risk, 2),
+        "rr3": round(abs(tp3 - price) / risk, 2),
+    }
+
+
+def _strip_levels(base: dict) -> None:
+    """Для WAIT/SKIP убираем Entry/SL/TP — нечего показывать."""
+    for k in ("entry", "sl", "tp1", "tp2", "tp3", "rr1", "rr2", "rr3"):
+        base[k] = None
+
+
+# ─── Сбор противоречий ────────────────────────────────────────────────────
+
+def _collect_vetoes(direction: str, market: dict, mtf: dict) -> list:
+    vetoes = []
+    indic  = market.get("indicators", {}) or {}
+
+    rsi = indic.get("rsi")
+    if rsi is not None:
+        if direction == "long" and rsi > RSI_OVERBOUGHT_LONG:
+            vetoes.append({
+                "text": f"RSI {rsi:.0f} перекуплен (>{RSI_OVERBOUGHT_LONG})",
+                "penalty": RSI_VETO_PENALTY,
+            })
+        elif direction == "short" and rsi < RSI_OVERSOLD_SHORT:
+            vetoes.append({
+                "text": f"RSI {rsi:.0f} перепродан (<{RSI_OVERSOLD_SHORT})",
+                "penalty": RSI_VETO_PENALTY,
+            })
+
+    if mtf and mtf.get("aligned") == 0:
+        total = mtf.get("total", 3)
+        vetoes.append({
+            "text": f"MTF: все {total} ТФ против направления",
+            "penalty": MTF_AGAINST_PENALTY,
+        })
+
+    bybit = market.get("bybit", {}) or {}
+    fr    = bybit.get("funding")
+    if fr is not None:
+        if direction == "long" and fr > FUNDING_OVERHEATED:
+            vetoes.append({
+                "text": f"Funding {fr*100:+.3f}% — лонги перегреты",
+                "penalty": FUNDING_VETO_PENALTY,
+            })
+        elif direction == "short" and fr < -FUNDING_OVERHEATED:
+            vetoes.append({
+                "text": f"Funding {fr*100:+.3f}% — шорты перегреты",
+                "penalty": FUNDING_VETO_PENALTY,
+            })
+
+    macd = indic.get("macd", {}) or {}
+    trend = macd.get("trend")
+    if direction == "long" and trend == "bear":
+        vetoes.append({"text": "MACD: медвежий тренд",
+                       "penalty": MACD_VETO_PENALTY})
+    elif direction == "short" and trend == "bull":
+        vetoes.append({"text": "MACD: бычий тренд",
+                       "penalty": MACD_VETO_PENALTY})
+
+    rsi_div = indic.get("rsi_div", "none")
+    if direction == "long" and rsi_div == "bearish":
+        vetoes.append({"text": "RSI медвежья дивергенция",
+                       "penalty": RSI_DIV_VETO_PENALTY})
+    elif direction == "short" and rsi_div == "bullish":
+        vetoes.append({"text": "RSI бычья дивергенция",
+                       "penalty": RSI_DIV_VETO_PENALTY})
+
+    for tf_name, tz_key in [("1H", "turtle_1h"), ("4H", "turtle_4h")]:
+        tz = market.get(tz_key, {}) or {}
+        z  = tz.get("zone", "")
+        if direction == "long" and z == "extreme_upper":
+            vetoes.append({
+                "text": f"TZ {tf_name}: extreme upper — цена перегрета",
+                "penalty": TZ_EXTREME_PENALTY,
+            })
+        elif direction == "short" and z == "extreme_lower":
+            vetoes.append({
+                "text": f"TZ {tf_name}: extreme lower — цена перепродана",
+                "penalty": TZ_EXTREME_PENALTY,
+            })
+
+    return vetoes
+
+
+# ─── Топ-факторы «за» направление ─────────────────────────────────────────
+
+def _extract_key_factors(factors: list, limit: int = 3) -> list:
+    if not factors:
+        return []
+    positive = [f for f in factors if "✅" in f]
+    return positive[:limit]
+
+
+# ─── Helpers для форматирования цены ──────────────────────────────────────
+
+def _price_digits(price: float) -> int:
+    p = abs(price)
+    if p >= 1000:
+        return 2
+    if p >= 10:
+        return 3
+    if p >= 1:
+        return 4
+    if p >= 0.01:
+        return 5
+    return 7
+
+
+def _fmt_price(p) -> str:
+    if p is None:
+        return "—"
+    ap = abs(p)
+    if ap >= 1000:
+        return f"{p:,.2f}"
+    if ap >= 10:
+        return f"{p:,.3f}"
+    if ap >= 1:
+        return f"{p:,.4f}"
+    if ap >= 0.01:
+        return f"{p:.5f}"
+    return f"{p:.7f}"
+
+
+# ─── Telegram-форматирование шапки решения ────────────────────────────────
+
+VERDICT_EMOJI = {
+    "LONG":  "🟢",
+    "SHORT": "🔴",
+    "WAIT":  "⚪",
+    "SKIP":  "⏭️",
+}
+
+VERDICT_TITLE = {
+    "LONG":  "LONG",
+    "SHORT": "SHORT",
+    "WAIT":  "WAIT — переждать",
+    "SKIP":  "SKIP — не торговать",
+}
+
+
+def format_decision_header(decision: dict) -> str:
+    """
+    Короткая шапка для Telegram-сообщения.
+    LONG/SHORT — Entry/SL/TP/RR/Confidence + ключевые факторы.
+    WAIT/SKIP  — причина + список противоречий (если есть).
+    """
+    v   = decision.get("verdict", "WAIT")
+    em  = VERDICT_EMOJI.get(v, "❔")
+    lab = VERDICT_TITLE.get(v, v)
+
+    if v in ("WAIT", "SKIP"):
+        lines = [f"{em} <b>{lab}</b>",
+                 f"💬 {decision.get('reason','')}"]
+        if decision.get("veto_reasons"):
+            lines.append("⚠️ Против: " + " · ".join(decision["veto_reasons"][:3]))
+        return "\n".join(lines)
+
+    entry = decision.get("entry") or {}
+    e_min = entry.get("min")
+    e_max = entry.get("max")
+
+    rr1   = decision.get("rr1") or 0
+    conf  = decision.get("confidence", 0)
+
+    lines = [
+        (f"{em} <b>{lab}</b>  ·  RR(TP1): <b>{rr1}</b>  ·  "
+         f"Confidence: <b>{conf}/100</b>"),
+        f"📍 Entry: <code>{_fmt_price(e_min)} — {_fmt_price(e_max)}</code>",
+        f"🛑 SL:    <code>{_fmt_price(decision.get('sl'))}</code>",
+        (f"🎯 TP1:   <code>{_fmt_price(decision.get('tp1'))}</code>  "
+         f"(RR {decision.get('rr1')})"),
+        (f"🎯 TP2:   <code>{_fmt_price(decision.get('tp2'))}</code>  "
+         f"(RR {decision.get('rr2')})"),
+        (f"🎯 TP3:   <code>{_fmt_price(decision.get('tp3'))}</code>  "
+         f"(RR {decision.get('rr3')})"),
+    ]
+    if decision.get("key_factors"):
+        lines.append("✅ За: " + " · ".join(decision["key_factors"][:3]))
+    if decision.get("veto_reasons"):
+        lines.append("⚠️ Риски: " + " · ".join(decision["veto_reasons"][:3]))
+    return "\n".join(lines)

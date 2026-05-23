@@ -4,3 +4,4 @@ anthropic>=0.40.0
 schedule>=1.2.0
 pandas>=2.0.0
 numpy>=1.24.0
+matplotlib>=3.7.0

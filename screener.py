@@ -7,6 +7,7 @@ TradingView Webhooks → CVD + VP + MTF + Macro → Claude LLM → Telegram
 import base64
 import json
 import logging
+import os
 import math
 import re
 import sqlite3
@@ -19,6 +20,14 @@ import anthropic
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone, timedelta
 from flask import Flask, request, jsonify
+
+from decision import make_decision, format_decision_header
+from llm_agents import (
+    explain_signal, debate_and_judge, market_brief,
+    summarize_day, analyze_user_chart,
+)
+from chart import render_signal_chart
+import tracking
 
 try:
     from config import (
@@ -139,9 +148,12 @@ def db_init():
             )
         """)
         c.commit()
+        # Engine-tracking колонки (Этап 4) — идемпотентная миграция
+        tracking.init_schema(c)
     log.info("DB инициализирована")
 
-def db_save(symbol, tf, sig_type, price, raw, llm_text, quality=0):
+def db_save(symbol, tf, sig_type, price, raw, llm_text, quality=0,
+            decision: dict | None = None):
     ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M")
     with _db_lock, db_conn() as c:
         cur = c.execute(
@@ -152,15 +164,25 @@ def db_save(symbol, tf, sig_type, price, raw, llm_text, quality=0):
         signal_id = cur.lastrowid
         c.commit()
 
-    # Auto-track outcome for directional signals
-    sig_up = any(x in sig_type for x in ("BULL", "LONG", "SWEEP_L", "CHOCH_BULL"))
-    sig_dn = any(x in sig_type for x in ("BEAR", "SHORT", "SWEEP_H", "CHOCH_BEAR"))
-    if sig_up or sig_dn:
-        direction = "bull" if sig_up else "bear"
+    # Engine-tracking (Этап 4): сохраняем decision-snapshot для TP/SL tracking.
+    # WAIT/SKIP записываем с status='skipped' — для статистики гейтинга.
+    if decision:
         try:
-            db_outcome_add(signal_id, symbol, sig_type, direction, float(price or 0))
+            with _db_lock, db_conn() as c:
+                tracking.open_trade(c, signal_id, decision, symbol, sig_type)
         except Exception as e:
-            log.warning(f"db_outcome_add: {e}")
+            log.warning(f"tracking.open_trade: {e}")
+    else:
+        # Fallback на старую логику для обратной совместимости
+        # (если сигнал пришёл откуда-то без decision)
+        sig_up = any(x in sig_type for x in ("BULL", "LONG", "SWEEP_L", "CHOCH_BULL"))
+        sig_dn = any(x in sig_type for x in ("BEAR", "SHORT", "SWEEP_H", "CHOCH_BEAR"))
+        if sig_up or sig_dn:
+            direction = "bull" if sig_up else "bear"
+            try:
+                db_outcome_add(signal_id, symbol, sig_type, direction, float(price or 0))
+            except Exception as e:
+                log.warning(f"db_outcome_add: {e}")
 
 def db_recent(hours=4, limit=8):
     since = (datetime.now(timezone.utc) - timedelta(hours=hours)).strftime("%Y-%m-%d %H:%M")
@@ -1133,7 +1155,7 @@ def compute_confluence_score(signal_type: str, market: dict, mtf: dict) -> tuple
         elif al >= tot - 1:
             score += 10; factors.append(f"MTF 🟡 {al}/{tot} ТФ")
         elif al == 0:
-            score -= 10; factors.append(f"MTF ❌ все ТФ против")
+            score -= 10; factors.append("MTF ❌ все ТФ против")
         else:
             factors.append(f"MTF ⚪ {al}/{tot} ТФ")
 
@@ -1236,8 +1258,8 @@ def compute_confluence_score(signal_type: str, market: dict, mtf: dict) -> tuple
     if bb_pos:
         if   sig_up and bb_pos == "below_lower": score += 8; factors.append(f"BB ✅ ниже нижней полосы [%B:{bb['pct_b']:.2f}]")
         elif sig_dn and bb_pos == "above_upper": score += 8; factors.append(f"BB ✅ выше верхней полосы [%B:{bb['pct_b']:.2f}]")
-        elif sig_up and bb_pos == "above_upper": score -= 8; factors.append(f"BB ❌ выше верхней при лонге")
-        elif sig_dn and bb_pos == "below_lower": score -= 8; factors.append(f"BB ❌ ниже нижней при шорте")
+        elif sig_up and bb_pos == "above_upper": score -= 8; factors.append("BB ❌ выше верхней при лонге")
+        elif sig_dn and bb_pos == "below_lower": score -= 8; factors.append("BB ❌ ниже нижней при шорте")
         else: factors.append(f"BB ⚪ {bb.get('icon','⚪')} [%B:{bb.get('pct_b',0.5):.2f}]")
 
     # Pivot Points (+8 near key level)
@@ -1326,8 +1348,8 @@ def compute_confluence_score(signal_type: str, market: dict, mtf: dict) -> tuple
     liqs = market.get("liquidations", {})
     if liqs.get("liq_total_usd", 0) > 100_000:
         dom = liqs.get("liq_dom", "")
-        if   sig_up and dom == "long":  score += 5;  factors.append(f"Liqs ✅ лонги ликвидированы — контрариан лонг")
-        elif sig_dn and dom == "short": score += 5;  factors.append(f"Liqs ✅ шорты ликвидированы — контрариан шорт")
+        if   sig_up and dom == "long":  score += 5;  factors.append("Liqs ✅ лонги ликвидированы — контрариан лонг")
+        elif sig_dn and dom == "short": score += 5;  factors.append("Liqs ✅ шорты ликвидированы — контрариан шорт")
 
     return max(0, min(100, score)), factors
 
@@ -1378,8 +1400,10 @@ def _hl_data(symbol: str) -> dict:
         def depth(side, n=8):
             t = 0.0
             for lvl in side[:n]:
-                try: t += float(lvl["px"]) * float(lvl["sz"])
-                except: pass
+                try:
+                    t += float(lvl["px"]) * float(lvl["sz"])
+                except (KeyError, ValueError, TypeError):
+                    pass
             return t
 
         bd = depth(bids); ad = depth(asks)
@@ -1401,7 +1425,8 @@ def _hl_data(symbol: str) -> dict:
                 if sz_usd >= 300_000:
                     large.append({"side": "BUY" if t.get("side") == "B" else "SELL",
                                   "usd": sz_usd, "price": float(t["px"])})
-            except: pass
+            except (KeyError, ValueError, TypeError):
+                pass
         out["large_trades"] = large[:5]
     except Exception as e:
         log.warning(f"HL trades {coin}: {e}")
@@ -1809,7 +1834,7 @@ def market_summary_text(symbol: str, m: dict) -> str:
 
     piv = m.get("pivots", {})
     piv_str = ""
-    if piv:
+    if piv and piv.get("P") is not None:
         ns = piv.get("nearest_sup")
         nr = piv.get("nearest_res")
         sup_s = f"{ns[0]}:${ns[1]:,.0f}" if ns else "—"
@@ -1949,11 +1974,6 @@ SYSTEM_SIGNAL = """\
 
 Без приветствий, без общих слов."""
 
-SYSTEM_ASK = """\
-Ты — профессиональный институциональный крипто-трейдер (SMC, ICT, Wyckoff, Order Flow, CVD).
-Отвечаешь на вопросы трейдера на основе текущих рыночных данных и истории сигналов.
-Только русский язык. Конкретно, по существу, без воды."""
-
 SYSTEM_CHART = """\
 Ты — профессиональный крипто-аналитик уровня prop firm (SMC, ICT, Wyckoff, Price Action).
 Трейдер прислал скриншот графика — проанализируй его и сравни со своими данными.
@@ -2057,8 +2077,7 @@ def cmd_chat(chat_id: int, text: str):
     tg_send("💬 Думаю...", chat_id=chat_id)
     sym    = ticker or SYMBOLS[0]
     m      = fetch_market(sym)
-    ctx    = f"{sym}:\n{market_summary_text(sym, m)}"
-    answer = llm_ask(text, ctx, db_last_n(8))
+    answer = llm_ask(text, m, db_last_n(8))
     tg_send(f"🧠 {answer}", chat_id=chat_id)
 
 
@@ -2084,118 +2103,65 @@ def _tg_download_photo(file_id: str) -> tuple:
 
 
 def llm_analyze_chart(img_b64: str, media_type: str, caption: str,
-                       market: dict, symbol: str) -> str:
-    """Analyze chart screenshot + compare with live market data."""
-    mkt_text = market_summary_text(symbol, market)
-
-    prompt = (
-        f"Пара: {symbol.replace('USDT','')}/USDT.P\n"
-        + (f"Комментарий трейдера: {caption}\n\n" if caption else "\n")
-        + f"Текущие данные рынка:\n{mkt_text}\n\n"
-        "Проанализируй скриншот и дай сравнительный разбор."
+                       market: dict, symbol: str,
+                       decision: dict | None = None) -> str:
+    """
+    Анализ присланного юзером скриншота через llm_agents.analyze_user_chart.
+    Если decision передан — LLM сравнивает trader's view с engine-verdict
+    и подсвечивает расхождения.
+    """
+    return analyze_user_chart(
+        image_b64=img_b64,
+        media_type=media_type,
+        user_caption=caption or "",
+        market=market,
+        client=ai,
+        model=LLM_MODEL_SMART,
+        decision=decision,
     )
-
-    try:
-        resp = ai.messages.create(
-            model=LLM_MODEL_SMART,
-            max_tokens=700,
-            system=SYSTEM_CHART,
-            messages=[{
-                "role": "user",
-                "content": [
-                    {
-                        "type": "image",
-                        "source": {
-                            "type": "base64",
-                            "media_type": media_type,
-                            "data": img_b64,
-                        },
-                    },
-                    {"type": "text", "text": prompt},
-                ],
-            }],
-        )
-        return resp.content[0].text.strip()
-    except Exception as e:
-        log.error(f"LLM chart error: {e}")
-        return f"⚠️ Ошибка анализа: {e}"
 
 
 def llm_analyze_signal(sig_data: dict, market: dict, recent: list,
-                        confluence: int = 0, conf_factors: list = None,
+                        decision: dict = None,
                         model=LLM_MODEL_FAST) -> tuple:
-    symbol = sig_data.get("symbol", "UNKNOWN")
-    sig    = sig_data.get("signal", "ALERT")
-    price  = sig_data.get("price", market.get("price", 0))
-    tf     = TF_LABEL.get(str(sig_data.get("tf", "")), sig_data.get("tf", "?"))
+    """
+    Per-signal LLM: single-shot explainer над engine verdict.
 
-    recent_lines = "\n".join(
-        f"  • {r[0]} UTC: {r[3]} {r[1]} {r[2]} @ ${float(r[4]):,.0f}"
-        for r in recent
-    ) or "  Нет недавних сигналов"
+    Quality score теперь детерминистский — от decision.confidence,
+    а не regex-парсинг из вывода LLM. Это убирает ещё один источник
+    рассогласования между engine и LLM.
+    """
+    if not decision:
+        return "⚠️ Нет verdict от engine — анализ пропущен.", 0
 
-    extras = []
-    for k, label in [("ob_top","OB верх"),("ob_bot","OB низ"),
-                      ("fvg_top","FVG верх"),("fvg_bot","FVG низ"),
-                      ("target","Цель"),("stop","Стоп")]:
-        if sig_data.get(k):
-            extras.append(f"• {label}: ${float(sig_data[k]):,.0f}")
+    text = explain_signal(
+        decision=decision,
+        market=market,
+        sig_data=sig_data,
+        client=ai,
+        model=model,
+    )
 
-    conf_text = ""
-    if conf_factors:
-        conf_text = (f"\nConfluence Score: {confluence}/100\n"
-                     + "\n".join(f"  {f}" for f in conf_factors[:6]))
+    # Quality 1–10 из confidence 0–100, минимум 1 чтобы фильтры по
+    # MIN_QUALITY не отрезали валидные WAIT-сигналы.
+    quality = max(1, min(10, int(round(decision.get("confidence", 0) / 10))))
+    return text, quality
 
-    prompt = f"""Новый сигнал от TradingView:
-Тип: {sig}
-Пара: {symbol} | ТФ: {tf} | Цена: ${float(price):,.2f}
-{chr(10).join(extras) if extras else ''}
-{conf_text}
 
-Деривативы прямо сейчас:
-{market_summary_text(symbol, market)}
-
-Последние сигналы (4ч):
-{recent_lines}
-
-Дай анализ."""
-
+def llm_ask(question: str, market: dict, recent: list,
+            fast_model=LLM_MODEL_FAST, smart_model=LLM_MODEL_SMART) -> str:
+    """
+    Multi-agent debate: Bull / Bear / Risk параллельно → Sonnet judge.
+    """
     try:
-        resp = ai.messages.create(
-            model=model, max_tokens=350, system=SYSTEM_SIGNAL,
-            messages=[{"role": "user", "content": prompt}],
+        return debate_and_judge(
+            question=question,
+            market=market,
+            recent=recent,
+            client=ai,
+            fast_model=fast_model,
+            smart_model=smart_model,
         )
-        text    = resp.content[0].text.strip()
-        quality = 5
-        m = re.search(r"\b([1-9]|10)\s*/\s*10", text)
-        if m:
-            quality = int(m.group(1))
-        return text, quality
-    except Exception as e:
-        log.error(f"LLM error: {e}")
-        return f"⚠️ LLM временно недоступен: {e}", 0
-
-
-def llm_ask(question: str, market_ctx: str, recent: list, model=LLM_MODEL_SMART) -> str:
-    recent_lines = "\n".join(
-        f"  • {r[0]}: {r[3]} {r[1]} {r[2]} @ ${float(r[4]):,.0f} [Q:{r[5]}]"
-        for r in recent
-    ) or "  Нет недавних сигналов"
-
-    prompt = f"""Текущая рыночная ситуация:
-{market_ctx}
-
-Последние сигналы (8ч):
-{recent_lines}
-
-Вопрос трейдера: {question}"""
-
-    try:
-        resp = ai.messages.create(
-            model=model, max_tokens=600, system=SYSTEM_ASK,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        return resp.content[0].text.strip()
     except Exception as e:
         return f"⚠️ Ошибка: {e}"
 
@@ -2536,26 +2502,20 @@ def cmd_analyze_symbol(chat_id: int, symbol: str, tfs: list = None):
         )
 
 
-def llm_digest(signals: list, market_ctx: str) -> str:
-    if not signals:
-        return "Сигналов за сегодня не было."
-    lines = "\n".join(
-        f"  {r[0]}: {r[3]} {r[1]} {r[2]} @ ${float(r[4]):,.0f} [Q:{r[6]}]"
-        for r in signals
-    )
-    prompt = f"""Сигналы за сегодня:
-{lines}
-
-Текущий рынок:
-{market_ctx}
-
-Дай дневной дайджест: ключевые паттерны, что показал рынок, общий bias."""
+def llm_digest(signals: list, market: dict,
+               tracking_stats: dict | None = None) -> str:
+    """
+    Дневной debrief через llm_agents.summarize_day — учитывает реальную
+    engine-performance (win-rate, TP/SL hits) и не противоречит verdict'ам.
+    """
     try:
-        resp = ai.messages.create(
-            model=LLM_MODEL_SMART, max_tokens=500, system=SYSTEM_SIGNAL,
-            messages=[{"role": "user", "content": prompt}],
+        return summarize_day(
+            signals=signals,
+            market=market,
+            client=ai,
+            model=LLM_MODEL_SMART,
+            tracking_stats=tracking_stats,
         )
-        return resp.content[0].text.strip()
     except Exception as e:
         return f"⚠️ Ошибка дайджеста: {e}"
 
@@ -2580,6 +2540,41 @@ def tg_send(text: str, chat_id=None, reply_markup: dict = None) -> bool:
     except Exception as e:
         log.error(f"Telegram send: {e}")
         return False
+
+
+TELEGRAM_CAPTION_LIMIT = 1024
+
+
+def tg_send_photo(photo_bytes: bytes, caption: str, chat_id=None,
+                  filename: str = "chart.png") -> bool:
+    """
+    Отправляет PNG в Telegram. Если caption > 1024 (лимит API), фото
+    шлётся с обрезанной шапкой, а полный текст приходит ОТДЕЛЬНЫМ
+    сообщением сразу следом (вместо silent truncation).
+    """
+    cid = chat_id or TELEGRAM_CHAT_ID
+    full_text = caption
+    overflowed = len(caption) > TELEGRAM_CAPTION_LIMIT
+    if overflowed:
+        # Шапка под фото: первые 1000 символов + явный маркер
+        caption = caption[:1000].rstrip() + "\n\n<i>↓ полный текст ниже</i>"
+
+    files = {"photo": (filename, photo_bytes, "image/png")}
+    data  = {"chat_id": cid, "caption": caption, "parse_mode": "HTML"}
+    try:
+        r = requests.post(
+            f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendPhoto",
+            data=data, files=files, timeout=15,
+        )
+        r.raise_for_status()
+    except Exception as e:
+        log.error(f"Telegram sendPhoto: {e}")
+        return False
+
+    if overflowed:
+        tg_send(full_text, chat_id=cid)
+
+    return True
 
 
 def _register_bot_commands() -> None:
@@ -2631,218 +2626,61 @@ def _tg_answer_callback(callback_id: str) -> None:
 # ─── MESSAGE BUILDER ─────────────────────────────────────────────────────────
 
 def build_signal_message(data: dict, market: dict, llm_text: str, quality: int,
-                          confluence: int = 0, conf_factors: list = None) -> str:
+                          confluence: int = 0, conf_factors: list = None,
+                          decision: dict = None) -> str:
+    """
+    Компактный per-signal формат:
+      title · pair · TF · time
+      price · 24h change · bias
+      ━ Verdict (Entry/SL/TP/RR из engine, или WAIT/SKIP с причиной)
+      ━ Анализ (2-3 предложения от LLM)
+      ━ Контекст (5-7 строк market_brief)
+
+    Полный дамп индикаторов остался в /status — не дублируем.
+    """
     sig    = data.get("signal", "ALERT").upper()
-    symbol = data.get("symbol", data.get("ticker", "?")).replace("USDT.P","").replace("USDT","")
+    symbol = (data.get("symbol", data.get("ticker", "?"))
+              .replace("USDT.P", "").replace("USDT", ""))
     price  = data.get("price", data.get("close", market.get("price", 0)))
-    tf     = TF_LABEL.get(str(data.get("tf", data.get("interval","?"))), str(data.get("tf","?")))
+    tf     = TF_LABEL.get(str(data.get("tf", data.get("interval", "?"))),
+                          str(data.get("tf", "?")))
     now    = datetime.now(timezone.utc).strftime("%H:%M UTC")
 
     emoji, title, bias = SIGNAL_META.get(sig, SIGNAL_META["ALERT"])
 
-    try:    price_f = f"${float(price):,.2f}"
-    except: price_f = str(price)
+    try:
+        price_f = f"${float(price):,.2f}"
+    except (TypeError, ValueError):
+        price_f = str(price)
 
-    stars      = "⭐" * min(quality, 5) + ("+" if quality > 5 else "")
-    conf_bar   = "🔥" * (confluence // 20) + "▫️" * (5 - confluence // 20)
-    conf_color = "🔴" if confluence < 35 else ("🟡" if confluence < 55 else ("🟢" if confluence < 75 else "🚀"))
-
+    # Optional TradingView-supplied levels (OB/FVG/target/stop)
     extras = []
-    for k, lbl in [("ob_top","OB ↑"),("ob_bot","OB ↓"),
-                    ("fvg_top","FVG ↑"),("fvg_bot","FVG ↓"),
-                    ("target","Цель"),("stop","Стоп")]:
+    for k, lbl in [("ob_top", "OB↑"), ("ob_bot", "OB↓"),
+                   ("fvg_top", "FVG↑"), ("fvg_bot", "FVG↓"),
+                   ("target", "Цель"), ("stop", "Стоп")]:
         if data.get(k):
-            try: extras.append(f"  {lbl}: ${float(data[k]):,.0f}")
-            except: pass
+            try:
+                extras.append(f"{lbl} ${float(data[k]):,.0f}")
+            except (TypeError, ValueError):
+                pass
+    tv_levels = ("\n📐 От TV: " + " · ".join(extras)) if extras else ""
 
-    extras_str = ("\n" + "\n".join(extras)) if extras else ""
-
-    b, hl  = market.get("bybit", {}), market.get("hl", {})
-    fr_b   = b.get("funding", 0) * 100
-    fr_hl  = hl.get("funding", 0) * 100
-    oi_chg = b.get("oi_chg", 0)
-    oi_usd = hl.get("oi_usd", 0)
-
-    def fr_icon(fr): return "🔴" if fr > 0.01 else ("🟢" if fr < -0.01 else "⚪")
-
-    ratio     = hl.get("book_ratio", 1.0)
-    book_icon = "🟢" if ratio > 1.1 else ("🔴" if ratio < 0.9 else "⚪")
-
-    lt = hl.get("large_trades", [])
-    lt_line = ""
-    if lt:
-        parts = [f"{'🟢' if t['side']=='BUY' else '🔴'}${t['usd']/1e6:.1f}M" for t in lt[:3]]
-        lt_line = f"\n  🐋 Крупные: {' '.join(parts)}"
-
-    div_line = f"\n  ⚡ FR расхождение: {market['fr_divergence']:.4f}%" if market.get("fr_divergence_signal") else ""
-
-    cvd = market.get("cvd", {})
-    cvd_line = ""
-    if cvd.get("trend") and cvd["trend"] != "unknown":
-        cvd_line = (f"\n  CVD: {'📈' if cvd['trend']=='up' else '📉'} {cvd['trend'].upper()}"
-                    + (" ⚠️ DIV" if cvd.get("divergence") else ""))
-
-    vp = market.get("vp", {})
-    vp_line = f"\n  VP POC: ${vp['poc']:,.0f} | VA ${vp['val']:,.0f}–${vp['vah']:,.0f}" if vp.get("poc") else ""
-
-    biases = market.get("ema_biases", {})
-    mtf_line = ""
-    if biases:
-        parts = [f"{tf}:{'🟢' if b=='bull' else ('🔴' if b=='bear' else '❓')}" for tf, b in biases.items()]
-        mtf_line = "\n  MTF: " + " ".join(parts)
-
-    tz_line = ""
-    for tz_key, tf_name in [("turtle_1h", "1H"), ("turtle_4h", "4H")]:
-        tz = market.get(tz_key, {})
-        if tz:
-            tz_line += f"\n  TZ {tf_name}: {tz['icon']} {tz['label']} [{tz['pct_from_mean']:+.1f}%]"
-
-    ind = market.get("indicators", {})
-    ind_line = ""
-    if ind:
-        rsi   = ind.get("rsi", 50)
-        macd  = ind.get("macd", {})
-        bb    = ind.get("bb", {})
-        stoch = ind.get("stoch", {})
-        ri = "🔴" if rsi > 70 else ("🟢" if rsi < 30 else "⚪")
-        mi = "📈" if macd.get("trend") == "bull" else "📉"
-        cx = f"[{macd.get('cross')}]" if macd.get("cross") not in ("none", None, "") else ""
-        atr     = ind.get("atr", 0)
-        atr_pct = ind.get("atr_pct", 0)
-        div     = ind.get("rsi_div", "none")
-        ecross  = ind.get("ema_cross", "none")
-        vspike  = ind.get("vol_spike", False)
-        div_s   = f"  📐 RSI Div: {'🟢 BULL' if div=='bullish' else '🔴 BEAR'}\n" if div != "none" else ""
-        ecr_s   = f"  {'✨' if ecross=='golden' else '💀'} EMA9/21: {'Golden ✅' if ecross=='golden' else 'Death ❌'}\n" if ecross != "none" else ""
-        vol_s   = f"  🔊 Volume Spike!\n" if vspike else ""
-        ind_line = (
-            f"\n━━ Индикаторы (1H) ━\n"
-            f"  RSI14: {ri} {rsi:.0f}"
-            f"  |  MACD: {mi}{cx}\n"
-            f"  BB: {bb.get('icon','⚪')} %B:{bb.get('pct_b',0.5):.2f}"
-            f"  |  Stoch: {stoch.get('icon','⚪')} K:{stoch.get('k',50):.0f}\n"
-            f"  ATR14: {atr:,.2f} ({atr_pct:.2f}%)\n"
-            f"{div_s}{ecr_s}{vol_s}"
-        ).rstrip("\n")
-
-    piv = market.get("pivots", {})
-    piv_line = ""
-    if piv:
-        ns = piv.get("nearest_sup")
-        nr = piv.get("nearest_res")
-        sup_s = f"{ns[0]}:${ns[1]:,.0f}" if ns else "—"
-        res_s = f"{nr[0]}:${nr[1]:,.0f}" if nr else "—"
-        fr_h  = market.get("fr_history", {})
-        fr_s  = f"  FR trend: {fr_h['icon']} {fr_h['trend']}" if fr_h else ""
-        piv_line = (f"\n━━ Pivot + FR Trend ━\n"
-                    f"  P: ${piv['P']:,.0f} | Sup: {sup_s} | Res: {res_s}{fr_s}")
-
-    vwap = market.get("vwap", {})
-    vwap_line = ""
-    if vwap:
-        parts = []
-        _vi = {"extreme_upper":"🔴🔴","upper":"🔴","premium":"🟡",
-               "discount":"🟡","lower":"🟢","extreme_lower":"🟢🟢"}
-        if vwap.get("daily"):
-            d   = vwap["daily"]
-            pos = vwap.get("daily_pos","")
-            pct = vwap.get("daily_pct", 0)
-            parts.append(f"Daily ${d['vwap']:,.0f} {_vi.get(pos,'⚪')}{pct:+.1f}%")
-        if vwap.get("weekly"):
-            w   = vwap["weekly"]
-            pct = vwap.get("weekly_pct", 0)
-            parts.append(f"Weekly ${w['vwap']:,.0f} {pct:+.1f}%")
-        if parts:
-            vwap_line = "\n━━ VWAP ━━━━━━━━━━━\n  " + " | ".join(parts)
-
-    liq = market.get("liquidity", {})
-    liq_line = ""
-    if liq:
-        ratio  = liq.get("ratio", 1.0)
-        r_icon = "🟢" if ratio > 1.1 else ("🔴" if ratio < 0.9 else "⚪")
-        bw     = liq.get("bid_walls", [])[:2]
-        aw     = liq.get("ask_walls", [])[:2]
-        bw_s   = " · ".join(f"${w['price']:,.0f}(${w['usd_m']:.1f}M)" for w in bw) or "нет"
-        aw_s   = " · ".join(f"${w['price']:,.0f}(${w['usd_m']:.1f}M)" for w in aw) or "нет"
-        liq_line = (
-            f"\n━━ Ликвидность (BNB) ━\n"
-            f"  Bid/Ask: {r_icon} {ratio:.2f}\n"
-            f"  🟢 Bid стены: {bw_s}\n"
-            f"  🔴 Ask стены: {aw_s}"
-        )
-
-    opt = market.get("options", {})
-    opt_line = ""
-    if opt:
-        pcr      = opt.get("pc_ratio", 0)
-        pcr_icon = "🔴" if pcr > 1.2 else ("🟢" if pcr < 0.8 else "⚪")
-        mp       = opt.get("max_pain")
-        exp      = opt.get("nearest_expiry", "")
-        mp_str   = f" | MaxPain ${mp:,.0f} ({exp})" if mp else ""
-        opt_line = f"\n━━ Options (Deribit) ━\n  P/C: {pcr_icon} {pcr:.2f}{mp_str}"
-
-    ls   = market.get("ls_ratio", {})
-    liqs = market.get("liquidations", {})
-    flow_line = ""
-    parts = []
-    if ls.get("bybit_long") is not None:
-        icon = "🟢" if ls["bybit_long"] > 55 else ("🔴" if ls["bybit_long"] < 45 else "⚪")
-        parts.append(f"L/S {icon}{ls['bybit_long']:.0f}/{ls['bybit_short']:.0f}%")
-    if ls.get("taker_ratio") is not None:
-        ti = "🟢" if ls["taker_ratio"] > 1.1 else ("🔴" if ls["taker_ratio"] < 0.9 else "⚪")
-        parts.append(f"Taker {ti}{ls['taker_ratio']:.2f}")
-    if liqs.get("liq_total_usd", 0) > 0:
-        total = liqs["liq_total_usd"]
-        dom   = "🔴L" if liqs["liq_dom"] == "long" else "🟢S"
-        parts.append(f"Liqs ${total/1e6:.2f}M dom:{dom}")
-    if parts:
-        flow_line = "\n━━ Flow / Liqs ━━━━\n  " + " | ".join(parts)
-
-    macro = market.get("macro", {})
-    macro_line = ""
-    if macro.get("fg_value") is not None:
-        macro_line = (f"\n  F&G: {macro['fg_icon']} {macro['fg_label']} [{macro['fg_value']}]"
-                      + (f" | Dom: {macro.get('btc_dom')}%" if macro.get("btc_dom") else ""))
-
-    sess = market.get("session", {})
-    sess_line = f"\n  {sess.get('icon','')} {sess.get('name','')} [{sess.get('quality',2)}/5]"
-
-    conf_lines = ""
-    if conf_factors:
-        conf_lines = "\n" + "\n".join(f"  {f}" for f in conf_factors[:5])
+    verdict_block = ""
+    if decision:
+        verdict_block = ("━━ Verdict ━━━━━━━━\n"
+                         f"{format_decision_header(decision)}\n")
 
     return (
-        f"{emoji} <b>{title}</b>\n"
-        f"━━━━━━━━━━━━━━━━━━\n"
-        f"📌 <b>{symbol}/USDT.P</b> • {tf} • {now}\n"
-        f"💰 <b>{price_f}</b>  ({market.get('change_24h', 0):+.2f}% 24h)\n"
-        f"📊 Bias: <b>{bias}</b>\n"
-        f"⭐ LLM: {stars} [{quality}/10]\n"
-        f"━━ Confluence ━━━━\n"
-        f"{conf_color} Score: <b>{confluence}/100</b>  {conf_bar}"
-        f"{conf_lines}"
-        f"{extras_str}\n"
-        f"━━ Деривативы ━━━━\n"
-        f"  Bybit FR:  {fr_icon(fr_b)} {fr_b:+.4f}%\n"
-        f"  HL FR:     {fr_icon(fr_hl)} {fr_hl:+.4f}%{div_line}\n"
-        f"  OI Bybit:  {oi_chg:+.2f}% (15м)\n"
-        f"  OI HL:     ${oi_usd/1e9:.2f}B\n"
-        f"  Book HL:   {book_icon} {ratio:.2f}{lt_line}"
-        f"{cvd_line}"
-        f"{vp_line}"
-        f"{mtf_line}"
-        f"{tz_line}"
-        f"{ind_line}"
-        f"{piv_line}"
-        f"{vwap_line}"
-        f"{liq_line}"
-        f"{opt_line}"
-        f"{flow_line}"
-        f"{macro_line}"
-        f"{sess_line}\n"
-        f"━━ 🧠 Анализ LLM ━━\n"
+        f"{emoji} <b>{title}</b>  ·  <b>{symbol}/USDT.P</b>  ·  {tf}  ·  {now}\n"
+        f"💰 <b>{price_f}</b>  ({market.get('change_24h', 0):+.2f}% 24h)  "
+        f"·  Bias: <b>{bias}</b>"
+        f"{tv_levels}\n"
+        f"{verdict_block}"
+        f"━━ Анализ ━━━━━━━━\n"
         f"{llm_text}\n"
-        f"━━━━━━━━━━━━━━━━━━"
+        f"━━ Контекст ━━━━━━\n"
+        f"{market_brief(market)}\n"
+        f"ℹ️ Полный дамп: /status {symbol}"
     )
 
 
@@ -2876,20 +2714,59 @@ def webhook():
 
     conf_score, conf_factors = compute_confluence_score(sig_type, market, mtf)
 
-    recent               = db_recent(hours=4, limit=6)
-    llm_text, quality    = llm_analyze_signal(data, market, recent, conf_score, conf_factors)
+    decision = make_decision(
+        signal_type=sig_type,
+        price=price or market.get("price", 0),
+        market=market,
+        mtf=mtf,
+        confluence_score=conf_score,
+        confluence_factors=conf_factors,
+    )
+    log.info(f"  Decision: {decision['verdict']} "
+             f"conf={decision['confidence']}/100 "
+             f"vetoes={len(decision['veto_reasons'])} "
+             f"reason='{decision['reason']}'")
 
-    db_save(symbol, tf, sig_type, price, data, llm_text, quality)
+    recent               = db_recent(hours=4, limit=6)
+    llm_text, quality    = llm_analyze_signal(data, market, recent, decision)
+
+    db_save(symbol, tf, sig_type, price, data, llm_text, quality, decision=decision)
+
+    if decision["verdict"] == "SKIP":
+        log.info(f"  Verdict=SKIP — не отправляем ({decision['reason']})")
+        return jsonify({"status": "skipped",
+                        "verdict": decision["verdict"],
+                        "reason":  decision["reason"]}), 200
 
     if quality < MIN_QUALITY:
         log.info(f"  Качество {quality} < {MIN_QUALITY} — не отправляем")
         return jsonify({"status": "filtered", "quality": quality}), 200
 
-    msg = build_signal_message(data, market, llm_text, quality, conf_score, conf_factors)
-    ok  = tg_send(msg)
-    log.info(f"  {sig_type} {symbol} Q:{quality}/10 Conf:{conf_score}/100 → {'OK' if ok else 'FAIL'}")
+    msg = build_signal_message(data, market, llm_text, quality,
+                               conf_score, conf_factors, decision)
 
-    return jsonify({"status": "ok", "quality": quality, "confluence": conf_score}), 200
+    # Чарт рендерим всегда, когда есть достаточно баров — даже для WAIT,
+    # чтобы пользователь видел контекст. SKIP уже отфильтрован выше.
+    klines_1h = (market.get("_klines") or {}).get("60") or []
+    photo     = render_signal_chart(symbol, klines_1h, decision, market)
+
+    if photo:
+        ok = tg_send_photo(photo, msg)
+    else:
+        ok = tg_send(msg)
+
+    log.info(f"  {sig_type} {symbol} Q:{quality}/10 Conf:{conf_score}/100 "
+             f"Verdict:{decision['verdict']} chart:{'yes' if photo else 'no'} "
+             f"→ {'OK' if ok else 'FAIL'}")
+
+    return jsonify({
+        "status":     "ok",
+        "quality":    quality,
+        "confluence": conf_score,
+        "verdict":    decision["verdict"],
+        "confidence": decision["confidence"],
+        "chart_sent": bool(photo),
+    }), 200
 
 
 @app.route("/health", methods=["GET"])
@@ -2938,26 +2815,34 @@ def cmd_ask(chat_id: int, question: str):
     if not question:
         tg_send("❓ Пример: /ask стоит ли сейчас лонговать BTC?", chat_id=chat_id)
         return
-    tg_send("🧠 Думаю...", chat_id=chat_id)
+    tg_send("🧠 Bull, Bear и Risk обсуждают…", chat_id=chat_id)
 
-    ctx_parts = []
-    for sym in SYMBOLS:
-        m = fetch_market(sym)
-        ctx_parts.append(f"{sym}:\n{market_summary_text(sym, m)}")
-
+    # Multi-agent работает по одному символу за раз — выбираем по
+    # упоминанию в вопросе или дефолтный.
+    sym    = _extract_ticker(question) or SYMBOLS[0]
+    market = fetch_market(sym)
     recent = db_last_n(12)
-    answer = llm_ask(question, "\n\n".join(ctx_parts), recent)
-    tg_send(f"🧠 <b>Анализ:</b>\n\n{answer}", chat_id=chat_id)
+    answer = llm_ask(question, market, recent)
+    tg_send(f"🧠 <b>Анализ по {sym}:</b>\n\n{answer}", chat_id=chat_id)
 
 
 def cmd_digest(chat_id: int):
     tg_send("📊 Генерирую дайджест...", chat_id=chat_id)
-    signals   = db_today()
-    ctx_parts = []
-    for sym in SYMBOLS:
-        m = fetch_market(sym)
-        ctx_parts.append(f"{sym}:\n{market_summary_text(sym, m)}")
-    digest = llm_digest(signals, "\n\n".join(ctx_parts))
+    signals = db_today()
+
+    # Один основной символ для market_brief (если несколько SYMBOLS —
+    # берём первый, остальные попадут в общую engine-stats picture)
+    primary_market = fetch_market(SYMBOLS[0])
+
+    # Engine-performance за сегодня для контекста LLM
+    tracking_stats = None
+    try:
+        with _db_lock, db_conn() as c:
+            tracking_stats = tracking.compute_stats(c, days=1)
+    except Exception as e:
+        log.warning(f"digest tracking_stats: {e}")
+
+    digest = llm_digest(signals, primary_market, tracking_stats)
     tg_send(
         f"📊 <b>Дайджест за сегодня</b> ({len(signals)} сигналов)\n"
         f"━━━━━━━━━━━━━━━━━\n{digest}",
@@ -3497,7 +3382,7 @@ def handle_update(update: dict):
     elif cmd == "/alert":              cmd_alert_add(chat_id, args)
     elif cmd == "/alerts":             cmd_alert_list(chat_id)
     elif cmd == "/delalert":           cmd_alert_delete(chat_id, args)
-    elif cmd == "/stats":              cmd_stats(chat_id)
+    elif cmd == "/stats":              cmd_stats(chat_id, args)
     elif cmd == "/top":                cmd_top(chat_id)
     elif cmd == "/movers":             cmd_movers(chat_id)
     elif cmd == "/risk":               cmd_risk(chat_id, args)
@@ -3562,8 +3447,8 @@ def detect_signals(candles: list) -> list:
     elif close_now < prev_low:
         signals.append("BOS_BEAR" if not trend_up else "CHOCH_BEAR")
 
-    # ── FVG (3-candle gap) ───────────────────────────────────────────────────
-    c2, c1, c0 = candles[-3], candles[-2], candles[-1]
+    # ── FVG (3-candle gap, средняя свеча игнорируется по определению) ────
+    c2, c0 = candles[-3], candles[-1]
     if c0["l"] > c2["h"]:
         signals.append("FVG_BULL")
     elif c0["h"] < c2["l"]:
@@ -3644,21 +3529,50 @@ def run_auto_scan():
                 sig_data = {"signal": sig_type, "symbol": base,
                             "tf": interval, "price": price}
                 recent           = db_recent(hours=4, limit=6)
-                llm_text, quality = llm_analyze_signal(
-                    sig_data, market, recent, conf_score, conf_factors
+
+                # Engine verdict для auto-scanned сигналов (был баг: старая
+                # сигнатура передавала conf_score/conf_factors как
+                # decision/model и крашила llm_analyze_signal)
+                mtf_dir = "long" if any(x in sig_type for x in ("BULL","LONG","SWEEP_L","EQL")) \
+                          else ("short" if any(x in sig_type for x in ("BEAR","SHORT","SWEEP_H","EQH")) else "neutral")
+                mtf_data = check_mtf_confluence(market.get("ema_biases", {}), mtf_dir) \
+                           if mtf_dir != "neutral" else {}
+                decision = make_decision(
+                    signal_type=sig_type, price=price, market=market,
+                    mtf=mtf_data,
+                    confluence_score=conf_score, confluence_factors=conf_factors,
                 )
 
-                db_save(base, interval, sig_type, price, sig_data, llm_text, quality)
+                llm_text, quality = llm_analyze_signal(
+                    sig_data, market, recent, decision
+                )
 
+                db_save(base, interval, sig_type, price, sig_data,
+                        llm_text, quality, decision=decision)
+
+                if decision["verdict"] == "SKIP":
+                    log.info(f"  Skip {sig_type} {base} {interval}: {decision['reason']}")
+                    continue
                 if quality < MIN_QUALITY:
                     continue
 
                 msg = "🤖 <b>[АВТОСКАНЕР]</b>\n" + build_signal_message(
-                    sig_data, market, llm_text, quality, conf_score, conf_factors
+                    sig_data, market, llm_text, quality, conf_score, conf_factors,
+                    decision,
                 )
-                tg_send(msg)
+
+                # Чарт для auto-scanned LONG/SHORT (как в /webhook)
+                klines_1h = (market.get("_klines") or {}).get("60") or []
+                photo = render_signal_chart(base, klines_1h, decision, market) \
+                        if klines_1h else None
+                if photo:
+                    tg_send_photo(photo, msg)
+                else:
+                    tg_send(msg)
+
                 log.info(f"  ✅ {sig_type} {base} {interval} "
-                         f"Q:{quality}/10 Conf:{conf_score}/100")
+                         f"Q:{quality}/10 Conf:{conf_score}/100 "
+                         f"Verdict:{decision['verdict']}")
 
     log.info("🔍 Автосканер: завершено")
 
@@ -3755,8 +3669,7 @@ def cmd_top(chat_id: int):
 
 # ─── MOVERS ───────────────────────────────────────────────────────────────────
 
-import os as _os2
-MOVERS_THRESHOLD = float(_os2.environ.get("MOVERS_THRESHOLD", "3.0"))
+MOVERS_THRESHOLD = float(os.environ.get("MOVERS_THRESHOLD", "3.0"))
 MOVERS_WATCHLIST = list(dict.fromkeys(
     SYMBOLS + ["SOLUSDT", "BNBUSDT", "XRPUSDT", "DOGEUSDT",
                "AVAXUSDT", "LINKUSDT", "DOTUSDT", "NEARUSDT", "APTUSDT"]
@@ -3826,6 +3739,26 @@ def check_movers():
 
 # ─── SIGNAL OUTCOME CHECKER ───────────────────────────────────────────────────
 
+def check_trade_outcomes():
+    """
+    Engine-based outcome tracking (Этап 4): walk 5m klines с момента entry,
+    проверяем первый touch SL / TP для каждой open LONG/SHORT сделки.
+    Обновляет signal_outcomes.status / hit_level / r_multiple.
+    """
+    try:
+        with _db_lock, db_conn() as c:
+            stats = tracking.check_open_trades(
+                c,
+                fetch_klines=lambda sym, interval, limit: _klines(sym, interval, limit),
+            )
+        if stats["closed"] > 0:
+            log.info(f"Trade outcomes: проверено {stats['checked']}, "
+                     f"закрыто {stats['closed']}, "
+                     f"остаётся open {stats['still_open']}")
+    except Exception as e:
+        log.warning(f"check_trade_outcomes: {e}")
+
+
 def check_signal_outcomes():
     """Check pending signal outcomes at 1H / 4H / 24H intervals."""
     pending = db_outcomes_pending()
@@ -3880,55 +3813,29 @@ def check_signal_outcomes():
         log.info(f"Signal outcomes updated: {updated} records")
 
 
-def cmd_stats(chat_id: int):
-    """Show win-rate statistics by signal type (last 30 days)."""
-    rows = db_stats(days=30)
-    if not rows:
-        tg_send(
-            "📊 Статистика пока пуста.\n"
-            "Она появится после того, как сигналы отработают 4H.",
-            chat_id=chat_id,
-        )
+def cmd_stats(chat_id: int, args: str = ""):
+    """
+    Engine-based win-rate статистика (Этап 4): TP/SL hits, R-multiple,
+    разбивка по signal_type / символам / confidence-bucket.
+
+    /stats          — 30 дней (по умолчанию)
+    /stats 7        — последние 7 дней
+    """
+    try:
+        days = int(args.strip()) if args.strip().isdigit() else 30
+    except Exception:
+        days = 30
+    days = max(1, min(365, days))
+
+    try:
+        with _db_lock, db_conn() as c:
+            stats = tracking.compute_stats(c, days=days)
+    except Exception as e:
+        log.error(f"compute_stats: {e}")
+        tg_send(f"⚠️ Ошибка stats: {e}", chat_id=chat_id)
         return
 
-    # Aggregate by signal_type
-    from collections import defaultdict
-    stats: dict[str, dict] = defaultdict(lambda: {"wins": 0, "losses": 0, "pcts": []})
-
-    for sig_type, direction, pct_4h in rows:
-        key = sig_type
-        stats[key]["pcts"].append(pct_4h)
-        if pct_4h >= 0:
-            stats[key]["wins"] += 1
-        else:
-            stats[key]["losses"] += 1
-
-    lines = [
-        "📊 <b>Win-rate по сигналам (30 дней, 4H)</b>",
-        "━━━━━━━━━━━━━━━━━━━━",
-    ]
-    total_w = total_l = 0
-    for sig_type, d in sorted(stats.items(), key=lambda x: -(x[1]["wins"] + x[1]["losses"])):
-        w, l  = d["wins"], d["losses"]
-        total = w + l
-        wr    = w / total * 100
-        avg   = sum(d["pcts"]) / len(d["pcts"])
-        icon  = "🟢" if wr >= 55 else ("🟡" if wr >= 45 else "🔴")
-        lines.append(
-            f"{icon} <b>{sig_type}</b>  {wr:.0f}% ({w}W/{l}L)  avg {avg:+.1f}%"
-        )
-        total_w += w
-        total_l += l
-
-    grand_total = total_w + total_l
-    grand_wr    = total_w / grand_total * 100 if grand_total else 0
-    lines += [
-        "━━━━━━━━━━━━━━━━━━━━",
-        f"<b>Всего:</b> {grand_wr:.0f}% ({total_w}W/{total_l}L из {grand_total} сигналов)",
-        f"<i>Период: последние 30 дней · checkpoint: 4H</i>",
-    ]
-
-    tg_send("\n".join(lines), chat_id=chat_id)
+    tg_send(tracking.format_stats_message(stats), chat_id=chat_id)
 
 
 # ─── DAILY DIGEST ─────────────────────────────────────────────────────────────
@@ -3943,6 +3850,7 @@ def start_scheduler():
     schedule.every(15).minutes.do(run_auto_scan)
     schedule.every(1).minutes.do(check_price_alerts)
     schedule.every(30).minutes.do(check_signal_outcomes)
+    schedule.every(10).minutes.do(check_trade_outcomes)
     schedule.every(5).minutes.do(check_movers)
     time.sleep(15)          # short delay so Flask is fully up first
     run_auto_scan()         # run once immediately on startup
