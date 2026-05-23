@@ -21,6 +21,7 @@ from datetime import datetime, timezone, timedelta
 from flask import Flask, request, jsonify
 
 from decision import make_decision, format_decision_header
+from llm_agents import explain_signal, debate_and_judge, market_brief
 
 try:
     from config import (
@@ -1951,11 +1952,6 @@ SYSTEM_SIGNAL = """\
 
 Без приветствий, без общих слов."""
 
-SYSTEM_ASK = """\
-Ты — профессиональный институциональный крипто-трейдер (SMC, ICT, Wyckoff, Order Flow, CVD).
-Отвечаешь на вопросы трейдера на основе текущих рыночных данных и истории сигналов.
-Только русский язык. Конкретно, по существу, без воды."""
-
 SYSTEM_CHART = """\
 Ты — профессиональный крипто-аналитик уровня prop firm (SMC, ICT, Wyckoff, Price Action).
 Трейдер прислал скриншот графика — проанализируй его и сравни со своими данными.
@@ -2059,8 +2055,7 @@ def cmd_chat(chat_id: int, text: str):
     tg_send("💬 Думаю...", chat_id=chat_id)
     sym    = ticker or SYMBOLS[0]
     m      = fetch_market(sym)
-    ctx    = f"{sym}:\n{market_summary_text(sym, m)}"
-    answer = llm_ask(text, ctx, db_last_n(8))
+    answer = llm_ask(text, m, db_last_n(8))
     tg_send(f"🧠 {answer}", chat_id=chat_id)
 
 
@@ -2124,80 +2119,46 @@ def llm_analyze_chart(img_b64: str, media_type: str, caption: str,
 
 
 def llm_analyze_signal(sig_data: dict, market: dict, recent: list,
-                        confluence: int = 0, conf_factors: list = None,
+                        decision: dict = None,
                         model=LLM_MODEL_FAST) -> tuple:
-    symbol = sig_data.get("symbol", "UNKNOWN")
-    sig    = sig_data.get("signal", "ALERT")
-    price  = sig_data.get("price", market.get("price", 0))
-    tf     = TF_LABEL.get(str(sig_data.get("tf", "")), sig_data.get("tf", "?"))
+    """
+    Per-signal LLM: single-shot explainer над engine verdict.
 
-    recent_lines = "\n".join(
-        f"  • {r[0]} UTC: {r[3]} {r[1]} {r[2]} @ ${float(r[4]):,.0f}"
-        for r in recent
-    ) or "  Нет недавних сигналов"
+    Quality score теперь детерминистский — от decision.confidence,
+    а не regex-парсинг из вывода LLM. Это убирает ещё один источник
+    рассогласования между engine и LLM.
+    """
+    if not decision:
+        return "⚠️ Нет verdict от engine — анализ пропущен.", 0
 
-    extras = []
-    for k, label in [("ob_top","OB верх"),("ob_bot","OB низ"),
-                      ("fvg_top","FVG верх"),("fvg_bot","FVG низ"),
-                      ("target","Цель"),("stop","Стоп")]:
-        if sig_data.get(k):
-            extras.append(f"• {label}: ${float(sig_data[k]):,.0f}")
+    text = explain_signal(
+        decision=decision,
+        market=market,
+        sig_data=sig_data,
+        client=ai,
+        model=model,
+    )
 
-    conf_text = ""
-    if conf_factors:
-        conf_text = (f"\nConfluence Score: {confluence}/100\n"
-                     + "\n".join(f"  {f}" for f in conf_factors[:6]))
+    # Quality 1–10 из confidence 0–100, минимум 1 чтобы фильтры по
+    # MIN_QUALITY не отрезали валидные WAIT-сигналы.
+    quality = max(1, min(10, int(round(decision.get("confidence", 0) / 10))))
+    return text, quality
 
-    prompt = f"""Новый сигнал от TradingView:
-Тип: {sig}
-Пара: {symbol} | ТФ: {tf} | Цена: ${float(price):,.2f}
-{chr(10).join(extras) if extras else ''}
-{conf_text}
 
-Деривативы прямо сейчас:
-{market_summary_text(symbol, market)}
-
-Последние сигналы (4ч):
-{recent_lines}
-
-Дай анализ."""
-
+def llm_ask(question: str, market: dict, recent: list,
+            fast_model=LLM_MODEL_FAST, smart_model=LLM_MODEL_SMART) -> str:
+    """
+    Multi-agent debate: Bull / Bear / Risk параллельно → Sonnet judge.
+    """
     try:
-        resp = ai.messages.create(
-            model=model, max_tokens=350, system=SYSTEM_SIGNAL,
-            messages=[{"role": "user", "content": prompt}],
+        return debate_and_judge(
+            question=question,
+            market=market,
+            recent=recent,
+            client=ai,
+            fast_model=fast_model,
+            smart_model=smart_model,
         )
-        text    = resp.content[0].text.strip()
-        quality = 5
-        m = re.search(r"\b([1-9]|10)\s*/\s*10", text)
-        if m:
-            quality = int(m.group(1))
-        return text, quality
-    except Exception as e:
-        log.error(f"LLM error: {e}")
-        return f"⚠️ LLM временно недоступен: {e}", 0
-
-
-def llm_ask(question: str, market_ctx: str, recent: list, model=LLM_MODEL_SMART) -> str:
-    recent_lines = "\n".join(
-        f"  • {r[0]}: {r[3]} {r[1]} {r[2]} @ ${float(r[4]):,.0f} [Q:{r[5]}]"
-        for r in recent
-    ) or "  Нет недавних сигналов"
-
-    prompt = f"""Текущая рыночная ситуация:
-{market_ctx}
-
-Последние сигналы (8ч):
-{recent_lines}
-
-Вопрос трейдера: {question}"""
-
-    try:
-        resp = ai.messages.create(
-            model=model, max_tokens=600, system=SYSTEM_ASK,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        return resp.content[0].text.strip()
     except Exception as e:
         return f"⚠️ Ошибка: {e}"
 
@@ -2635,225 +2596,59 @@ def _tg_answer_callback(callback_id: str) -> None:
 def build_signal_message(data: dict, market: dict, llm_text: str, quality: int,
                           confluence: int = 0, conf_factors: list = None,
                           decision: dict = None) -> str:
+    """
+    Компактный per-signal формат:
+      title · pair · TF · time
+      price · 24h change · bias
+      ━ Verdict (Entry/SL/TP/RR из engine, или WAIT/SKIP с причиной)
+      ━ Анализ (2-3 предложения от LLM)
+      ━ Контекст (5-7 строк market_brief)
+
+    Полный дамп индикаторов остался в /status — не дублируем.
+    """
     sig    = data.get("signal", "ALERT").upper()
-    symbol = data.get("symbol", data.get("ticker", "?")).replace("USDT.P","").replace("USDT","")
+    symbol = (data.get("symbol", data.get("ticker", "?"))
+              .replace("USDT.P", "").replace("USDT", ""))
     price  = data.get("price", data.get("close", market.get("price", 0)))
-    tf     = TF_LABEL.get(str(data.get("tf", data.get("interval","?"))), str(data.get("tf","?")))
+    tf     = TF_LABEL.get(str(data.get("tf", data.get("interval", "?"))),
+                          str(data.get("tf", "?")))
     now    = datetime.now(timezone.utc).strftime("%H:%M UTC")
 
     emoji, title, bias = SIGNAL_META.get(sig, SIGNAL_META["ALERT"])
 
-    try:    price_f = f"${float(price):,.2f}"
-    except: price_f = str(price)
+    try:
+        price_f = f"${float(price):,.2f}"
+    except (TypeError, ValueError):
+        price_f = str(price)
 
-    stars      = "⭐" * min(quality, 5) + ("+" if quality > 5 else "")
-    conf_bar   = "🔥" * (confluence // 20) + "▫️" * (5 - confluence // 20)
-    conf_color = "🔴" if confluence < 35 else ("🟡" if confluence < 55 else ("🟢" if confluence < 75 else "🚀"))
-
+    # Optional TradingView-supplied levels (OB/FVG/target/stop)
     extras = []
-    for k, lbl in [("ob_top","OB ↑"),("ob_bot","OB ↓"),
-                    ("fvg_top","FVG ↑"),("fvg_bot","FVG ↓"),
-                    ("target","Цель"),("stop","Стоп")]:
+    for k, lbl in [("ob_top", "OB↑"), ("ob_bot", "OB↓"),
+                   ("fvg_top", "FVG↑"), ("fvg_bot", "FVG↓"),
+                   ("target", "Цель"), ("stop", "Стоп")]:
         if data.get(k):
-            try: extras.append(f"  {lbl}: ${float(data[k]):,.0f}")
-            except: pass
-
-    extras_str = ("\n" + "\n".join(extras)) if extras else ""
-
-    b, hl  = market.get("bybit", {}), market.get("hl", {})
-    fr_b   = b.get("funding", 0) * 100
-    fr_hl  = hl.get("funding", 0) * 100
-    oi_chg = b.get("oi_chg", 0)
-    oi_usd = hl.get("oi_usd", 0)
-
-    def fr_icon(fr): return "🔴" if fr > 0.01 else ("🟢" if fr < -0.01 else "⚪")
-
-    ratio     = hl.get("book_ratio", 1.0)
-    book_icon = "🟢" if ratio > 1.1 else ("🔴" if ratio < 0.9 else "⚪")
-
-    lt = hl.get("large_trades", [])
-    lt_line = ""
-    if lt:
-        parts = [f"{'🟢' if t['side']=='BUY' else '🔴'}${t['usd']/1e6:.1f}M" for t in lt[:3]]
-        lt_line = f"\n  🐋 Крупные: {' '.join(parts)}"
-
-    div_line = f"\n  ⚡ FR расхождение: {market['fr_divergence']:.4f}%" if market.get("fr_divergence_signal") else ""
-
-    cvd = market.get("cvd", {})
-    cvd_line = ""
-    if cvd.get("trend") and cvd["trend"] != "unknown":
-        cvd_line = (f"\n  CVD: {'📈' if cvd['trend']=='up' else '📉'} {cvd['trend'].upper()}"
-                    + (" ⚠️ DIV" if cvd.get("divergence") else ""))
-
-    vp = market.get("vp", {})
-    vp_line = f"\n  VP POC: ${vp['poc']:,.0f} | VA ${vp['val']:,.0f}–${vp['vah']:,.0f}" if vp.get("poc") else ""
-
-    biases = market.get("ema_biases", {})
-    mtf_line = ""
-    if biases:
-        parts = [f"{tf}:{'🟢' if b=='bull' else ('🔴' if b=='bear' else '❓')}" for tf, b in biases.items()]
-        mtf_line = "\n  MTF: " + " ".join(parts)
-
-    tz_line = ""
-    for tz_key, tf_name in [("turtle_1h", "1H"), ("turtle_4h", "4H")]:
-        tz = market.get(tz_key, {})
-        if tz:
-            tz_line += f"\n  TZ {tf_name}: {tz['icon']} {tz['label']} [{tz['pct_from_mean']:+.1f}%]"
-
-    ind = market.get("indicators", {})
-    ind_line = ""
-    if ind:
-        rsi   = ind.get("rsi", 50)
-        macd  = ind.get("macd", {})
-        bb    = ind.get("bb", {})
-        stoch = ind.get("stoch", {})
-        ri = "🔴" if rsi > 70 else ("🟢" if rsi < 30 else "⚪")
-        mi = "📈" if macd.get("trend") == "bull" else "📉"
-        cx = f"[{macd.get('cross')}]" if macd.get("cross") not in ("none", None, "") else ""
-        atr     = ind.get("atr", 0)
-        atr_pct = ind.get("atr_pct", 0)
-        div     = ind.get("rsi_div", "none")
-        ecross  = ind.get("ema_cross", "none")
-        vspike  = ind.get("vol_spike", False)
-        div_s   = f"  📐 RSI Div: {'🟢 BULL' if div=='bullish' else '🔴 BEAR'}\n" if div != "none" else ""
-        ecr_s   = f"  {'✨' if ecross=='golden' else '💀'} EMA9/21: {'Golden ✅' if ecross=='golden' else 'Death ❌'}\n" if ecross != "none" else ""
-        vol_s   = f"  🔊 Volume Spike!\n" if vspike else ""
-        ind_line = (
-            f"\n━━ Индикаторы (1H) ━\n"
-            f"  RSI14: {ri} {rsi:.0f}"
-            f"  |  MACD: {mi}{cx}\n"
-            f"  BB: {bb.get('icon','⚪')} %B:{bb.get('pct_b',0.5):.2f}"
-            f"  |  Stoch: {stoch.get('icon','⚪')} K:{stoch.get('k',50):.0f}\n"
-            f"  ATR14: {atr:,.2f} ({atr_pct:.2f}%)\n"
-            f"{div_s}{ecr_s}{vol_s}"
-        ).rstrip("\n")
-
-    piv = market.get("pivots", {})
-    piv_line = ""
-    if piv:
-        ns = piv.get("nearest_sup")
-        nr = piv.get("nearest_res")
-        sup_s = f"{ns[0]}:${ns[1]:,.0f}" if ns else "—"
-        res_s = f"{nr[0]}:${nr[1]:,.0f}" if nr else "—"
-        fr_h  = market.get("fr_history", {})
-        fr_s  = f"  FR trend: {fr_h['icon']} {fr_h['trend']}" if fr_h else ""
-        piv_line = (f"\n━━ Pivot + FR Trend ━\n"
-                    f"  P: ${piv['P']:,.0f} | Sup: {sup_s} | Res: {res_s}{fr_s}")
-
-    vwap = market.get("vwap", {})
-    vwap_line = ""
-    if vwap:
-        parts = []
-        _vi = {"extreme_upper":"🔴🔴","upper":"🔴","premium":"🟡",
-               "discount":"🟡","lower":"🟢","extreme_lower":"🟢🟢"}
-        if vwap.get("daily"):
-            d   = vwap["daily"]
-            pos = vwap.get("daily_pos","")
-            pct = vwap.get("daily_pct", 0)
-            parts.append(f"Daily ${d['vwap']:,.0f} {_vi.get(pos,'⚪')}{pct:+.1f}%")
-        if vwap.get("weekly"):
-            w   = vwap["weekly"]
-            pct = vwap.get("weekly_pct", 0)
-            parts.append(f"Weekly ${w['vwap']:,.0f} {pct:+.1f}%")
-        if parts:
-            vwap_line = "\n━━ VWAP ━━━━━━━━━━━\n  " + " | ".join(parts)
-
-    liq = market.get("liquidity", {})
-    liq_line = ""
-    if liq:
-        ratio  = liq.get("ratio", 1.0)
-        r_icon = "🟢" if ratio > 1.1 else ("🔴" if ratio < 0.9 else "⚪")
-        bw     = liq.get("bid_walls", [])[:2]
-        aw     = liq.get("ask_walls", [])[:2]
-        bw_s   = " · ".join(f"${w['price']:,.0f}(${w['usd_m']:.1f}M)" for w in bw) or "нет"
-        aw_s   = " · ".join(f"${w['price']:,.0f}(${w['usd_m']:.1f}M)" for w in aw) or "нет"
-        liq_line = (
-            f"\n━━ Ликвидность (BNB) ━\n"
-            f"  Bid/Ask: {r_icon} {ratio:.2f}\n"
-            f"  🟢 Bid стены: {bw_s}\n"
-            f"  🔴 Ask стены: {aw_s}"
-        )
-
-    opt = market.get("options", {})
-    opt_line = ""
-    if opt:
-        pcr      = opt.get("pc_ratio", 0)
-        pcr_icon = "🔴" if pcr > 1.2 else ("🟢" if pcr < 0.8 else "⚪")
-        mp       = opt.get("max_pain")
-        exp      = opt.get("nearest_expiry", "")
-        mp_str   = f" | MaxPain ${mp:,.0f} ({exp})" if mp else ""
-        opt_line = f"\n━━ Options (Deribit) ━\n  P/C: {pcr_icon} {pcr:.2f}{mp_str}"
-
-    ls   = market.get("ls_ratio", {})
-    liqs = market.get("liquidations", {})
-    flow_line = ""
-    parts = []
-    if ls.get("bybit_long") is not None:
-        icon = "🟢" if ls["bybit_long"] > 55 else ("🔴" if ls["bybit_long"] < 45 else "⚪")
-        parts.append(f"L/S {icon}{ls['bybit_long']:.0f}/{ls['bybit_short']:.0f}%")
-    if ls.get("taker_ratio") is not None:
-        ti = "🟢" if ls["taker_ratio"] > 1.1 else ("🔴" if ls["taker_ratio"] < 0.9 else "⚪")
-        parts.append(f"Taker {ti}{ls['taker_ratio']:.2f}")
-    if liqs.get("liq_total_usd", 0) > 0:
-        total = liqs["liq_total_usd"]
-        dom   = "🔴L" if liqs["liq_dom"] == "long" else "🟢S"
-        parts.append(f"Liqs ${total/1e6:.2f}M dom:{dom}")
-    if parts:
-        flow_line = "\n━━ Flow / Liqs ━━━━\n  " + " | ".join(parts)
-
-    macro = market.get("macro", {})
-    macro_line = ""
-    if macro.get("fg_value") is not None:
-        macro_line = (f"\n  F&G: {macro['fg_icon']} {macro['fg_label']} [{macro['fg_value']}]"
-                      + (f" | Dom: {macro.get('btc_dom')}%" if macro.get("btc_dom") else ""))
-
-    sess = market.get("session", {})
-    sess_line = f"\n  {sess.get('icon','')} {sess.get('name','')} [{sess.get('quality',2)}/5]"
-
-    conf_lines = ""
-    if conf_factors:
-        conf_lines = "\n" + "\n".join(f"  {f}" for f in conf_factors[:5])
+            try:
+                extras.append(f"{lbl} ${float(data[k]):,.0f}")
+            except (TypeError, ValueError):
+                pass
+    tv_levels = ("\n📐 От TV: " + " · ".join(extras)) if extras else ""
 
     verdict_block = ""
     if decision:
-        verdict_block = (
-            "━━ Verdict ━━━━━━━━\n"
-            f"{format_decision_header(decision)}\n"
-        )
+        verdict_block = ("━━ Verdict ━━━━━━━━\n"
+                         f"{format_decision_header(decision)}\n")
 
     return (
-        f"{emoji} <b>{title}</b>\n"
-        f"━━━━━━━━━━━━━━━━━━\n"
-        f"📌 <b>{symbol}/USDT.P</b> • {tf} • {now}\n"
-        f"💰 <b>{price_f}</b>  ({market.get('change_24h', 0):+.2f}% 24h)\n"
-        f"📊 Bias: <b>{bias}</b>\n"
-        f"⭐ LLM: {stars} [{quality}/10]\n"
+        f"{emoji} <b>{title}</b>  ·  <b>{symbol}/USDT.P</b>  ·  {tf}  ·  {now}\n"
+        f"💰 <b>{price_f}</b>  ({market.get('change_24h', 0):+.2f}% 24h)  "
+        f"·  Bias: <b>{bias}</b>"
+        f"{tv_levels}\n"
         f"{verdict_block}"
-        f"━━ Confluence ━━━━\n"
-        f"{conf_color} Score: <b>{confluence}/100</b>  {conf_bar}"
-        f"{conf_lines}"
-        f"{extras_str}\n"
-        f"━━ Деривативы ━━━━\n"
-        f"  Bybit FR:  {fr_icon(fr_b)} {fr_b:+.4f}%\n"
-        f"  HL FR:     {fr_icon(fr_hl)} {fr_hl:+.4f}%{div_line}\n"
-        f"  OI Bybit:  {oi_chg:+.2f}% (15м)\n"
-        f"  OI HL:     ${oi_usd/1e9:.2f}B\n"
-        f"  Book HL:   {book_icon} {ratio:.2f}{lt_line}"
-        f"{cvd_line}"
-        f"{vp_line}"
-        f"{mtf_line}"
-        f"{tz_line}"
-        f"{ind_line}"
-        f"{piv_line}"
-        f"{vwap_line}"
-        f"{liq_line}"
-        f"{opt_line}"
-        f"{flow_line}"
-        f"{macro_line}"
-        f"{sess_line}\n"
-        f"━━ 🧠 Анализ LLM ━━\n"
+        f"━━ Анализ ━━━━━━━━\n"
         f"{llm_text}\n"
-        f"━━━━━━━━━━━━━━━━━━"
+        f"━━ Контекст ━━━━━━\n"
+        f"{market_brief(market)}\n"
+        f"ℹ️ Полный дамп: /status {symbol}"
     )
 
 
@@ -2901,7 +2696,7 @@ def webhook():
              f"reason='{decision['reason']}'")
 
     recent               = db_recent(hours=4, limit=6)
-    llm_text, quality    = llm_analyze_signal(data, market, recent, conf_score, conf_factors)
+    llm_text, quality    = llm_analyze_signal(data, market, recent, decision)
 
     db_save(symbol, tf, sig_type, price, data, llm_text, quality)
 
@@ -2976,16 +2771,15 @@ def cmd_ask(chat_id: int, question: str):
     if not question:
         tg_send("❓ Пример: /ask стоит ли сейчас лонговать BTC?", chat_id=chat_id)
         return
-    tg_send("🧠 Думаю...", chat_id=chat_id)
+    tg_send("🧠 Bull, Bear и Risk обсуждают…", chat_id=chat_id)
 
-    ctx_parts = []
-    for sym in SYMBOLS:
-        m = fetch_market(sym)
-        ctx_parts.append(f"{sym}:\n{market_summary_text(sym, m)}")
-
+    # Multi-agent работает по одному символу за раз — выбираем по
+    # упоминанию в вопросе или дефолтный.
+    sym    = _extract_ticker(question) or SYMBOLS[0]
+    market = fetch_market(sym)
     recent = db_last_n(12)
-    answer = llm_ask(question, "\n\n".join(ctx_parts), recent)
-    tg_send(f"🧠 <b>Анализ:</b>\n\n{answer}", chat_id=chat_id)
+    answer = llm_ask(question, market, recent)
+    tg_send(f"🧠 <b>Анализ по {sym}:</b>\n\n{answer}", chat_id=chat_id)
 
 
 def cmd_digest(chat_id: int):
