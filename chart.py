@@ -50,6 +50,8 @@ SL_COLOR     = "#ff5252"
 TP_COLOR     = "#26a69a"
 POC_COLOR    = "#ffca28"
 VA_COLOR     = "#8c7a3f"
+VWAP_COLOR   = "#7e57c2"     # фиолетовый под VWAP
+PIVOT_COLOR  = "#90a4ae"     # серо-голубой под pivots
 
 DEFAULT_BARS = 100
 RIGHT_PAD    = 0.12          # 12% правого margin под проекцию (как TV)
@@ -126,6 +128,25 @@ def render_signal_chart(
     if vp.get("val"):
         levels.append((vp["val"], VA_COLOR,
                        f"VAL {_fmt_price(vp['val'])}", ":"))
+
+    # Daily VWAP (только daily — weekly слишком шумит на 1H графике)
+    vwap_obj = market.get("vwap") or {}
+    daily_vwap = (vwap_obj.get("daily") or {}).get("vwap")
+    if daily_vwap:
+        levels.append((daily_vwap, VWAP_COLOR,
+                       f"VWAP {_fmt_price(daily_vwap)}", "-"))
+
+    # Pivot Points (P + R1/S1 — самые важные; R2/R3/S2/S3 шумят)
+    piv = market.get("pivots") or {}
+    if piv.get("P") is not None:
+        levels.append((piv["P"], PIVOT_COLOR,
+                       f"P {_fmt_price(piv['P'])}", ":"))
+    if piv.get("R1") is not None:
+        levels.append((piv["R1"], PIVOT_COLOR,
+                       f"R1 {_fmt_price(piv['R1'])}", ":"))
+    if piv.get("S1") is not None:
+        levels.append((piv["S1"], PIVOT_COLOR,
+                       f"S1 {_fmt_price(piv['S1'])}", ":"))
 
     verdict = decision.get("verdict", "WAIT")
     if verdict in ("LONG", "SHORT"):
@@ -299,8 +320,9 @@ def _place_price_tags(ax, levels, last_close, last_color):
     # Trade-уровни (приоритетные)
     trade_levels = [t for t in trio
                     if t[1] in (SL_COLOR, TP_COLOR, ENTRY_LONG[0], ENTRY_SHORT[0])]
+    # Контекстные уровни: VP + VWAP + Pivots (скрываем при коллизии с trade)
     vp_levels    = [t for t in trio
-                    if t[1] in (POC_COLOR, VA_COLOR)]
+                    if t[1] in (POC_COLOR, VA_COLOR, VWAP_COLOR, PIVOT_COLOR)]
 
     important_prices = [t[0] for t in trade_levels] + [last_close]
 

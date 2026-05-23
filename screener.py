@@ -21,7 +21,10 @@ from datetime import datetime, timezone, timedelta
 from flask import Flask, request, jsonify
 
 from decision import make_decision, format_decision_header
-from llm_agents import explain_signal, debate_and_judge, market_brief
+from llm_agents import (
+    explain_signal, debate_and_judge, market_brief,
+    summarize_day, analyze_user_chart,
+)
 from chart import render_signal_chart
 import tracking
 
@@ -1827,7 +1830,7 @@ def market_summary_text(symbol: str, m: dict) -> str:
 
     piv = m.get("pivots", {})
     piv_str = ""
-    if piv:
+    if piv and piv.get("P") is not None:
         ns = piv.get("nearest_sup")
         nr = piv.get("nearest_res")
         sup_s = f"{ns[0]}:${ns[1]:,.0f}" if ns else "—"
@@ -2096,41 +2099,22 @@ def _tg_download_photo(file_id: str) -> tuple:
 
 
 def llm_analyze_chart(img_b64: str, media_type: str, caption: str,
-                       market: dict, symbol: str) -> str:
-    """Analyze chart screenshot + compare with live market data."""
-    mkt_text = market_summary_text(symbol, market)
-
-    prompt = (
-        f"Пара: {symbol.replace('USDT','')}/USDT.P\n"
-        + (f"Комментарий трейдера: {caption}\n\n" if caption else "\n")
-        + f"Текущие данные рынка:\n{mkt_text}\n\n"
-        "Проанализируй скриншот и дай сравнительный разбор."
+                       market: dict, symbol: str,
+                       decision: dict | None = None) -> str:
+    """
+    Анализ присланного юзером скриншота через llm_agents.analyze_user_chart.
+    Если decision передан — LLM сравнивает trader's view с engine-verdict
+    и подсвечивает расхождения.
+    """
+    return analyze_user_chart(
+        image_b64=img_b64,
+        media_type=media_type,
+        user_caption=caption or "",
+        market=market,
+        client=ai,
+        model=LLM_MODEL_SMART,
+        decision=decision,
     )
-
-    try:
-        resp = ai.messages.create(
-            model=LLM_MODEL_SMART,
-            max_tokens=700,
-            system=SYSTEM_CHART,
-            messages=[{
-                "role": "user",
-                "content": [
-                    {
-                        "type": "image",
-                        "source": {
-                            "type": "base64",
-                            "media_type": media_type,
-                            "data": img_b64,
-                        },
-                    },
-                    {"type": "text", "text": prompt},
-                ],
-            }],
-        )
-        return resp.content[0].text.strip()
-    except Exception as e:
-        log.error(f"LLM chart error: {e}")
-        return f"⚠️ Ошибка анализа: {e}"
 
 
 def llm_analyze_signal(sig_data: dict, market: dict, recent: list,
@@ -2514,26 +2498,20 @@ def cmd_analyze_symbol(chat_id: int, symbol: str, tfs: list = None):
         )
 
 
-def llm_digest(signals: list, market_ctx: str) -> str:
-    if not signals:
-        return "Сигналов за сегодня не было."
-    lines = "\n".join(
-        f"  {r[0]}: {r[3]} {r[1]} {r[2]} @ ${float(r[4]):,.0f} [Q:{r[6]}]"
-        for r in signals
-    )
-    prompt = f"""Сигналы за сегодня:
-{lines}
-
-Текущий рынок:
-{market_ctx}
-
-Дай дневной дайджест: ключевые паттерны, что показал рынок, общий bias."""
+def llm_digest(signals: list, market: dict,
+               tracking_stats: dict | None = None) -> str:
+    """
+    Дневной debrief через llm_agents.summarize_day — учитывает реальную
+    engine-performance (win-rate, TP/SL hits) и не противоречит verdict'ам.
+    """
     try:
-        resp = ai.messages.create(
-            model=LLM_MODEL_SMART, max_tokens=500, system=SYSTEM_SIGNAL,
-            messages=[{"role": "user", "content": prompt}],
+        return summarize_day(
+            signals=signals,
+            market=market,
+            client=ai,
+            model=LLM_MODEL_SMART,
+            tracking_stats=tracking_stats,
         )
-        return resp.content[0].text.strip()
     except Exception as e:
         return f"⚠️ Ошибка дайджеста: {e}"
 
@@ -2834,12 +2812,21 @@ def cmd_ask(chat_id: int, question: str):
 
 def cmd_digest(chat_id: int):
     tg_send("📊 Генерирую дайджест...", chat_id=chat_id)
-    signals   = db_today()
-    ctx_parts = []
-    for sym in SYMBOLS:
-        m = fetch_market(sym)
-        ctx_parts.append(f"{sym}:\n{market_summary_text(sym, m)}")
-    digest = llm_digest(signals, "\n\n".join(ctx_parts))
+    signals = db_today()
+
+    # Один основной символ для market_brief (если несколько SYMBOLS —
+    # берём первый, остальные попадут в общую engine-stats picture)
+    primary_market = fetch_market(SYMBOLS[0])
+
+    # Engine-performance за сегодня для контекста LLM
+    tracking_stats = None
+    try:
+        with _db_lock, db_conn() as c:
+            tracking_stats = tracking.compute_stats(c, days=1)
+    except Exception as e:
+        log.warning(f"digest tracking_stats: {e}")
+
+    digest = llm_digest(signals, primary_market, tracking_stats)
     tg_send(
         f"📊 <b>Дайджест за сегодня</b> ({len(signals)} сигналов)\n"
         f"━━━━━━━━━━━━━━━━━\n{digest}",

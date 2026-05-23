@@ -8,12 +8,16 @@ import pytest
 from llm_agents import (
     SYSTEM_BEAR,
     SYSTEM_BULL,
+    SYSTEM_CHART_USER,
+    SYSTEM_DIGEST,
     SYSTEM_EXPLAIN,
     SYSTEM_JUDGE,
     SYSTEM_RISK,
+    analyze_user_chart,
     debate_and_judge,
     explain_signal,
     market_brief,
+    summarize_day,
 )
 
 
@@ -296,3 +300,143 @@ def test_quality_derivation_from_confidence(confidence, expected_quality):
     """The deterministic mapping used in screener.llm_analyze_signal."""
     quality = max(1, min(10, int(round(confidence / 10))))
     assert quality == expected_quality
+
+
+# ─── summarize_day (digest) ───────────────────────────────────────────────
+
+
+def _signal_row(ts="2026-05-23 12:00", symbol="BTCUSDT", tf="60",
+                signal_type="BOS_BULL", price=42500.0,
+                llm_text="explainer text", quality=7):
+    return (ts, symbol, tf, signal_type, price, llm_text, quality)
+
+
+def test_summarize_day_returns_short_text_when_no_signals():
+    client = FakeClient()
+    out = summarize_day(signals=[], market=_market(), client=client,
+                        model="haiku")
+    assert "не было" in out.lower()
+    assert len(client.calls) == 0  # no API call when nothing to summarize
+
+
+def test_summarize_day_calls_with_digest_system_prompt():
+    client = FakeClient(responses="дайджест ответ")
+    out = summarize_day(
+        signals=[_signal_row(), _signal_row(signal_type="CHOCH_BEAR")],
+        market=_market(),
+        client=client, model="sonnet-test",
+    )
+    assert out == "дайджест ответ"
+    assert len(client.calls) == 1
+    call = client.calls[0]
+    assert call["system"] == SYSTEM_DIGEST
+    assert call["model"] == "sonnet-test"
+    # User prompt должен включать signal types
+    assert "BOS_BULL" in call["user_message"]
+    assert "CHOCH_BEAR" in call["user_message"]
+
+
+def test_summarize_day_embeds_tracking_stats_when_provided():
+    client = FakeClient()
+    stats = {
+        "total": 10, "open": 2, "closed": 8,
+        "win_rate": 62.5, "avg_r": 0.85,
+        "hits": {"tp1": 4, "tp2": 1, "tp3": 0, "sl": 3, "expired": 0},
+    }
+    summarize_day(signals=[_signal_row()], market=_market(),
+                  client=client, model="m", tracking_stats=stats)
+    msg = client.calls[0]["user_message"]
+    assert "Engine performance" in msg
+    assert "62.5%" in msg
+    assert "TP1=4" in msg
+    assert "SL=3" in msg
+
+
+def test_summarize_day_skips_stats_block_when_no_closed():
+    client = FakeClient()
+    stats = {"total": 0, "open": 0, "closed": 0,
+             "win_rate": 0, "avg_r": 0,
+             "hits": {"tp1": 0, "tp2": 0, "tp3": 0, "sl": 0, "expired": 0}}
+    summarize_day(signals=[_signal_row()], market=_market(),
+                  client=client, model="m", tracking_stats=stats)
+    msg = client.calls[0]["user_message"]
+    assert "Engine performance" not in msg
+
+
+# ─── analyze_user_chart ───────────────────────────────────────────────────
+
+
+def _fake_vision_client(text="vision response"):
+    """FakeClient that accepts list-of-content user messages (image+text)."""
+    client = FakeClient(responses=text)
+    original = client._create
+
+    def _create(*, model, max_tokens, system, messages):
+        # Normalise — image messages have content as list
+        content = messages[0]["content"]
+        if isinstance(content, list):
+            text_block = next(
+                (b["text"] for b in content if b.get("type") == "text"), "")
+            messages = [{"role": "user", "content": text_block}]
+        return original(model=model, max_tokens=max_tokens, system=system,
+                        messages=messages)
+
+    client.messages.create = _create
+    return client
+
+
+def test_analyze_user_chart_uses_chart_user_system():
+    client = _fake_vision_client("analysis")
+    out = analyze_user_chart(
+        image_b64="abc", media_type="image/png",
+        user_caption="думаю шорт",
+        market=_market(),
+        client=client, model="sonnet",
+    )
+    assert out == "analysis"
+    call = client.calls[0]
+    assert call["system"] == SYSTEM_CHART_USER
+    assert call["model"] == "sonnet"
+    assert "думаю шорт" in call["user_message"]
+
+
+def test_analyze_user_chart_embeds_decision_when_provided():
+    client = _fake_vision_client()
+    decision = {
+        "verdict": "SHORT", "confidence": 72, "rr1": 1.5,
+        "reason": "Confluence 72/100",
+        "key_factors": ["MTF ✅"], "veto_reasons": ["RSI <25"],
+    }
+    analyze_user_chart(
+        image_b64="x", media_type="image/png", user_caption="",
+        market=_market(), client=client, model="sonnet",
+        decision=decision,
+    )
+    msg = client.calls[0]["user_message"]
+    assert "engine-verdict" in msg.lower() or "verdict" in msg.lower()
+    assert "SHORT" in msg
+    assert "72/100" in msg
+    assert "MTF" in msg
+
+
+def test_analyze_user_chart_omits_decision_block_when_none():
+    client = _fake_vision_client()
+    analyze_user_chart(
+        image_b64="x", media_type="image/png", user_caption="hi",
+        market=_market(), client=client, model="sonnet", decision=None,
+    )
+    msg = client.calls[0]["user_message"]
+    assert "engine-verdict" not in msg.lower()
+
+
+def test_analyze_user_chart_handles_exception():
+    bad_client = SimpleNamespace(
+        messages=SimpleNamespace(
+            create=MagicMock(side_effect=RuntimeError("vision API down")),
+        ),
+    )
+    out = analyze_user_chart(
+        image_b64="x", media_type="image/png", user_caption="",
+        market=_market(), client=bad_client, model="sonnet",
+    )
+    assert "Ошибка" in out or "ошибка" in out

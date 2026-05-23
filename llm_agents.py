@@ -68,6 +68,40 @@ SYSTEM_RISK = """\
 Не выбирай сторону рынка. Только риски."""
 
 
+SYSTEM_DIGEST = """\
+Ты — старший трейдер prop firm, делаешь дневной debrief команде.
+Только русский. 5–7 предложений, без приветствий.
+
+Структура ответа:
+1. Главный bias дня (long-side / short-side / chop) — одной фразой.
+2. Что работало vs не работало: ссылайся на конкретные signal_type
+   и engine-verdict'ы из списка ниже.
+3. Качество гейтинга engine: были ли WAIT/SKIP оправданы (если в
+   статистике указано).
+4. Один honest call на завтра: какие setup'ы искать / каких избегать.
+
+ЖЁСТКО: если engine закрыл сделку как sl_hit — не пытайся объяснить
+почему "на самом деле это была хорошая идея". Принимай факты как есть."""
+
+
+SYSTEM_CHART_USER = """\
+Ты — старший трейдер prop firm. Трейдер прислал скриншот своего
+графика — сравни его взгляд с объективными данными и текущим
+engine-verdict (если есть).
+Только русский. 5–7 предложений, без приветствий.
+
+Структура:
+1. 📊 Что видно на графике трейдера: структура, ключевые уровни,
+   паттерны.
+2. 🔍 Сравнение с engine-данными (CVD, funding, MTF, OB, FVG).
+3. ✅/❌ Где трейдер прав / где расходитесь.
+4. 🎯 Если engine уже выдал verdict — сравни с trader's bias и скажи,
+   стоит ли ему пересматривать вход. Если verdict отсутствует —
+   дай свою рекомендацию (вход / ждать / избегать).
+
+Без воды, без оговорок типа "следите за рынком"."""
+
+
 SYSTEM_JUDGE = """\
 Ты — главный трейдер, синтезируешь анализ команды (Bull / Bear / Risk).
 Только русский.
@@ -273,3 +307,112 @@ def debate_and_judge(
             "judge": final,
         }
     return final
+
+
+# ─── Daily digest ─────────────────────────────────────────────────────────
+
+def summarize_day(
+    signals: list,
+    market: dict,
+    client,
+    model: str,
+    tracking_stats: dict | None = None,
+    max_tokens: int = 500,
+) -> str:
+    """
+    Дневной debrief. На вход:
+      • signals — список tuple'ов из db_today():
+        (ts, symbol, tf, signal_type, price, llm_text, quality)
+      • market — текущий рынок (любого основного символа)
+      • tracking_stats — опционально, output tracking.compute_stats()
+        за тот же период (для гейтинг-метрик)
+
+    Использует SYSTEM_DIGEST, который запрещает оправдывать sl_hit'ы.
+    """
+    if not signals:
+        return "Сигналов за сегодня не было."
+
+    lines = "\n".join(
+        f"  {r[0]} {r[3]} {r[1]} {r[2]} @ ${float(r[4]):,.2f}"
+        + (f" [Q:{r[6]}]" if len(r) > 6 and r[6] is not None else "")
+        for r in signals[:20]
+    )
+
+    stats_block = ""
+    if tracking_stats and tracking_stats.get("closed"):
+        s = tracking_stats
+        stats_block = (
+            f"\n\nEngine performance за период:\n"
+            f"  Всего {s['total']} (open {s['open']}, closed {s['closed']})\n"
+            f"  Win-rate: {s['win_rate']}% · Avg R: {s['avg_r']:+.2f}\n"
+            f"  Hits: TP1={s['hits']['tp1']} TP2={s['hits']['tp2']} "
+            f"TP3={s['hits']['tp3']} SL={s['hits']['sl']} "
+            f"Expired={s['hits']['expired']}"
+        )
+
+    prompt = (
+        f"Сигналы за сегодня ({len(signals)} шт.):\n{lines}"
+        f"{stats_block}\n\n"
+        f"Текущий рынок:\n{market_brief(market)}\n\n"
+        "Дай дневной debrief по правилам системы."
+    )
+
+    return _agent_call(client, model, SYSTEM_DIGEST, prompt, max_tokens)
+
+
+# ─── User chart screenshot analysis ───────────────────────────────────────
+
+def analyze_user_chart(
+    image_b64: str,
+    media_type: str,
+    user_caption: str,
+    market: dict,
+    client,
+    model: str,
+    decision: dict | None = None,
+    max_tokens: int = 700,
+) -> str:
+    """
+    Анализ присланного юзером скриншота со сравнением vs engine-verdict.
+    Если decision передан — LLM явно его учтёт и подсветит расхождения.
+    """
+    verdict_block = ""
+    if decision and decision.get("verdict") in ("LONG", "SHORT", "WAIT", "SKIP"):
+        kf = "\n".join(f"  + {f}" for f in (decision.get("key_factors") or [])[:3])
+        vr = "\n".join(f"  - {r}" for r in (decision.get("veto_reasons") or [])[:3])
+        verdict_block = (
+            f"\n\nТекущий engine-verdict для этого инструмента:\n"
+            f"  {decision['verdict']} · Confidence {decision.get('confidence', 0)}/100"
+            f" · RR(TP1) {decision.get('rr1') or '—'}\n"
+            f"  Причина: {decision.get('reason', '')}\n"
+            f"Факторы ЗА:\n{kf or '  (нет)'}\n"
+            f"Risks (vetoes):\n{vr or '  (нет)'}"
+        )
+
+    text_prompt = (
+        f"Caption от трейдера: \"{user_caption or '(пусто)'}\"\n\n"
+        f"Объективные рыночные данные:\n{market_brief(market)}"
+        f"{verdict_block}\n\n"
+        "Дай анализ по правилам системы."
+    )
+
+    try:
+        resp = client.messages.create(
+            model=model,
+            max_tokens=max_tokens,
+            system=SYSTEM_CHART_USER,
+            messages=[{
+                "role": "user",
+                "content": [
+                    {"type": "image", "source": {
+                        "type": "base64",
+                        "media_type": media_type,
+                        "data": image_b64,
+                    }},
+                    {"type": "text", "text": text_prompt},
+                ],
+            }],
+        )
+        return resp.content[0].text.strip()
+    except Exception as e:
+        return f"⚠️ Ошибка анализа чарта: {e}"
