@@ -154,7 +154,9 @@ def _compute_levels(price: float, atr: float, direction: str) -> dict:
     t3_d   = atr * ATR_TP3_DIST
 
     digits = _price_digits(price)
-    r      = lambda x: round(x, digits)
+
+    def r(x):
+        return round(x, digits)
 
     entry_min = r(price - zone_d)
     entry_max = r(price + zone_d)
