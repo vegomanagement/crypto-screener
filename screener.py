@@ -22,6 +22,7 @@ from flask import Flask, request, jsonify
 
 from decision import make_decision, format_decision_header
 from llm_agents import explain_signal, debate_and_judge, market_brief
+from chart import render_signal_chart
 
 try:
     from config import (
@@ -2545,6 +2546,29 @@ def tg_send(text: str, chat_id=None, reply_markup: dict = None) -> bool:
         return False
 
 
+def tg_send_photo(photo_bytes: bytes, caption: str, chat_id=None,
+                  filename: str = "chart.png") -> bool:
+    """
+    Отправляет PNG в Telegram с HTML-подписью. Caption Telegram-API
+    ограничен 1024 символами — длинный текст обрезается с многоточием.
+    """
+    cid = chat_id or TELEGRAM_CHAT_ID
+    if len(caption) > 1024:
+        caption = caption[:1020] + "…"
+    files = {"photo": (filename, photo_bytes, "image/png")}
+    data  = {"chat_id": cid, "caption": caption, "parse_mode": "HTML"}
+    try:
+        r = requests.post(
+            f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendPhoto",
+            data=data, files=files, timeout=15,
+        )
+        r.raise_for_status()
+        return True
+    except Exception as e:
+        log.error(f"Telegram sendPhoto: {e}")
+        return False
+
+
 def _register_bot_commands() -> None:
     """Register slash commands so Telegram shows them in the / menu."""
     commands = [
@@ -2712,9 +2736,20 @@ def webhook():
 
     msg = build_signal_message(data, market, llm_text, quality,
                                conf_score, conf_factors, decision)
-    ok  = tg_send(msg)
+
+    # Чарт рендерим всегда, когда есть достаточно баров — даже для WAIT,
+    # чтобы пользователь видел контекст. SKIP уже отфильтрован выше.
+    klines_1h = (market.get("_klines") or {}).get("60") or []
+    photo     = render_signal_chart(symbol, klines_1h, decision, market)
+
+    if photo:
+        ok = tg_send_photo(photo, msg)
+    else:
+        ok = tg_send(msg)
+
     log.info(f"  {sig_type} {symbol} Q:{quality}/10 Conf:{conf_score}/100 "
-             f"Verdict:{decision['verdict']} → {'OK' if ok else 'FAIL'}")
+             f"Verdict:{decision['verdict']} chart:{'yes' if photo else 'no'} "
+             f"→ {'OK' if ok else 'FAIL'}")
 
     return jsonify({
         "status":     "ok",
@@ -2722,6 +2757,7 @@ def webhook():
         "confluence": conf_score,
         "verdict":    decision["verdict"],
         "confidence": decision["confidence"],
+        "chart_sent": bool(photo),
     }), 200
 
 
