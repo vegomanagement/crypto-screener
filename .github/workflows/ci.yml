@@ -27,11 +27,11 @@ jobs:
           pip install -r requirements-dev.txt
 
       - name: Syntax check (all modules)
-        run: python -m py_compile decision.py screener.py webhook_server.py
+        run: python -m py_compile decision.py llm_agents.py chart.py tracking.py screener.py webhook_server.py
 
       - name: Lint (ruff)
         # scoped to new code only; full repo cleanup is out of scope
-        run: ruff check decision.py tests/
+        run: ruff check decision.py llm_agents.py chart.py tracking.py tests/
 
       - name: Unit tests (pytest)
         run: pytest -v

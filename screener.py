@@ -23,6 +23,7 @@ from flask import Flask, request, jsonify
 from decision import make_decision, format_decision_header
 from llm_agents import explain_signal, debate_and_judge, market_brief
 from chart import render_signal_chart
+import tracking
 
 try:
     from config import (
@@ -143,9 +144,12 @@ def db_init():
             )
         """)
         c.commit()
+        # Engine-tracking колонки (Этап 4) — идемпотентная миграция
+        tracking.init_schema(c)
     log.info("DB инициализирована")
 
-def db_save(symbol, tf, sig_type, price, raw, llm_text, quality=0):
+def db_save(symbol, tf, sig_type, price, raw, llm_text, quality=0,
+            decision: dict | None = None):
     ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M")
     with _db_lock, db_conn() as c:
         cur = c.execute(
@@ -156,15 +160,25 @@ def db_save(symbol, tf, sig_type, price, raw, llm_text, quality=0):
         signal_id = cur.lastrowid
         c.commit()
 
-    # Auto-track outcome for directional signals
-    sig_up = any(x in sig_type for x in ("BULL", "LONG", "SWEEP_L", "CHOCH_BULL"))
-    sig_dn = any(x in sig_type for x in ("BEAR", "SHORT", "SWEEP_H", "CHOCH_BEAR"))
-    if sig_up or sig_dn:
-        direction = "bull" if sig_up else "bear"
+    # Engine-tracking (Этап 4): сохраняем decision-snapshot для TP/SL tracking.
+    # WAIT/SKIP записываем с status='skipped' — для статистики гейтинга.
+    if decision:
         try:
-            db_outcome_add(signal_id, symbol, sig_type, direction, float(price or 0))
+            with _db_lock, db_conn() as c:
+                tracking.open_trade(c, signal_id, decision, symbol, sig_type)
         except Exception as e:
-            log.warning(f"db_outcome_add: {e}")
+            log.warning(f"tracking.open_trade: {e}")
+    else:
+        # Fallback на старую логику для обратной совместимости
+        # (если сигнал пришёл откуда-то без decision)
+        sig_up = any(x in sig_type for x in ("BULL", "LONG", "SWEEP_L", "CHOCH_BULL"))
+        sig_dn = any(x in sig_type for x in ("BEAR", "SHORT", "SWEEP_H", "CHOCH_BEAR"))
+        if sig_up or sig_dn:
+            direction = "bull" if sig_up else "bear"
+            try:
+                db_outcome_add(signal_id, symbol, sig_type, direction, float(price or 0))
+            except Exception as e:
+                log.warning(f"db_outcome_add: {e}")
 
 def db_recent(hours=4, limit=8):
     since = (datetime.now(timezone.utc) - timedelta(hours=hours)).strftime("%Y-%m-%d %H:%M")
@@ -2722,7 +2736,7 @@ def webhook():
     recent               = db_recent(hours=4, limit=6)
     llm_text, quality    = llm_analyze_signal(data, market, recent, decision)
 
-    db_save(symbol, tf, sig_type, price, data, llm_text, quality)
+    db_save(symbol, tf, sig_type, price, data, llm_text, quality, decision=decision)
 
     if decision["verdict"] == "SKIP":
         log.info(f"  Verdict=SKIP — не отправляем ({decision['reason']})")
@@ -3365,7 +3379,7 @@ def handle_update(update: dict):
     elif cmd == "/alert":              cmd_alert_add(chat_id, args)
     elif cmd == "/alerts":             cmd_alert_list(chat_id)
     elif cmd == "/delalert":           cmd_alert_delete(chat_id, args)
-    elif cmd == "/stats":              cmd_stats(chat_id)
+    elif cmd == "/stats":              cmd_stats(chat_id, args)
     elif cmd == "/top":                cmd_top(chat_id)
     elif cmd == "/movers":             cmd_movers(chat_id)
     elif cmd == "/risk":               cmd_risk(chat_id, args)
@@ -3694,6 +3708,26 @@ def check_movers():
 
 # ─── SIGNAL OUTCOME CHECKER ───────────────────────────────────────────────────
 
+def check_trade_outcomes():
+    """
+    Engine-based outcome tracking (Этап 4): walk 5m klines с момента entry,
+    проверяем первый touch SL / TP для каждой open LONG/SHORT сделки.
+    Обновляет signal_outcomes.status / hit_level / r_multiple.
+    """
+    try:
+        with _db_lock, db_conn() as c:
+            stats = tracking.check_open_trades(
+                c,
+                fetch_klines=lambda sym, interval, limit: _klines(sym, interval, limit),
+            )
+        if stats["closed"] > 0:
+            log.info(f"Trade outcomes: проверено {stats['checked']}, "
+                     f"закрыто {stats['closed']}, "
+                     f"остаётся open {stats['still_open']}")
+    except Exception as e:
+        log.warning(f"check_trade_outcomes: {e}")
+
+
 def check_signal_outcomes():
     """Check pending signal outcomes at 1H / 4H / 24H intervals."""
     pending = db_outcomes_pending()
@@ -3748,55 +3782,29 @@ def check_signal_outcomes():
         log.info(f"Signal outcomes updated: {updated} records")
 
 
-def cmd_stats(chat_id: int):
-    """Show win-rate statistics by signal type (last 30 days)."""
-    rows = db_stats(days=30)
-    if not rows:
-        tg_send(
-            "📊 Статистика пока пуста.\n"
-            "Она появится после того, как сигналы отработают 4H.",
-            chat_id=chat_id,
-        )
+def cmd_stats(chat_id: int, args: str = ""):
+    """
+    Engine-based win-rate статистика (Этап 4): TP/SL hits, R-multiple,
+    разбивка по signal_type / символам / confidence-bucket.
+
+    /stats          — 30 дней (по умолчанию)
+    /stats 7        — последние 7 дней
+    """
+    try:
+        days = int(args.strip()) if args.strip().isdigit() else 30
+    except Exception:
+        days = 30
+    days = max(1, min(365, days))
+
+    try:
+        with _db_lock, db_conn() as c:
+            stats = tracking.compute_stats(c, days=days)
+    except Exception as e:
+        log.error(f"compute_stats: {e}")
+        tg_send(f"⚠️ Ошибка stats: {e}", chat_id=chat_id)
         return
 
-    # Aggregate by signal_type
-    from collections import defaultdict
-    stats: dict[str, dict] = defaultdict(lambda: {"wins": 0, "losses": 0, "pcts": []})
-
-    for sig_type, direction, pct_4h in rows:
-        key = sig_type
-        stats[key]["pcts"].append(pct_4h)
-        if pct_4h >= 0:
-            stats[key]["wins"] += 1
-        else:
-            stats[key]["losses"] += 1
-
-    lines = [
-        "📊 <b>Win-rate по сигналам (30 дней, 4H)</b>",
-        "━━━━━━━━━━━━━━━━━━━━",
-    ]
-    total_w = total_l = 0
-    for sig_type, d in sorted(stats.items(), key=lambda x: -(x[1]["wins"] + x[1]["losses"])):
-        w, l  = d["wins"], d["losses"]
-        total = w + l
-        wr    = w / total * 100
-        avg   = sum(d["pcts"]) / len(d["pcts"])
-        icon  = "🟢" if wr >= 55 else ("🟡" if wr >= 45 else "🔴")
-        lines.append(
-            f"{icon} <b>{sig_type}</b>  {wr:.0f}% ({w}W/{l}L)  avg {avg:+.1f}%"
-        )
-        total_w += w
-        total_l += l
-
-    grand_total = total_w + total_l
-    grand_wr    = total_w / grand_total * 100 if grand_total else 0
-    lines += [
-        "━━━━━━━━━━━━━━━━━━━━",
-        f"<b>Всего:</b> {grand_wr:.0f}% ({total_w}W/{total_l}L из {grand_total} сигналов)",
-        f"<i>Период: последние 30 дней · checkpoint: 4H</i>",
-    ]
-
-    tg_send("\n".join(lines), chat_id=chat_id)
+    tg_send(tracking.format_stats_message(stats), chat_id=chat_id)
 
 
 # ─── DAILY DIGEST ─────────────────────────────────────────────────────────────
@@ -3811,6 +3819,7 @@ def start_scheduler():
     schedule.every(15).minutes.do(run_auto_scan)
     schedule.every(1).minutes.do(check_price_alerts)
     schedule.every(30).minutes.do(check_signal_outcomes)
+    schedule.every(10).minutes.do(check_trade_outcomes)
     schedule.every(5).minutes.do(check_movers)
     time.sleep(15)          # short delay so Flask is fully up first
     run_auto_scan()         # run once immediately on startup
