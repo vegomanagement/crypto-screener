@@ -20,6 +20,8 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone, timedelta
 from flask import Flask, request, jsonify
 
+from decision import make_decision, format_decision_header
+
 try:
     from config import (
         TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, ANTHROPIC_API_KEY,
@@ -2631,7 +2633,8 @@ def _tg_answer_callback(callback_id: str) -> None:
 # ─── MESSAGE BUILDER ─────────────────────────────────────────────────────────
 
 def build_signal_message(data: dict, market: dict, llm_text: str, quality: int,
-                          confluence: int = 0, conf_factors: list = None) -> str:
+                          confluence: int = 0, conf_factors: list = None,
+                          decision: dict = None) -> str:
     sig    = data.get("signal", "ALERT").upper()
     symbol = data.get("symbol", data.get("ticker", "?")).replace("USDT.P","").replace("USDT","")
     price  = data.get("price", data.get("close", market.get("price", 0)))
@@ -2811,6 +2814,13 @@ def build_signal_message(data: dict, market: dict, llm_text: str, quality: int,
     if conf_factors:
         conf_lines = "\n" + "\n".join(f"  {f}" for f in conf_factors[:5])
 
+    verdict_block = ""
+    if decision:
+        verdict_block = (
+            "━━ Verdict ━━━━━━━━\n"
+            f"{format_decision_header(decision)}\n"
+        )
+
     return (
         f"{emoji} <b>{title}</b>\n"
         f"━━━━━━━━━━━━━━━━━━\n"
@@ -2818,6 +2828,7 @@ def build_signal_message(data: dict, market: dict, llm_text: str, quality: int,
         f"💰 <b>{price_f}</b>  ({market.get('change_24h', 0):+.2f}% 24h)\n"
         f"📊 Bias: <b>{bias}</b>\n"
         f"⭐ LLM: {stars} [{quality}/10]\n"
+        f"{verdict_block}"
         f"━━ Confluence ━━━━\n"
         f"{conf_color} Score: <b>{confluence}/100</b>  {conf_bar}"
         f"{conf_lines}"
@@ -2876,20 +2887,47 @@ def webhook():
 
     conf_score, conf_factors = compute_confluence_score(sig_type, market, mtf)
 
+    decision = make_decision(
+        signal_type=sig_type,
+        price=price or market.get("price", 0),
+        market=market,
+        mtf=mtf,
+        confluence_score=conf_score,
+        confluence_factors=conf_factors,
+    )
+    log.info(f"  Decision: {decision['verdict']} "
+             f"conf={decision['confidence']}/100 "
+             f"vetoes={len(decision['veto_reasons'])} "
+             f"reason='{decision['reason']}'")
+
     recent               = db_recent(hours=4, limit=6)
     llm_text, quality    = llm_analyze_signal(data, market, recent, conf_score, conf_factors)
 
     db_save(symbol, tf, sig_type, price, data, llm_text, quality)
 
+    if decision["verdict"] == "SKIP":
+        log.info(f"  Verdict=SKIP — не отправляем ({decision['reason']})")
+        return jsonify({"status": "skipped",
+                        "verdict": decision["verdict"],
+                        "reason":  decision["reason"]}), 200
+
     if quality < MIN_QUALITY:
         log.info(f"  Качество {quality} < {MIN_QUALITY} — не отправляем")
         return jsonify({"status": "filtered", "quality": quality}), 200
 
-    msg = build_signal_message(data, market, llm_text, quality, conf_score, conf_factors)
+    msg = build_signal_message(data, market, llm_text, quality,
+                               conf_score, conf_factors, decision)
     ok  = tg_send(msg)
-    log.info(f"  {sig_type} {symbol} Q:{quality}/10 Conf:{conf_score}/100 → {'OK' if ok else 'FAIL'}")
+    log.info(f"  {sig_type} {symbol} Q:{quality}/10 Conf:{conf_score}/100 "
+             f"Verdict:{decision['verdict']} → {'OK' if ok else 'FAIL'}")
 
-    return jsonify({"status": "ok", "quality": quality, "confluence": conf_score}), 200
+    return jsonify({
+        "status":     "ok",
+        "quality":    quality,
+        "confluence": conf_score,
+        "verdict":    decision["verdict"],
+        "confidence": decision["confidence"],
+    }), 200
 
 
 @app.route("/health", methods=["GET"])
