@@ -53,6 +53,11 @@ VA_COLOR     = "#8c7a3f"
 VWAP_COLOR   = "#7e57c2"     # фиолетовый под VWAP
 PIVOT_COLOR  = "#90a4ae"     # серо-голубой под pivots
 
+# Подсветка торговых сессий (UTC окна), очень faint
+SESSION_ASIA   = ("#4fc3f7", 0.04)   # 00:00–08:00 UTC (Tokyo)
+SESSION_LONDON = ("#81c784", 0.04)   # 08:00–16:00 UTC
+SESSION_NY     = ("#ffb74d", 0.04)   # 13:00–21:00 UTC
+
 DEFAULT_BARS = 100
 RIGHT_PAD    = 0.12          # 12% правого margin под проекцию (как TV)
 
@@ -100,6 +105,9 @@ def render_signal_chart(
 
     for ax in (ax_price, ax_vol, ax_cvd):
         _style_axis(ax)
+
+    # ─── Session highlights (бэкграунд под свечами) ─────────────────────
+    _draw_session_highlights(ax_price, times)
 
     # ─── Candles ─────────────────────────────────────────────────────────
     _draw_candles(ax_price, times_num, opens, highs, lows, closes, bar_width)
@@ -266,9 +274,13 @@ def render_signal_chart(
 
     # ─── Export ──────────────────────────────────────────────────────────
     buf = io.BytesIO()
-    fig.savefig(buf, format="png", dpi=120, facecolor=BG_COLOR,
-                bbox_inches="tight", pad_inches=0.25)
-    plt.close(fig)
+    try:
+        fig.savefig(buf, format="png", dpi=120, facecolor=BG_COLOR,
+                    bbox_inches="tight", pad_inches=0.25)
+    finally:
+        # plt.close ОБЯЗАТЕЛЕН — иначе figure утекает в pyplot state
+        # и накапливается RAM при потоке сигналов
+        plt.close(fig)
     buf.seek(0)
     return buf.getvalue()
 
@@ -282,6 +294,39 @@ def _style_axis(ax):
     for spine in ax.spines.values():
         spine.set_color(GRID_COLOR)
         spine.set_linewidth(0.8)
+
+
+def _draw_session_highlights(ax, times):
+    """
+    Полупрозрачные вертикальные полосы Asia/London/NY (UTC окна).
+    Рисуется до свечей (zorder=0) — не мешает читать прайс.
+    """
+    if len(times) < 2:
+        return
+
+    sessions = [
+        (SESSION_ASIA,   0,  8),
+        (SESSION_LONDON, 8, 16),
+        (SESSION_NY,    13, 21),
+    ]
+
+    first, last = times[0], times[-1]
+    cur_day = first.replace(hour=0, minute=0, second=0, microsecond=0)
+    end_day = last.replace(hour=0, minute=0, second=0, microsecond=0) \
+              + timedelta(days=1)
+
+    while cur_day <= end_day:
+        for (color, alpha), h_start, h_end in sessions:
+            s = cur_day + timedelta(hours=h_start)
+            e = cur_day + timedelta(hours=h_end)
+            # Кропаем по видимому диапазону
+            if e < first or s > last:
+                continue
+            ax.axvspan(mdates.date2num(max(s, first)),
+                       mdates.date2num(min(e, last)),
+                       color=color, alpha=alpha, zorder=0,
+                       linewidth=0)
+        cur_day += timedelta(days=1)
 
 
 def _draw_candles(ax, times_num, opens, highs, lows, closes, bar_width):

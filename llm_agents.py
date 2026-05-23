@@ -277,6 +277,16 @@ def debate_and_judge(
         bear = bear_f.result()
         risk = risk_f.result()
 
+    # Замена сбойных агентов на маркер, чтобы judge не цитировал
+    # error-строку как реальный тезис
+    def _fallback(text: str, role: str) -> str:
+        if text.startswith("[agent error"):
+            return f"(аналитик {role} недоступен — игнорируй эту позицию)"
+        return text
+    bull = _fallback(bull, "Bull")
+    bear = _fallback(bear, "Bear")
+    risk = _fallback(risk, "Risk")
+
     verdict_block = ""
     if decision and decision.get("verdict") in ("LONG", "SHORT", "WAIT", "SKIP"):
         verdict_block = (

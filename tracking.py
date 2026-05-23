@@ -24,8 +24,11 @@ R-multiple для калибровки engine.
 """
 
 import json
+import logging
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
+
+log = logging.getLogger(__name__)
 
 
 EXPIRY_HOURS  = 168  # 7 дней — после этого open trade принудительно expired
@@ -175,14 +178,33 @@ def check_open_trades(conn, fetch_klines) -> dict:
         except (TypeError, ValueError):
             pass
 
-        # Загружаем klines с момента entry (5m bars, до 2000 штук = ~1 неделя)
+        # Сколько 5m баров прошло с момента entry — берём только их,
+        # иначе walk через старую историю даст ложные SL/TP касания
+        # (баг ревью: 2000 баров = ~7 дней, entry мог быть 2ч назад)
         try:
-            klines = fetch_klines(symbol, "5", 2000) or []
-        except Exception:
+            entry_dt = datetime.strptime(entry_ts, "%Y-%m-%d %H:%M").replace(
+                tzinfo=timezone.utc)
+        except (TypeError, ValueError):
+            continue
+
+        minutes_since = max(1, int((now - entry_dt).total_seconds() / 60))
+        # +2 бара буфер (на округление и текущий незакрытый бар)
+        bars_needed = min(2000, max(2, minutes_since // 5 + 2))
+
+        try:
+            klines = fetch_klines(symbol, "5", bars_needed) or []
+        except Exception as e:
+            log.warning(f"tracking fetch_klines {symbol}: {e}")
             continue
 
         if not klines:
             continue
+
+        # Если API вернул больше баров чем нужно — обрезаем хвост по
+        # числу баров с entry. Это защита от случаев, когда у нас
+        # лимит =N, но API всё равно отдал N последних.
+        if len(klines) > bars_needed:
+            klines = klines[-bars_needed:]
 
         hit = _detect_hit(klines, verdict, sl, tp1, tp2, tp3, rr1, rr2, rr3,
                           entry_ts)

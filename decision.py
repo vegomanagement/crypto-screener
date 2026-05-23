@@ -122,6 +122,7 @@ def make_decision(
     if rr1 < MIN_RR_FOR_TRADE:
         base["verdict"] = "SKIP"
         base["reason"]  = f"RR до TP1 = {rr1:.2f} < {MIN_RR_FOR_TRADE}"
+        _strip_levels(base)
         return base
 
     if confluence_score < CONFLUENCE_WAIT_THRESHOLD:

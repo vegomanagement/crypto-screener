@@ -30,8 +30,11 @@ jobs:
         run: python -m py_compile decision.py llm_agents.py chart.py tracking.py screener.py webhook_server.py
 
       - name: Lint (ruff)
-        # scoped to new code only; full repo cleanup is out of scope
-        run: ruff check decision.py llm_agents.py chart.py tracking.py tests/
+        # screener.py — legacy 4k-line file; игнорим стилистические
+        # one-line if/else (E701/E702), оставляем только реальные баги
+        run: |
+          ruff check decision.py llm_agents.py chart.py tracking.py tests/
+          ruff check screener.py --ignore E701,E702 webhook_server.py
 
       - name: Unit tests (pytest)
         run: pytest -v

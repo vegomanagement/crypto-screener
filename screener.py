@@ -7,6 +7,7 @@ TradingView Webhooks → CVD + VP + MTF + Macro → Claude LLM → Telegram
 import base64
 import json
 import logging
+import os
 import math
 import re
 import sqlite3
@@ -1154,7 +1155,7 @@ def compute_confluence_score(signal_type: str, market: dict, mtf: dict) -> tuple
         elif al >= tot - 1:
             score += 10; factors.append(f"MTF 🟡 {al}/{tot} ТФ")
         elif al == 0:
-            score -= 10; factors.append(f"MTF ❌ все ТФ против")
+            score -= 10; factors.append("MTF ❌ все ТФ против")
         else:
             factors.append(f"MTF ⚪ {al}/{tot} ТФ")
 
@@ -1257,8 +1258,8 @@ def compute_confluence_score(signal_type: str, market: dict, mtf: dict) -> tuple
     if bb_pos:
         if   sig_up and bb_pos == "below_lower": score += 8; factors.append(f"BB ✅ ниже нижней полосы [%B:{bb['pct_b']:.2f}]")
         elif sig_dn and bb_pos == "above_upper": score += 8; factors.append(f"BB ✅ выше верхней полосы [%B:{bb['pct_b']:.2f}]")
-        elif sig_up and bb_pos == "above_upper": score -= 8; factors.append(f"BB ❌ выше верхней при лонге")
-        elif sig_dn and bb_pos == "below_lower": score -= 8; factors.append(f"BB ❌ ниже нижней при шорте")
+        elif sig_up and bb_pos == "above_upper": score -= 8; factors.append("BB ❌ выше верхней при лонге")
+        elif sig_dn and bb_pos == "below_lower": score -= 8; factors.append("BB ❌ ниже нижней при шорте")
         else: factors.append(f"BB ⚪ {bb.get('icon','⚪')} [%B:{bb.get('pct_b',0.5):.2f}]")
 
     # Pivot Points (+8 near key level)
@@ -1347,8 +1348,8 @@ def compute_confluence_score(signal_type: str, market: dict, mtf: dict) -> tuple
     liqs = market.get("liquidations", {})
     if liqs.get("liq_total_usd", 0) > 100_000:
         dom = liqs.get("liq_dom", "")
-        if   sig_up and dom == "long":  score += 5;  factors.append(f"Liqs ✅ лонги ликвидированы — контрариан лонг")
-        elif sig_dn and dom == "short": score += 5;  factors.append(f"Liqs ✅ шорты ликвидированы — контрариан шорт")
+        if   sig_up and dom == "long":  score += 5;  factors.append("Liqs ✅ лонги ликвидированы — контрариан лонг")
+        elif sig_dn and dom == "short": score += 5;  factors.append("Liqs ✅ шорты ликвидированы — контрариан шорт")
 
     return max(0, min(100, score)), factors
 
@@ -1399,8 +1400,10 @@ def _hl_data(symbol: str) -> dict:
         def depth(side, n=8):
             t = 0.0
             for lvl in side[:n]:
-                try: t += float(lvl["px"]) * float(lvl["sz"])
-                except: pass
+                try:
+                    t += float(lvl["px"]) * float(lvl["sz"])
+                except (KeyError, ValueError, TypeError):
+                    pass
             return t
 
         bd = depth(bids); ad = depth(asks)
@@ -1422,7 +1425,8 @@ def _hl_data(symbol: str) -> dict:
                 if sz_usd >= 300_000:
                     large.append({"side": "BUY" if t.get("side") == "B" else "SELL",
                                   "usd": sz_usd, "price": float(t["px"])})
-            except: pass
+            except (KeyError, ValueError, TypeError):
+                pass
         out["large_trades"] = large[:5]
     except Exception as e:
         log.warning(f"HL trades {coin}: {e}")
@@ -2538,15 +2542,23 @@ def tg_send(text: str, chat_id=None, reply_markup: dict = None) -> bool:
         return False
 
 
+TELEGRAM_CAPTION_LIMIT = 1024
+
+
 def tg_send_photo(photo_bytes: bytes, caption: str, chat_id=None,
                   filename: str = "chart.png") -> bool:
     """
-    Отправляет PNG в Telegram с HTML-подписью. Caption Telegram-API
-    ограничен 1024 символами — длинный текст обрезается с многоточием.
+    Отправляет PNG в Telegram. Если caption > 1024 (лимит API), фото
+    шлётся с обрезанной шапкой, а полный текст приходит ОТДЕЛЬНЫМ
+    сообщением сразу следом (вместо silent truncation).
     """
     cid = chat_id or TELEGRAM_CHAT_ID
-    if len(caption) > 1024:
-        caption = caption[:1020] + "…"
+    full_text = caption
+    overflowed = len(caption) > TELEGRAM_CAPTION_LIMIT
+    if overflowed:
+        # Шапка под фото: первые 1000 символов + явный маркер
+        caption = caption[:1000].rstrip() + "\n\n<i>↓ полный текст ниже</i>"
+
     files = {"photo": (filename, photo_bytes, "image/png")}
     data  = {"chat_id": cid, "caption": caption, "parse_mode": "HTML"}
     try:
@@ -2555,10 +2567,14 @@ def tg_send_photo(photo_bytes: bytes, caption: str, chat_id=None,
             data=data, files=files, timeout=15,
         )
         r.raise_for_status()
-        return True
     except Exception as e:
         log.error(f"Telegram sendPhoto: {e}")
         return False
+
+    if overflowed:
+        tg_send(full_text, chat_id=cid)
+
+    return True
 
 
 def _register_bot_commands() -> None:
@@ -3431,8 +3447,8 @@ def detect_signals(candles: list) -> list:
     elif close_now < prev_low:
         signals.append("BOS_BEAR" if not trend_up else "CHOCH_BEAR")
 
-    # ── FVG (3-candle gap) ───────────────────────────────────────────────────
-    c2, c1, c0 = candles[-3], candles[-2], candles[-1]
+    # ── FVG (3-candle gap, средняя свеча игнорируется по определению) ────
+    c2, c0 = candles[-3], candles[-1]
     if c0["l"] > c2["h"]:
         signals.append("FVG_BULL")
     elif c0["h"] < c2["l"]:
@@ -3513,21 +3529,50 @@ def run_auto_scan():
                 sig_data = {"signal": sig_type, "symbol": base,
                             "tf": interval, "price": price}
                 recent           = db_recent(hours=4, limit=6)
-                llm_text, quality = llm_analyze_signal(
-                    sig_data, market, recent, conf_score, conf_factors
+
+                # Engine verdict для auto-scanned сигналов (был баг: старая
+                # сигнатура передавала conf_score/conf_factors как
+                # decision/model и крашила llm_analyze_signal)
+                mtf_dir = "long" if any(x in sig_type for x in ("BULL","LONG","SWEEP_L","EQL")) \
+                          else ("short" if any(x in sig_type for x in ("BEAR","SHORT","SWEEP_H","EQH")) else "neutral")
+                mtf_data = check_mtf_confluence(market.get("ema_biases", {}), mtf_dir) \
+                           if mtf_dir != "neutral" else {}
+                decision = make_decision(
+                    signal_type=sig_type, price=price, market=market,
+                    mtf=mtf_data,
+                    confluence_score=conf_score, confluence_factors=conf_factors,
                 )
 
-                db_save(base, interval, sig_type, price, sig_data, llm_text, quality)
+                llm_text, quality = llm_analyze_signal(
+                    sig_data, market, recent, decision
+                )
 
+                db_save(base, interval, sig_type, price, sig_data,
+                        llm_text, quality, decision=decision)
+
+                if decision["verdict"] == "SKIP":
+                    log.info(f"  Skip {sig_type} {base} {interval}: {decision['reason']}")
+                    continue
                 if quality < MIN_QUALITY:
                     continue
 
                 msg = "🤖 <b>[АВТОСКАНЕР]</b>\n" + build_signal_message(
-                    sig_data, market, llm_text, quality, conf_score, conf_factors
+                    sig_data, market, llm_text, quality, conf_score, conf_factors,
+                    decision,
                 )
-                tg_send(msg)
+
+                # Чарт для auto-scanned LONG/SHORT (как в /webhook)
+                klines_1h = (market.get("_klines") or {}).get("60") or []
+                photo = render_signal_chart(base, klines_1h, decision, market) \
+                        if klines_1h else None
+                if photo:
+                    tg_send_photo(photo, msg)
+                else:
+                    tg_send(msg)
+
                 log.info(f"  ✅ {sig_type} {base} {interval} "
-                         f"Q:{quality}/10 Conf:{conf_score}/100")
+                         f"Q:{quality}/10 Conf:{conf_score}/100 "
+                         f"Verdict:{decision['verdict']}")
 
     log.info("🔍 Автосканер: завершено")
 
@@ -3624,8 +3669,7 @@ def cmd_top(chat_id: int):
 
 # ─── MOVERS ───────────────────────────────────────────────────────────────────
 
-import os as _os2
-MOVERS_THRESHOLD = float(_os2.environ.get("MOVERS_THRESHOLD", "3.0"))
+MOVERS_THRESHOLD = float(os.environ.get("MOVERS_THRESHOLD", "3.0"))
 MOVERS_WATCHLIST = list(dict.fromkeys(
     SYMBOLS + ["SOLUSDT", "BNBUSDT", "XRPUSDT", "DOGEUSDT",
                "AVAXUSDT", "LINKUSDT", "DOTUSDT", "NEARUSDT", "APTUSDT"]

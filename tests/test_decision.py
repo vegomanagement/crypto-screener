@@ -181,6 +181,26 @@ def test_zero_atr_returns_skip():
     assert "ATR" in d["reason"]
 
 
+def test_skip_by_rr_strips_levels(monkeypatch):
+    """
+    SKIP-by-RR должен очищать entry/sl/tp как и WAIT (ревью-фикс).
+    С дефолтными ATR-коэффициентами RR(TP1) всегда = 1.5, так что
+    SKIP-by-RR недостижим — поэтому temporarily патчим коэффициент.
+    """
+    import decision as d_mod
+    monkeypatch.setattr(d_mod, "ATR_TP1_DIST", 0.5)  # → RR1 = 0.5/1.0 = 0.5
+
+    d = d_mod.make_decision("BOS_BULL", 42500.0,
+                            _market(atr=200.0),
+                            {"aligned": 2, "total": 3},
+                            70, [])
+    assert d["verdict"] == "SKIP"
+    assert d["entry"] is None
+    assert d["sl"] is None
+    assert d["tp1"] is None
+    assert d["rr1"] is None
+
+
 def test_zero_price_returns_skip():
     d = make_decision("BOS_BULL", 0, _market(), {}, 70, [])
     assert d["verdict"] == "SKIP"

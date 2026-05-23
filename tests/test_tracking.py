@@ -277,6 +277,50 @@ def test_fetch_klines_exception_handled(conn):
     assert status == "open"
 
 
+def test_check_open_trades_requests_bars_proportional_to_age(conn):
+    """
+    Ревью-фикс: не запрашивать всё 2000 баров если trade открыт давно.
+    Берём ровно столько, сколько прошло с entry, чтобы не walk'ить
+    pre-entry историю и не получать ложные SL/TP касания.
+    """
+    tracking.open_trade(conn, 1, _decision(), "BTCUSDT", "BOS_BULL")
+
+    requested = {"bars": None}
+
+    def _capture(symbol, interval, limit):
+        requested["bars"] = limit
+        # Возвращаем "цена топчется" — без касаний
+        return [_bar(100, 100.5, 99.5, 100.2) for _ in range(limit)]
+
+    tracking.check_open_trades(conn, fetch_klines=_capture)
+    # Сделка открыта только что → должно запросить минимум баров,
+    # а НЕ весь хвост 2000.
+    assert requested["bars"] is not None
+    assert requested["bars"] < 100, \
+        f"запросили {requested['bars']} баров для свежесозданной сделки"
+
+
+def test_pre_entry_klines_dont_trigger_false_sl(conn):
+    """
+    Регрессия: до фикса worker walk'ил все 2000 баров и SL мог
+    "сработать" на цене недельной давности. После фикса берётся
+    только окно с entry; ниже даём всего 2 бара (соответствует
+    свежей сделке) и проверяем что не закрылась.
+    """
+    tracking.open_trade(conn, 1, _decision(verdict="LONG"),
+                        "BTCUSDT", "BOS_BULL")
+
+    def _fetch(symbol, interval, limit):
+        # API вернул столько баров сколько просили — без касаний
+        return [_bar(100, 100.5, 99.5, 100.2)] * min(limit, 5)
+
+    stats = tracking.check_open_trades(conn, fetch_klines=_fetch)
+    assert stats["closed"] == 0
+    status = conn.execute(
+        "SELECT status FROM signal_outcomes").fetchone()[0]
+    assert status == "open"
+
+
 # ─── compute_stats + format_stats_message ────────────────────────────────
 
 

@@ -280,6 +280,37 @@ def test_debate_handles_agent_failure_gracefully():
     assert out.startswith("ok-")
 
 
+def test_failed_agent_replaced_with_fallback_marker_in_judge_prompt():
+    """
+    Ревью-фикс: error-строка не должна попадать в judge как тезис
+    (иначе judge цитирует "[agent error: timeout]" как мнение Bull'а).
+    """
+    def create(*, model, max_tokens, system, messages):
+        if system == SYSTEM_BULL:
+            raise RuntimeError("timeout")
+        return SimpleNamespace(content=[SimpleNamespace(text="ok")])
+
+    captured = {"judge_prompt": None}
+
+    def wrap_create(*, model, max_tokens, system, messages):
+        if system == SYSTEM_JUDGE:
+            captured["judge_prompt"] = messages[0]["content"]
+        return create(model=model, max_tokens=max_tokens,
+                      system=system, messages=messages)
+
+    bad_client = SimpleNamespace(messages=SimpleNamespace(create=wrap_create))
+    debate_and_judge(
+        question="?", market=_market(), recent=[], client=bad_client,
+        fast_model="h", smart_model="s",
+    )
+    assert captured["judge_prompt"] is not None
+    # error-строки нет в judge-промпте
+    assert "[agent error" not in captured["judge_prompt"]
+    # есть marker «аналитик недоступен»
+    assert "недоступен" in captured["judge_prompt"]
+    assert "Bull" in captured["judge_prompt"]
+
+
 # ─── Quality score derivation (sanity check via decision.confidence) ──────
 
 # Note: explain_signal returns just the text; quality conversion lives in
