@@ -28,6 +28,7 @@ from llm_agents import (
 )
 from chart import render_signal_chart
 import tracking
+import signal_gate
 
 try:
     from config import (
@@ -150,6 +151,8 @@ def db_init():
         c.commit()
         # Engine-tracking колонки (Этап 4) — идемпотентная миграция
         tracking.init_schema(c)
+        # Signal dispatch / cooldown gate (Этап 5)
+        signal_gate.init_schema(c)
     log.info("DB инициализирована")
 
 def db_save(symbol, tf, sig_type, price, raw, llm_text, quality=0,
@@ -2686,18 +2689,15 @@ def build_signal_message(data: dict, market: dict, llm_text: str, quality: int,
 
 # ─── WEBHOOK ──────────────────────────────────────────────────────────────────
 
-@app.route("/webhook", methods=["POST"])
-def webhook():
-    raw = request.get_data(as_text=True)
-    log.info(f"← Webhook: {raw[:150]}")
-
-    data = {}
-    try:
-        data = json.loads(raw)
-    except Exception:
-        data = {"signal": "ALERT", "msg": raw[:300]}
-
-    sig_type = data.get("signal", "ALERT").upper()
+def _process_winner(winner: "signal_gate.BufferedSignal",
+                    suppressed: list) -> None:
+    """
+    Aggregator callback. Запускает полный pipeline для winner-сигнала:
+    fetch_market → make_decision → cooldown_check → llm → chart → send.
+    `suppressed` — сигналы, проигравшие в окне (для пометки в сообщении).
+    """
+    data     = winner.payload
+    sig_type = winner.sig_type
     symbol   = data.get("symbol", data.get("ticker", "BTCUSDT"))
     tf       = str(data.get("tf", data.get("interval", "?")))
     price    = float(data.get("price", data.get("close", 0)) or 0)
@@ -2705,7 +2705,6 @@ def webhook():
     base_sym = symbol.replace(".P", "").replace("/", "")
     market   = fetch_market(base_sym if base_sym.endswith("USDT") else base_sym + "USDT")
 
-    # MTF confluence with signal direction
     sig_up    = any(x in sig_type for x in ("BULL","LONG","SWEEP_L","EQL"))
     sig_dn    = any(x in sig_type for x in ("BEAR","SHORT","SWEEP_H","EQH"))
     direction = "long" if sig_up else ("short" if sig_dn else "neutral")
@@ -2727,26 +2726,46 @@ def webhook():
              f"vetoes={len(decision['veto_reasons'])} "
              f"reason='{decision['reason']}'")
 
-    recent               = db_recent(hours=4, limit=6)
-    llm_text, quality    = llm_analyze_signal(data, market, recent, decision)
+    recent            = db_recent(hours=4, limit=6)
+    llm_text, quality = llm_analyze_signal(data, market, recent, decision)
 
     db_save(symbol, tf, sig_type, price, data, llm_text, quality, decision=decision)
 
     if decision["verdict"] == "SKIP":
         log.info(f"  Verdict=SKIP — не отправляем ({decision['reason']})")
-        return jsonify({"status": "skipped",
-                        "verdict": decision["verdict"],
-                        "reason":  decision["reason"]}), 200
+        return
 
     if quality < MIN_QUALITY:
         log.info(f"  Качество {quality} < {MIN_QUALITY} — не отправляем")
-        return jsonify({"status": "filtered", "quality": quality}), 200
+        return
+
+    # Cooldown gate: проверяем не противоречит ли активной dispatch-записи.
+    gate = None
+    if decision["verdict"] in ("LONG", "SHORT"):
+        with _db_lock, db_conn() as c:
+            gate = signal_gate.cooldown_check(
+                c, symbol, decision["verdict"],
+                decision.get("confidence", 0), tf,
+            )
+        if gate.action == "suppress":
+            log.info(
+                f"  [gate] SUPPRESS {symbol} {decision['verdict']}: "
+                f"{gate.reason}"
+            )
+            return
+        if gate.action == "reversal":
+            log.info(
+                f"  [gate] REVERSAL {symbol} {decision['verdict']}: "
+                f"{gate.reason}"
+            )
 
     msg = build_signal_message(data, market, llm_text, quality,
                                conf_score, conf_factors, decision)
+    if gate and gate.action == "reversal" and gate.active is not None:
+        msg += signal_gate.format_reversal_note(gate.active, decision["verdict"])
+    if suppressed:
+        msg += signal_gate.format_suppressed_note(suppressed)
 
-    # Чарт рендерим всегда, когда есть достаточно баров — даже для WAIT,
-    # чтобы пользователь видел контекст. SKIP уже отфильтрован выше.
     klines_1h = (market.get("_klines") or {}).get("60") or []
     photo     = render_signal_chart(symbol, klines_1h, decision, market)
 
@@ -2759,14 +2778,36 @@ def webhook():
              f"Verdict:{decision['verdict']} chart:{'yes' if photo else 'no'} "
              f"→ {'OK' if ok else 'FAIL'}")
 
-    return jsonify({
-        "status":     "ok",
-        "quality":    quality,
-        "confluence": conf_score,
-        "verdict":    decision["verdict"],
-        "confidence": decision["confidence"],
-        "chart_sent": bool(photo),
-    }), 200
+    if ok and decision["verdict"] in ("LONG", "SHORT"):
+        try:
+            with _db_lock, db_conn() as c:
+                signal_gate.record_dispatch(
+                    c, symbol, decision["verdict"], tf, sig_type,
+                    decision.get("confidence", 0),
+                    note=("reversal" if gate and gate.action == "reversal" else None),
+                )
+        except Exception as e:
+            log.warning(f"signal_gate.record_dispatch: {e}")
+
+
+# Singleton aggregator — буферизирует входящие webhook-сигналы по символу.
+_aggregator = signal_gate.SignalAggregator(callback=_process_winner)
+
+
+@app.route("/webhook", methods=["POST"])
+def webhook():
+    raw = request.get_data(as_text=True)
+    log.info(f"← Webhook: {raw[:150]}")
+
+    data = {}
+    try:
+        data = json.loads(raw)
+    except Exception:
+        data = {"signal": "ALERT", "msg": raw[:300]}
+
+    symbol = data.get("symbol", data.get("ticker", "BTCUSDT"))
+    _aggregator.submit(symbol, data)
+    return jsonify({"status": "queued", "symbol": symbol}), 200
 
 
 @app.route("/health", methods=["GET"])
