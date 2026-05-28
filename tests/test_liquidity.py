@@ -158,3 +158,84 @@ def test_empty_market_returns_empty_map():
 
 def test_kind_strength_table_sane():
     assert KIND_STRENGTH["PWH"] >= KIND_STRENGTH["PDH"] >= KIND_STRENGTH["R1"]
+
+
+# ─── Volume-weighting + untapped pruning (метод BigBeluga) ─────────────────
+
+from liquidity import (  # noqa: E402
+    cluster_with_volume,
+    untapped_swing_highs,
+    untapped_swing_lows,
+)
+
+
+def test_cluster_with_volume_aggregates():
+    out = cluster_with_volume([(100.0, 10.0), (100.05, 5.0), (200.0, 7.0)])
+    by_price = {round(p): (cnt, vol) for p, cnt, vol in out}
+    assert by_price[100] == (2, 15.0)   # объёмы сложились
+    assert by_price[200] == (1, 7.0)
+
+
+def test_untapped_high_excludes_swept():
+    # swing high 110 на idx2, затем бар пробивает выше (115) → снят, исключён
+    candles = [_c(100, 101, 99, 100), _c(100, 105, 99, 101),
+               _c(101, 110, 100, 104), _c(104, 108, 103, 106),
+               _c(106, 115, 105, 113), _c(113, 114, 111, 112)]
+    highs = untapped_swing_highs(candles, lb=2)
+    prices = [p for p, _v in highs]
+    assert all(p != 110 for p in prices)   # 110 снят баром 115
+
+
+def test_untapped_high_keeps_unswept():
+    candles = [_c(100, 101, 99, 100), _c(100, 105, 99, 101),
+               _c(101, 110, 100, 104), _c(104, 108, 103, 106),
+               _c(106, 107, 104, 105), _c(105, 106, 103, 104)]
+    highs = untapped_swing_highs(candles, lb=2)
+    prices = [p for p, _v in highs]
+    assert 110 in prices                   # не пробит → живая ликвидность
+
+
+def test_untapped_low_excludes_swept():
+    candles = [_c(100, 101, 99, 100), _c(100, 100, 95, 96),
+               _c(96, 97, 90, 92), _c(92, 95, 91, 94),
+               _c(94, 95, 85, 87), _c(87, 89, 86, 88)]
+    lows = untapped_swing_lows(candles, lb=2)
+    prices = [p for p, _v in lows]
+    assert all(p != 90 for p in prices)    # 90 пробит баром 85
+
+
+def test_strength_with_volume_unit():
+    from liquidity import _strength_with_volume
+    hi = _strength_with_volume(base=4, count=1, vol=100.0, max_vol=100.0)
+    lo = _strength_with_volume(base=4, count=1, vol=0.0, max_vol=100.0)
+    assert hi > lo                       # высокий объём → выше strength
+    assert _strength_with_volume(4, 1, 0, 0) == 4  # нет данных → база
+
+
+def test_build_assigns_volume_to_swing_pools():
+    lmap = build_liquidity_map(_market_with_klines())
+    swing = [p for p in lmap.pools if p.kind in ("EQH", "EQL")]
+    assert swing, "expected EQH/EQL pools"
+    assert all(p.volume > 0 for p in swing)  # объём проставлен
+
+
+def test_liquidity_poc_returns_max_volume_pool():
+    lmap = LiquidityMap(price=100.0, pools=[
+        Pool(price=110.0, kind="EQH", side="buyside", strength=4,
+             dist_pct=10.0, volume=500.0),
+        Pool(price=90.0, kind="EQL", side="sellside", strength=4,
+             dist_pct=-10.0, volume=2000.0),
+        Pool(price=105.0, kind="round", side="buyside", strength=2,
+             dist_pct=5.0, volume=0.0),
+    ])
+    poc = lmap.liquidity_poc()
+    assert poc is not None
+    assert poc.price == 90.0   # максимальный объём
+
+
+def test_liquidity_poc_none_without_volume():
+    lmap = LiquidityMap(price=100.0, pools=[
+        Pool(price=105.0, kind="round", side="buyside", strength=2,
+             dist_pct=5.0, volume=0.0),
+    ])
+    assert lmap.liquidity_poc() is None
