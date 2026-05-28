@@ -156,7 +156,7 @@ def db_init():
     log.info("DB инициализирована")
 
 def db_save(symbol, tf, sig_type, price, raw, llm_text, quality=0,
-            decision: dict | None = None):
+            decision: dict | None = None, gate_status: str | None = None):
     ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M")
     with _db_lock, db_conn() as c:
         cur = c.execute(
@@ -169,10 +169,13 @@ def db_save(symbol, tf, sig_type, price, raw, llm_text, quality=0,
 
     # Engine-tracking (Этап 4): сохраняем decision-snapshot для TP/SL tracking.
     # WAIT/SKIP записываем с status='skipped' — для статистики гейтинга.
+    # gate_status='suppressed' — сигнал подавлен cooldown gate (Этап 5),
+    # не трекается и не учитывается в win-rate.
     if decision:
         try:
             with _db_lock, db_conn() as c:
-                tracking.open_trade(c, signal_id, decision, symbol, sig_type)
+                tracking.open_trade(c, signal_id, decision, symbol, sig_type,
+                                    force_status=gate_status)
         except Exception as e:
             log.warning(f"tracking.open_trade: {e}")
     else:
@@ -2729,7 +2732,19 @@ def _process_winner(winner: "signal_gate.BufferedSignal",
     recent            = db_recent(hours=4, limit=6)
     llm_text, quality = llm_analyze_signal(data, market, recent, decision)
 
-    db_save(symbol, tf, sig_type, price, data, llm_text, quality, decision=decision)
+    # Cooldown gate ДО db_save: подавленные сигналы метим status='suppressed',
+    # чтобы они не трекались как сделки и не портили win-rate.
+    gate = None
+    if decision["verdict"] in ("LONG", "SHORT"):
+        with _db_lock, db_conn() as c:
+            gate = signal_gate.cooldown_check(
+                c, symbol, decision["verdict"],
+                decision.get("confidence", 0), tf,
+            )
+
+    gate_status = "suppressed" if (gate and gate.action == "suppress") else None
+    db_save(symbol, tf, sig_type, price, data, llm_text, quality,
+            decision=decision, gate_status=gate_status)
 
     if decision["verdict"] == "SKIP":
         log.info(f"  Verdict=SKIP — не отправляем ({decision['reason']})")
@@ -2739,25 +2754,13 @@ def _process_winner(winner: "signal_gate.BufferedSignal",
         log.info(f"  Качество {quality} < {MIN_QUALITY} — не отправляем")
         return
 
-    # Cooldown gate: проверяем не противоречит ли активной dispatch-записи.
-    gate = None
-    if decision["verdict"] in ("LONG", "SHORT"):
-        with _db_lock, db_conn() as c:
-            gate = signal_gate.cooldown_check(
-                c, symbol, decision["verdict"],
-                decision.get("confidence", 0), tf,
-            )
-        if gate.action == "suppress":
-            log.info(
-                f"  [gate] SUPPRESS {symbol} {decision['verdict']}: "
-                f"{gate.reason}"
-            )
-            return
-        if gate.action == "reversal":
-            log.info(
-                f"  [gate] REVERSAL {symbol} {decision['verdict']}: "
-                f"{gate.reason}"
-            )
+    if gate and gate.action == "suppress":
+        log.info(f"  [gate] SUPPRESS {symbol} {decision['verdict']}: "
+                 f"{gate.reason}")
+        return
+    if gate and gate.action == "reversal":
+        log.info(f"  [gate] REVERSAL {symbol} {decision['verdict']}: "
+                 f"{gate.reason}")
 
     msg = build_signal_message(data, market, llm_text, quality,
                                conf_score, conf_factors, decision)

@@ -77,12 +77,18 @@ def init_schema(conn) -> None:
 # ─── Запись сделки ───────────────────────────────────────────────────────
 
 def open_trade(conn, signal_id: int, decision: dict,
-               symbol: str, signal_type: str) -> int | None:
+               symbol: str, signal_type: str,
+               force_status: str | None = None) -> int | None:
     """
     Сохраняет торгуемую сделку для отслеживания TP/SL.
 
     Если verdict не LONG/SHORT — записывает с status='skipped'
     и не отслеживает (для статистики гейтинга).
+
+    force_status переопределяет вычисленный статус — используется когда
+    сигнал был LONG/SHORT, но cooldown gate его подавил (status='suppressed'):
+    такие сделки НЕ трекаются и НЕ учитываются в win-rate, т.к. юзер их
+    не получил.
 
     Возвращает id строки в signal_outcomes или None при ошибке.
     """
@@ -93,7 +99,8 @@ def open_trade(conn, signal_id: int, decision: dict,
     now       = datetime.now(timezone.utc)
     entry_ts  = now.strftime("%Y-%m-%d %H:%M")
     expires   = (now + timedelta(hours=EXPIRY_HOURS)).strftime("%Y-%m-%d %H:%M")
-    status    = "open" if verdict in ("LONG", "SHORT") else "skipped"
+    status    = force_status or (
+        "open" if verdict in ("LONG", "SHORT") else "skipped")
 
     # entry_price для совместимости со старой схемой — берём midpoint
     e_min = entry.get("min")
@@ -325,7 +332,10 @@ def compute_stats(conn, days: int = 30) -> dict:
 
     for sig_type, symbol, verdict, status, hit_level, r_mult, conf, _rr1 in rows:
         by_status[status] += 1
-        if status in ("open", "skipped"):
+        # open/skipped/suppressed — не закрытые торгуемые сделки:
+        # suppressed = подавлен cooldown gate, юзер его не получил,
+        # поэтому в win-rate не учитываем (статистика только по sent-сигналам).
+        if status in ("open", "skipped", "suppressed"):
             continue
 
         r = r_mult if r_mult is not None else 0
@@ -361,6 +371,7 @@ def compute_stats(conn, days: int = 30) -> dict:
         "closed":     closed_n,
         "win_rate":   round(win_rate, 1),
         "avg_r":      round(avg_r, 2),
+        "suppressed": by_status.get("suppressed", 0),
         "hits": {
             "tp1": by_status.get("tp1_hit", 0),
             "tp2": by_status.get("tp2_hit", 0),
@@ -374,14 +385,21 @@ def compute_stats(conn, days: int = 30) -> dict:
     }
 
 
+CONF_BUCKETS = ("75+", "60-74", "50-59", "35-49", "<35")
+
+
 def _conf_bucket(conf) -> str:
     if conf is None:
         return "?"
     if conf >= 75:
         return "75+"
-    if conf >= 55:
-        return "55-74"
-    return "<55"
+    if conf >= 60:
+        return "60-74"
+    if conf >= 50:
+        return "50-59"
+    if conf >= 35:
+        return "35-49"
+    return "<35"
 
 
 def _summarize(d: dict) -> list:
@@ -436,6 +454,10 @@ def format_stats_message(stats: dict) -> str:
         f"  ⏰ Expired: {hits['expired']}",
     ]
 
+    if stats.get("suppressed"):
+        lines.append(f"  🚫 Подавлено gate: {stats['suppressed']} "
+                     f"(не учтены в win-rate)")
+
     if stats["by_signal"]:
         lines.append("\n<b>По типам сигналов:</b>")
         for sig_type, n, wr_s, ar_s in stats["by_signal"][:8]:
@@ -456,7 +478,7 @@ def format_stats_message(stats: dict) -> str:
 
     if stats["by_conf"]:
         lines.append("\n<b>По confidence (калибровка engine):</b>")
-        for bucket in ("75+", "55-74", "<55"):
+        for bucket in CONF_BUCKETS:
             row = next((r for r in stats["by_conf"] if r[0] == bucket), None)
             if row:
                 _, n, wr_s, ar_s = row

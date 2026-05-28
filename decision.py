@@ -28,6 +28,12 @@ CONFLUENCE_WAIT_THRESHOLD = 55
 MIN_RR_FOR_TRADE          = 1.5
 MAX_CONTRADICTIONS        = 3
 
+# Минимальный ФИНАЛЬНЫЙ confidence (после вычета штрафов вето) для торговли.
+# Раньше гейт был только по confluence_score, поэтому сильно завотированные
+# сигналы (confluence 56, штрафы 28 → confidence 28) всё равно слались как
+# LONG/SHORT. Теперь итоговый confidence ниже порога → SKIP (молча).
+MIN_CONFIDENCE_FOR_TRADE  = 50
+
 # Veto штрафы к confidence
 RSI_OVERBOUGHT_LONG  = 75
 RSI_OVERSOLD_SHORT   = 25
@@ -136,6 +142,13 @@ def make_decision(
         base["verdict"] = "WAIT"
         base["reason"]  = (f"{len(vetoes)} противоречий — лучше переждать "
                            f"подтверждение")
+        _strip_levels(base)
+        return base
+
+    if confidence < MIN_CONFIDENCE_FOR_TRADE:
+        base["verdict"] = "SKIP"
+        base["reason"]  = (f"Confidence {confidence}/100 < "
+                           f"{MIN_CONFIDENCE_FOR_TRADE} — слишком слабый сигнал")
         _strip_levels(base)
         return base
 

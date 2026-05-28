@@ -384,17 +384,47 @@ def test_compute_stats_groups_by_signal_and_symbol(conn):
 
 def test_compute_stats_confidence_buckets(conn):
     _seed_closed_trade(conn, signal_type="X", status="tp1_hit",
-                       r_multiple=1.5, confidence=80)
+                       r_multiple=1.5, confidence=80)   # → 75+
     _seed_closed_trade(conn, signal_type="X", status="tp1_hit",
-                       r_multiple=1.5, confidence=60)
+                       r_multiple=1.5, confidence=65)   # → 60-74
+    _seed_closed_trade(conn, signal_type="X", status="tp1_hit",
+                       r_multiple=1.5, confidence=55)   # → 50-59
     _seed_closed_trade(conn, signal_type="X", status="sl_hit",
-                       r_multiple=-1.0, confidence=40)
+                       r_multiple=-1.0, confidence=40)  # → 35-49
+    _seed_closed_trade(conn, signal_type="X", status="sl_hit",
+                       r_multiple=-1.0, confidence=20)  # → <35
 
     s = tracking.compute_stats(conn, days=30)
     buckets = {b[0]: b for b in s["by_conf"]}
-    assert buckets["75+"][1]    == 1   # n=1, 100% win
-    assert buckets["55-74"][1]  == 1
-    assert buckets["<55"][1]    == 1
+    assert buckets["75+"][1]    == 1
+    assert buckets["60-74"][1]  == 1
+    assert buckets["50-59"][1]  == 1
+    assert buckets["35-49"][1]  == 1
+    assert buckets["<35"][1]    == 1
+
+
+def test_open_trade_force_status_suppressed(conn):
+    """force_status переопределяет 'open' для подавленных gate сигналов."""
+    oid = tracking.open_trade(conn, signal_id=1, decision=_decision(),
+                              symbol="BTCUSDT", signal_type="BOS_BULL",
+                              force_status="suppressed")
+    status = conn.execute(
+        "SELECT status FROM signal_outcomes WHERE id=?", (oid,)).fetchone()[0]
+    assert status == "suppressed"
+
+
+def test_compute_stats_excludes_suppressed(conn):
+    """suppressed-сигналы не учитываются в win-rate (юзер их не получил)."""
+    _seed_closed_trade(conn, signal_type="X", status="tp1_hit", r_multiple=1.5)
+    _seed_closed_trade(conn, signal_type="X", status="suppressed",
+                       r_multiple=0.0, confidence=30)
+    _seed_closed_trade(conn, signal_type="X", status="suppressed",
+                       r_multiple=0.0, confidence=25)
+
+    s = tracking.compute_stats(conn, days=30)
+    assert s["closed"] == 1          # только tp1_hit
+    assert s["win_rate"] == 100.0    # suppressed не разбавили win-rate
+    assert s["suppressed"] == 2
 
 
 def test_compute_stats_filters_by_days(conn):
