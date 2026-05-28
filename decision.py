@@ -274,6 +274,12 @@ def _apply_smart_money(base: dict, market: dict, direction: str,
                               "dist_pct": tgt.dist_pct}
         factors.append(f"TP-магнит: {tgt.label()} (ликвидность)")
 
+    # 5) Liquidity POC — плотнейшая по объёму ликвидность (метод BigBeluga)
+    poc = lmap.liquidity_poc()
+    if poc is not None:
+        base["liq_poc"] = {"price": poc.price, "kind": poc.kind,
+                           "side": poc.side, "volume": poc.volume}
+
     # Дедуп и обрезка для аккуратного вывода
     base["key_factors"] = list(dict.fromkeys(factors))[:5]
     base["veto_reasons"] = list(dict.fromkeys(risks))[:5]
