@@ -52,6 +52,12 @@ POC_COLOR    = "#ffca28"
 VA_COLOR     = "#8c7a3f"
 VWAP_COLOR   = "#7e57c2"     # фиолетовый под VWAP
 PIVOT_COLOR  = "#90a4ae"     # серо-голубой под pivots
+LIQ_COLOR    = "#ff7043"     # deep-orange под пулы ликвидности (EQH/EQL/PD/PW)
+
+# Типы пулов ликвидности, которых ещё нет на графике (pivots/VP рисуются
+# отдельно). Показываем только структурную ликвидность.
+LIQ_KINDS    = {"EQH", "EQL", "PDH", "PDL", "PWH", "PWL"}
+LIQ_PER_SIDE = 2             # сколько пулов рисовать сверху/снизу от цены
 
 # Подсветка торговых сессий (UTC окна), очень faint
 SESSION_ASIA   = ("#4fc3f7", 0.04)   # 00:00–08:00 UTC (Tokyo)
@@ -182,12 +188,38 @@ def render_signal_chart(
                     text += f" · RR {rr}"
                 levels.append((tp, TP_COLOR, text, "--"))
 
+    # ─── Пулы ликвидности (структурные: EQH/EQL/PDH/PDL/PWH/PWL) ─────────
+    cur_price = closes[-1]
+    liq_tgt = (decision.get("liq_target") or {}).get("price")
+    lmap = _safe_liquidity_map(market)
+    if lmap is not None:
+        structural = [p for p in lmap.pools if p.kind in LIQ_KINDS]
+        ups = sorted((p for p in structural if p.price > cur_price),
+                     key=lambda p: p.price)[:LIQ_PER_SIDE]
+        dns = sorted((p for p in structural if p.price < cur_price),
+                     key=lambda p: -p.price)[:LIQ_PER_SIDE]
+        seen = set()
+        for p in ups + dns:
+            key = round(p.price, 8)
+            if key in seen:
+                continue
+            seen.add(key)
+            is_magnet = liq_tgt is not None and abs(p.price - liq_tgt) < 1e-9
+            prefix = "🧲 " if is_magnet else ""
+            levels.append((p.price, LIQ_COLOR,
+                           f"{prefix}{p.kind} {_fmt_price(p.price)}", ":"))
+
     # ─── Линии уровней через всю ось (включая проекцию) ─────────────────
     for price, color, _label, ls in levels:
         if ls is None:
             continue
         ax_price.axhline(price, color=color, lw=1.3, ls=ls,
                          alpha=0.85, zorder=1)
+
+    # Магнит ликвидности — выделяем толще (куда тянется TP)
+    if liq_tgt is not None:
+        ax_price.axhline(liq_tgt, color=LIQ_COLOR, lw=2.0, ls="-.",
+                         alpha=0.9, zorder=2)
 
     # ─── Текущая цена (highlighted tag в стиле TV) ──────────────────────
     last_close  = closes[-1]
@@ -365,9 +397,11 @@ def _place_price_tags(ax, levels, last_close, last_color):
     # Trade-уровни (приоритетные)
     trade_levels = [t for t in trio
                     if t[1] in (SL_COLOR, TP_COLOR, ENTRY_LONG[0], ENTRY_SHORT[0])]
-    # Контекстные уровни: VP + VWAP + Pivots (скрываем при коллизии с trade)
+    # Контекстные уровни: VP + VWAP + Pivots + ликвидность
+    # (скрываем при коллизии с trade-уровнями, чтобы tag'и не наслаивались)
     vp_levels    = [t for t in trio
-                    if t[1] in (POC_COLOR, VA_COLOR, VWAP_COLOR, PIVOT_COLOR)]
+                    if t[1] in (POC_COLOR, VA_COLOR, VWAP_COLOR, PIVOT_COLOR,
+                                LIQ_COLOR)]
 
     important_prices = [t[0] for t in trade_levels] + [last_close]
 
@@ -399,6 +433,18 @@ def _place_price_tags(ax, levels, last_close, last_color):
 
 
 # ─── Helpers ─────────────────────────────────────────────────────────────
+
+def _safe_liquidity_map(market: dict):
+    """build_liquidity_map с защитой — чарт не должен падать из-за неё."""
+    if not market:
+        return None
+    try:
+        from liquidity import build_liquidity_map
+        lmap = build_liquidity_map(market)
+        return lmap if lmap.pools else None
+    except Exception:
+        return None
+
 
 def _ema(values: np.ndarray, span: int) -> np.ndarray:
     if len(values) == 0:

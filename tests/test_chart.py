@@ -170,3 +170,53 @@ def test_render_respects_tf_minutes(tf_min):
     out = render_signal_chart("BTCUSDT", _make_klines(), _decision(),
                               _market(), tf_minutes=tf_min)
     assert out.startswith(PNG_MAGIC)
+
+
+# ─── Liquidity pools overlay ───────────────────────────────────────────────
+
+
+def _market_with_liquidity():
+    """Market с klines/pivots → build_liquidity_map даст структурные пулы."""
+    k1h = _make_klines(120)
+    kD = [{"o": 41000, "h": 43500, "l": 40500, "c": 42000, "v": 1000},
+          {"o": 42000, "h": 43200, "l": 41200, "c": 42500, "v": 1000},
+          {"o": 42500, "h": 42900, "l": 42100, "c": 42500, "v": 1000}]
+    return {
+        "price": 42_500.0,
+        "vp": {"poc": 42_450, "vah": 42_700, "val": 42_200},
+        "pivots": {"P": 42_400, "R1": 42_800, "S1": 42_100,
+                   "R2": 43_100, "S2": 41_800},
+        "_klines": {"60": k1h, "240": [], "D": kD},
+    }
+
+
+def test_render_with_liquidity_pools_valid_png():
+    out = render_signal_chart(
+        "BTCUSDT", _make_klines(),
+        _decision(liq_target={"price": 42_900.0, "kind": "PWH",
+                              "strength": 4, "dist_pct": 0.9}),
+        _market_with_liquidity(),
+    )
+    assert isinstance(out, bytes)
+    assert out.startswith(PNG_MAGIC)
+    assert len(out) > 5_000
+
+
+def test_render_without_klines_skips_liquidity_safely():
+    # market без _klines → liquidity overlay не строится, чарт не падает
+    out = render_signal_chart("BTCUSDT", _make_klines(),
+                              _decision(), _market())
+    assert out.startswith(PNG_MAGIC)
+
+
+def test_safe_liquidity_map_handles_empty_market():
+    from chart import _safe_liquidity_map
+    assert _safe_liquidity_map({}) is None
+    assert _safe_liquidity_map(None) is None
+
+
+def test_safe_liquidity_map_returns_map_with_pools():
+    from chart import _safe_liquidity_map
+    lmap = _safe_liquidity_map(_market_with_liquidity())
+    assert lmap is not None
+    assert lmap.pools
