@@ -165,6 +165,61 @@ def test_many_vetoes_force_wait():
     assert d["confidence"] < 70
 
 
+def test_low_final_confidence_skips_despite_passing_confluence():
+    """
+    Confluence проходит порог (>=55), но вето снижают финальный confidence
+    ниже MIN_CONFIDENCE_FOR_TRADE — раньше слался LONG, теперь SKIP.
+
+    confluence=58, штрафы: RSI div bearish (12) + MACD bear (8) = 20
+    → confidence = 38 < 50 → SKIP. Вето всего 2 (< MAX_CONTRADICTIONS=3),
+    поэтому до confidence-гейта не отсекается на vetoes.
+    """
+    from decision import MIN_CONFIDENCE_FOR_TRADE
+
+    d = make_decision(
+        signal_type="BOS_BULL",
+        price=42500.0,
+        market=_market(
+            indicators={
+                "atr": 200.0,
+                "rsi": 55,
+                "macd": {"trend": "bear"},
+                "rsi_div": "bearish",
+            },
+            bybit={"funding": 0.0001},
+        ),
+        mtf={"aligned": 2, "total": 3},
+        confluence_score=58,
+        confluence_factors=["CVD ✅"],
+    )
+    assert d["confidence"] < MIN_CONFIDENCE_FOR_TRADE
+    assert d["verdict"] == "SKIP"
+    assert d["entry"] is None
+    assert str(MIN_CONFIDENCE_FOR_TRADE) in d["reason"]
+
+
+def test_confidence_just_above_floor_still_trades():
+    """confidence ровно на пороге (>=50) — сделка проходит."""
+    d = make_decision(
+        signal_type="BOS_BULL",
+        price=42500.0,
+        market=_market(
+            indicators={
+                "atr": 200.0, "rsi": 55,
+                "macd": {"trend": "bull"},
+                "rsi_div": "none",
+            },
+            bybit={"funding": 0.0001},
+        ),
+        mtf={"aligned": 3, "total": 3},
+        confluence_score=58,
+        confluence_factors=["CVD ✅", "MTF ✅"],
+    )
+    # нет вето → confidence = 58 >= 50 → LONG
+    assert d["confidence"] == 58
+    assert d["verdict"] == "LONG"
+
+
 def test_neutral_signal_returns_wait():
     d = make_decision("DAILY_OPEN", 42500.0, _market(), {}, 50, [])
     assert d["verdict"] == "WAIT"
