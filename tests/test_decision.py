@@ -336,3 +336,66 @@ def test_min_rr_constant_is_respected():
     # All happy-path tests achieve RR=1.5 which equals MIN_RR_FOR_TRADE.
     # This sanity-checks the relationship.
     assert MIN_RR_FOR_TRADE <= 1.5
+
+
+# ─── Smart-money слой (liquidity + regime) ─────────────────────────────────
+
+
+def _c(o, h, low, c, v=100.0):
+    return {"o": o, "h": h, "l": low, "c": c, "v": v}
+
+
+def _market_full(direction_setup="accumulation"):
+    """
+    Полный market dict с klines для smart-money слоя.
+    accumulation: цена у низа диапазона + CVD вверх (bias long).
+    """
+    older  = [_c(100, 120, 80, 100) for _ in range(20)]
+    recent = [_c(92, 94, 90, 92) for _ in range(20)]
+    k1h = older + recent
+    return {
+        "price": 92.0,
+        "_klines": {"60": k1h, "240": [], "D": [
+            _c(95, 122, 78, 100), _c(100, 110, 88, 92), _c(92, 95, 90, 92)]},
+        "cvd": {"trend": "up", "price_trend": "down", "divergence": True},
+        "vp": {"poc": 100.0, "vah": 115.0, "val": 85.0},
+        "pivots": {"R1": 105.0, "S1": 88.0},
+        "bybit": {"funding": 0.0, "oi_chg": 0.0},
+        "ls_ratio": {}, "liquidations": {}, "change_24h": -2.0,
+        "indicators": {"atr": 3.0, "rsi": 45,
+                       "macd": {"trend": "bull"}, "rsi_div": "none"},
+    }
+
+
+def test_smart_money_regime_aligned_long_gets_bonus_and_context():
+    m = _market_full()
+    d = make_decision("BOS_BULL", 92.0, m, {"aligned": 3, "total": 3}, 60,
+                      ["CVD ✅"])
+    # regime accumulation (bias long) совпал → должен быть контекст
+    assert "regime" in d
+    assert d["regime"]["phase"] == "accumulation"
+    assert d["liquidity"]  # строка карты ликвидности
+    # confidence поднялся выше базового confluence 60 за счёт режима/discount
+    assert d["confidence"] > 60
+    assert d["verdict"] == "LONG"
+
+
+def test_smart_money_regime_conflict_short_penalized():
+    # шорт против фазы накопления → штраф + риск в veto_reasons
+    m = _market_full()
+    d = make_decision("BOS_BEAR", 92.0, m, {"aligned": 1, "total": 3}, 60,
+                      ["CVD ✅"])
+    assert d["regime"]["phase"] == "accumulation"
+    # либо отвергнут в SKIP (confidence упал ниже 50), либо есть риск-нота
+    assert d["confidence"] < 60
+    assert any("режим" in r.lower() or "discount" in r.lower()
+               for r in d["veto_reasons"])
+
+
+def test_smart_money_missing_klines_is_safe():
+    # market без _klines не должен ломать движок
+    m = _market(atr=200.0)
+    d = make_decision("BOS_BULL", 42500.0, m, {"aligned": 3, "total": 3}, 60,
+                      ["CVD ✅"])
+    assert d["verdict"] in ("LONG", "SHORT", "WAIT", "SKIP")
+    assert "regime" in d  # слой отработал даже на пустых данных
