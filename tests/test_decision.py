@@ -399,3 +399,93 @@ def test_smart_money_missing_klines_is_safe():
                       ["CVD ✅"])
     assert d["verdict"] in ("LONG", "SHORT", "WAIT", "SKIP")
     assert "regime" in d  # слой отработал даже на пустых данных
+
+
+# ─── Liquidity-aware levels (Этап 8) ───────────────────────────────────────
+
+from decision import apply_liquidity_levels  # noqa: E402
+from liquidity import LiquidityMap, Pool  # noqa: E402
+
+
+def _atr_levels_long(price=100.0, atr=2.0):
+    """ATR-уровни для long: SL=price-2, TP1/2/3 = +3/+5/+8 (как _compute_levels)."""
+    from decision import _compute_levels
+    return _compute_levels(price, atr, "long")
+
+
+def test_liq_levels_noop_without_map():
+    lv = _atr_levels_long()
+    out = apply_liquidity_levels(lv, None, 100.0, 2.0, "long")
+    assert out == lv
+
+
+def test_liq_levels_sl_moves_beyond_pool_long():
+    lv = _atr_levels_long(price=100.0, atr=2.0)   # ATR SL = 98.0
+    # сильный пул поддержки на 97.5 → SL должен уйти ЗА него (ниже 97.5)
+    lmap = LiquidityMap(price=100.0, pools=[
+        Pool(price=97.5, kind="PWL", side="sellside", strength=4, dist_pct=-2.5),
+        Pool(price=108.0, kind="PWH", side="buyside", strength=4, dist_pct=8.0),
+    ])
+    out = apply_liquidity_levels(lv, lmap, 100.0, 2.0, "long")
+    assert out["sl"] < 97.5            # за пул
+    assert (100.0 - out["sl"]) <= 2.0 * 2.0 + 1e-6  # в пределах cap
+
+
+def test_liq_levels_sl_cap_respected():
+    lv = _atr_levels_long(price=100.0, atr=2.0)
+    # пул слишком далеко (90) → SL за него = 89.5, риск 10.5 > cap 4.0 → ATR SL
+    lmap = LiquidityMap(price=100.0, pools=[
+        Pool(price=90.0, kind="PWL", side="sellside", strength=4, dist_pct=-10.0),
+        Pool(price=108.0, kind="PWH", side="buyside", strength=4, dist_pct=8.0),
+    ])
+    out = apply_liquidity_levels(lv, lmap, 100.0, 2.0, "long")
+    assert out["sl"] == lv["sl"]       # cap → fallback на ATR SL
+
+
+def test_liq_levels_tp_frontruns_pool_long():
+    lv = _atr_levels_long(price=100.0, atr=2.0)
+    # пул на 106 → TP должен быть чуть НИЖЕ (front-run): 106 - 0.15*2 = 105.7
+    lmap = LiquidityMap(price=100.0, pools=[
+        Pool(price=106.0, kind="EQH", side="buyside", strength=4, dist_pct=6.0),
+        Pool(price=96.0, kind="EQL", side="sellside", strength=4, dist_pct=-4.0),
+    ])
+    out = apply_liquidity_levels(lv, lmap, 100.0, 2.0, "long")
+    assert out["tp1"] < 106.0
+    assert abs(out["tp1"] - (106.0 - 0.15 * 2.0)) < 0.05
+
+
+def test_liq_levels_monotonic_tps():
+    lv = _atr_levels_long(price=100.0, atr=2.0)
+    lmap = LiquidityMap(price=100.0, pools=[
+        Pool(price=104.0, kind="EQH", side="buyside", strength=4, dist_pct=4.0),
+        Pool(price=110.0, kind="PWH", side="buyside", strength=4, dist_pct=10.0),
+        Pool(price=96.0, kind="EQL", side="sellside", strength=4, dist_pct=-4.0),
+    ])
+    out = apply_liquidity_levels(lv, lmap, 100.0, 2.0, "long")
+    assert out["tp1"] < out["tp2"] < out["tp3"]
+
+
+def test_liq_levels_guardrail_reverts_when_rr_too_low():
+    lv = _atr_levels_long(price=100.0, atr=2.0)
+    # widen SL via far-ish pool (within cap) AND only a very-close TP pool
+    # → rr1 below MIN_RR → полный откат на ATR levels
+    lmap = LiquidityMap(price=100.0, pools=[
+        Pool(price=96.2, kind="PWL", side="sellside", strength=4, dist_pct=-3.8),
+        Pool(price=100.4, kind="EQH", side="buyside", strength=4, dist_pct=0.4),
+    ])
+    out = apply_liquidity_levels(lv, lmap, 100.0, 2.0, "long")
+    # TP1 front-run от 100.4 даёт крошечный RR → guardrail откатывает всё
+    assert out == lv
+
+
+def test_liq_levels_short_mirror():
+    from decision import _compute_levels
+    lv = _compute_levels(100.0, 2.0, "short")   # SL=102, TP1=97
+    lmap = LiquidityMap(price=100.0, pools=[
+        Pool(price=102.5, kind="PWH", side="buyside", strength=4, dist_pct=2.5),
+        Pool(price=94.0, kind="EQL", side="sellside", strength=4, dist_pct=-6.0),
+    ])
+    out = apply_liquidity_levels(lv, lmap, 100.0, 2.0, "short")
+    assert out["sl"] > 102.5           # SL за пул сверху
+    assert out["tp1"] > 94.0           # front-run пула снизу
+    assert out["tp1"] < 100.0          # в сторону шорта
