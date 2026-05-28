@@ -46,6 +46,16 @@ PREMIUM_DISCOUNT_BONUS  = 6    # лонг в discount / шорт в premium
 PREMIUM_DISCOUNT_PENALTY = 8   # лонг в premium / шорт в discount
 OVERHEAD_LIQ_PENALTY    = 10   # сильный пул ликвидности прямо на пути входа
 
+# ─── Liquidity-aware levels (Этап 8) ──────────────────────────────────────
+# Двигаем TP/SL к карте ликвидности с жёсткими guardrails.
+LIQUIDITY_LEVELS_ENABLED = True
+TP_FRONTRUN_ATR    = 0.15   # TP не доходя TP_FRONTRUN×ATR до пула (front-run)
+SL_BUFFER_ATR      = 0.25   # SL за пул + SL_BUFFER×ATR (sweep-safe)
+SL_MAX_ATR         = 2.0    # cap: риск не дальше SL_MAX×ATR от entry
+MIN_POOL_STRENGTH_TP = 3    # пул для TP должен быть не слабее
+MIN_POOL_STRENGTH_SL = 3    # пул для SL должен быть не слабее
+MIN_TP_GAP_ATR     = 0.3    # минимальный зазор между TP при монотонизации
+
 # Veto штрафы к confidence
 RSI_OVERBOUGHT_LONG  = 75
 RSI_OVERSOLD_SHORT   = 25
@@ -126,6 +136,9 @@ def make_decision(
         return base
 
     levels = _compute_levels(price, atr, direction)
+    # Liquidity-aware levels: двигаем TP/SL к карте ликвидности (Этап 8).
+    lmap = _safe_liquidity_map(market)
+    levels = apply_liquidity_levels(levels, lmap, price, atr, direction)
     base.update(levels)
 
     vetoes = _collect_vetoes(direction, market, mtf)
@@ -159,8 +172,9 @@ def make_decision(
 
     # Smart-money слой: liquidity map + regime корректируют confidence
     # ДО финального порога, чтобы режим/ликвидность могли отсечь сделку.
+    # Переиспользуем уже построенную карту ликвидности (lmap).
     confidence = _apply_smart_money(base, market, direction, atr, price,
-                                    confidence)
+                                    confidence, lmap=lmap)
     base["confidence"] = confidence
 
     if confidence < MIN_CONFIDENCE_FOR_TRADE:
@@ -179,7 +193,8 @@ def make_decision(
 # ─── Smart-money слой ──────────────────────────────────────────────────────
 
 def _apply_smart_money(base: dict, market: dict, direction: str,
-                       atr: float, price: float, confidence: int) -> int:
+                       atr: float, price: float, confidence: int,
+                       lmap=None) -> int:
     """
     Накладывает order-flow контекст на сделку:
       • regime (накопление/распределение) — bias за/против сигнала
@@ -187,13 +202,15 @@ def _apply_smart_money(base: dict, market: dict, direction: str,
       • overhead liquidity — сильный пул прямо на пути = риск снятия+разворота
       • liquidity target — ближайший магнит для TP (для показа/LLM)
 
+    lmap — уже построенная карта ликвидности (переиспользуем из make_decision).
     Возвращает скорректированный confidence. Заполняет base['regime'],
     base['liquidity'], base['liq_target'] и добавляет факторы/риски.
     Безопасна: при нехватке данных (нет klines) ничего не ломает.
     """
     try:
-        lmap = build_liquidity_map(market)
-        reg  = classify_regime(market)
+        if lmap is None:
+            lmap = build_liquidity_map(market)
+        reg = classify_regime(market)
     except Exception:
         return confidence
 
@@ -262,6 +279,110 @@ def _apply_smart_money(base: dict, market: dict, direction: str,
     base["veto_reasons"] = list(dict.fromkeys(risks))[:5]
 
     return max(0, min(100, confidence + adj))
+
+
+# ─── Liquidity-aware levels ────────────────────────────────────────────────
+
+def _safe_liquidity_map(market: dict):
+    """build_liquidity_map с защитой: None при ошибке/нехватке данных."""
+    try:
+        lmap = build_liquidity_map(market)
+        return lmap if lmap.pools else None
+    except Exception:
+        return None
+
+
+def _enforce_monotonic(tps: list, direction: str, anchor: float,
+                       min_gap: float) -> list:
+    """
+    Гарантирует строгий порядок TP в сторону сделки с минимальным зазором.
+    Для long: tp1 < tp2 < tp3 и все > anchor. Для short — зеркально.
+    """
+    out = []
+    prev = anchor
+    for t in tps:
+        if t is None:
+            t = prev + (min_gap if direction == "long" else -min_gap)
+        if direction == "long":
+            t = max(t, prev + min_gap)
+        else:
+            t = min(t, prev - min_gap)
+        out.append(t)
+        prev = t
+    return out
+
+
+def apply_liquidity_levels(levels: dict, lmap, price: float, atr: float,
+                           direction: str) -> dict:
+    """
+    Корректирует SL/TP к карте ликвидности:
+      • SL — за противоположный пул + буфер, но не дальше SL_MAX×ATR (cap).
+      • TP — front-run сильных пулов в сторону сделки (не доходя до пула).
+    Пересчитывает RR. Guardrail: если итоговый RR(TP1) < MIN_RR_FOR_TRADE —
+    полный откат на исходные ATR-уровни.
+
+    Чистая функция: при отсутствии пулов/данных возвращает levels без изменений.
+    """
+    if not LIQUIDITY_LEVELS_ENABLED or atr <= 0 or lmap is None:
+        return levels
+
+    out = dict(levels)
+    digits = _price_digits(price)
+    entry = levels.get("entry") or {}
+    e_mid = ((entry.get("min", price) + entry.get("max", price)) / 2
+             if entry else price)
+
+    # ── SL: за противоположный пул, capped ───────────────────────────────
+    sl = levels.get("sl")
+    if direction == "long":
+        pool = lmap.nearest_below(MIN_POOL_STRENGTH_SL)
+        if pool is not None:
+            cand = pool.price - SL_BUFFER_ATR * atr
+            if cand < e_mid and (e_mid - cand) <= SL_MAX_ATR * atr:
+                sl = round(cand, digits)
+    else:
+        pool = lmap.nearest_above(MIN_POOL_STRENGTH_SL)
+        if pool is not None:
+            cand = pool.price + SL_BUFFER_ATR * atr
+            if cand > e_mid and (cand - e_mid) <= SL_MAX_ATR * atr:
+                sl = round(cand, digits)
+    out["sl"] = sl
+
+    risk = abs(e_mid - sl) if sl is not None else 0
+
+    # ── TP: front-run сильных пулов в сторону сделки ─────────────────────
+    pools_dir = lmap.above() if direction == "long" else lmap.below()
+    fr = TP_FRONTRUN_ATR * atr
+    cand_tps = []
+    for p in pools_dir:
+        if p.strength < MIN_POOL_STRENGTH_TP:
+            continue
+        t = p.price - fr if direction == "long" else p.price + fr
+        beyond = (t > e_mid) if direction == "long" else (t < e_mid)
+        if beyond:
+            cand_tps.append(round(t, digits))
+        if len(cand_tps) == 3:
+            break
+
+    if cand_tps:
+        atr_tps = [levels.get("tp1"), levels.get("tp2"), levels.get("tp3")]
+        merged = [cand_tps[i] if i < len(cand_tps) else atr_tps[i]
+                  for i in range(3)]
+        merged = _enforce_monotonic(merged, direction, e_mid,
+                                    MIN_TP_GAP_ATR * atr)
+        out["tp1"], out["tp2"], out["tp3"] = (round(x, digits) for x in merged)
+
+    # ── Пересчёт RR ──────────────────────────────────────────────────────
+    if risk > 0:
+        for i, key in enumerate(("tp1", "tp2", "tp3"), start=1):
+            tp = out.get(key)
+            out[f"rr{i}"] = round(abs(tp - e_mid) / risk, 2) if tp else None
+
+    # ── Guardrail: не ухудшаем сделку ниже MIN_RR ────────────────────────
+    if (out.get("rr1") or 0) < MIN_RR_FOR_TRADE:
+        return levels
+
+    return out
 
 
 # ─── Расчёт уровней (ATR-based) ───────────────────────────────────────────
