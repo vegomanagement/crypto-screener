@@ -20,15 +20,19 @@ from typing import Optional
 # ─── Промпты ──────────────────────────────────────────────────────────────
 
 SYSTEM_EXPLAIN = """\
-Ты — старший трейдер на prop desk. Verdict уже принят детерминистским
-engine, твоя задача — кратко объяснить ПОЧЕМУ.
+Ты — старший трейдер на институциональном desk. Мыслишь как крупный игрок:
+не «индикатор показал», а ГДЕ лежит ликвидность (стопы, пулы) и идёт ли
+НАБОР (accumulation) или РАЗДАЧА (distribution). Verdict уже принят
+детерминистским engine, твоя задача — кратко объяснить ПОЧЕМУ через призму
+order-flow.
 
 ЖЁСТКИЕ ПРАВИЛА:
 1. Не меняй verdict. Если engine сказал LONG — ты НЕ пишешь "но возможно
    лучше переждать". Если WAIT — не убеждаешь входить.
 2. Только русский. Ровно 2–3 предложения. Без приветствий.
-3. Опирайся на key_factors (за) и veto_reasons (против) — это уже
-   отфильтровано engine.
+3. Опирайся на key_factors (за), veto_reasons (против) и блок РЕЖИМ/
+   ЛИКВИДНОСТЬ: объясни где крупный игрок набирает/скидывает и к какому
+   пулу ликвидности тянется цена.
 4. Последнее предложение: "Отменит сделку: <конкретное условие>"
    (для LONG/SHORT) или "Сигнал войдёт в силу при: <условие>" (для WAIT).
 
@@ -195,6 +199,23 @@ def explain_signal(
     facts = "\n".join(f"  + {f}" for f in kf[:5]) or "  (нет сильных факторов)"
     risks = "\n".join(f"  - {r}" for r in vr[:5]) or "  (риски не выявлены)"
 
+    # Smart-money контекст (Этап 7): режим рынка + карта ликвидности
+    reg = decision.get("regime") or {}
+    sm_lines = []
+    if reg.get("phase"):
+        sm_lines.append(
+            f"  Фаза: {reg.get('phase')} (bias {reg.get('bias')}, "
+            f"зона {reg.get('zone')}, {reg.get('positioning')})")
+        for note in (reg.get("notes") or [])[:2]:
+            sm_lines.append(f"  • {note}")
+    if decision.get("liquidity"):
+        sm_lines.append(f"  Пулы ликвидности: {decision['liquidity']}")
+    if decision.get("liq_target"):
+        lt = decision["liq_target"]
+        sm_lines.append(f"  Магнит цены: {lt['kind']}@{lt['price']:g} "
+                        f"({lt['dist_pct']:+.2f}%)")
+    smart_money = "\n".join(sm_lines) or "  (данных order-flow нет)"
+
     prompt = f"""Сигнал: {sig} · {sym}
 Engine verdict: {v}  ·  Confidence: {decision.get('confidence',0)}/100  ·  \
 RR(TP1): {decision.get('rr1') or '—'}
@@ -205,6 +226,9 @@ RR(TP1): {decision.get('rr1') or '—'}
 
 Veto / риски engine:
 {risks}
+
+РЕЖИМ / ЛИКВИДНОСТЬ (мышление крупного игрока):
+{smart_money}
 
 Рынок сейчас:
 {market_brief(market)}
