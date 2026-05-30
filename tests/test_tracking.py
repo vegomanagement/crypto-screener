@@ -163,17 +163,44 @@ def test_long_sl_hit(conn):
     assert row == ("sl_hit", "SL", -1.0)
 
 
-def test_long_sl_wins_when_same_bar_hits_both(conn):
-    """Conservative tie-break: SL первым (worst-case)."""
+def test_long_same_bar_sl_and_tp_is_tie(conn):
+    """
+    P4-фикс: same-bar SL+TP считаем ничьей (0R), а не -1R. По умолчанию
+    SAME_BAR_TIE_BREAK='fair'. Старое conservative покрывается отдельным
+    тестом ниже.
+    """
     tracking.open_trade(conn, 1, _decision(verdict="LONG"),
                         "BTCUSDT", "BOS_BULL")
     # Bar simultaneously sweeps SL and TP3
     bars = [_bar(100, 110, 97, 105)]
     tracking.check_open_trades(conn, fetch_klines=lambda *_: bars)
     row = conn.execute(
-        "SELECT status, hit_level FROM signal_outcomes"
+        "SELECT status, hit_level, r_multiple FROM signal_outcomes"
     ).fetchone()
-    assert row == ("sl_hit", "SL")
+    assert row == ("tie_hit", "TIE", 0.0)
+
+
+def test_long_same_bar_conservative_mode_returns_sl(monkeypatch):
+    """Backwards-compat: conservative режим всё ещё доступен через флаг."""
+    monkeypatch.setattr(tracking, "SAME_BAR_TIE_BREAK", "conservative")
+    # Прямо тестируем _detect_hit, чтобы не возиться с conn fixture повторно
+    bars = [_bar(100, 110, 97, 105)]
+    hit = tracking._detect_hit(bars, "LONG", 98.0, 103.0, 105.0, 108.0,
+                               1.5, 2.5, 4.0, "2026-01-01 00:00")
+    assert hit == ("SL", -1.0)
+
+
+def test_short_same_bar_sl_and_tp_is_tie(conn):
+    """Симметрично для SHORT: tie вместо -1R."""
+    d = _decision(verdict="SHORT", sl=102.0, tp1=97.0, tp2=95.0, tp3=92.0)
+    tracking.open_trade(conn, 1, d, "BTCUSDT", "BOS_BEAR")
+    # high пробивает SL (102), low — TP3 (92) в одной свече
+    bars = [_bar(100, 103, 91, 95)]
+    tracking.check_open_trades(conn, fetch_klines=lambda *_: bars)
+    row = conn.execute(
+        "SELECT status, hit_level, r_multiple FROM signal_outcomes"
+    ).fetchone()
+    assert row == ("tie_hit", "TIE", 0.0)
 
 
 def test_short_tp1_hit(conn):
@@ -363,6 +390,24 @@ def test_compute_stats_basic_math(conn):
     assert s["hits"]["tp1"] == 1
     assert s["hits"]["tp2"] == 1
     assert s["hits"]["sl"]  == 1
+    assert s["hits"]["tie"] == 0
+
+
+def test_compute_stats_counts_ties_as_zero_r(conn):
+    """
+    Tie-trades контрибутят 0R в avg_R и не идут в wins. Если только tie —
+    winrate 0%, но avg_R = 0 (vs -1R при старом conservative). Это и есть
+    смысл P4-фикса: убрать ложный bias к лоссу.
+    """
+    _seed_closed_trade(conn, signal_type="X", status="tp1_hit", r_multiple=1.5)
+    _seed_closed_trade(conn, signal_type="X", status="tie_hit", r_multiple=0.0)
+    _seed_closed_trade(conn, signal_type="X", status="tie_hit", r_multiple=0.0)
+
+    s = tracking.compute_stats(conn, days=30)
+    assert s["closed"] == 3
+    assert s["hits"]["tie"] == 2
+    assert s["win_rate"] == round(1 / 3 * 100, 1)
+    assert s["avg_r"] == round(1.5 / 3, 2)  # ties = 0, не -1
 
 
 def test_compute_stats_groups_by_signal_and_symbol(conn):
