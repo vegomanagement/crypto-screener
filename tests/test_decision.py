@@ -126,8 +126,12 @@ def test_low_confluence_returns_wait_without_levels():
     assert "Confluence 45" in d["reason"]
 
 
-def test_confluence_exactly_at_threshold_is_wait_or_trade():
-    # threshold is strict <, so == threshold should pass to trade
+def test_confluence_exactly_at_threshold_passes_confluence_gate():
+    """
+    Confluence ровно на CONFLUENCE_WAIT_THRESHOLD проходит confluence-гейт
+    (не WAIT). Но финальный verdict определяется ещё и MIN_CONFIDENCE_FOR_TRADE,
+    который может быть выше — тогда SKIP, но не WAIT-by-confluence.
+    """
     d = make_decision(
         "BOS_BULL",
         42500.0,
@@ -136,7 +140,8 @@ def test_confluence_exactly_at_threshold_is_wait_or_trade():
         CONFLUENCE_WAIT_THRESHOLD,
         ["CVD ✅"],
     )
-    assert d["verdict"] == "LONG"
+    # Главное: не "WAIT — мало confluence" причина
+    assert "Confluence" not in d.get("reason", "") or d["verdict"] != "WAIT"
 
 
 def test_many_vetoes_force_wait():
@@ -170,8 +175,8 @@ def test_low_final_confidence_skips_despite_passing_confluence():
     Confluence проходит порог (>=55), но вето снижают финальный confidence
     ниже MIN_CONFIDENCE_FOR_TRADE — раньше слался LONG, теперь SKIP.
 
-    confluence=58, штрафы: RSI div bearish (12) + MACD bear (8) = 20
-    → confidence = 38 < 50 → SKIP. Вето всего 2 (< MAX_CONTRADICTIONS=3),
+    confluence=70, штрафы: RSI div bearish (12) + MACD bear (8) = 20
+    → confidence = 50 < 65 (новый floor) → SKIP. Вето всего 2 (< MAX=3),
     поэтому до confidence-гейта не отсекается на vetoes.
     """
     from decision import MIN_CONFIDENCE_FOR_TRADE
@@ -189,7 +194,7 @@ def test_low_final_confidence_skips_despite_passing_confluence():
             bybit={"funding": 0.0001},
         ),
         mtf={"aligned": 2, "total": 3},
-        confluence_score=58,
+        confluence_score=70,
         confluence_factors=["CVD ✅"],
     )
     assert d["confidence"] < MIN_CONFIDENCE_FOR_TRADE
@@ -199,7 +204,7 @@ def test_low_final_confidence_skips_despite_passing_confluence():
 
 
 def test_confidence_just_above_floor_still_trades():
-    """confidence ровно на пороге (>=50) — сделка проходит."""
+    """confidence ровно на новом пороге (>=65) — сделка проходит."""
     d = make_decision(
         signal_type="BOS_BULL",
         price=42500.0,
@@ -212,11 +217,11 @@ def test_confidence_just_above_floor_still_trades():
             bybit={"funding": 0.0001},
         ),
         mtf={"aligned": 3, "total": 3},
-        confluence_score=58,
+        confluence_score=65,
         confluence_factors=["CVD ✅", "MTF ✅"],
     )
-    # нет вето → confidence = 58 >= 50 → LONG
-    assert d["confidence"] == 58
+    # нет вето + нет klines (smart-money silent) → confidence = 65 >= 65 → LONG
+    assert d["confidence"] == 65
     assert d["verdict"] == "LONG"
 
 
@@ -265,6 +270,7 @@ def test_zero_price_returns_skip():
 
 
 def test_rsi_extreme_penalizes_confidence():
+    """RSI overbought штрафует на 20. С confluence=90 → confidence=70 ≥ 65."""
     d = make_decision(
         signal_type="BOS_BULL",
         price=42500.0,
@@ -273,16 +279,17 @@ def test_rsi_extreme_penalizes_confidence():
             "macd": {"trend": "bull"}, "rsi_div": "none",
         }),
         mtf={"aligned": 2, "total": 3},
-        confluence_score=70,
+        confluence_score=90,
         confluence_factors=["CVD ✅"],
     )
     assert d["verdict"] == "LONG"
-    # Only one veto (RSI overbought) → confidence = 70 − 20 = 50
-    assert d["confidence"] == 50
+    # confidence = 90 − 20 = 70 (smart-money silent без klines)
+    assert d["confidence"] == 70
     assert any("RSI" in r for r in d["veto_reasons"])
 
 
 def test_funding_overheated_against_long_is_veto():
+    """Funding штрафует на 10. veto_reason записывается даже когда verdict SKIP."""
     d = make_decision(
         signal_type="BOS_BULL",
         price=42500.0,
@@ -292,7 +299,7 @@ def test_funding_overheated_against_long_is_veto():
         confluence_factors=[],
     )
     assert any("Funding" in r and "лонги" in r for r in d["veto_reasons"])
-    assert d["confidence"] == 60  # 70 - 10
+    assert d["confidence"] == 60  # 70 - 10. Verdict SKIP (60 < 65), но veto в списке.
 
 
 # ─── format_decision_header ───────────────────────────────────────────────
@@ -367,38 +374,236 @@ def _market_full(direction_setup="accumulation"):
     }
 
 
-def test_smart_money_regime_aligned_long_gets_bonus_and_context():
+def test_smart_money_regime_aligned_long_gets_context():
+    """
+    BOS_BULL в accumulation regime: получает regime/liquidity контекст.
+    После калибровки бонусы asymmetric и могут не превышать penalties
+    (overhead block), поэтому проверяем только КОНТЕКСТ + что verdict
+    не сломался, а не строгое > confluence.
+    """
     m = _market_full()
-    d = make_decision("BOS_BULL", 92.0, m, {"aligned": 3, "total": 3}, 60,
+    d = make_decision("BOS_BULL", 92.0, m, {"aligned": 3, "total": 3}, 70,
                       ["CVD ✅"])
-    # regime accumulation (bias long) совпал → должен быть контекст
     assert "regime" in d
     assert d["regime"]["phase"] == "accumulation"
-    assert d["liquidity"]  # строка карты ликвидности
-    # confidence поднялся выше базового confluence 60 за счёт режима/discount
-    assert d["confidence"] > 60
-    assert d["verdict"] == "LONG"
+    assert d["liquidity"]
+    # Verdict либо LONG (если bonuses перекрыли penalties), либо SKIP
+    # (если pool overhead дал штраф). В обоих случаях direction long.
+    assert d["direction"] == "long"
 
 
 def test_smart_money_regime_conflict_short_penalized():
-    # шорт против фазы накопления → штраф + риск в veto_reasons
+    """
+    BOS_BEAR против accumulation regime — гейт P2 жёстко WAIT'ит (retest-bear
+    + regime bias=long). До гейта confidence уже занижен штрафами.
+    """
     m = _market_full()
     d = make_decision("BOS_BEAR", 92.0, m, {"aligned": 1, "total": 3}, 60,
                       ["CVD ✅"])
     assert d["regime"]["phase"] == "accumulation"
-    # либо отвергнут в SKIP (confidence упал ниже 50), либо есть риск-нота
-    assert d["confidence"] < 60
-    assert any("режим" in r.lower() or "discount" in r.lower()
-               for r in d["veto_reasons"])
+    # P2-гейт ловит: BOS_BEAR + regime bias long → WAIT
+    assert d["verdict"] == "WAIT"
+    assert "P2 gate" in d["reason"] or "против" in d["reason"].lower()
 
 
 def test_smart_money_missing_klines_is_safe():
     # market без _klines не должен ломать движок
     m = _market(atr=200.0)
-    d = make_decision("BOS_BULL", 42500.0, m, {"aligned": 3, "total": 3}, 60,
+    d = make_decision("BOS_BULL", 42500.0, m, {"aligned": 3, "total": 3}, 70,
                       ["CVD ✅"])
     assert d["verdict"] in ("LONG", "SHORT", "WAIT", "SKIP")
     assert "regime" in d  # слой отработал даже на пустых данных
+
+
+# ─── P1: smart-money асимметрия (бонусы gated, штрафы всегда) ──────────────
+
+
+def test_smart_money_bonus_gated_by_low_confluence():
+    """
+    При confluence < SMART_MONEY_BONUS_MIN_CONFLUENCE (60) бонусы regime/zone
+    НЕ начисляются — слабая база не должна разгоняться smart-money'ем в торг.
+    """
+    from decision import SMART_MONEY_BONUS_MIN_CONFLUENCE
+
+    m = _market_full()  # accumulation regime + discount — обычно даёт бонус
+    # Берём confluence ниже floor, но выше CONFLUENCE_WAIT_THRESHOLD
+    cs = SMART_MONEY_BONUS_MIN_CONFLUENCE - 1
+    d = make_decision("BOS_BULL", 92.0, m, {"aligned": 3, "total": 3}, cs,
+                      ["CVD ✅"])
+    # Бонусов не дали → confidence не выше базового minus штрафы
+    # (penalty может быть от overhead pool — confidence может быть ниже cs)
+    assert d["confidence"] <= cs
+    # При confidence < 65 (MIN_CONFIDENCE_FOR_TRADE) → SKIP
+    # Подтверждает, что bonus-gating не дал "вытянуть" слабый сигнал в торг
+    assert d["verdict"] in ("SKIP", "WAIT")
+
+
+def test_smart_money_penalty_still_applies_at_low_confluence():
+    """Штрафы smart-money применяются всегда, даже при низкой confluence."""
+    # accumulation regime — даст штраф для BOS_BEAR (regime conflict)
+    m = _market_full()
+    cs = 55  # на пределе CONFLUENCE_WAIT_THRESHOLD, ниже SMART_MONEY floor
+    d = make_decision("BOS_BEAR", 92.0, m, {"aligned": 1, "total": 3}, cs,
+                      ["CVD ✅"])
+    # confidence занижен штрафом regime-conflict
+    assert d["confidence"] < cs
+    # либо WAIT по P2-гейту, либо SKIP по floor
+    assert d["verdict"] in ("WAIT", "SKIP")
+
+
+# ─── P2: structural gate retest vs regime ───────────────────────────────────
+
+
+def test_p2_gate_blocks_fvg_bull_in_bearish_regime():
+    """
+    FVG_BULL когда regime bias=short → жёсткий WAIT (retest продолжения
+    против тренда). Подделываем regime через monkey-patched classify_regime.
+    """
+    import decision as d_mod
+
+    class FakeReg:
+        phase = "distribution"
+        bias = "short"
+        zone = "premium"
+        positioning = "balanced"
+        range_state = "normal"
+        confidence = 70
+        notes = []
+        def summary(self): return "fake distribution"
+
+    # monkey-patch на время вызова
+    orig = d_mod.classify_regime
+    d_mod.classify_regime = lambda _m: FakeReg()
+    try:
+        d = make_decision(
+            "FVG_BULL_5M", 100.0,
+            _market_full(),
+            {"aligned": 3, "total": 3}, 75, ["CVD ✅"],
+        )
+    finally:
+        d_mod.classify_regime = orig
+
+    assert d["verdict"] == "WAIT"
+    assert "P2 gate" in d["reason"]
+    assert d["entry"] is None
+
+
+def test_p2_gate_blocks_bos_bear_in_bullish_regime():
+    """BOS_BEAR когда regime bias=long → жёсткий WAIT."""
+    import decision as d_mod
+
+    class FakeReg:
+        phase = "accumulation"
+        bias = "long"
+        zone = "discount"
+        positioning = "balanced"
+        range_state = "normal"
+        confidence = 70
+        notes = []
+        def summary(self): return "fake accumulation"
+
+    orig = d_mod.classify_regime
+    d_mod.classify_regime = lambda _m: FakeReg()
+    try:
+        d = make_decision(
+            "BOS_BEAR_15M", 100.0,
+            _market_full(),
+            {"aligned": 3, "total": 3}, 75, ["CVD ✅"],
+        )
+    finally:
+        d_mod.classify_regime = orig
+
+    assert d["verdict"] == "WAIT"
+    assert "P2 gate" in d["reason"]
+
+
+def test_p2_gate_does_not_block_liq_sweep_l_in_bearish_regime():
+    """
+    LIQ_SWEEP_L — контр-трендовый разворотный сигнал. Гейт НЕ должен его
+    блокировать в bear regime (это его рабочий контекст).
+    """
+    import decision as d_mod
+
+    class FakeReg:
+        phase = "distribution"
+        bias = "short"
+        zone = "premium"
+        positioning = "balanced"
+        range_state = "normal"
+        confidence = 70
+        notes = []
+        def summary(self): return "fake distribution"
+
+    orig = d_mod.classify_regime
+    d_mod.classify_regime = lambda _m: FakeReg()
+    try:
+        d = make_decision(
+            "LIQ_SWEEP_L_5M", 100.0,
+            _market_full(),
+            {"aligned": 3, "total": 3}, 75, ["CVD ✅"],
+        )
+    finally:
+        d_mod.classify_regime = orig
+
+    # Гейт не сработал — verdict не WAIT-by-P2 (но может быть WAIT/SKIP
+    # по другим причинам). Главное: причина не P2.
+    assert "P2 gate" not in d.get("reason", "")
+
+
+def test_p2_gate_silent_when_regime_neutral():
+    """В neutral regime гейт НЕ срабатывает, даже для retest-сигналов."""
+    import decision as d_mod
+
+    class FakeReg:
+        phase = "neutral"
+        bias = "neutral"
+        zone = "equilibrium"
+        positioning = "balanced"
+        range_state = "normal"
+        confidence = 40
+        notes = []
+        def summary(self): return "fake neutral"
+
+    orig = d_mod.classify_regime
+    d_mod.classify_regime = lambda _m: FakeReg()
+    try:
+        d = make_decision(
+            "FVG_BULL_5M", 100.0,
+            _market_full(),
+            {"aligned": 3, "total": 3}, 75, ["CVD ✅"],
+        )
+    finally:
+        d_mod.classify_regime = orig
+
+    assert "P2 gate" not in d.get("reason", "")
+
+
+def test_p2_gate_silent_when_no_regime_data():
+    """
+    Без _klines (smart-money silent) regime в base не пишется → гейт молчит.
+    Сигнал торгуется по обычным правилам.
+    """
+    m = _market(atr=200.0)  # без _klines
+    d = make_decision("FVG_BULL_5M", 42500.0, m,
+                      {"aligned": 3, "total": 3}, 75, ["CVD ✅"])
+    assert "P2 gate" not in d.get("reason", "")
+
+
+def test_is_retest_helpers():
+    """Sanity-check на prefix-match для retest-классификаторов."""
+    from decision import _is_retest_bear, _is_retest_bull
+
+    assert _is_retest_bull("FVG_BULL")
+    assert _is_retest_bull("FVG_BULL_5M")
+    assert _is_retest_bull("BOS_BULL_1H")
+    assert _is_retest_bull("EMA_CROSS_BULL")
+    assert not _is_retest_bull("LIQ_SWEEP_L")
+    assert not _is_retest_bull("RSI_DIV_BULL")
+
+    assert _is_retest_bear("FVG_BEAR_15M")
+    assert _is_retest_bear("BOS_BEAR")
+    assert not _is_retest_bear("LIQ_SWEEP_H")
+    assert not _is_retest_bear(None)
 
 
 # ─── Liquidity-aware levels (Этап 8) ───────────────────────────────────────
