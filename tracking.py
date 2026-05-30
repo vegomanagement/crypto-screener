@@ -32,6 +32,14 @@ log = logging.getLogger(__name__)
 
 
 EXPIRY_HOURS  = 168  # 7 дней — после этого open trade принудительно expired
+
+# Same-bar tie-break: что делать, если в одной свече задеты И SL, И TP.
+# "conservative" — SL первым, full -1R (старое поведение, занижает winrate).
+# "fair" — ничья, r_multiple=0.0, status='tie_hit'. По умолчанию (P4-фикс).
+# На крипте 5m свеча часто свипает обе стороны → conservative системно ловит
+# ложные лоссы. Fair честнее показывает «исход был неоднозначен».
+SAME_BAR_TIE_BREAK = "fair"
+
 EXTRA_COLS = [
     ("decision_json", "TEXT"),
     ("verdict",       "TEXT"),
@@ -240,6 +248,11 @@ def _detect_hit(klines, verdict, sl, tp1, tp2, tp3, rr1, rr2, rr3,
     Walk через klines в хронологическом порядке.
     Возвращает (hit_level, r_multiple) или None если ничего не задето.
 
+    Same-bar tie-break (SL+TP в одной свече) определяется SAME_BAR_TIE_BREAK:
+      • "conservative" — SL первым, r_multiple=-1.0
+      • "fair" (default) — ("TIE", 0.0) → status='tie_hit', не считается
+        ни победой, ни классическим лоссом
+
     Note: klines не имеют timestamps, поэтому считаем что fetch_klines
     вернул свечи с момента entry до now включительно. Это допущение
     верно для большинства fetch'еров (они отдают N последних свечей и
@@ -271,7 +284,12 @@ def _detect_hit(klines, verdict, sl, tp1, tp2, tp3, rr1, rr2, rr3,
         else:
             return None
 
-        # Conservative: если оба в одном баре, SL первым
+        # Same-bar tie: оба задеты в одной свече
+        if sl_hit and tp_candidates:
+            if SAME_BAR_TIE_BREAK == "conservative":
+                return ("SL", -1.0)
+            return ("TIE", 0.0)
+
         if sl_hit:
             return ("SL", -1.0)
 
@@ -377,6 +395,7 @@ def compute_stats(conn, days: int = 30) -> dict:
             "tp2": by_status.get("tp2_hit", 0),
             "tp3": by_status.get("tp3_hit", 0),
             "sl":  by_status.get("sl_hit",  0),
+            "tie": by_status.get("tie_hit", 0),
             "expired": by_status.get("expired", 0),
         },
         "by_signal":  _summarize(by_signal),
@@ -451,6 +470,7 @@ def format_stats_message(stats: dict) -> str:
         "<b>По уровням:</b>",
         f"  🎯 TP1 hit: {hits['tp1']}  ·  TP2: {hits['tp2']}  ·  TP3: {hits['tp3']}",
         f"  🛑 SL hit:  {hits['sl']}",
+        f"  ↔️ Tie (same-bar SL+TP, 0R): {hits.get('tie', 0)}",
         f"  ⏰ Expired: {hits['expired']}",
     ]
 
