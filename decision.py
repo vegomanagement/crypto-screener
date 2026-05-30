@@ -32,19 +32,35 @@ MIN_RR_FOR_TRADE          = 1.5
 MAX_CONTRADICTIONS        = 3
 
 # Минимальный ФИНАЛЬНЫЙ confidence (после вычета штрафов вето) для торговли.
-# Раньше гейт был только по confluence_score, поэтому сильно завотированные
-# сигналы (confluence 56, штрафы 28 → confidence 28) всё равно слались как
-# LONG/SHORT. Теперь итоговый confidence ниже порога → SKIP (молча).
-MIN_CONFIDENCE_FOR_TRADE  = 50
+# Поднят 50→65 после калибровки по /stats 30д: bucket 75+ показал 8% winrate
+# из-за систематической переоценки smart-money слоем, а bucket 50-59 — 20%.
+# 65 отрезает оба низкокачественных хвоста; bucket 60-74 (56% wr) проходит.
+MIN_CONFIDENCE_FOR_TRADE  = 65
 
 # ─── Smart-money слой (liquidity map + regime) ────────────────────────────
-# Корректировки confidence от order-flow контекста. Все — настраиваемые,
-# калибруются через /stats (по confidence-бакетам).
-REGIME_ALIGN_BONUS      = 8    # сигнал совпал с фазой рынка (накопл/распред)
-REGIME_CONFLICT_PENALTY = 12   # сигнал против фазы рынка
-PREMIUM_DISCOUNT_BONUS  = 6    # лонг в discount / шорт в premium
-PREMIUM_DISCOUNT_PENALTY = 8   # лонг в premium / шорт в discount
-OVERHEAD_LIQ_PENALTY    = 10   # сильный пул ликвидности прямо на пути входа
+# Корректировки confidence от order-flow контекста.
+# После калибровки по /stats — АСИММЕТРИЧНЫЕ: бонусы вполовину, штрафы
+# усилены, и бонусы начисляются только при подтверждённой confluence
+# (>= SMART_MONEY_BONUS_MIN_CONFLUENCE). Это исключает накрутку слабых
+# сетапов smart-money'ем в 75+ bucket с последующим сливом.
+REGIME_ALIGN_BONUS      = 4    # было 8 — сигнал совпал с фазой рынка
+REGIME_CONFLICT_PENALTY = 18   # было 12 — сигнал против фазы рынка
+PREMIUM_DISCOUNT_BONUS  = 3    # было 6 — лонг в discount / шорт в premium
+PREMIUM_DISCOUNT_PENALTY = 14  # было 8 — лонг в premium / шорт в discount
+OVERHEAD_LIQ_PENALTY    = 16   # было 10 — сильный пул на пути входа
+
+# Бонусы smart-money начисляются только если базовая confluence уже
+# поддерживает сигнал. Иначе только штрафы (асимметрия в сторону осторожности).
+SMART_MONEY_BONUS_MIN_CONFLUENCE = 60
+
+# ─── Структурный гейт «retest-сигнал против режима» (P2) ──────────────────
+# По /stats 30д FVG_BULL/BOS_BULL/EMA_CROSS_BULL = 48 сделок, средний R=-1.0R
+# (0-7% winrate). Это retest-сетапы продолжения: в нисходящем тренде они
+# систематически сливают. Гейт жёстко переводит в WAIT, если direction
+# сигнала противоречит bias режима. Для контр-трендовых разворотных
+# сигналов (LIQ_SWEEP, RSI_DIV) гейт НЕ срабатывает — это другой класс.
+RETEST_BULL_PREFIXES = ("FVG_BULL", "BOS_BULL", "EMA_CROSS_BULL")
+RETEST_BEAR_PREFIXES = ("FVG_BEAR", "BOS_BEAR", "EMA_CROSS_BEAR")
 
 # ─── Liquidity-aware levels (Этап 8) ──────────────────────────────────────
 # Двигаем TP/SL к карте ликвидности с жёсткими guardrails.
@@ -174,8 +190,18 @@ def make_decision(
     # ДО финального порога, чтобы режим/ликвидность могли отсечь сделку.
     # Переиспользуем уже построенную карту ликвидности (lmap).
     confidence = _apply_smart_money(base, market, direction, atr, price,
-                                    confidence, lmap=lmap)
+                                    confidence, confluence_score=confluence_score,
+                                    lmap=lmap)
     base["confidence"] = confidence
+
+    # P2: жёсткий WAIT, если retest-сигнал противоречит bias режима.
+    gate_reason = _regime_structural_gate(
+        signal_type, direction, base.get("regime"))
+    if gate_reason:
+        base["verdict"] = "WAIT"
+        base["reason"]  = gate_reason
+        _strip_levels(base)
+        return base
 
     if confidence < MIN_CONFIDENCE_FOR_TRADE:
         base["verdict"] = "SKIP"
@@ -194,6 +220,7 @@ def make_decision(
 
 def _apply_smart_money(base: dict, market: dict, direction: str,
                        atr: float, price: float, confidence: int,
+                       confluence_score: int = 0,
                        lmap=None) -> int:
     """
     Накладывает order-flow контекст на сделку:
@@ -201,6 +228,11 @@ def _apply_smart_money(base: dict, market: dict, direction: str,
       • premium/discount — лонг дешевле в discount, шорт в premium
       • overhead liquidity — сильный пул прямо на пути = риск снятия+разворота
       • liquidity target — ближайший магнит для TP (для показа/LLM)
+
+    Асимметрия (после калибровки): бонусы (regime-align, premium/discount)
+    начисляются только если confluence_score >= SMART_MONEY_BONUS_MIN_CONFLUENCE.
+    Штрафы (regime-conflict, premium long / discount short, overhead) —
+    всегда. Это исключает накрутку слабых сигналов smart-money'ем.
 
     lmap — уже построенная карта ликвидности (переиспользуем из make_decision).
     Возвращает скорректированный confidence. Заполняет base['regime'],
@@ -231,27 +263,32 @@ def _apply_smart_money(base: dict, market: dict, direction: str,
     base["liquidity"] = lmap.summary()
 
     adj = 0
+    apply_bonus = confluence_score >= SMART_MONEY_BONUS_MIN_CONFLUENCE
 
-    # 1) Режим за/против сигнала
+    # 1) Режим за/против сигнала. Штраф — всегда; бонус — только при
+    # подтверждённой confluence (>= SMART_MONEY_BONUS_MIN_CONFLUENCE).
     if reg.bias != "neutral":
         scaled = round((reg.confidence / 100) *
                        (REGIME_ALIGN_BONUS if reg.bias == direction
                         else REGIME_CONFLICT_PENALTY))
         if reg.bias == direction:
-            adj += scaled
-            factors.append(f"Режим ✅ {reg.phase} совпадает с сигналом")
+            if apply_bonus:
+                adj += scaled
+                factors.append(f"Режим ✅ {reg.phase} совпадает с сигналом")
         else:
             adj -= scaled
             risks.append(f"Режим ⚠️ {reg.phase} против сигнала "
                          f"(крупный игрок {reg.bias})")
 
-    # 2) Premium / Discount
+    # 2) Premium / Discount. Бонусы — gated, штрафы — всегда.
     if reg.zone == "discount" and direction == "long":
-        adj += PREMIUM_DISCOUNT_BONUS
-        factors.append("Цена в discount — выгодная зона набора (long)")
+        if apply_bonus:
+            adj += PREMIUM_DISCOUNT_BONUS
+            factors.append("Цена в discount — выгодная зона набора (long)")
     elif reg.zone == "premium" and direction == "short":
-        adj += PREMIUM_DISCOUNT_BONUS
-        factors.append("Цена в premium — выгодная зона раздачи (short)")
+        if apply_bonus:
+            adj += PREMIUM_DISCOUNT_BONUS
+            factors.append("Цена в premium — выгодная зона раздачи (short)")
     elif reg.zone == "premium" and direction == "long":
         adj -= PREMIUM_DISCOUNT_PENALTY
         risks.append("Лонг в premium-зоне — дорого, риск раздачи сверху")
@@ -285,6 +322,42 @@ def _apply_smart_money(base: dict, market: dict, direction: str,
     base["veto_reasons"] = list(dict.fromkeys(risks))[:5]
 
     return max(0, min(100, confidence + adj))
+
+
+# ─── Структурный гейт «retest против режима» (P2) ─────────────────────────
+
+def _is_retest_bull(signal_type: str) -> bool:
+    s = (signal_type or "").upper()
+    return any(s.startswith(p) for p in RETEST_BULL_PREFIXES)
+
+
+def _is_retest_bear(signal_type: str) -> bool:
+    s = (signal_type or "").upper()
+    return any(s.startswith(p) for p in RETEST_BEAR_PREFIXES)
+
+
+def _regime_structural_gate(signal_type: str, direction: str,
+                            regime: dict | None) -> str | None:
+    """
+    Возвращает причину жёсткого WAIT, если retest-сигнал продолжения тренда
+    противоречит bias режима. Иначе None.
+
+    Срабатывает только когда регим уверенно противоположен направлению —
+    нейтральный режим / отсутствие данных НЕ блокирует сделку.
+    Контр-трендовые сетапы (LIQ_SWEEP, RSI_DIV) НЕ блокируются — их класс
+    подразумевает работу против тренда.
+    """
+    if regime is None:
+        return None
+    bias = regime.get("bias")
+    phase = regime.get("phase", "?")
+    if direction == "long" and bias == "short" and _is_retest_bull(signal_type):
+        return (f"Режим {phase} (bias short) против retest-bull сигнала "
+                f"{signal_type} — жёсткий WAIT (P2 gate)")
+    if direction == "short" and bias == "long" and _is_retest_bear(signal_type):
+        return (f"Режим {phase} (bias long) против retest-bear сигнала "
+                f"{signal_type} — жёсткий WAIT (P2 gate)")
+    return None
 
 
 # ─── Liquidity-aware levels ────────────────────────────────────────────────
