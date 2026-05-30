@@ -2716,6 +2716,12 @@ def _process_winner(winner: "signal_gate.BufferedSignal",
 
     conf_score, conf_factors = compute_confluence_score(sig_type, market, mtf)
 
+    # Инжектим timestamp алерта из TV payload, если есть — для killzone-гейта
+    # (Этап 10 фаза 3). При отсутствии killzones.in_killzone fallback'нет на now().
+    alert_ts = signal_gate.parse_alert_ts(data)
+    if alert_ts is not None:
+        market["ts"] = alert_ts
+
     decision = make_decision(
         signal_type=sig_type,
         price=price or market.get("price", 0),
