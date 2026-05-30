@@ -3598,37 +3598,76 @@ def run_auto_scan():
                     sig_data, market, recent, decision
                 )
 
-                # Bug-11 fix: см. _process_winner — LONG/SHORT с низким quality
-                # не отправляются юзеру, метим их 'suppressed' для tracking.
+                # Bug-16 fix: auto-scan теперь идёт через cooldown gate, как
+                # _process_winner. Раньше обходил → мог слать сигналы поверх
+                # свежих webhook-сделок и не записывать свой dispatch для
+                # последующих webhook'ов.
+                gate = None
+                if decision["verdict"] in ("LONG", "SHORT"):
+                    with _db_lock, db_conn() as c:
+                        gate = signal_gate.cooldown_check(
+                            c, base, decision["verdict"],
+                            decision.get("confidence", 0), interval,
+                        )
+
+                # Bug-11 fix: LONG/SHORT с низким quality не отправляются
+                # юзеру; метим их 'suppressed' для tracking. Объединяем с
+                # cooldown-suppress (Bug-16) — оба ведут к 'suppressed' статусу.
                 quality_blocked = (decision["verdict"] in ("LONG", "SHORT")
                                    and quality < MIN_QUALITY)
+                gate_status = "suppressed" if (
+                    (gate and gate.action == "suppress") or quality_blocked
+                ) else None
                 db_save(base, interval, sig_type, price, sig_data,
                         llm_text, quality, decision=decision,
-                        gate_status="suppressed" if quality_blocked else None)
+                        gate_status=gate_status)
 
                 if decision["verdict"] == "SKIP":
                     log.info(f"  Skip {sig_type} {base} {interval}: {decision['reason']}")
                     continue
                 if quality < MIN_QUALITY:
                     continue
+                if gate and gate.action == "suppress":
+                    log.info(f"  [gate] SUPPRESS auto-scan {base} "
+                             f"{decision['verdict']}: {gate.reason}")
+                    continue
+                if gate and gate.action == "reversal":
+                    log.info(f"  [gate] REVERSAL auto-scan {base} "
+                             f"{decision['verdict']}: {gate.reason}")
 
                 msg = "🤖 <b>[АВТОСКАНЕР]</b>\n" + build_signal_message(
                     sig_data, market, llm_text, quality, conf_score, conf_factors,
                     decision,
                 )
+                if gate and gate.action == "reversal" and gate.active is not None:
+                    msg += signal_gate.format_reversal_note(
+                        gate.active, decision["verdict"])
 
                 # Чарт для auto-scanned LONG/SHORT (как в /webhook)
                 klines_1h = (market.get("_klines") or {}).get("60") or []
                 photo = render_signal_chart(base, klines_1h, decision, market) \
                         if klines_1h else None
                 if photo:
-                    tg_send_photo(photo, msg)
+                    ok = tg_send_photo(photo, msg)
                 else:
-                    tg_send(msg)
+                    ok = tg_send(msg)
 
                 log.info(f"  ✅ {sig_type} {base} {interval} "
                          f"Q:{quality}/10 Conf:{conf_score}/100 "
                          f"Verdict:{decision['verdict']}")
+
+                # Bug-16 fix: записываем dispatch чтобы последующие webhook
+                # и auto-scan уважали наш cooldown.
+                if ok and decision["verdict"] in ("LONG", "SHORT"):
+                    try:
+                        with _db_lock, db_conn() as c:
+                            signal_gate.record_dispatch(
+                                c, base, decision["verdict"], interval, sig_type,
+                                decision.get("confidence", 0),
+                                note=("reversal" if gate and gate.action == "reversal" else None),
+                            )
+                    except Exception as e:
+                        log.warning(f"signal_gate.record_dispatch (auto-scan): {e}")
 
     log.info("🔍 Автосканер: завершено")
 
