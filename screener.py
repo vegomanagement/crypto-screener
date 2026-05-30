@@ -2742,7 +2742,14 @@ def _process_winner(winner: "signal_gate.BufferedSignal",
                 decision.get("confidence", 0), tf,
             )
 
-    gate_status = "suppressed" if (gate and gate.action == "suppress") else None
+    # Bug-11 fix: LONG/SHORT с quality < MIN_QUALITY юзеру не отправляются,
+    # но раньше всё равно трекались как 'open' и портили win-rate. Метим
+    # их как 'suppressed' — параллельно с cooldown-suppressed (Этап 6).
+    quality_blocked = (decision["verdict"] in ("LONG", "SHORT")
+                       and quality < MIN_QUALITY)
+    gate_status = "suppressed" if (
+        (gate and gate.action == "suppress") or quality_blocked
+    ) else None
     db_save(symbol, tf, sig_type, price, data, llm_text, quality,
             decision=decision, gate_status=gate_status)
 
@@ -3591,8 +3598,13 @@ def run_auto_scan():
                     sig_data, market, recent, decision
                 )
 
+                # Bug-11 fix: см. _process_winner — LONG/SHORT с низким quality
+                # не отправляются юзеру, метим их 'suppressed' для tracking.
+                quality_blocked = (decision["verdict"] in ("LONG", "SHORT")
+                                   and quality < MIN_QUALITY)
                 db_save(base, interval, sig_type, price, sig_data,
-                        llm_text, quality, decision=decision)
+                        llm_text, quality, decision=decision,
+                        gate_status="suppressed" if quality_blocked else None)
 
                 if decision["verdict"] == "SKIP":
                     log.info(f"  Skip {sig_type} {base} {interval}: {decision['reason']}")
