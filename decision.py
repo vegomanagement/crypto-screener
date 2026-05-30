@@ -781,6 +781,16 @@ def format_decision_header(decision: dict) -> str:
         }.get(reg["phase"], reg["phase"])
         lines.append(f"🏦 Режим: <b>{phase_ru}</b> · зона {reg.get('zone','?')}"
                      f" · {reg.get('positioning','?')}")
+    kz = decision.get("killzone")
+    if kz and kz.get("in") and kz.get("name"):
+        lines.append(f"🕐 Killzone: <b>{kz['name']}</b>")
+    st = decision.get("structure")
+    if st and st.get("confirmed"):
+        dir_ru = "🟢 bull" if st.get("direction") == "bull" else "🔴 bear"
+        lines.append(
+            f"🏗️ Структура: <b>{st.get('kind_5m','?')} 5m + "
+            f"{st.get('kind_15m','?')} 15m</b> {dir_ru}"
+        )
     lt = decision.get("liq_target")
     if lt:
         lines.append(f"🧲 Магнит ликвидности: <code>{_fmt_price(lt['price'])}</code>"
