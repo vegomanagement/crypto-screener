@@ -11,6 +11,18 @@ from decision import (
 )
 
 
+@pytest.fixture(autouse=True)
+def _disable_p3_gates(monkeypatch):
+    """
+    Этап 10 фаза 3 P3-гейты (killzone + structure) по умолчанию ВКЛЮЧЕНЫ в
+    проде, но в тестах они флапали бы по now()/нехватке klines. Отключаем
+    их для всех тестов; P3-специфичные тесты включают обратно вручную.
+    """
+    import decision as d_mod
+    monkeypatch.setattr(d_mod, "KILLZONE_GATE_ENABLED", False)
+    monkeypatch.setattr(d_mod, "STRUCTURE_GATE_ENABLED", False)
+
+
 # ─── Helpers ──────────────────────────────────────────────────────────────
 
 
@@ -694,3 +706,146 @@ def test_liq_levels_short_mirror():
     assert out["sl"] > 102.5           # SL за пул сверху
     assert out["tp1"] > 94.0           # front-run пула снизу
     assert out["tp1"] < 100.0          # в сторону шорта
+
+
+# ─── Этап 10 фаза 3: killzone + structure hard gate ────────────────────────
+
+
+from datetime import datetime, timezone  # noqa: E402
+
+
+def _enable_killzone(monkeypatch, on=True):
+    import decision as d_mod
+    monkeypatch.setattr(d_mod, "KILLZONE_GATE_ENABLED", on)
+
+
+def _enable_structure(monkeypatch, on=True):
+    import decision as d_mod
+    monkeypatch.setattr(d_mod, "STRUCTURE_GATE_ENABLED", on)
+
+
+def _ts_in_killzone():
+    """Дата-время гарантированно внутри London killzone (08:30 UTC)."""
+    return datetime(2026, 5, 28, 8, 30, tzinfo=timezone.utc)
+
+
+def _ts_outside_killzone():
+    """Дата-время гарантированно вне всех killzone (06:00 UTC)."""
+    return datetime(2026, 5, 28, 6, 0, tzinfo=timezone.utc)
+
+
+def _bullish_klines():
+    """Серия с подтверждённым bull-сломом в конце (используем для 5m+15m)."""
+    prices = [10, 10, 10, 11, 12, 15, 12, 11, 10, 10, 10, 16]
+    return [{"o": p, "h": p, "l": p, "c": p, "v": 100} for p in prices]
+
+
+def _bearish_klines():
+    prices = [20, 20, 20, 19, 18, 15, 18, 19, 20, 20, 20, 14]
+    return [{"o": p, "h": p, "l": p, "c": p, "v": 100} for p in prices]
+
+
+def test_p3_killzone_gate_blocks_outside_window(monkeypatch):
+    _enable_killzone(monkeypatch)
+    m = _market()
+    m["ts"] = _ts_outside_killzone()
+    d = make_decision("BOS_BULL", 42500.0, m,
+                      {"aligned": 3, "total": 3}, 78, ["CVD ✅"])
+    assert d["verdict"] == "WAIT"
+    assert "killzone gate" in d["reason"]
+    assert d.get("killzone", {}).get("in") is False
+
+
+def test_p3_killzone_gate_passes_inside_window(monkeypatch):
+    _enable_killzone(monkeypatch)
+    m = _market()
+    m["ts"] = _ts_in_killzone()
+    d = make_decision("BOS_BULL", 42500.0, m,
+                      {"aligned": 3, "total": 3}, 78, ["CVD ✅"])
+    # Killzone OK, structure отключен → должен пройти как LONG
+    assert d["verdict"] == "LONG"
+    assert d["killzone"]["in"] is True
+    assert d["killzone"]["name"] == "London"
+
+
+def test_p3_structure_gate_blocks_without_confirmation(monkeypatch):
+    _enable_structure(monkeypatch)
+    m = _market()
+    # klines есть, но без подтверждённого слома
+    flat = [{"o": 1, "h": 1, "l": 1, "c": 1, "v": 100} for _ in range(20)]
+    m["_klines"] = {"5": flat, "15": flat}
+    d = make_decision("BOS_BULL", 42500.0, m,
+                      {"aligned": 3, "total": 3}, 78, ["CVD ✅"])
+    assert d["verdict"] == "WAIT"
+    assert "structure gate" in d["reason"]
+
+
+def test_p3_structure_gate_passes_with_aligned_break(monkeypatch):
+    _enable_structure(monkeypatch)
+    m = _market()
+    m["_klines"] = {"5": _bullish_klines(), "15": _bullish_klines()}
+    d = make_decision("BOS_BULL", 42500.0, m,
+                      {"aligned": 3, "total": 3}, 78, ["CVD ✅"])
+    assert d["verdict"] == "LONG"
+    assert d["structure"]["confirmed"] is True
+    assert d["structure"]["direction"] == "bull"
+
+
+def test_p3_structure_gate_blocks_wrong_direction(monkeypatch):
+    _enable_structure(monkeypatch)
+    m = _market()
+    # Слом структуры bear, а сигнал long — расхождение
+    m["_klines"] = {"5": _bearish_klines(), "15": _bearish_klines()}
+    d = make_decision("BOS_BULL", 42500.0, m,
+                      {"aligned": 3, "total": 3}, 78, ["CVD ✅"])
+    assert d["verdict"] == "WAIT"
+    assert "расхождение" in d["reason"]
+
+
+def test_p3_structure_gate_graceful_when_klines_missing(monkeypatch):
+    _enable_structure(monkeypatch)
+    m = _market()  # _market() не задаёт _klines
+    d = make_decision("BOS_BULL", 42500.0, m,
+                      {"aligned": 3, "total": 3}, 78, ["CVD ✅"])
+    # Нет данных → гейт молчит, торгуем как обычно
+    assert d["verdict"] == "LONG"
+    assert d["structure"]["available"] is False
+
+
+def test_p3_both_gates_pass_together(monkeypatch):
+    _enable_killzone(monkeypatch)
+    _enable_structure(monkeypatch)
+    m = _market()
+    m["ts"] = _ts_in_killzone()
+    m["_klines"] = {"5": _bullish_klines(), "15": _bullish_klines()}
+    d = make_decision("BOS_BULL", 42500.0, m,
+                      {"aligned": 3, "total": 3}, 78, ["CVD ✅"])
+    assert d["verdict"] == "LONG"
+    assert d["killzone"]["in"] is True
+    assert d["structure"]["confirmed"] is True
+
+
+def test_p3_killzone_subgate_short_circuits_structure(monkeypatch):
+    """Killzone проверяется первым — если вне окна, structure не дойдёт."""
+    _enable_killzone(monkeypatch)
+    _enable_structure(monkeypatch)
+    m = _market()
+    m["ts"] = _ts_outside_killzone()
+    # klines не задаём — даже если бы structure дошёл, упал бы
+    d = make_decision("BOS_BULL", 42500.0, m,
+                      {"aligned": 3, "total": 3}, 78, ["CVD ✅"])
+    assert d["verdict"] == "WAIT"
+    assert "killzone gate" in d["reason"]
+    # structure ключ не появился (subgate не выполнился)
+    assert "structure" not in d
+
+
+def test_p3_disabled_by_default(monkeypatch):
+    """С дефолтными флагами (KILLZONE_GATE_ENABLED=False, STRUCTURE=False)
+    через autouse-fixture P3 молчит."""
+    m = _market()
+    m["ts"] = _ts_outside_killzone()
+    # без _klines, но и без _ts — структура и killzone не сработают
+    d = make_decision("BOS_BULL", 42500.0, m,
+                      {"aligned": 3, "total": 3}, 78, ["CVD ✅"])
+    assert d["verdict"] == "LONG"  # гейты выключены autouse-fixture'ом
