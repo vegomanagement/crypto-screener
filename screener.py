@@ -29,6 +29,7 @@ from llm_agents import (
 from chart import render_signal_chart
 import tracking
 import signal_gate
+from webhook_utils import parse_alert_ts
 
 try:
     from config import (
@@ -2707,6 +2708,14 @@ def _process_winner(winner: "signal_gate.BufferedSignal",
 
     base_sym = symbol.replace(".P", "").replace("/", "")
     market   = fetch_market(base_sym if base_sym.endswith("USDT") else base_sym + "USDT")
+
+    # Timestamp алерта (если TV прислал time/ts/timestamp) — пробрасываем в
+    # market, чтобы killzone-гейт (Этап 10 фаза 3) работал по времени
+    # сигнала, а не now(). На прод-нагрузке разница в секунды, но aggregator
+    # буферизирует до 30s, плюс scheduler может задержать обработку.
+    alert_ts = parse_alert_ts(data)
+    if alert_ts is not None:
+        market["ts"] = alert_ts
 
     sig_up    = any(x in sig_type for x in ("BULL","LONG","SWEEP_L","EQL"))
     sig_dn    = any(x in sig_type for x in ("BEAR","SHORT","SWEEP_H","EQH"))
