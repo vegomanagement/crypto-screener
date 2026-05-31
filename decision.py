@@ -785,6 +785,17 @@ def format_decision_header(decision: dict) -> str:
     if lt:
         lines.append(f"🧲 Магнит ликвидности: <code>{_fmt_price(lt['price'])}</code>"
                      f" ({lt['kind']}, {lt['dist_pct']:+.2f}%)")
+    # Этап 10 фаза 3: P3-гейт прошёл → показываем подтверждение
+    kz = decision.get("killzone")
+    if kz and kz.get("in") and kz.get("name"):
+        lines.append(f"🕐 Killzone: <b>{kz['name']}</b>")
+    st = decision.get("structure")
+    if st and st.get("confirmed"):
+        kind_5m  = st.get("kind_5m", "?")
+        kind_15m = st.get("kind_15m", "?")
+        dir_em = "🟢" if st.get("direction") == "bull" else "🔴"
+        lines.append(f"🔨 Структура: {kind_5m} 5m + {kind_15m} 15m → "
+                     f"{dir_em} {st.get('direction', '?')}")
     if decision.get("key_factors"):
         lines.append("✅ За: " + " · ".join(decision["key_factors"][:3]))
     if decision.get("veto_reasons"):
