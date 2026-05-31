@@ -348,6 +348,71 @@ def test_format_skip_shows_reason():
     assert "ATR" in s
 
 
+def test_format_shows_killzone_when_in_window():
+    """Если P3-гейт записал killzone in=True — показать его в шапке."""
+    d = {
+        "verdict": "LONG", "direction": "long",
+        "entry": {"min": 100, "max": 101}, "sl": 95.0,
+        "tp1": 105, "tp2": 110, "tp3": 115,
+        "rr1": 1.5, "rr2": 2.5, "rr3": 4.0,
+        "confidence": 70, "veto_reasons": [], "key_factors": [],
+        "atr": 1.0, "reason": "",
+        "killzone": {"in": True, "name": "London"},
+    }
+    s = format_decision_header(d)
+    assert "Killzone" in s
+    assert "London" in s
+
+
+def test_format_omits_killzone_when_not_in_window():
+    """killzone in=False (или нет ключа) — не выводим строку."""
+    d_no_kz = {
+        "verdict": "LONG", "direction": "long",
+        "entry": {"min": 100, "max": 101}, "sl": 95.0,
+        "tp1": 105, "tp2": 110, "tp3": 115,
+        "rr1": 1.5, "rr2": 2.5, "rr3": 4.0,
+        "confidence": 70, "veto_reasons": [], "key_factors": [],
+        "atr": 1.0, "reason": "",
+    }
+    s = format_decision_header(d_no_kz)
+    assert "Killzone" not in s
+
+
+def test_format_shows_structure_when_confirmed():
+    """P3-гейт подтвердил slом структуры → показать BOS/CHoCH 5m+15m."""
+    d = {
+        "verdict": "LONG", "direction": "long",
+        "entry": {"min": 100, "max": 101}, "sl": 95.0,
+        "tp1": 105, "tp2": 110, "tp3": 115,
+        "rr1": 1.5, "rr2": 2.5, "rr3": 4.0,
+        "confidence": 70, "veto_reasons": [], "key_factors": [],
+        "atr": 1.0, "reason": "",
+        "structure": {"available": True, "confirmed": True,
+                      "direction": "bull",
+                      "kind_5m": "BOS", "kind_15m": "CHOCH"},
+    }
+    s = format_decision_header(d)
+    assert "Структура" in s
+    assert "BOS" in s and "CHOCH" in s
+
+
+def test_format_omits_structure_when_unavailable_or_unconfirmed():
+    """structure available=False (graceful fallback) — строки нет."""
+    base_d = {
+        "verdict": "LONG", "direction": "long",
+        "entry": {"min": 100, "max": 101}, "sl": 95.0,
+        "tp1": 105, "tp2": 110, "tp3": 115,
+        "rr1": 1.5, "rr2": 2.5, "rr3": 4.0,
+        "confidence": 70, "veto_reasons": [], "key_factors": [],
+        "atr": 1.0, "reason": "",
+    }
+    # Нет структуры вообще
+    assert "Структура" not in format_decision_header(base_d)
+    # Структура есть, но available=False
+    d2 = {**base_d, "structure": {"available": False}}
+    assert "Структура" not in format_decision_header(d2)
+
+
 # ─── RR floor ─────────────────────────────────────────────────────────────
 
 
