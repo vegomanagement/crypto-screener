@@ -2599,6 +2599,7 @@ def _register_bot_commands() -> None:
         {"command": "alerts",   "description": "Список активных алертов"},
         {"command": "delalert", "description": "Удалить алерт: /delalert 3"},
         {"command": "stats",    "description": "Win-rate по типам сигналов (30 дней)"},
+        {"command": "trades",   "description": "Последние закрытые сделки с R-исходом"},
         {"command": "history",  "description": "Последние 10 сигналов из БД"},
         {"command": "digest",   "description": "Дневной дайджест с LLM-анализом"},
         {"command": "scan",     "description": "Ручной запуск автосканера"},
@@ -3232,7 +3233,8 @@ def cmd_help(chat_id: int):
         "/news ETH            — новости по монете\n"
         "/scan                — ручной запуск автосканера\n"
         "/history             — последние 10 сигналов\n"
-        "/stats               — win-rate по типам сигналов (30д)\n"
+        "/stats               — win-rate + risk-adjusted метрики (30д)\n"
+        "/trades [days]       — последние закрытые сделки с R-исходом\n"
         "/digest              — дневной дайджест\n\n"
         "💬 <b>Свободный чат — пиши без команд!</b>\n"
         "<i>анализируй BTC 4H</i>     → полный разбор\n"
@@ -3443,6 +3445,7 @@ def handle_update(update: dict):
     elif cmd == "/alerts":             cmd_alert_list(chat_id)
     elif cmd == "/delalert":           cmd_alert_delete(chat_id, args)
     elif cmd == "/stats":              cmd_stats(chat_id, args)
+    elif cmd == "/trades":             cmd_trades(chat_id, args)
     elif cmd == "/top":                cmd_top(chat_id)
     elif cmd == "/movers":             cmd_movers(chat_id)
     elif cmd == "/risk":               cmd_risk(chat_id, args)
@@ -3942,6 +3945,30 @@ def cmd_stats(chat_id: int, args: str = ""):
         return
 
     tg_send(tracking.format_stats_message(stats), chat_id=chat_id)
+
+
+def cmd_trades(chat_id: int, args: str = ""):
+    """
+    Список последних закрытых сделок с R-исходом.
+
+    /trades         — за 7 дней по умолчанию
+    /trades 30      — за последние 30 дней
+    """
+    try:
+        days = int(args.strip()) if args.strip().isdigit() else 7
+    except Exception:
+        days = 7
+    days = max(1, min(60, days))
+
+    try:
+        with _db_lock, db_conn() as c:
+            trades = tracking.recent_trades(c, days=days, limit=30)
+    except Exception as e:
+        log.error(f"recent_trades: {e}")
+        tg_send(f"⚠️ Ошибка trades: {e}", chat_id=chat_id)
+        return
+
+    tg_send(tracking.format_trades_message(trades, days), chat_id=chat_id)
 
 
 # ─── DAILY DIGEST ─────────────────────────────────────────────────────────────

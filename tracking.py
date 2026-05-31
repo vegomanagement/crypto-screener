@@ -25,6 +25,7 @@ R-multiple для калибровки engine.
 
 import json
 import logging
+import math
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 
@@ -321,6 +322,115 @@ def _close_trade(conn, outcome_id: int, status: str,
     conn.commit()
 
 
+# ─── Risk-adjusted метрики (R-space) ──────────────────────────────────────
+#
+# Все метрики оперируют в пространстве R-multiple (1R = риск SL). Нет
+# нормализации по капиталу и нет risk-free rate — это безразмерные числа,
+# отражающие профиль исходов сигналов. Calibration constants:
+#
+#   Sharpe_R    = mean(R) / std(R)         — стабильность результата
+#   Sortino_R   = mean(R) / down_std(R)    — наказывает только волатильность вниз
+#   ProfitFactor = sum(R+) / |sum(R-)|     — стандарт индустрии (>=1.5 = good)
+#   MaxDD       — самая глубокая просадка equity curve, в R
+#   MaxConsecL  — длиннейшая серия лоссов подряд (для psychology / sizing)
+
+
+def _profit_factor(rs: list) -> float:
+    """sum(R+) / |sum(R-)|. 0 если нет прибыли. inf если только прибыль."""
+    wins   = sum(r for r in rs if r > 0)
+    losses = sum(-r for r in rs if r < 0)
+    if losses == 0:
+        return float("inf") if wins > 0 else 0.0
+    return wins / losses
+
+
+def _sharpe_r(rs: list) -> float:
+    """avg(R) / std(R). 0 при n<2 или нулевой дисперсии."""
+    if len(rs) < 2:
+        return 0.0
+    mean = sum(rs) / len(rs)
+    var  = sum((r - mean) ** 2 for r in rs) / len(rs)  # population
+    std  = math.sqrt(var)
+    if std == 0:
+        return 0.0
+    return mean / std
+
+
+def _sortino_r(rs: list) -> float:
+    """
+    avg(R) / downside_std(R). Downside_std считается по отклонениям от 0
+    (R уже центрирован вокруг breakeven), только для отрицательных значений.
+    """
+    if len(rs) < 2:
+        return 0.0
+    mean = sum(rs) / len(rs)
+    downs = [r for r in rs if r < 0]
+    if not downs:
+        return float("inf") if mean > 0 else 0.0
+    dstd = math.sqrt(sum(r * r for r in downs) / len(downs))
+    if dstd == 0:
+        return 0.0
+    return mean / dstd
+
+
+def _max_drawdown_r(rs_chrono: list) -> float:
+    """
+    Максимальная просадка equity curve (cumulative R), хронологически.
+    Возвращает 0.0 или отрицательное число (величина max-dd в R).
+    Требует упорядоченный по времени список.
+    """
+    if not rs_chrono:
+        return 0.0
+    eq     = 0.0
+    peak   = 0.0
+    max_dd = 0.0
+    for r in rs_chrono:
+        eq   += r
+        peak  = max(peak, eq)
+        max_dd = min(max_dd, eq - peak)
+    return max_dd
+
+
+def _max_consec_loss(rs_chrono: list) -> int:
+    """Длиннейшая серия r<=0 подряд (включая 0R ties — не победы)."""
+    best = 0
+    cur  = 0
+    for r in rs_chrono:
+        if r <= 0:
+            cur += 1
+            best = max(best, cur)
+        else:
+            cur = 0
+    return best
+
+
+# ─── ASCII sparkline (для equity curve) ───────────────────────────────────
+
+_SPARK_CHARS = "▁▂▃▄▅▆▇█"
+
+
+def _sparkline(values: list, width: int = 20) -> str:
+    """
+    Компактный ASCII-график серии (для equity curve в Telegram).
+    Ресемплирует серию до `width` точек, нормализует к 8 уровням.
+    """
+    if not values:
+        return ""
+    n = len(values)
+    if n <= width:
+        sampled = values
+    else:
+        step = n / width
+        sampled = [values[min(n - 1, int(i * step))] for i in range(width)]
+    lo, hi = min(sampled), max(sampled)
+    if hi == lo:
+        return _SPARK_CHARS[3] * len(sampled)
+    span = hi - lo
+    return "".join(
+        _SPARK_CHARS[min(7, int((v - lo) / span * 7))] for v in sampled
+    )
+
+
 # ─── Stats aggregation ────────────────────────────────────────────────────
 
 def compute_stats(conn, days: int = 30) -> dict:
@@ -336,6 +446,7 @@ def compute_stats(conn, days: int = 30) -> dict:
                r_multiple, confidence, rr1
         FROM signal_outcomes
         WHERE entry_ts >= ? AND verdict IN ('LONG', 'SHORT')
+        ORDER BY entry_ts ASC
         """,
         (since,),
     ).fetchall()
@@ -382,6 +493,22 @@ def compute_stats(conn, days: int = 30) -> dict:
     win_rate = (total_wins / closed_n * 100) if closed_n else 0
     avg_r    = (sum(closed_r) / closed_n) if closed_n else 0
 
+    # closed_r собран в хронологическом порядке (ORDER BY entry_ts ASC),
+    # поэтому equity curve / drawdown / streaks считаются как walk слева направо.
+    equity = []
+    cum    = 0.0
+    for r in closed_r:
+        cum += r
+        equity.append(cum)
+
+    pf      = _profit_factor(closed_r) if closed_r else 0.0
+    sharpe  = _sharpe_r(closed_r)      if closed_r else 0.0
+    sortino = _sortino_r(closed_r)     if closed_r else 0.0
+    max_dd  = _max_drawdown_r(closed_r) if closed_r else 0.0
+    consec  = _max_consec_loss(closed_r) if closed_r else 0
+    best_r  = max(closed_r) if closed_r else 0.0
+    worst_r = min(closed_r) if closed_r else 0.0
+
     return {
         "days":       days,
         "total":      total,
@@ -398,6 +525,18 @@ def compute_stats(conn, days: int = 30) -> dict:
             "tie": by_status.get("tie_hit", 0),
             "expired": by_status.get("expired", 0),
         },
+        "risk": {
+            "profit_factor":   round(pf, 2) if pf != float("inf") else "∞",
+            "sharpe_r":        round(sharpe, 2),
+            "sortino_r":       (round(sortino, 2)
+                                if sortino != float("inf") else "∞"),
+            "max_drawdown_r":  round(max_dd, 2),
+            "max_consec_loss": consec,
+            "best_r":          round(best_r, 2),
+            "worst_r":         round(worst_r, 2),
+        },
+        "equity":     [round(v, 2) for v in equity],
+        "spark":      _sparkline(equity, width=20),
         "by_signal":  _summarize(by_signal),
         "by_symbol":  _summarize(by_symbol),
         "by_conf":    _summarize(by_conf),
@@ -478,6 +617,30 @@ def format_stats_message(stats: dict) -> str:
         lines.append(f"  🚫 Подавлено gate: {stats['suppressed']} "
                      f"(не учтены в win-rate)")
 
+    risk = stats.get("risk") or {}
+    if risk:
+        pf      = risk.get("profit_factor", 0)
+        sharpe  = risk.get("sharpe_r", 0)
+        sortino = risk.get("sortino_r", 0)
+        pf_ic = ("🟢" if isinstance(pf, (int, float)) and pf >= 1.5
+                 else ("🟡" if isinstance(pf, (int, float)) and pf >= 1.0
+                       else "🔴"))
+        sh_ic = ("🟢" if isinstance(sharpe, (int, float)) and sharpe >= 0.3
+                 else ("🟡" if isinstance(sharpe, (int, float)) and sharpe >= 0
+                       else "🔴"))
+        lines.append("\n<b>📐 Risk-adjusted (R-space):</b>")
+        lines.append(f"  {pf_ic} Profit Factor: <b>{pf}</b>")
+        lines.append(f"  {sh_ic} Sharpe: <b>{sharpe}</b>  ·  "
+                     f"Sortino: <b>{sortino}</b>")
+        lines.append(f"  📉 Max DD: <b>{risk.get('max_drawdown_r', 0):+.2f}R</b>"
+                     f"  ·  Consec losses: <b>{risk.get('max_consec_loss', 0)}</b>")
+        lines.append(f"  🏆 Best: <b>{risk.get('best_r', 0):+.2f}R</b>"
+                     f"  ·  Worst: <b>{risk.get('worst_r', 0):+.2f}R</b>")
+
+    spark = stats.get("spark")
+    if spark and closed >= 3:
+        lines.append(f"\n<b>📈 Equity (cum R):</b>  <code>{spark}</code>")
+
     if stats["by_signal"]:
         lines.append("\n<b>По типам сигналов:</b>")
         for sig_type, n, wr_s, ar_s in stats["by_signal"][:8]:
@@ -508,4 +671,67 @@ def format_stats_message(stats: dict) -> str:
                     f"{n:>3} · {wr_s:>4.0f}% · {ar_s:+.2f}R"
                 )
 
+    return "\n".join(lines)
+
+
+# ─── Список последних сделок (/trades) ─────────────────────────────────────
+
+def recent_trades(conn, days: int = 7, limit: int = 30) -> list:
+    """
+    Закрытые торгуемые сделки за N дней, новые сверху. Только статусы:
+    tp1_hit/tp2_hit/tp3_hit/sl_hit/tie_hit/expired. open/skipped/suppressed
+    не показываем — пользователь их не торговал.
+    """
+    since = (datetime.now(timezone.utc) - timedelta(days=days)).strftime(
+        "%Y-%m-%d %H:%M")
+    rows = conn.execute(
+        """
+        SELECT entry_ts, symbol, signal_type, verdict, status, hit_level,
+               r_multiple, confidence
+        FROM signal_outcomes
+        WHERE entry_ts >= ? AND verdict IN ('LONG', 'SHORT')
+          AND status IN ('tp1_hit', 'tp2_hit', 'tp3_hit',
+                         'sl_hit', 'tie_hit', 'expired')
+        ORDER BY entry_ts DESC
+        LIMIT ?
+        """,
+        (since, int(limit)),
+    ).fetchall()
+    return rows
+
+
+_OUTCOME_ICON = {
+    "tp1_hit": "🟢", "tp2_hit": "🟢", "tp3_hit": "🟢",
+    "sl_hit":  "🔴",
+    "tie_hit": "↔️",
+    "expired": "⏰",
+}
+
+
+def format_trades_message(trades: list, days: int) -> str:
+    """Компактный список последних N сделок для Telegram."""
+    if not trades:
+        return (f"📋 <b>Сделки за {days} дней</b>\n"
+                f"━━━━━━━━━━━━━━━━━━━━\n"
+                f"Закрытых торгуемых сделок нет.")
+
+    lines = [
+        f"📋 <b>Последние {len(trades)} сделок за {days} дней</b>",
+        "━━━━━━━━━━━━━━━━━━━━",
+    ]
+    for (ts, sym, sig_type, verdict, status, hit_level,
+         r_mult, conf) in trades:
+        out_ic    = _OUTCOME_ICON.get(status, "•")
+        verdict_ic = "🟢" if verdict == "LONG" else "🔴"
+        sym_short  = (sym or "?").replace("USDT", "")
+        time_short = (ts or "")[5:] if ts else "?"  # "MM-DD HH:MM"
+        r_str = f"{r_mult:+.2f}R" if r_mult is not None else "—"
+        conf_str = f"c{conf}" if conf is not None else "c?"
+        sig_short = (sig_type or "?")[:12]
+        lines.append(
+            f"  {out_ic} <code>{time_short}</code> {verdict_ic} "
+            f"<code>{sym_short:<5}</code> "
+            f"<code>{sig_short:<12}</code> "
+            f"{r_str:>7}  {conf_str}"
+        )
     return "\n".join(lines)

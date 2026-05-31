@@ -541,3 +541,222 @@ def test_format_stats_message_contains_all_sections(conn):
     assert "BTC" in msg
     assert "ETH" in msg
     assert "calibration" in msg.lower() or "confidence" in msg.lower()
+
+
+# ─── Risk-adjusted metrics ─────────────────────────────────────────────────
+
+
+def test_profit_factor_basic():
+    # wins=3+2=5, losses=1+1=2 → PF=2.5
+    assert tracking._profit_factor([3, 2, -1, -1]) == 2.5
+
+
+def test_profit_factor_no_losses_is_inf():
+    pf = tracking._profit_factor([1, 2, 3])
+    assert pf == float("inf")
+
+
+def test_profit_factor_no_wins_is_zero():
+    assert tracking._profit_factor([-1, -2]) == 0.0
+
+
+def test_sharpe_r_constant_zero_std():
+    """Все исходы одинаковы → std=0 → Sharpe=0 (по контракту)."""
+    assert tracking._sharpe_r([1.5, 1.5, 1.5]) == 0.0
+
+
+def test_sharpe_r_positive_when_mean_positive():
+    rs = [1.5, -1.0, 1.5, -1.0, 1.5]
+    assert tracking._sharpe_r(rs) > 0
+
+
+def test_sharpe_r_negative_when_mean_negative():
+    rs = [-1.0, -1.0, -1.0, 1.5]
+    assert tracking._sharpe_r(rs) < 0
+
+
+def test_sortino_r_no_downside_is_inf():
+    sortino = tracking._sortino_r([1.5, 2.0, 0.5])
+    assert sortino == float("inf")
+
+
+def test_sortino_r_with_downside():
+    rs = [1.5, -1.0, 1.5, -1.0]
+    s = tracking._sortino_r(rs)
+    assert s > 0  # mean=0.25, есть downside, конечное значение
+
+
+def test_max_drawdown_r_walks_chronologically():
+    """[+1, -2, -1, +1, +1] → equity = [1, -1, -2, -1, 0]; peak=1, max-DD = -3."""
+    rs = [1, -2, -1, 1, 1]
+    assert tracking._max_drawdown_r(rs) == -3.0
+
+
+def test_max_drawdown_r_no_drawdown():
+    """Только прибыль → DD=0."""
+    assert tracking._max_drawdown_r([1, 2, 3]) == 0.0
+
+
+def test_max_consec_loss_counts_zeros_too():
+    """tie_hit (0R) — не победа, идёт в серию проигрышей."""
+    rs = [-1, -1, 0, -1, 1, -1, -1]
+    assert tracking._max_consec_loss(rs) == 4
+
+
+def test_max_consec_loss_zero_when_all_wins():
+    assert tracking._max_consec_loss([1, 2, 3]) == 0
+
+
+# ─── ASCII sparkline ───────────────────────────────────────────────────────
+
+
+def test_sparkline_empty():
+    assert tracking._sparkline([]) == ""
+
+
+def test_sparkline_flat_uses_middle_char():
+    s = tracking._sparkline([5, 5, 5, 5], width=4)
+    assert all(c == tracking._SPARK_CHARS[3] for c in s)
+
+
+def test_sparkline_length_respects_width():
+    s = tracking._sparkline([1, 2, 3, 4, 5, 6, 7, 8], width=4)
+    assert len(s) == 4
+
+
+def test_sparkline_min_max_correct():
+    s = tracking._sparkline([0, 10], width=2)
+    # первый — самый низкий (_SPARK_CHARS[0]), второй — самый высокий ([7])
+    assert s[0] == tracking._SPARK_CHARS[0]
+    assert s[-1] == tracking._SPARK_CHARS[7]
+
+
+# ─── compute_stats integration: новые поля ─────────────────────────────────
+
+
+def test_compute_stats_includes_risk_block(conn):
+    _seed_closed_trade(conn, signal_type="X", status="tp1_hit", r_multiple=1.5)
+    _seed_closed_trade(conn, signal_type="X", status="sl_hit",  r_multiple=-1.0)
+    _seed_closed_trade(conn, signal_type="X", status="tp2_hit", r_multiple=2.5)
+
+    s = tracking.compute_stats(conn, days=30)
+    assert "risk" in s
+    risk = s["risk"]
+    assert "profit_factor" in risk
+    assert "sharpe_r" in risk
+    assert "sortino_r" in risk
+    assert "max_drawdown_r" in risk
+    assert "max_consec_loss" in risk
+    assert "best_r" in risk
+    assert "worst_r" in risk
+    # 1.5+2.5 = 4 wins, 1 loss → PF = 4
+    assert risk["profit_factor"] == 4.0
+    assert risk["best_r"]  == 2.5
+    assert risk["worst_r"] == -1.0
+
+
+def test_compute_stats_equity_curve_chronological(conn):
+    """equity[i] = cum R по времени. days_ago старше → раньше в списке."""
+    _seed_closed_trade(conn, signal_type="X", status="tp1_hit",
+                       r_multiple=1.5, days_ago=10)
+    _seed_closed_trade(conn, signal_type="X", status="sl_hit",
+                       r_multiple=-1.0, days_ago=5)
+    _seed_closed_trade(conn, signal_type="X", status="tp2_hit",
+                       r_multiple=2.5, days_ago=1)
+
+    s = tracking.compute_stats(conn, days=30)
+    assert s["equity"] == [1.5, 0.5, 3.0]
+    assert s["spark"]  # sparkline есть
+
+
+def test_compute_stats_sparkline_empty_when_no_closed(conn):
+    s = tracking.compute_stats(conn, days=30)
+    # никаких сделок не добавлено — компактный fallback
+    # (compute_stats возвращает total=0 ветку без spark)
+    assert s.get("total", 0) == 0
+
+
+def test_format_stats_message_shows_risk_block(conn):
+    _seed_closed_trade(conn, signal_type="X", status="tp1_hit", r_multiple=1.5)
+    _seed_closed_trade(conn, signal_type="X", status="sl_hit",  r_multiple=-1.0)
+    _seed_closed_trade(conn, signal_type="X", status="tp2_hit", r_multiple=2.5)
+
+    msg = tracking.format_stats_message(tracking.compute_stats(conn, days=30))
+    assert "Risk-adjusted" in msg or "Profit Factor" in msg
+    assert "Sharpe" in msg
+    assert "Sortino" in msg
+
+
+def test_format_stats_message_shows_equity_when_enough_trades(conn):
+    for i in range(5):
+        _seed_closed_trade(conn, signal_type="X", status="tp1_hit",
+                           r_multiple=1.5, days_ago=10 - i)
+
+    msg = tracking.format_stats_message(tracking.compute_stats(conn, days=30))
+    assert "Equity" in msg
+
+
+# ─── recent_trades + format_trades_message ─────────────────────────────────
+
+
+def test_recent_trades_empty(conn):
+    assert tracking.recent_trades(conn, days=7) == []
+
+
+def test_recent_trades_returns_only_torgable_closed(conn):
+    _seed_closed_trade(conn, signal_type="A", status="tp1_hit", r_multiple=1.5)
+    _seed_closed_trade(conn, signal_type="A", status="sl_hit",  r_multiple=-1.0)
+    # suppressed — не показываем
+    _seed_closed_trade(conn, signal_type="A", status="suppressed",
+                       r_multiple=0.0)
+    # skipped — тоже нет
+    _seed_closed_trade(conn, signal_type="A", status="skipped",
+                       r_multiple=0.0)
+
+    rows = tracking.recent_trades(conn, days=30)
+    statuses = {row[4] for row in rows}
+    assert "tp1_hit" in statuses
+    assert "sl_hit"  in statuses
+    assert "suppressed" not in statuses
+    assert "skipped"    not in statuses
+
+
+def test_recent_trades_filters_by_days(conn):
+    _seed_closed_trade(conn, signal_type="A", status="tp1_hit",
+                       r_multiple=1.5, days_ago=1)
+    _seed_closed_trade(conn, signal_type="A", status="sl_hit",
+                       r_multiple=-1.0, days_ago=20)
+    assert len(tracking.recent_trades(conn, days=7)) == 1
+
+
+def test_recent_trades_orders_newest_first(conn):
+    _seed_closed_trade(conn, signal_type="OLD", status="tp1_hit",
+                       r_multiple=1.5, days_ago=10)
+    _seed_closed_trade(conn, signal_type="NEW", status="sl_hit",
+                       r_multiple=-1.0, days_ago=1)
+    rows = tracking.recent_trades(conn, days=30)
+    # signal_type — третья колонка в SELECT
+    assert rows[0][2] == "NEW"
+    assert rows[1][2] == "OLD"
+
+
+def test_format_trades_message_empty():
+    msg = tracking.format_trades_message([], days=7)
+    assert "нет" in msg.lower()
+
+
+def test_format_trades_message_renders_rows(conn):
+    _seed_closed_trade(conn, signal_type="BOS_BULL", symbol="BTCUSDT",
+                       status="tp1_hit", r_multiple=1.5, confidence=72)
+    _seed_closed_trade(conn, signal_type="FVG_BEAR", symbol="ETHUSDT",
+                       status="sl_hit", verdict="SHORT",
+                       r_multiple=-1.0, confidence=65)
+
+    rows = tracking.recent_trades(conn, days=7)
+    msg = tracking.format_trades_message(rows, days=7)
+    assert "BOS_BULL" in msg
+    assert "FVG_BEAR" in msg
+    assert "+1.50R" in msg
+    assert "-1.00R" in msg
+    assert "c72" in msg and "c65" in msg
+
