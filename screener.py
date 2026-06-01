@@ -31,6 +31,7 @@ import tracking
 import signal_gate
 import patterns
 import order_blocks
+import block_patterns
 from webhook_utils import parse_alert_ts
 
 try:
@@ -78,6 +79,10 @@ SIGNAL_META = {
     "LIQ_SWEEP_L":       ("💧", "Sweep лоёв (SSL)",       "⚡ РАЗВОРОТ?"),
     "SWEEP_RECLAIM_BULL": ("🪝", "Sweep low + reclaim",    "🟢 BULLISH"),
     "SWEEP_RECLAIM_BEAR": ("🪝", "Sweep high + reclaim",   "🔴 BEARISH"),
+    "MB_BULL":            ("🧱", "Mitigation Block",       "🟢 BULLISH"),
+    "MB_BEAR":            ("🧱", "Mitigation Block",       "🔴 BEARISH"),
+    "BB_BULL":            ("🔨", "Breaker Block",          "🟢 BULLISH"),
+    "BB_BEAR":            ("🔨", "Breaker Block",          "🔴 BEARISH"),
     "EQH":               ("📊", "Equal Highs (BSL)",      "⚡ ВНИМАНИЕ"),
     "EQL":               ("📊", "Equal Lows (SSL)",       "⚡ ВНИМАНИЕ"),
     "TURTLE_LONG":       ("🐢", "Turtle Long",            "🟢 BULLISH"),
@@ -3576,6 +3581,22 @@ def run_auto_scan():
             if ob is not None:
                 detected.append(
                     "OB_BULL" if ob.direction == "bull" else "OB_BEAR"
+                )
+
+            # Mitigation Block test (Этап 12 фаза 4) — extreme нарушен,
+            # opposite intact, return to level.
+            mb = block_patterns.latest_mb_test(candles)
+            if mb is not None:
+                detected.append(
+                    "MB_BULL" if mb.direction == "bull" else "MB_BEAR"
+                )
+
+            # Breaker Block test — extreme нарушен + opposite тоже (reversal),
+            # return to original extreme.
+            bb = block_patterns.latest_bb_test(candles)
+            if bb is not None:
+                detected.append(
+                    "BB_BULL" if bb.direction == "bull" else "BB_BEAR"
                 )
 
             if not detected:
