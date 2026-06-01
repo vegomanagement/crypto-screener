@@ -29,6 +29,7 @@ from llm_agents import (
 from chart import render_signal_chart
 import tracking
 import signal_gate
+import patterns
 from webhook_utils import parse_alert_ts
 
 try:
@@ -74,6 +75,8 @@ SIGNAL_META = {
     "FVG_FILLED":        ("✅", "FVG заполнен",           "🟡 НЕЙТРАЛ"),
     "LIQ_SWEEP_H":       ("💧", "Sweep хаёв (BSL)",       "⚡ РАЗВОРОТ?"),
     "LIQ_SWEEP_L":       ("💧", "Sweep лоёв (SSL)",       "⚡ РАЗВОРОТ?"),
+    "SWEEP_RECLAIM_BULL": ("🪝", "Sweep low + reclaim",    "🟢 BULLISH"),
+    "SWEEP_RECLAIM_BEAR": ("🪝", "Sweep high + reclaim",   "🔴 BEARISH"),
     "EQH":               ("📊", "Equal Highs (BSL)",      "⚡ ВНИМАНИЕ"),
     "EQL":               ("📊", "Equal Lows (SSL)",       "⚡ ВНИМАНИЕ"),
     "TURTLE_LONG":       ("🐢", "Turtle Long",            "🟢 BULLISH"),
@@ -3556,6 +3559,16 @@ def run_auto_scan():
                 continue
 
             detected = detect_signals(candles)
+
+            # Sweep+reclaim паттерн (Этап 11 фаза 1) — детект по тем же
+            # candles, добавляем синтетический тип если событие свежее.
+            sr = patterns.latest_sweep_reclaim(candles)
+            if sr is not None:
+                detected.append(
+                    "SWEEP_RECLAIM_BULL" if sr.direction == "bull"
+                    else "SWEEP_RECLAIM_BEAR"
+                )
+
             if not detected:
                 continue
 
