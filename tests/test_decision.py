@@ -12,15 +12,16 @@ from decision import (
 
 
 @pytest.fixture(autouse=True)
-def _disable_p3_gates(monkeypatch):
+def _disable_p3_p4_gates(monkeypatch):
     """
-    Этап 10 фаза 3 P3-гейты (killzone + structure) по умолчанию ВКЛЮЧЕНЫ в
-    проде, но в тестах они флапали бы по now()/нехватке klines. Отключаем
-    их для всех тестов; P3-специфичные тесты включают обратно вручную.
+    P3/P4 гейты ВКЛЮЧЕНЫ в проде, но в тестах флапали бы по now()/нехватке
+    klines. Отключаем для всех тестов; гейт-специфичные тесты включают
+    обратно вручную.
     """
     import decision as d_mod
-    monkeypatch.setattr(d_mod, "KILLZONE_GATE_ENABLED", False)
+    monkeypatch.setattr(d_mod, "KILLZONE_GATE_ENABLED",  False)
     monkeypatch.setattr(d_mod, "STRUCTURE_GATE_ENABLED", False)
+    monkeypatch.setattr(d_mod, "HTF_BIAS_GATE_ENABLED",  False)
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────
@@ -914,3 +915,118 @@ def test_p3_disabled_by_default(monkeypatch):
     d = make_decision("BOS_BULL", 42500.0, m,
                       {"aligned": 3, "total": 3}, 78, ["CVD ✅"])
     assert d["verdict"] == "LONG"  # гейты выключены autouse-fixture'ом
+
+
+# ─── Этап 12 фаза 2: HTF Top-down PDA bias gate (P4) ───────────────────────
+
+
+def _enable_htf_bias(monkeypatch, on=True):
+    import decision as d_mod
+    monkeypatch.setattr(d_mod, "HTF_BIAS_GATE_ENABLED", on)
+
+
+def _htf_range_klines(low: float, high: float, current_pos: float,
+                      n: int = 100) -> list:
+    """Klines с current_pos позицией в [low, high]."""
+    klines = []
+    klines.append({"o": low, "h": low + 0.1, "l": low, "c": low, "v": 100})
+    klines.append({"o": high, "h": high, "l": high - 0.1, "c": high, "v": 100})
+    mid = (low + high) / 2
+    for _ in range(n - 3):
+        klines.append({"o": mid, "h": mid + 0.1, "l": mid - 0.1, "c": mid,
+                       "v": 100})
+    cur = low + (high - low) * current_pos
+    klines.append({"o": cur, "h": cur + 0.1, "l": cur - 0.1, "c": cur, "v": 100})
+    return klines
+
+
+def test_p4_htf_gate_blocks_short_when_strong_long_bias(monkeypatch):
+    """3/3 HTF в discount → strong long. SHORT-сигнал → жёсткий WAIT."""
+    _enable_htf_bias(monkeypatch)
+    m = _market()
+    m["_klines"] = {
+        "D":   _htf_range_klines(100, 200, 0.2),
+        "240": _htf_range_klines(100, 200, 0.3),
+        "60":  _htf_range_klines(100, 200, 0.35),
+    }
+    d = make_decision("CHOCH_BEAR", 150.0, m,
+                      {"aligned": 3, "total": 3}, 78, ["CVD ✅"])
+    assert d["verdict"] == "WAIT"
+    assert "P4 HTF" in d["reason"] or "HTF strong" in d["reason"]
+    assert d["htf_bias"]["strength"] == "strong"
+    assert d["htf_bias"]["direction"] == "long"
+
+
+def test_p4_htf_gate_blocks_long_when_strong_short_bias(monkeypatch):
+    _enable_htf_bias(monkeypatch)
+    m = _market()
+    m["_klines"] = {
+        "D":   _htf_range_klines(100, 200, 0.8),
+        "240": _htf_range_klines(100, 200, 0.7),
+        "60":  _htf_range_klines(100, 200, 0.65),
+    }
+    d = make_decision("BOS_BULL", 150.0, m,
+                      {"aligned": 3, "total": 3}, 78, ["CVD ✅"])
+    assert d["verdict"] == "WAIT"
+    assert "HTF" in d["reason"]
+
+
+def test_p4_htf_gate_allows_signal_with_strong_bias(monkeypatch):
+    """Signal direction совпадает с strong HTF → проходит."""
+    _enable_htf_bias(monkeypatch)
+    m = _market()
+    m["_klines"] = {
+        "D":   _htf_range_klines(100, 200, 0.2),
+        "240": _htf_range_klines(100, 200, 0.3),
+        "60":  _htf_range_klines(100, 200, 0.35),
+    }
+    d = make_decision("BOS_BULL", 150.0, m,
+                      {"aligned": 3, "total": 3}, 78, ["CVD ✅"])
+    assert d["verdict"] == "LONG"
+    assert d["htf_bias"]["strength"] == "strong"
+
+
+def test_p4_htf_gate_silent_for_moderate_bias(monkeypatch):
+    """2/3 → moderate, гейт молчит. Signal любого направления проходит."""
+    _enable_htf_bias(monkeypatch)
+    m = _market()
+    m["_klines"] = {
+        "D":   _htf_range_klines(100, 200, 0.3),    # discount → long vote
+        "240": _htf_range_klines(100, 200, 0.35),   # discount → long vote
+        "60":  _htf_range_klines(100, 200, 0.5),    # equilibrium → no vote
+    }
+    d = make_decision("CHOCH_BEAR", 150.0, m,
+                      {"aligned": 3, "total": 3}, 78, ["CVD ✅"])
+    # Moderate long bias не блокирует SHORT — должен пройти
+    assert d["verdict"] == "SHORT"
+    assert d["htf_bias"]["strength"] == "moderate"
+
+
+def test_p4_htf_gate_silent_when_no_klines(monkeypatch):
+    """Нет HTF klines → bias neutral → гейт молчит."""
+    _enable_htf_bias(monkeypatch)
+    m = _market()  # без _klines
+    d = make_decision("BOS_BULL", 42500.0, m,
+                      {"aligned": 3, "total": 3}, 78, ["CVD ✅"])
+    # Не WAIT-by-HTF
+    assert "HTF" not in d.get("reason", "")
+    assert d["htf_bias"]["strength"] == "neutral"
+
+
+def test_p4_htf_gate_disabled_by_default_fixture():
+    """Autouse-fixture отключает HTF_BIAS_GATE_ENABLED → гейт не срабатывает
+    даже при strong HTF против direction. Verdict может быть SKIP по другим
+    причинам (smart-money penalty), но НЕ WAIT-by-HTF."""
+    m = _market()
+    m["_klines"] = {
+        "D":   _htf_range_klines(100, 200, 0.8),   # strong short bias
+        "240": _htf_range_klines(100, 200, 0.7),
+        "60":  _htf_range_klines(100, 200, 0.65),
+    }
+    d = make_decision("BOS_BULL", 150.0, m,
+                      {"aligned": 3, "total": 3}, 78, ["CVD ✅"])
+    # HTF gate disabled → даже strong opposite не блокирует
+    assert "HTF" not in d.get("reason", "")
+    assert "P4 HTF" not in d.get("reason", "")
+    # htf_bias ключ НЕ заполняется при disabled
+    assert "htf_bias" not in d
