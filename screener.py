@@ -30,6 +30,7 @@ from chart import render_signal_chart
 import tracking
 import signal_gate
 import patterns
+import order_blocks
 from webhook_utils import parse_alert_ts
 
 try:
@@ -3567,6 +3568,14 @@ def run_auto_scan():
                 detected.append(
                     "SWEEP_RECLAIM_BULL" if sr.direction == "bull"
                     else "SWEEP_RECLAIM_BEAR"
+                )
+
+            # Order Block test (Этап 12 фаза 1) — текущий бар тестирует
+            # unmitigated OB → entry trigger по канону ICT.
+            ob = order_blocks.latest_ob_test(candles)
+            if ob is not None:
+                detected.append(
+                    "OB_BULL" if ob.direction == "bull" else "OB_BEAR"
                 )
 
             if not detected:
