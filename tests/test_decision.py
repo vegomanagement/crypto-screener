@@ -914,3 +914,49 @@ def test_p3_disabled_by_default(monkeypatch):
     d = make_decision("BOS_BULL", 42500.0, m,
                       {"aligned": 3, "total": 3}, 78, ["CVD ✅"])
     assert d["verdict"] == "LONG"  # гейты выключены autouse-fixture'ом
+
+
+# ─── format_decision_header: killzone / structure вывод ────────────────────
+
+
+def test_format_long_includes_killzone_line(monkeypatch):
+    _enable_killzone(monkeypatch)
+    m = _market()
+    m["ts"] = _ts_in_killzone()
+    d = make_decision("BOS_BULL", 42500.0, m,
+                      {"aligned": 3, "total": 3}, 78, ["CVD ✅"])
+    s = format_decision_header(d)
+    assert "Killzone" in s
+    assert "London" in s
+
+
+def test_format_long_includes_structure_line(monkeypatch):
+    _enable_structure(monkeypatch)
+    m = _market()
+    m["_klines"] = {"5": _bullish_klines(), "15": _bullish_klines()}
+    d = make_decision("BOS_BULL", 42500.0, m,
+                      {"aligned": 3, "total": 3}, 78, ["CVD ✅"])
+    s = format_decision_header(d)
+    assert "Структура" in s
+    assert "5m" in s and "15m" in s
+    assert "bull" in s
+
+
+def test_format_long_omits_killzone_when_subgate_silent():
+    """Без killzone-данных строка не появляется (P3-гейты отключены fixture'ом)."""
+    d = make_decision("BOS_BULL", 42500.0, _market(),
+                      {"aligned": 3, "total": 3}, 78, ["CVD ✅"])
+    s = format_decision_header(d)
+    assert "Killzone" not in s
+    assert "Структура" not in s
+
+
+def test_format_long_omits_structure_when_not_confirmed(monkeypatch):
+    """structure без confirmed=True не выводится (только информативные строки)."""
+    _enable_structure(monkeypatch)
+    m = _market()  # без _klines — graceful → structure.available=False
+    d = make_decision("BOS_BULL", 42500.0, m,
+                      {"aligned": 3, "total": 3}, 78, ["CVD ✅"])
+    s = format_decision_header(d)
+    # structure доступен но не confirmed → строки нет
+    assert "Структура" not in s
