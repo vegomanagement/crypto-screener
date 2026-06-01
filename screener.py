@@ -32,6 +32,7 @@ import signal_gate
 import patterns
 import order_blocks
 import block_patterns
+import minor_patterns
 from webhook_utils import parse_alert_ts
 
 try:
@@ -83,6 +84,10 @@ SIGNAL_META = {
     "MB_BEAR":            ("🧱", "Mitigation Block",       "🔴 BEARISH"),
     "BB_BULL":            ("🔨", "Breaker Block",          "🟢 BULLISH"),
     "BB_BEAR":            ("🔨", "Breaker Block",          "🔴 BEARISH"),
+    "INSIDE_BREAK_BULL":  ("💥", "Inside candle breakout", "🟢 BULLISH"),
+    "INSIDE_BREAK_BEAR":  ("💥", "Inside candle breakout", "🔴 BEARISH"),
+    "RB_BULL":            ("🛡️", "Rejection Block",         "🟢 BULLISH"),
+    "RB_BEAR":            ("🛡️", "Rejection Block",         "🔴 BEARISH"),
     "EQH":               ("📊", "Equal Highs (BSL)",      "⚡ ВНИМАНИЕ"),
     "EQL":               ("📊", "Equal Lows (SSL)",       "⚡ ВНИМАНИЕ"),
     "TURTLE_LONG":       ("🐢", "Turtle Long",            "🟢 BULLISH"),
@@ -3597,6 +3602,22 @@ def run_auto_scan():
             if bb is not None:
                 detected.append(
                     "BB_BULL" if bb.direction == "bull" else "BB_BEAR"
+                )
+
+            # Inside Candle Breakout (Этап 12 фаза 5) — взрывное движение
+            # после inside-свечи в направлении breakout'а.
+            ib = minor_patterns.latest_inside_breakout(candles)
+            if ib is not None:
+                detected.append(
+                    "INSIDE_BREAK_BULL" if ib.direction == "bull"
+                    else "INSIDE_BREAK_BEAR"
+                )
+
+            # Rejection Block test — длинный wick + retest body level.
+            rb = minor_patterns.latest_rejection_test(candles)
+            if rb is not None:
+                detected.append(
+                    "RB_BULL" if rb.direction == "bull" else "RB_BEAR"
                 )
 
             if not detected:
