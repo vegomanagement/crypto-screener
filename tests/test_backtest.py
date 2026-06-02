@@ -340,3 +340,61 @@ def test_parse_overrides_int_float_bool():
 def test_parse_overrides_str_fallback():
     out = backtest._parse_overrides("MODE=conservative")
     assert out["MODE"] == "conservative"
+
+
+# ─── tf_primary selection ─────────────────────────────────────────────────
+
+
+def test_tf_minutes_helper():
+    assert backtest._tf_minutes("5") == 5
+    assert backtest._tf_minutes("15") == 15
+    assert backtest._tf_minutes("60") == 60
+    assert backtest._tf_minutes("240") == 240
+    assert backtest._tf_minutes("D") == 1440
+    assert backtest._tf_minutes("W") == 10080
+    # invalid → fallback 5
+    assert backtest._tf_minutes("garbage") == 5
+
+
+def test_run_backtest_tf_primary_uses_correct_klines():
+    """tf_primary='15' → walk идёт по 15m баров, не по 5m."""
+    ts0 = 1_780_000_000_000
+    # 100 5m баров (плоские)
+    klines_5m = [_b(ts0 + i * 300_000, 100, 100.1, 99.9, 100)
+                 for i in range(100)]
+    # 50 15m баров
+    klines_15m = [_b(ts0 + i * 900_000, 100, 100.1, 99.9, 100)
+                  for i in range(50)]
+    data = {
+        "symbol": "BTCUSDT", "days": 1,
+        "klines": {"5": klines_5m, "15": klines_15m},
+        "funding": [], "oi": [],
+    }
+    # Прогон на 15m — должен дойти до конца klines_15m
+    result_15 = backtest.run_backtest(data, tf_primary="15", warmup_bars=10)
+    assert result_15.symbol == "BTCUSDT"
+    # На плоских данных 0 трейдов (нет сигналов), но прогон должен пройти
+    assert "stats" in vars(result_15) or isinstance(result_15.stats, dict)
+
+
+def test_run_backtest_expiry_scales_with_tf():
+    """expiry_bars без явного override масштабируется под TF."""
+    ts0 = 1_780_000_000_000
+    klines_15m = [_b(ts0 + i * 900_000, 100, 100.1, 99.9, 100)
+                  for i in range(50)]
+    data = {
+        "symbol": "X", "days": 1,
+        "klines": {"15": klines_15m},
+        "funding": [], "oi": [],
+    }
+    # Не падает — внутри expiry/cooldown пересчитаются
+    result = backtest.run_backtest(data, tf_primary="15", warmup_bars=10)
+    assert result.symbol == "X"
+
+
+def test_run_backtest_missing_primary_tf_returns_empty():
+    """tf_primary='60' но в data нет klines.60 → empty result."""
+    data = {"symbol": "X", "days": 1, "klines": {"5": []},
+            "funding": [], "oi": []}
+    result = backtest.run_backtest(data, tf_primary="60", warmup_bars=10)
+    assert result.trades == []

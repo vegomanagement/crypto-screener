@@ -310,25 +310,53 @@ def _aggregate_stats(trades: list, days: int) -> dict:
 # ─── Главный entry point ──────────────────────────────────────────────────
 
 
+def _tf_minutes(tf: str) -> int:
+    """Конвертация TF в минуты для масштабирования expiry/cooldown."""
+    s = str(tf).upper()
+    if s == "D":
+        return 1440
+    if s == "W":
+        return 10080
+    if s == "M":
+        return 30 * 1440
+    try:
+        return int(s)
+    except ValueError:
+        return 5
+
+
 def run_backtest(
     data: dict,
     *,
+    tf_primary:        str = "5",
     warmup_bars:       int = DEFAULT_WARMUP_BARS,
-    expiry_bars:       int = DEFAULT_EXPIRY_BARS,
-    cooldown_bars:     int = DEFAULT_COOLDOWN_BARS,
+    expiry_bars:       int | None = None,
+    cooldown_bars:     int | None = None,
     config_overrides:  dict | None = None,
     default_conf_score: int = DEFAULT_CONF_SCORE,
     progress_each:     int | None = None,
 ) -> BacktestResult:
     """
     Главный entry. data — из bt_data.fetch_all(symbol, days).
-    Симулирует прогон всего decision-pipeline на 5m баров и трекает исходы.
-    """
-    klines_5m = data.get("klines", {}).get("5") or []
-    symbol    = data.get("symbol", "?")
-    days      = data.get("days", 0)
+    Симулирует прогон всего decision-pipeline на свечах primary TF.
 
-    if not klines_5m:
+    tf_primary: '5' | '15' | '60' | '240' | 'D' — на каком TF идёт walk-bar.
+    По умолчанию 5m (ICT-канон). При выборе другого TF expiry/cooldown
+    масштабируются автоматически (7d expiry и 1h cooldown в реальном
+    времени, независимо от tf_primary), если не переопределены явно.
+    """
+    # Auto-scale expiry/cooldown под выбранный TF (в реальном времени)
+    tf_min = _tf_minutes(tf_primary)
+    if expiry_bars is None:
+        expiry_bars = (DEFAULT_EXPIRY_BARS * 5) // tf_min   # 7d → bars
+    if cooldown_bars is None:
+        cooldown_bars = max(1, (DEFAULT_COOLDOWN_BARS * 5) // tf_min)  # 1h → bars
+
+    klines_primary = data.get("klines", {}).get(tf_primary) or []
+    symbol         = data.get("symbol", "?")
+    days           = data.get("days", 0)
+
+    if not klines_primary:
         return BacktestResult(symbol=symbol, days=days)
 
     trades: list[BacktestTrade] = []
@@ -336,10 +364,10 @@ def run_backtest(
     last_signal_idx: dict[tuple, int] = {}
 
     with _config_override(config_overrides):
-        for idx in range(warmup_bars, len(klines_5m)):
-            klines_so_far = klines_5m[:idx + 1]
+        for idx in range(warmup_bars, len(klines_primary)):
+            klines_so_far = klines_primary[:idx + 1]
 
-            market = bt_market.build_market_at(data, idx)
+            market = bt_market.build_market_at(data, idx, tf_primary=tf_primary)
             if not market:
                 continue
 
@@ -351,7 +379,7 @@ def run_backtest(
                     continue
                 last_signal_idx[key] = idx
 
-                price = klines_5m[idx]["c"]
+                price = klines_primary[idx]["c"]
                 d = make_decision(
                     signal_type=sig_type,
                     price=price,
@@ -371,7 +399,7 @@ def run_backtest(
                 )
 
                 outcome = _simulate_outcome(
-                    klines_5m, idx, d["verdict"],
+                    klines_primary, idx, d["verdict"],
                     d["sl"], d["tp1"], d["tp2"], d["tp3"],
                     d.get("rr1"), d.get("rr2"), d.get("rr3"),
                     expiry_bars,
@@ -380,13 +408,13 @@ def run_backtest(
                     skipped += 1
                     continue
                 close_idx, status, hit_level, r_mult = outcome
-                close_ts = klines_5m[close_idx]["ts"] if close_idx < len(klines_5m) else klines_5m[-1]["ts"]
+                close_ts = klines_primary[close_idx]["ts"] if close_idx < len(klines_primary) else klines_primary[-1]["ts"]
 
                 trades.append(BacktestTrade(
                     signal_type=sig_type,
                     direction=d["direction"],
                     open_idx=idx,
-                    open_ts=klines_5m[idx]["ts"],
+                    open_ts=klines_primary[idx]["ts"],
                     entry=float(entry),
                     sl=float(d["sl"]),
                     tp1=float(d["tp1"]),
@@ -401,7 +429,7 @@ def run_backtest(
                 ))
 
             if progress_each and idx % progress_each == 0:
-                print(f"[backtest] {symbol} idx={idx}/{len(klines_5m)} "
+                print(f"[backtest] {symbol} idx={idx}/{len(klines_primary)} "
                       f"trades={len(trades)} skipped={skipped}", flush=True)
 
     stats = _aggregate_stats(trades, days)
