@@ -329,3 +329,101 @@ def test_cache_round_trip(tmp_cache):
 
 def test_read_cache_missing_returns_empty(tmp_cache):
     assert bt_data._read_cache(Path("/tmp/nonexistent_xyz_123.jsonl")) == []
+
+
+# ─── Binance fallback ─────────────────────────────────────────────────────
+
+
+def _binance_kline_row(ts_ms, o, h, lo, c, v):
+    """Binance Futures kline format: [openTime, o, h, l, c, v, closeTime, ...]"""
+    return [ts_ms, str(o), str(h), str(lo), str(c), str(v),
+            ts_ms + 60_000, "0", 0, "0", "0", "0"]
+
+
+def test_parse_binance_kline_row():
+    row = _binance_kline_row(1700000000000, 100, 101, 99, 100.5, 12.3)
+    parsed = bt_data._parse_binance_kline_row(row)
+    assert parsed == {"ts": 1700000000000, "o": 100.0, "h": 101.0,
+                      "l": 99.0, "c": 100.5, "v": 12.3}
+
+
+def test_fetch_klines_binance_basic(tmp_cache):
+    """Прямой вызов _fetch_klines_binance."""
+    base_ts = _ms(2026, 6, 1, 10)
+    rows = [_binance_kline_row(base_ts + i * 300_000, 100, 101, 99, 100, 1)
+            for i in range(10)]
+    sess = _mock_session([rows, []])  # rows, then empty to terminate
+    start_ms = _ms(2026, 6, 1, 9)
+    end_ms = _ms(2026, 6, 1, 11)
+    result = bt_data._fetch_klines_binance(
+        "BTCUSDT", "5", start_ms, end_ms, session=sess)
+    assert len(result) > 0
+    for k in result:
+        assert "ts" in k and "o" in k and "c" in k
+
+
+def test_fetch_klines_falls_back_to_binance_on_bybit_403(tmp_cache):
+    """Главный fix: если Bybit падает с 403, должны fall back на Binance."""
+    import requests as _req
+
+    base_ts = _ms(2026, 6, 1, 10)
+    binance_rows = [
+        _binance_kline_row(base_ts + i * 300_000, 200, 201, 199, 200, 5)
+        for i in range(20)
+    ]
+
+    binance_calls = {"n": 0}
+
+    def _selective_get(url, params=None, timeout=None):
+        if "bybit" in url:
+            err = _req.exceptions.HTTPError("403 Client Error: Forbidden")
+            resp = MagicMock()
+            resp.raise_for_status = MagicMock(side_effect=err)
+            return resp
+        # Binance: вернуть rows на ПЕРВЫЙ вызов, потом пусто (для остановки)
+        binance_calls["n"] += 1
+        resp = MagicMock()
+        resp.json = lambda: binance_rows if binance_calls["n"] == 1 else []
+        resp.raise_for_status = lambda: None
+        return resp
+
+    sess = MagicMock()
+    sess.get = _selective_get
+    # ускоряем retry чтобы тест был быстрым
+    monkeypatch_attr = bt_data.RETRY_BACKOFF_SEC
+    bt_data.RETRY_BACKOFF_SEC = 0
+    try:
+        result = bt_data.fetch_klines("BTCUSDT", "5", days=1,
+                                      cache=False, session=sess)
+    finally:
+        bt_data.RETRY_BACKOFF_SEC = monkeypatch_attr
+    assert len(result) > 0   # fallback сработал
+    assert result[0]["o"] == 200  # данные ИЗ Binance (не Bybit)
+
+
+def test_fetch_klines_raises_when_both_fail(monkeypatch, tmp_cache):
+    """Если оба эксченджа упали — должна быть понятная RuntimeError."""
+    import requests as _req
+
+    def _always_fail(url, params=None, timeout=None):
+        err = _req.exceptions.HTTPError("403 Client Error: Forbidden")
+        resp = MagicMock()
+        resp.raise_for_status = MagicMock(side_effect=err)
+        return resp
+
+    sess = MagicMock()
+    sess.get = _always_fail
+    monkeypatch.setattr(bt_data, "RETRY_BACKOFF_SEC", 0)
+
+    with pytest.raises(RuntimeError, match="(Bybit|Binance|failed)"):
+        bt_data.fetch_klines("BTCUSDT", "5", days=1,
+                             cache=False, session=sess)
+
+
+def test_binance_interval_mapping():
+    """Бывби TF → Binance interval."""
+    assert bt_data._BINANCE_INTERVAL_MAP["5"] == "5m"
+    assert bt_data._BINANCE_INTERVAL_MAP["15"] == "15m"
+    assert bt_data._BINANCE_INTERVAL_MAP["60"] == "1h"
+    assert bt_data._BINANCE_INTERVAL_MAP["240"] == "4h"
+    assert bt_data._BINANCE_INTERVAL_MAP["D"] == "1d"
