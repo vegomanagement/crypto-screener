@@ -38,14 +38,23 @@ __all__ = [
 ]
 
 BYBIT_BASE          = "https://api.bybit.com"
+BINANCE_FAPI        = "https://fapi.binance.com"
 CACHE_DIR           = Path("bt_cache")
 KLINE_MAX_LIMIT     = 1000
+BINANCE_KLINE_LIMIT = 1500
 FUNDING_MAX_LIMIT   = 200
 OI_MAX_LIMIT        = 200
 DEFAULT_CATEGORY    = "linear"  # USDT perpetual futures
 REQUEST_TIMEOUT     = 15
 RETRY_ATTEMPTS      = 3
 RETRY_BACKOFF_SEC   = 2
+
+# Bybit V5 → Binance Futures interval mapping
+_BINANCE_INTERVAL_MAP = {
+    "1": "1m", "3": "3m", "5": "5m", "15": "15m", "30": "30m",
+    "60": "1h", "120": "2h", "240": "4h", "360": "6h", "480": "8h",
+    "720": "12h", "D": "1d", "W": "1w", "M": "1M",
+}
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────
@@ -152,37 +161,12 @@ def _parse_kline_row(row: list) -> dict:
     }
 
 
-def fetch_klines(
-    symbol: str,
-    tf: str,
-    days: int,
-    *,
-    cache: bool = True,
-    session: requests.Session | None = None,
-    category: str = DEFAULT_CATEGORY,
+def _fetch_klines_bybit(
+    symbol: str, tf: str, start_ms: int, end_ms: int,
+    *, session=None, category: str = DEFAULT_CATEGORY,
 ) -> list[dict]:
-    """
-    Klines за последние `days` дней для symbol на TF.
-    Bybit отдаёт макс 1000 свечей за запрос — пагинируем назад.
-
-    Кеш: bt_cache/{symbol}_klines_{tf}.jsonl.
-
-    Возвращает list[dict] oldest→newest.
-    """
+    """Bybit V5 paginated kline fetch. Может бросить RuntimeError (403 etc)."""
     iv = tf_to_bybit_interval(tf)
-    path = _cache_path(symbol, "klines", tf)
-    start_ms = _ago_ms(days)
-    end_ms   = _now_ms()
-
-    if cache and path.exists():
-        cached = _read_cache(path)
-        # Cache считается валидным если он покрывает запрошенный start_ms
-        # (т.е. самый старый закешированный бар не моложе start_ms).
-        # Иначе — re-fetch full range (заодно обновим кеш для будущих
-        # коротких запросов: они тоже извлекут срез из этого же файла).
-        if cached and cached[0]["ts"] <= start_ms:
-            return [k for k in cached if start_ms <= k["ts"] <= end_ms]
-
     bars_per_request = KLINE_MAX_LIMIT
     minutes = tf_to_minutes(tf)
     window_ms = bars_per_request * minutes * 60_000
@@ -203,16 +187,121 @@ def fetch_klines(
         # Bybit возвращает newest→oldest, нормализуем
         parsed = [_parse_kline_row(r) for r in rows]
         parsed.sort(key=lambda x: x["ts"])
-        # фильтр под окно (некоторые ответы могут переползать)
         parsed = [p for p in parsed if start_ms <= p["ts"] < cur_end]
         if not parsed:
             break
         out = parsed + out
-        cur_end = parsed[0]["ts"]   # сдвигаем окно ещё дальше назад
+        cur_end = parsed[0]["ts"]
         if len(rows) < bars_per_request:
             break
+    return out
 
-    # Дедупликация по ts (на случай пересечений окон)
+
+def _parse_binance_kline_row(row: list) -> dict:
+    """
+    Binance Futures kline: [openTime, open, high, low, close, volume,
+                            closeTime, quoteAssetVolume, ...]
+    """
+    return {
+        "ts": int(row[0]),
+        "o":  float(row[1]),
+        "h":  float(row[2]),
+        "l":  float(row[3]),
+        "c":  float(row[4]),
+        "v":  float(row[5]),
+    }
+
+
+def _fetch_klines_binance(
+    symbol: str, tf: str, start_ms: int, end_ms: int,
+    *, session=None,
+) -> list[dict]:
+    """
+    Binance Futures (USDT-M) paginated kline fetch — fallback когда Bybit 403.
+    Endpoint /fapi/v1/klines поддерживает startTime/endTime.
+    """
+    iv_bybit = tf_to_bybit_interval(tf)
+    iv = _BINANCE_INTERVAL_MAP.get(iv_bybit)
+    if iv is None:
+        raise RuntimeError(f"No Binance interval mapping for tf={tf}")
+
+    minutes = tf_to_minutes(tf)
+    window_ms = BINANCE_KLINE_LIMIT * minutes * 60_000
+
+    out: list[dict] = []
+    cur_start = start_ms
+    while cur_start < end_ms:
+        cur_end = min(end_ms, cur_start + window_ms)
+        params = {
+            "symbol": symbol, "interval": iv,
+            "startTime": cur_start, "endTime": cur_end,
+            "limit": BINANCE_KLINE_LIMIT,
+        }
+        data = _request_with_retry(
+            f"{BINANCE_FAPI}/fapi/v1/klines", params, session=session)
+        if not isinstance(data, list) or not data:
+            break
+        parsed = [_parse_binance_kline_row(r) for r in data]
+        parsed = [p for p in parsed if start_ms <= p["ts"] < end_ms]
+        if not parsed:
+            break
+        out.extend(parsed)
+        last_ts = parsed[-1]["ts"]
+        cur_start = last_ts + minutes * 60_000   # next bar after last
+        if len(data) < BINANCE_KLINE_LIMIT:
+            break
+
+    return out
+
+
+def fetch_klines(
+    symbol: str,
+    tf: str,
+    days: int,
+    *,
+    cache: bool = True,
+    session: requests.Session | None = None,
+    category: str = DEFAULT_CATEGORY,
+) -> list[dict]:
+    """
+    Klines за последние `days` дней. Bybit → Binance Futures fallback.
+    Кеш: bt_cache/{symbol}_klines_{tf}.jsonl. Cache учитывает диапазон.
+    Возвращает list[dict] oldest→newest.
+    """
+    path = _cache_path(symbol, "klines", tf)
+    start_ms = _ago_ms(days)
+    end_ms   = _now_ms()
+
+    if cache and path.exists():
+        cached = _read_cache(path)
+        if cached and cached[0]["ts"] <= start_ms:
+            return [k for k in cached if start_ms <= k["ts"] <= end_ms]
+
+    # 1) Try Bybit (prod-primary)
+    out: list[dict] = []
+    try:
+        out = _fetch_klines_bybit(symbol, tf, start_ms, end_ms,
+                                  session=session, category=category)
+    except RuntimeError as e:
+        # 403 / network — fall through
+        out = []
+        _last_err = e
+    else:
+        _last_err = None
+
+    # 2) Fallback to Binance Futures
+    if not out:
+        try:
+            out = _fetch_klines_binance(symbol, tf, start_ms, end_ms,
+                                        session=session)
+        except RuntimeError as e:
+            if _last_err is not None:
+                raise RuntimeError(
+                    f"Both exchanges failed. Bybit: {_last_err}. Binance: {e}"
+                ) from e
+            raise
+
+    # Дедупликация по ts
     seen: set[int] = set()
     deduped: list[dict] = []
     for r in out:
@@ -222,7 +311,7 @@ def fetch_klines(
         deduped.append(r)
     deduped.sort(key=lambda x: x["ts"])
 
-    if cache:
+    if cache and deduped:
         _write_cache(path, deduped)
     return deduped
 
