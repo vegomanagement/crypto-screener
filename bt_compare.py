@@ -211,6 +211,29 @@ def format_comparison(result: ComparisonResult, *,
         cells = [_fmt_cell(row[k]).rjust(cell_w) for k, _ in _METRIC_COLS]
         lines.append(name.ljust(name_w) + " | " + " ".join(cells))
 
+    # HTF P4 diagnostics — для каждого конфига показать сколько P4 заблокировал
+    any_htf = any(r.htf_diag for r in result.results)
+    if any_htf:
+        lines.append("")
+        lines.append("HTF P4 diagnostics:")
+        for cfg, res in zip(result.configs, result.results):
+            d = res.htf_diag or {}
+            sc = d.get("strength_counts") or {}
+            sd = d.get("strong_directions") or {}
+            p4b = d.get("p4_blocks", 0)
+            total = sum(sc.values())
+            if total == 0:
+                continue
+            lines.append(
+                f"  {cfg.name[:max_name_len]:<{name_w}} | "
+                f"strong={sc.get('strong',0)} (L={sd.get('long',0)}, "
+                f"S={sd.get('short',0)}) · "
+                f"mod={sc.get('moderate',0)} · "
+                f"weak={sc.get('weak',0)} · "
+                f"neut={sc.get('neutral',0)} · "
+                f"P4-blocks={p4b}"
+            )
+
     return "\n".join(lines)
 
 
