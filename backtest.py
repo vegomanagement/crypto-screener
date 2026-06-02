@@ -19,12 +19,15 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import json
 import sys
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
+from datetime import datetime, timezone
 from typing import Iterator
 
 import bt_data
 import bt_market
+import killzones
 import order_blocks
 import patterns
 import tracking
@@ -32,6 +35,7 @@ from decision import make_decision
 
 __all__ = [
     "BacktestTrade",
+    "BacktestSignal",
     "BacktestResult",
     "run_backtest",
     "format_result",
@@ -39,12 +43,14 @@ __all__ = [
     "DEFAULT_EXPIRY_BARS",
     "DEFAULT_COOLDOWN_BARS",
     "DEFAULT_CONF_SCORE",
+    "DEFAULT_TAKER_FEE_PCT",
 ]
 
 DEFAULT_WARMUP_BARS  = 100       # пропуск первых N 5m баров (нужны для indicators)
 DEFAULT_EXPIRY_BARS  = 2016      # 7d × 288 5m bars
 DEFAULT_COOLDOWN_BARS = 12       # ~1h на 5m: cooldown per (symbol, signal_type)
 DEFAULT_CONF_SCORE   = 70        # base confluence для make_decision (выше WAIT-threshold)
+DEFAULT_TAKER_FEE_PCT = 0.0006   # 0.06% Bybit/Binance Futures taker × 2 legs = ~0.12% круг
 
 
 @dataclass
@@ -65,6 +71,33 @@ class BacktestTrade:
     status:       str         = "open"
     hit_level:    str | None  = None
     r_multiple:   float       = 0.0
+    # Диагностические атрибуты (для breakdown-анализа)
+    killzone:     str | None  = None      # "Asia" | "London" | "New York AM" | "London Close" | None
+    htf_strength: str | None  = None      # "strong"|"moderate"|"weak"|"neutral"|None
+    htf_direction: str | None = None      # "long"|"short"|"neutral"|None
+    regime:       str | None  = None      # "trend"|"range"|"breakout"|None
+    rr_planned:   float | None = None     # planned RR на TP1
+    bars_held:    int | None  = None      # close_idx - open_idx
+    fee_r:        float       = 0.0       # комиссия в R-эквиваленте
+    r_net:        float       = 0.0       # r_multiple - fee_r
+
+
+@dataclass
+class BacktestSignal:
+    """Запись о каждом детектированном сигнале (до и после фильтров)."""
+    idx:           int
+    ts:            int
+    signal_type:   str
+    direction:     str
+    verdict:       str                   # LONG|SHORT|WAIT|SKIP
+    reason:        str                   # короткая причина из decision
+    confidence:    int
+    killzone:      str | None  = None
+    htf_strength:  str | None  = None
+    htf_direction: str | None  = None
+    regime:        str | None  = None
+    rr1:           float | None = None
+    became_trade:  bool        = False
 
 
 @dataclass
@@ -76,6 +109,11 @@ class BacktestResult:
     stats:            dict      = field(default_factory=dict)
     config_overrides: dict | None = None
     htf_diag:         dict      = field(default_factory=dict)
+    signals:          list      = field(default_factory=list)
+    funnel:           dict      = field(default_factory=dict)
+    wait_reasons:     dict      = field(default_factory=dict)
+    breakdown:        dict      = field(default_factory=dict)
+    taker_fee_pct:    float     = 0.0
 
 
 # ─── Local detect_signals (без impo screener.py — оно тянет config.py) ────
@@ -227,6 +265,126 @@ def _config_override(overrides: dict | None) -> Iterator[None]:
             setattr(decision, k, v)
 
 
+# ─── Метаданные сигнала ───────────────────────────────────────────────────
+
+
+def _signal_killzone(ts_ms: int | None) -> str | None:
+    """Killzone-имя по таймстампу бара (ts в мс) или None если вне окон."""
+    if not ts_ms:
+        return None
+    try:
+        dt = datetime.fromtimestamp(ts_ms / 1000.0, tz=timezone.utc)
+    except (OSError, ValueError, OverflowError):
+        return None
+    kz = killzones.active_killzone(dt)
+    return kz.name if kz else None
+
+
+def _signal_meta(d: dict, ts_ms: int | None) -> dict:
+    """Извлекает диагностические атрибуты из decision-dict."""
+    hb = d.get("htf_bias") or {}
+    reg = d.get("regime") or {}
+    return {
+        "killzone":      _signal_killzone(ts_ms),
+        "htf_strength":  hb.get("strength") if isinstance(hb, dict) else None,
+        "htf_direction": hb.get("direction") if isinstance(hb, dict) else None,
+        "regime":        reg.get("bias") if isinstance(reg, dict) else None,
+    }
+
+
+def _rr_bucket(rr: float | None) -> str:
+    """RR-bucket для breakdown ('1-1.5'|'1.5-2'|'2-3'|'3+'|'unknown')."""
+    if rr is None:
+        return "unknown"
+    if rr < 1.5:
+        return "1-1.5"
+    if rr < 2:
+        return "1.5-2"
+    if rr < 3:
+        return "2-3"
+    return "3+"
+
+
+# ─── Breakdown по сегментам ───────────────────────────────────────────────
+
+
+def _bd_init() -> dict:
+    return {"n": 0, "wins": 0, "r_sum": 0.0, "r_net_sum": 0.0}
+
+
+def _bd_add(bucket: dict, key, r: float, r_net: float, is_win: bool) -> None:
+    b = bucket.setdefault(key, _bd_init())
+    b["n"]         += 1
+    b["r_sum"]     += r
+    b["r_net_sum"] += r_net
+    if is_win:
+        b["wins"] += 1
+
+
+def _bd_finalize(bucket: dict) -> list:
+    """Конвертирует raw bucket в список (key, n, wr, avgR, avgR_net), sorted по n."""
+    out = []
+    for k, v in bucket.items():
+        n = v["n"]
+        if n == 0:
+            continue
+        wr = round(v["wins"] / n * 100, 1)
+        ar = round(v["r_sum"] / n, 2)
+        anet = round(v["r_net_sum"] / n, 2)
+        out.append((str(k), n, wr, ar, anet))
+    out.sort(key=lambda x: -x[1])
+    return out
+
+
+def _build_breakdown(trades: list) -> dict:
+    """Breakdown по killzone / HTF / regime / signal_type / RR-bucket."""
+    by_kz, by_htf, by_regime, by_rr, by_sig = {}, {}, {}, {}, {}
+    for tr in trades:
+        if tr.status == "open":
+            continue
+        r = tr.r_multiple if tr.r_multiple is not None else 0.0
+        rn = tr.r_net if tr.r_net is not None else r
+        is_win = r > 0
+        _bd_add(by_kz,     tr.killzone or "none",      r, rn, is_win)
+        _bd_add(by_htf,    tr.htf_strength or "none",  r, rn, is_win)
+        _bd_add(by_regime, tr.regime or "none",        r, rn, is_win)
+        _bd_add(by_rr,     _rr_bucket(tr.rr_planned),  r, rn, is_win)
+        _bd_add(by_sig,    tr.signal_type,             r, rn, is_win)
+    return {
+        "by_killzone":    _bd_finalize(by_kz),
+        "by_htf":         _bd_finalize(by_htf),
+        "by_regime":      _bd_finalize(by_regime),
+        "by_rr_planned":  _bd_finalize(by_rr),
+        "by_signal_type": _bd_finalize(by_sig),
+    }
+
+
+def _funnel_counts(signals: list) -> tuple[dict, dict]:
+    """
+    Считает funnel: detected → !WAIT → !SKIP → trade.
+    Возвращает (funnel_dict, wait_reasons_histogram).
+    """
+    detected = len(signals)
+    non_wait = sum(1 for s in signals if s.verdict != "WAIT")
+    non_skip = sum(1 for s in signals if s.verdict not in ("WAIT", "SKIP"))
+    became_trade = sum(1 for s in signals if s.became_trade)
+    wait_reasons: dict[str, int] = {}
+    skip_reasons: dict[str, int] = {}
+    for s in signals:
+        if s.verdict == "WAIT" and s.reason:
+            wait_reasons[s.reason] = wait_reasons.get(s.reason, 0) + 1
+        elif s.verdict == "SKIP" and s.reason:
+            skip_reasons[s.reason] = skip_reasons.get(s.reason, 0) + 1
+    funnel = {
+        "detected":          detected,
+        "passed_wait_gates": non_wait,
+        "passed_skip_gate":  non_skip,
+        "became_trade":      became_trade,
+    }
+    reasons = {"wait": wait_reasons, "skip": skip_reasons}
+    return funnel, reasons
+
+
 # ─── Aggregator: stats в стиле tracking.compute_stats ─────────────────────
 
 
@@ -234,18 +392,23 @@ def _aggregate_stats(trades: list, days: int) -> dict:
     from collections import defaultdict
 
     by_status = defaultdict(int)
-    by_signal = defaultdict(lambda: {"n": 0, "wins": 0, "r_sum": 0.0})
-    closed_r: list[float] = []
+    by_signal = defaultdict(lambda: {"n": 0, "wins": 0,
+                                     "r_sum": 0.0, "r_net_sum": 0.0})
+    closed_r:     list[float] = []
+    closed_r_net: list[float] = []
 
     for tr in trades:
         by_status[tr.status] += 1
         if tr.status == "open":
             continue
         r = tr.r_multiple if tr.r_multiple is not None else 0.0
+        rn = tr.r_net if tr.r_net is not None else r
         closed_r.append(r)
+        closed_r_net.append(rn)
         is_win = r > 0
-        by_signal[tr.signal_type]["n"]     += 1
-        by_signal[tr.signal_type]["r_sum"] += r
+        by_signal[tr.signal_type]["n"]         += 1
+        by_signal[tr.signal_type]["r_sum"]     += r
+        by_signal[tr.signal_type]["r_net_sum"] += rn
         if is_win:
             by_signal[tr.signal_type]["wins"] += 1
 
@@ -253,8 +416,10 @@ def _aggregate_stats(trades: list, days: int) -> dict:
     total_wins = sum(1 for r in closed_r if r > 0)
     win_rate   = (total_wins / closed_n * 100) if closed_n else 0
     avg_r      = (sum(closed_r) / closed_n) if closed_n else 0
+    avg_r_net  = (sum(closed_r_net) / closed_n) if closed_n else 0
 
     pf      = tracking._profit_factor(closed_r) if closed_r else 0.0
+    pf_net  = tracking._profit_factor(closed_r_net) if closed_r_net else 0.0
     sharpe  = tracking._sharpe_r(closed_r)      if closed_r else 0.0
     sortino = tracking._sortino_r(closed_r)     if closed_r else 0.0
     max_dd  = tracking._max_drawdown_r(closed_r) if closed_r else 0.0
@@ -275,7 +440,8 @@ def _aggregate_stats(trades: list, days: int) -> dict:
             continue
         wr = round(v["wins"] / n * 100, 1)
         ar = round(v["r_sum"] / n, 2)
-        by_signal_summary.append((k, n, wr, ar))
+        anet = round(v["r_net_sum"] / n, 2)
+        by_signal_summary.append((k, n, wr, ar, anet))
     by_signal_summary.sort(key=lambda x: -x[1])
 
     return {
@@ -285,6 +451,7 @@ def _aggregate_stats(trades: list, days: int) -> dict:
         "closed":   closed_n,
         "win_rate": round(win_rate, 1),
         "avg_r":    round(avg_r, 2),
+        "avg_r_net": round(avg_r_net, 2),
         "hits": {
             "tp1":     by_status.get("tp1_hit", 0),
             "tp2":     by_status.get("tp2_hit", 0),
@@ -294,18 +461,36 @@ def _aggregate_stats(trades: list, days: int) -> dict:
             "expired": by_status.get("expired", 0),
         },
         "risk": {
-            "profit_factor":   round(pf, 2) if pf != float("inf") else "∞",
-            "sharpe_r":        round(sharpe, 2),
-            "sortino_r":       (round(sortino, 2)
-                                if sortino != float("inf") else "∞"),
-            "max_drawdown_r":  round(max_dd, 2),
-            "max_consec_loss": consec,
-            "best_r":          round(best_r, 2),
-            "worst_r":         round(worst_r, 2),
+            "profit_factor":     round(pf, 2) if pf != float("inf") else "∞",
+            "profit_factor_net": round(pf_net, 2) if pf_net != float("inf") else "∞",
+            "sharpe_r":          round(sharpe, 2),
+            "sortino_r":         (round(sortino, 2)
+                                  if sortino != float("inf") else "∞"),
+            "max_drawdown_r":    round(max_dd, 2),
+            "max_consec_loss":   consec,
+            "best_r":            round(best_r, 2),
+            "worst_r":           round(worst_r, 2),
         },
         "equity":    equity,
         "by_signal": by_signal_summary,
     }
+
+
+# ─── Commission ───────────────────────────────────────────────────────────
+
+
+def _fee_r(entry: float, sl: float, taker_fee_pct: float) -> float:
+    """
+    Round-trip taker fee, выраженный в R-эквиваленте.
+    fee_per_leg = entry * taker_fee_pct (notional)
+    round_trip  = 2 * fee_per_leg
+    R_unit      = |entry - sl|
+    fee_R       = round_trip / R_unit
+    """
+    risk = abs(entry - sl)
+    if risk <= 0 or taker_fee_pct <= 0:
+        return 0.0
+    return (2.0 * entry * taker_fee_pct) / risk
 
 
 # ─── Главный entry point ──────────────────────────────────────────────────
@@ -336,6 +521,8 @@ def run_backtest(
     config_overrides:  dict | None = None,
     default_conf_score: int = DEFAULT_CONF_SCORE,
     progress_each:     int | None = None,
+    taker_fee_pct:     float = DEFAULT_TAKER_FEE_PCT,
+    collect_signals:   bool  = True,
 ) -> BacktestResult:
     """
     Главный entry. data — из bt_data.fetch_all(symbol, days).
@@ -361,6 +548,7 @@ def run_backtest(
         return BacktestResult(symbol=symbol, days=days)
 
     trades: list[BacktestTrade] = []
+    signals_log: list[BacktestSignal] = []
     skipped = 0
     last_signal_idx: dict[tuple, int] = {}
 
@@ -387,6 +575,7 @@ def run_backtest(
                 last_signal_idx[key] = idx
 
                 price = klines_primary[idx]["c"]
+                bar_ts = klines_primary[idx]["ts"]
                 d = make_decision(
                     signal_type=sig_type,
                     price=price,
@@ -395,6 +584,8 @@ def run_backtest(
                     confluence_score=default_conf_score,
                     confluence_factors=[],
                 )
+
+                meta = _signal_meta(d, bar_ts)
 
                 # HTF diagnostics: htf_bias заполняется в _htf_pda_bias_gate
                 hb = d.get("htf_bias")
@@ -410,6 +601,26 @@ def run_backtest(
                             htf_strong_directions.get(bias_dir, 0) + 1)
                 if d.get("verdict") == "WAIT" and "P4 HTF" in (d.get("reason") or ""):
                     htf_p4_blocks += 1
+
+                # Log signal (pre-trade)
+                sig_record: BacktestSignal | None = None
+                if collect_signals:
+                    sig_record = BacktestSignal(
+                        idx=idx,
+                        ts=bar_ts,
+                        signal_type=sig_type,
+                        direction=d.get("direction") or "neutral",
+                        verdict=d.get("verdict") or "?",
+                        reason=str(d.get("reason") or "")[:200],
+                        confidence=int(d.get("confidence", 0) or 0),
+                        killzone=meta["killzone"],
+                        htf_strength=meta["htf_strength"],
+                        htf_direction=meta["htf_direction"],
+                        regime=meta["regime"],
+                        rr1=d.get("rr1"),
+                        became_trade=False,
+                    )
+                    signals_log.append(sig_record)
 
                 if d["verdict"] not in ("LONG", "SHORT"):
                     skipped += 1
@@ -432,11 +643,17 @@ def run_backtest(
                 close_idx, status, hit_level, r_mult = outcome
                 close_ts = klines_primary[close_idx]["ts"] if close_idx < len(klines_primary) else klines_primary[-1]["ts"]
 
+                fee_r = _fee_r(float(entry), float(d["sl"]), taker_fee_pct)
+                r_net = r_mult - fee_r
+
+                if sig_record is not None:
+                    sig_record.became_trade = True
+
                 trades.append(BacktestTrade(
                     signal_type=sig_type,
                     direction=d["direction"],
                     open_idx=idx,
-                    open_ts=klines_primary[idx]["ts"],
+                    open_ts=bar_ts,
                     entry=float(entry),
                     sl=float(d["sl"]),
                     tp1=float(d["tp1"]),
@@ -448,6 +665,14 @@ def run_backtest(
                     status=status,
                     hit_level=hit_level,
                     r_multiple=r_mult,
+                    killzone=meta["killzone"],
+                    htf_strength=meta["htf_strength"],
+                    htf_direction=meta["htf_direction"],
+                    regime=meta["regime"],
+                    rr_planned=d.get("rr1"),
+                    bars_held=close_idx - idx if close_idx is not None else None,
+                    fee_r=fee_r,
+                    r_net=r_net,
                 ))
 
             if progress_each and idx % progress_each == 0:
@@ -455,6 +680,9 @@ def run_backtest(
                       f"trades={len(trades)} skipped={skipped}", flush=True)
 
     stats = _aggregate_stats(trades, days)
+    funnel, wait_reasons = _funnel_counts(signals_log) if signals_log else ({}, {})
+    breakdown = _build_breakdown(trades) if trades else {}
+
     return BacktestResult(
         symbol=symbol,
         days=days,
@@ -467,10 +695,25 @@ def run_backtest(
             "strong_directions": htf_strong_directions,
             "p4_blocks":         htf_p4_blocks,
         },
+        signals=signals_log,
+        funnel=funnel,
+        wait_reasons=wait_reasons,
+        breakdown=breakdown,
+        taker_fee_pct=taker_fee_pct,
     )
 
 
 # ─── Pretty-print summary ─────────────────────────────────────────────────
+
+
+def _fmt_bd_row(item: tuple) -> str:
+    """Форматирует одну строку breakdown-таблицы (поддерживает 4- и 5-tuple)."""
+    if len(item) == 5:
+        key, n, wr, ar, anet = item
+        return (f"  {str(key):<24} n={n:>4} wr={wr:>5.1f}% "
+                f"avgR={ar:+.2f} netR={anet:+.2f}")
+    key, n, wr, ar = item
+    return f"  {str(key):<24} n={n:>4} wr={wr:>5.1f}% avgR={ar:+.2f}"
 
 
 def format_result(result: BacktestResult) -> str:
@@ -480,9 +723,15 @@ def format_result(result: BacktestResult) -> str:
                  f"closed: {s.get('closed', 0)} · "
                  f"skipped: {result.skipped_count}")
     if s.get("closed"):
-        lines.append(f"Win-rate: {s['win_rate']}% · Avg R: {s['avg_r']:+.2f}")
+        avg_r_str = f"Avg R: {s['avg_r']:+.2f}"
+        if "avg_r_net" in s:
+            avg_r_str += f" (net {s['avg_r_net']:+.2f})"
+        lines.append(f"Win-rate: {s['win_rate']}% · {avg_r_str}")
         r = s.get("risk", {})
-        lines.append(f"PF: {r.get('profit_factor')} · "
+        pf_str = f"PF: {r.get('profit_factor')}"
+        if "profit_factor_net" in r:
+            pf_str += f" (net {r.get('profit_factor_net')})"
+        lines.append(f"{pf_str} · "
                      f"Sharpe: {r.get('sharpe_r')} · "
                      f"Sortino: {r.get('sortino_r')}")
         lines.append(f"Max DD: {r.get('max_drawdown_r')}R · "
@@ -493,10 +742,49 @@ def format_result(result: BacktestResult) -> str:
                      f"SL: {hits.get('sl',0)} · "
                      f"Tie: {hits.get('tie',0)} · "
                      f"Expired: {hits.get('expired',0)}")
+        if result.taker_fee_pct:
+            lines.append(f"Fee: {result.taker_fee_pct * 100:.3f}% taker × 2 legs")
         if s.get("by_signal"):
             lines.append("\nBy signal type:")
-            for st, n, wr, ar in s["by_signal"][:10]:
-                lines.append(f"  {st:<22} n={n:>4} wr={wr:>5.1f}% avgR={ar:+.2f}")
+            for item in s["by_signal"][:10]:
+                lines.append(_fmt_bd_row(item))
+
+    # Funnel: detected → !WAIT → !SKIP → trade
+    if result.funnel:
+        f_ = result.funnel
+        det = f_.get("detected", 0)
+        if det > 0:
+            pw = f_.get("passed_wait_gates", 0)
+            ps = f_.get("passed_skip_gate", 0)
+            bt = f_.get("became_trade", 0)
+            lines.append("\nSignal funnel:")
+            lines.append(
+                f"  detected={det} → !WAIT={pw} ({pw / det * 100:.1f}%) "
+                f"→ !SKIP={ps} ({ps / det * 100:.1f}%) "
+                f"→ trades={bt} ({bt / det * 100:.1f}%)"
+            )
+
+    # Top WAIT reasons
+    if result.wait_reasons:
+        wait_r = result.wait_reasons.get("wait") or {}
+        if wait_r:
+            top = sorted(wait_r.items(), key=lambda kv: -kv[1])[:8]
+            lines.append("\nTop WAIT reasons:")
+            for reason, cnt in top:
+                lines.append(f"  {cnt:>4}× {reason[:90]}")
+
+    # Breakdown по сегментам
+    if result.breakdown:
+        bd = result.breakdown
+        for title, key in (("By killzone",       "by_killzone"),
+                           ("By HTF strength",   "by_htf"),
+                           ("By regime",         "by_regime"),
+                           ("By RR planned",     "by_rr_planned")):
+            rows = bd.get(key) or []
+            if rows:
+                lines.append(f"\n{title}:")
+                for item in rows:
+                    lines.append(_fmt_bd_row(item))
 
     # HTF P4 diagnostics — критично для понимания, работает ли P4-гейт
     if result.htf_diag:
@@ -523,6 +811,28 @@ def format_result(result: BacktestResult) -> str:
     if result.config_overrides:
         lines.append(f"\nConfig overrides: {result.config_overrides}")
     return "\n".join(lines)
+
+
+# ─── Dump helpers (JSON для оффлайн-анализа) ──────────────────────────────
+
+
+def dump_result_json(result: BacktestResult, path: str) -> None:
+    """Сохраняет полный result (trades + signals + funnel + breakdown) в JSON."""
+    payload = {
+        "symbol":         result.symbol,
+        "days":           result.days,
+        "taker_fee_pct":  result.taker_fee_pct,
+        "config_overrides": result.config_overrides,
+        "stats":          result.stats,
+        "funnel":         result.funnel,
+        "wait_reasons":   result.wait_reasons,
+        "breakdown":      result.breakdown,
+        "htf_diag":       result.htf_diag,
+        "trades":         [asdict(t) for t in result.trades],
+        "signals":        [asdict(s) for s in result.signals],
+    }
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(payload, f, ensure_ascii=False, indent=2, default=str)
 
 
 # ─── CLI ──────────────────────────────────────────────────────────────────
@@ -572,6 +882,12 @@ def _cli() -> int:
     p.add_argument("--no-oi", action="store_true")
     p.add_argument("--progress", type=int, default=500,
                    help="Print progress каждые N баров")
+    p.add_argument("--taker-fee", type=float, default=DEFAULT_TAKER_FEE_PCT,
+                   help=f"Taker fee per leg (default {DEFAULT_TAKER_FEE_PCT})")
+    p.add_argument("--no-signals", action="store_true",
+                   help="Не собирать список всех сигналов (экономия памяти)")
+    p.add_argument("--dump-json", default=None,
+                   help="Сохранить полный результат в JSON-файл")
     args = p.parse_args()
 
     print(f"Fetching {args.symbol} {args.days}d ...", flush=True)
@@ -594,9 +910,14 @@ def _cli() -> int:
         default_conf_score=args.conf,
         config_overrides=overrides,
         progress_each=args.progress,
+        taker_fee_pct=args.taker_fee,
+        collect_signals=not args.no_signals,
     )
     print()
     print(format_result(result))
+    if args.dump_json:
+        dump_result_json(result, args.dump_json)
+        print(f"\n[dump] saved → {args.dump_json}")
     return 0
 
 
