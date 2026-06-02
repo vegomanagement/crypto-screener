@@ -19,6 +19,7 @@ from typing import List
 import killzones
 from htf_bias import compute_htf_bias
 from liquidity import build_liquidity_map
+from ote import compute_ote_zone
 from regime import classify_regime
 from structure import confirmed_break_5m_15m
 
@@ -86,6 +87,13 @@ STRUCTURE_MAX_BARS_AGO_15M = 10
 #
 # Graceful fallback: если HTF klines недоступны → bias neutral → гейт молчит.
 HTF_BIAS_GATE_ENABLED = True
+
+# ─── Этап 12 фаза 3: Optimal Trade Entry (OTE) ────────────────────────────
+# PDF SMC: entry на Fibonacci 62-79% retracement последнего impulse leg.
+# Когда OTE-zone детектирован (есть свежий BOS/CHoCH в направлении сигнала),
+# entry zone заменяется на Fib-zone вместо ATR-зоны. SL ставится за extreme
+# импульса. Fallback на ATR-уровни если impulse не идентифицирован.
+OTE_ENABLED = True
 
 # ─── Liquidity-aware levels (Этап 8) ──────────────────────────────────────
 # Двигаем TP/SL к карте ликвидности с жёсткими guardrails.
@@ -177,6 +185,10 @@ def make_decision(
         return base
 
     levels = _compute_levels(price, atr, direction)
+    # OTE (Этап 12 фаза 3): если impulse идентифицирован, override entry zone
+    # на Fib 62-79% retracement. SL может уходить за impulse extreme.
+    if OTE_ENABLED:
+        levels = _try_apply_ote(levels, market, direction, price, atr, base)
     # Liquidity-aware levels: двигаем TP/SL к карте ликвидности (Этап 8).
     lmap = _safe_liquidity_map(market)
     levels = apply_liquidity_levels(levels, lmap, price, atr, direction)
@@ -658,6 +670,79 @@ def _compute_levels(price: float, atr: float, direction: str) -> dict:
         "rr2": round(abs(tp2 - price) / risk, 2),
         "rr3": round(abs(tp3 - price) / risk, 2),
     }
+
+
+def _try_apply_ote(levels: dict, market: dict, direction: str,
+                   price: float, atr: float, base: dict) -> dict:
+    """
+    Попытка заменить entry zone на OTE (Fib 62-79% retracement).
+    Использует 5m klines из market._klines для определения impulse.
+
+    Логика:
+     1. Попытаться compute_ote_zone на 5m klines.
+     2. Если OTE найден И текущая цена в OTE-зоне (или близко) — применить.
+     3. SL ставится по OTE (за impulse extreme). TP пересчитывается от
+        нового entry с тем же ATR multipliers (1.5/2.5/4.0).
+     4. Минимальный RR гарантируется в apply_liquidity_levels на следующем
+        шаге; если OTE-уровни нарушают RR, guardrail откатит на ATR.
+     5. Запись base['ote'] для диагностики/отображения.
+
+    Fallback: при отсутствии klines или impulse — возвращает levels без
+    изменений.
+    """
+    try:
+        klines = (market.get("_klines") or {}).get("5") or []
+        if not klines:
+            return levels
+        ote = compute_ote_zone(klines, direction)
+        if ote is None:
+            return levels
+
+        # Записываем OTE-инфу для LLM/диагностики
+        base["ote"] = {
+            "entry_min": ote.entry_min, "entry_max": ote.entry_max,
+            "fib_62":    ote.fib_62,    "fib_79":   ote.fib_79,
+            "impulse_start": ote.impulse_start,
+            "impulse_end":   ote.impulse_end,
+            "sl_proposed":   ote.sl,
+        }
+
+        # Принимаем OTE только если цена БЛИЗКО к зоне (в пределах 2×ATR),
+        # иначе вход слишком далеко от текущей цены — не подходит.
+        if direction == "long":
+            if price - ote.entry_max > 2 * atr or price < ote.entry_min:
+                return levels
+        else:
+            if ote.entry_min - price > 2 * atr or price > ote.entry_max:
+                return levels
+
+        # Override entry zone и SL
+        digits = _price_digits(price)
+        out = dict(levels)
+        out["entry"] = {"min": round(ote.entry_min, digits),
+                        "max": round(ote.entry_max, digits)}
+        out["sl"] = round(ote.sl, digits)
+
+        # Пересчитать TP от нового entry midpoint c teми же ATR multipliers
+        e_mid = (ote.entry_min + ote.entry_max) / 2
+        if direction == "long":
+            out["tp1"] = round(e_mid + atr * ATR_TP1_DIST, digits)
+            out["tp2"] = round(e_mid + atr * ATR_TP2_DIST, digits)
+            out["tp3"] = round(e_mid + atr * ATR_TP3_DIST, digits)
+            risk = e_mid - out["sl"]
+        else:
+            out["tp1"] = round(e_mid - atr * ATR_TP1_DIST, digits)
+            out["tp2"] = round(e_mid - atr * ATR_TP2_DIST, digits)
+            out["tp3"] = round(e_mid - atr * ATR_TP3_DIST, digits)
+            risk = out["sl"] - e_mid
+
+        if risk > 0:
+            out["rr1"] = round(abs(out["tp1"] - e_mid) / risk, 2)
+            out["rr2"] = round(abs(out["tp2"] - e_mid) / risk, 2)
+            out["rr3"] = round(abs(out["tp3"] - e_mid) / risk, 2)
+        return out
+    except Exception:
+        return levels
 
 
 def _strip_levels(base: dict) -> None:
