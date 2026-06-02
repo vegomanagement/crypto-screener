@@ -33,6 +33,9 @@ import patterns
 import order_blocks
 import block_patterns
 import minor_patterns
+import backtest as bt_backtest
+import bt_data
+import bt_compare
 from webhook_utils import parse_alert_ts
 
 try:
@@ -2614,6 +2617,7 @@ def _register_bot_commands() -> None:
         {"command": "delalert", "description": "Удалить алерт: /delalert 3"},
         {"command": "stats",    "description": "Win-rate по типам сигналов (30 дней)"},
         {"command": "trades",   "description": "Последние закрытые сделки с R-исходом"},
+        {"command": "backtest", "description": "Прогон стратегии на истории: /backtest BTC 30"},
         {"command": "history",  "description": "Последние 10 сигналов из БД"},
         {"command": "digest",   "description": "Дневной дайджест с LLM-анализом"},
         {"command": "scan",     "description": "Ручной запуск автосканера"},
@@ -3249,6 +3253,8 @@ def cmd_help(chat_id: int):
         "/history             — последние 10 сигналов\n"
         "/stats               — win-rate + risk-adjusted метрики (30д)\n"
         "/trades [days]       — последние закрытые сделки с R-исходом\n"
+        "/backtest [sym days] — прогон стратегии на истории\n"
+        "                       /backtest BTC 30  · /backtest BTC 30 compare\n"
         "/digest              — дневной дайджест\n\n"
         "💬 <b>Свободный чат — пиши без команд!</b>\n"
         "<i>анализируй BTC 4H</i>     → полный разбор\n"
@@ -3460,6 +3466,7 @@ def handle_update(update: dict):
     elif cmd == "/delalert":           cmd_alert_delete(chat_id, args)
     elif cmd == "/stats":              cmd_stats(chat_id, args)
     elif cmd == "/trades":             cmd_trades(chat_id, args)
+    elif cmd == "/backtest":           cmd_backtest(chat_id, args)
     elif cmd == "/top":                cmd_top(chat_id)
     elif cmd == "/movers":             cmd_movers(chat_id)
     elif cmd == "/risk":               cmd_risk(chat_id, args)
@@ -4033,6 +4040,86 @@ def cmd_trades(chat_id: int, args: str = ""):
         return
 
     tg_send(tracking.format_trades_message(trades, days), chat_id=chat_id)
+
+
+def cmd_backtest(chat_id: int, args: str = ""):
+    """
+    Прогон стратегии на исторических данных (Этап 13 backtest harness).
+    Запускается в background thread — может занять 30-90 секунд.
+
+      /backtest                  — BTC 7 дней baseline
+      /backtest ETH              — ETH 7 дней baseline
+      /backtest BTC 30           — BTC за 30 дней
+      /backtest BTC 30 compare   — 4 конфига: baseline / no_p3 / no_p4 / all_gates_off
+
+    Сообщение «🔄 Запускаю...» отправляется сразу, итоговая таблица —
+    когда backtest завершится.
+    """
+    parts = [p for p in args.strip().split() if p]
+    symbol = "BTC"
+    days = 7
+    compare_mode = False
+
+    for p in parts:
+        pl = p.lower()
+        if p.isdigit():
+            days = int(p)
+        elif pl in ("compare", "cmp", "--compare"):
+            compare_mode = True
+        else:
+            symbol = p.upper().replace("USDT", "").replace(".P", "")
+
+    symbol_full = symbol if symbol.endswith("USDT") else symbol + "USDT"
+    days = max(1, min(60, days))
+
+    tg_send(
+        f"🔄 <b>Backtest {symbol_full} {days}d</b> "
+        f"({'compare' if compare_mode else 'baseline'})\n"
+        f"Запускаю — может занять 30-90 сек...",
+        chat_id=chat_id,
+    )
+
+    def _run():
+        try:
+            data = bt_data.fetch_all(
+                symbol_full, days,
+                tfs=["5", "15", "60", "240", "D"],
+                fetch_funding_data=False,  # speed: skip extra endpoints
+                fetch_oi_data=False,
+            )
+            n_bars = len(data["klines"].get("5") or [])
+            log.info(f"[/backtest] fetched {n_bars} 5m bars for {symbol_full}")
+
+            if compare_mode:
+                cmp = bt_compare.compare(data, [
+                    bt_compare.Config(name="baseline"),
+                    bt_compare.Config(
+                        name="no_p3",
+                        overrides={"KILLZONE_GATE_ENABLED": False,
+                                   "STRUCTURE_GATE_ENABLED": False},
+                    ),
+                    bt_compare.Config(
+                        name="no_p4",
+                        overrides={"HTF_BIAS_GATE_ENABLED": False},
+                    ),
+                    bt_compare.Config(
+                        name="all_gates_off",
+                        overrides={"KILLZONE_GATE_ENABLED": False,
+                                   "STRUCTURE_GATE_ENABLED": False,
+                                   "HTF_BIAS_GATE_ENABLED": False},
+                    ),
+                ], warmup_bars=200)
+                body = bt_compare.format_comparison(cmp, max_name_len=15)
+            else:
+                result = bt_backtest.run_backtest(data, warmup_bars=200)
+                body = bt_backtest.format_result(result)
+
+            tg_send(f"<pre>{body}</pre>", chat_id=chat_id)
+        except Exception as e:
+            log.exception(f"[/backtest] failed: {e}")
+            tg_send(f"❌ Backtest error: {e}", chat_id=chat_id)
+
+    threading.Thread(target=_run, daemon=True).start()
 
 
 # ─── DAILY DIGEST ─────────────────────────────────────────────────────────────
