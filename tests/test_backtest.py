@@ -1,5 +1,8 @@
 """Тесты backtest.py — replay engine."""
 
+import json
+import os
+
 import backtest
 import tracking
 
@@ -438,6 +441,316 @@ def test_format_result_shows_htf_diag_when_populated():
     assert "HTF bias" in out
     assert "strong=10" in out
     assert "P4 blocks: 3" in out
+
+
+# ─── Commission / fee accounting ──────────────────────────────────────────
+
+
+def test_fee_r_zero_when_no_fee():
+    assert backtest._fee_r(100.0, 99.0, 0.0) == 0.0
+
+
+def test_fee_r_zero_when_zero_risk():
+    assert backtest._fee_r(100.0, 100.0, 0.0006) == 0.0
+
+
+def test_fee_r_basic_math():
+    # entry=100, sl=99 → risk=1
+    # fee = 2 * 100 * 0.0006 = 0.12 → fee_r = 0.12
+    f = backtest._fee_r(100.0, 99.0, 0.0006)
+    assert abs(f - 0.12) < 1e-9
+
+
+def test_fee_r_scales_with_risk_inverse():
+    """Чем шире SL — тем меньше fee_r (т.к. R-unit больше)."""
+    narrow = backtest._fee_r(100.0, 99.5, 0.0006)   # risk=0.5 → fee_r=0.24
+    wide   = backtest._fee_r(100.0, 98.0, 0.0006)   # risk=2.0 → fee_r=0.06
+    assert narrow > wide
+
+
+def test_aggregate_stats_includes_net_metrics():
+    """avg_r_net и profit_factor_net появляются в stats."""
+    tr = backtest.BacktestTrade(
+        signal_type="OB_BULL", direction="long", open_idx=10, open_ts=0,
+        entry=100, sl=99, tp1=103, tp2=105, tp3=108, confidence=70,
+        close_idx=20, close_ts=0, status="tp1_hit", hit_level="TP1",
+        r_multiple=1.5, fee_r=0.12, r_net=1.38,
+    )
+    s = backtest._aggregate_stats([tr], days=7)
+    assert "avg_r_net" in s
+    assert "profit_factor_net" in s["risk"]
+    assert s["avg_r_net"] == 1.38
+
+
+# ─── BacktestSignal + funnel ──────────────────────────────────────────────
+
+
+def test_backtest_signal_dataclass_defaults():
+    sig = backtest.BacktestSignal(
+        idx=10, ts=1_780_000_000_000, signal_type="OB_BULL",
+        direction="long", verdict="WAIT", reason="test", confidence=50,
+    )
+    assert sig.became_trade is False
+    assert sig.killzone is None
+    assert sig.htf_strength is None
+
+
+def test_funnel_counts_basic():
+    sigs = [
+        backtest.BacktestSignal(idx=1, ts=0, signal_type="A", direction="long",
+                                 verdict="WAIT", reason="P3 killzone",
+                                 confidence=50),
+        backtest.BacktestSignal(idx=2, ts=0, signal_type="A", direction="long",
+                                 verdict="WAIT", reason="P3 killzone",
+                                 confidence=50),
+        backtest.BacktestSignal(idx=3, ts=0, signal_type="B", direction="short",
+                                 verdict="SKIP", reason="conf < 65",
+                                 confidence=60),
+        backtest.BacktestSignal(idx=4, ts=0, signal_type="C", direction="long",
+                                 verdict="LONG", reason="ok",
+                                 confidence=80, became_trade=True),
+    ]
+    funnel, reasons = backtest._funnel_counts(sigs)
+    assert funnel["detected"] == 4
+    assert funnel["passed_wait_gates"] == 2
+    assert funnel["passed_skip_gate"] == 1
+    assert funnel["became_trade"] == 1
+    assert reasons["wait"]["P3 killzone"] == 2
+    assert reasons["skip"]["conf < 65"] == 1
+
+
+def test_funnel_counts_empty():
+    funnel, reasons = backtest._funnel_counts([])
+    assert funnel["detected"] == 0
+    assert funnel["became_trade"] == 0
+    assert reasons["wait"] == {}
+
+
+# ─── Breakdown по сегментам ───────────────────────────────────────────────
+
+
+def test_rr_bucket_classification():
+    assert backtest._rr_bucket(None) == "unknown"
+    assert backtest._rr_bucket(1.2) == "1-1.5"
+    assert backtest._rr_bucket(1.7) == "1.5-2"
+    assert backtest._rr_bucket(2.5) == "2-3"
+    assert backtest._rr_bucket(4.0) == "3+"
+
+
+def test_build_breakdown_by_killzone():
+    trades = [
+        backtest.BacktestTrade(
+            signal_type="A", direction="long", open_idx=1, open_ts=0,
+            entry=100, sl=99, tp1=103, tp2=0, tp3=0, confidence=70,
+            close_idx=10, status="tp1_hit", r_multiple=1.5,
+            killzone="London", rr_planned=1.5, r_net=1.4,
+        ),
+        backtest.BacktestTrade(
+            signal_type="B", direction="long", open_idx=2, open_ts=0,
+            entry=100, sl=99, tp1=103, tp2=0, tp3=0, confidence=70,
+            close_idx=11, status="sl_hit", r_multiple=-1.0,
+            killzone="London", rr_planned=2.0, r_net=-1.1,
+        ),
+        backtest.BacktestTrade(
+            signal_type="C", direction="long", open_idx=3, open_ts=0,
+            entry=100, sl=99, tp1=103, tp2=0, tp3=0, confidence=70,
+            close_idx=12, status="tp1_hit", r_multiple=1.5,
+            killzone=None, rr_planned=1.5, r_net=1.4,
+        ),
+    ]
+    bd = backtest._build_breakdown(trades)
+    by_kz = dict((row[0], row) for row in bd["by_killzone"])
+    assert by_kz["London"][1] == 2     # n
+    assert by_kz["London"][2] == 50.0  # wr
+    assert by_kz["none"][1] == 1
+    assert by_kz["none"][2] == 100.0
+
+
+def test_build_breakdown_handles_empty():
+    bd = backtest._build_breakdown([])
+    assert bd["by_killzone"] == []
+
+
+def test_signal_killzone_helper():
+    # 2026-06-02 13:00 UTC → New York AM (12:00-15:00)
+    import datetime as dt_mod
+    ts = int(dt_mod.datetime(2026, 6, 2, 13, 0,
+                             tzinfo=dt_mod.timezone.utc).timestamp() * 1000)
+    assert backtest._signal_killzone(ts) == "New York AM"
+    # 2026-06-02 05:00 UTC → вне окон
+    ts2 = int(dt_mod.datetime(2026, 6, 2, 5, 0,
+                              tzinfo=dt_mod.timezone.utc).timestamp() * 1000)
+    assert backtest._signal_killzone(ts2) is None
+    assert backtest._signal_killzone(None) is None
+
+
+def test_signal_meta_extracts_from_decision_dict():
+    d = {
+        "htf_bias": {"strength": "strong", "direction": "long"},
+        "regime":   {"bias": "trend"},
+    }
+    # 2026-06-02 13:00 UTC = NY AM
+    import datetime as dt_mod
+    ts = int(dt_mod.datetime(2026, 6, 2, 13, 0,
+                             tzinfo=dt_mod.timezone.utc).timestamp() * 1000)
+    meta = backtest._signal_meta(d, ts)
+    assert meta["killzone"] == "New York AM"
+    assert meta["htf_strength"] == "strong"
+    assert meta["htf_direction"] == "long"
+    assert meta["regime"] == "trend"
+
+
+def test_signal_meta_handles_missing_keys():
+    meta = backtest._signal_meta({}, None)
+    assert meta["killzone"] is None
+    assert meta["htf_strength"] is None
+    assert meta["regime"] is None
+
+
+# ─── format_result: новые секции ──────────────────────────────────────────
+
+
+def test_format_result_shows_funnel():
+    r = backtest.BacktestResult(
+        symbol="X", days=1,
+        funnel={"detected": 100, "passed_wait_gates": 30,
+                "passed_skip_gate": 15, "became_trade": 10},
+    )
+    out = backtest.format_result(r)
+    assert "Signal funnel" in out
+    assert "detected=100" in out
+    assert "trades=10" in out
+
+
+def test_format_result_shows_top_wait_reasons():
+    r = backtest.BacktestResult(
+        symbol="X", days=1,
+        wait_reasons={"wait": {"P3 killzone gate": 50,
+                               "P4 HTF strong": 20,
+                               "конфликт регима": 5},
+                      "skip": {}},
+    )
+    out = backtest.format_result(r)
+    assert "Top WAIT reasons" in out
+    assert "P3 killzone gate" in out
+    assert "50×" in out
+
+
+def test_format_result_shows_breakdown_sections():
+    r = backtest.BacktestResult(
+        symbol="X", days=1,
+        stats={"total": 2, "closed": 2, "win_rate": 50, "avg_r": 0.25,
+               "avg_r_net": 0.20,
+               "hits": {"tp1": 1, "tp2": 0, "tp3": 0, "sl": 1,
+                        "tie": 0, "expired": 0},
+               "risk": {"profit_factor": 1.5, "profit_factor_net": 1.4,
+                        "sharpe_r": 0.0, "sortino_r": 0.0,
+                        "max_drawdown_r": -1.0, "max_consec_loss": 1,
+                        "best_r": 1.5, "worst_r": -1.0},
+               "by_signal": []},
+        breakdown={
+            "by_killzone": [("London", 1, 100.0, 1.5, 1.4),
+                            ("none", 1, 0.0, -1.0, -1.1)],
+            "by_htf":      [("strong", 2, 50.0, 0.25, 0.20)],
+            "by_regime":   [],
+            "by_rr_planned": [("1.5-2", 2, 50.0, 0.25, 0.20)],
+        },
+    )
+    out = backtest.format_result(r)
+    assert "By killzone" in out
+    assert "London" in out
+    assert "By HTF strength" in out
+    assert "By RR planned" in out
+
+
+def test_format_result_shows_fee_line():
+    r = backtest.BacktestResult(
+        symbol="X", days=1, taker_fee_pct=0.0006,
+        stats={"total": 1, "closed": 1, "win_rate": 100, "avg_r": 1.5,
+               "avg_r_net": 1.38,
+               "hits": {"tp1": 1, "tp2": 0, "tp3": 0, "sl": 0,
+                        "tie": 0, "expired": 0},
+               "risk": {"profit_factor": "∞", "profit_factor_net": "∞",
+                        "sharpe_r": 0.0, "sortino_r": "∞",
+                        "max_drawdown_r": 0.0, "max_consec_loss": 0,
+                        "best_r": 1.5, "worst_r": 1.5}},
+    )
+    out = backtest.format_result(r)
+    assert "Fee:" in out
+    assert "0.060%" in out
+    assert "net" in out.lower()
+
+
+# ─── CLI: новые опции ─────────────────────────────────────────────────────
+
+
+def test_parse_overrides_killzone_disable():
+    out = backtest._parse_overrides("KILLZONE_GATE_ENABLED=false")
+    assert out["KILLZONE_GATE_ENABLED"] is False
+
+
+# ─── dump_result_json ─────────────────────────────────────────────────────
+
+
+def test_dump_result_json_roundtrip(tmp_path):
+    trades = [
+        backtest.BacktestTrade(
+            signal_type="OB_BULL", direction="long", open_idx=10, open_ts=0,
+            entry=100, sl=99, tp1=103, tp2=105, tp3=108, confidence=70,
+            close_idx=20, status="tp1_hit", hit_level="TP1",
+            r_multiple=1.5, killzone="London", htf_strength="strong",
+            rr_planned=1.5, bars_held=10, fee_r=0.12, r_net=1.38,
+        ),
+    ]
+    signals = [
+        backtest.BacktestSignal(
+            idx=10, ts=0, signal_type="OB_BULL", direction="long",
+            verdict="LONG", reason="ok", confidence=80,
+            killzone="London", htf_strength="strong",
+            became_trade=True,
+        ),
+    ]
+    r = backtest.BacktestResult(
+        symbol="BTC", days=1, trades=trades, signals=signals,
+        stats={"closed": 1, "win_rate": 100, "avg_r": 1.5},
+        funnel={"detected": 1, "became_trade": 1},
+        wait_reasons={"wait": {}, "skip": {}},
+        breakdown={"by_killzone": [("London", 1, 100.0, 1.5, 1.38)]},
+        taker_fee_pct=0.0006,
+    )
+    path = os.path.join(str(tmp_path), "out.json")
+    backtest.dump_result_json(r, path)
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+    assert data["symbol"] == "BTC"
+    assert data["trades"][0]["killzone"] == "London"
+    assert data["trades"][0]["r_net"] == 1.38
+    assert data["signals"][0]["became_trade"] is True
+    assert data["funnel"]["became_trade"] == 1
+
+
+# ─── run_backtest: новые поля в результате ────────────────────────────────
+
+
+def test_run_backtest_populates_funnel_and_signals_fields():
+    """Даже на пустых данных поля funnel/signals инициализированы."""
+    result = backtest.run_backtest(_make_data([]))
+    assert isinstance(result.signals, list)
+    assert isinstance(result.funnel, dict)
+    assert isinstance(result.breakdown, dict)
+    assert isinstance(result.wait_reasons, dict)
+
+
+def test_run_backtest_collect_signals_false():
+    """collect_signals=False → signals остаётся пустым."""
+    ts0 = 1_780_000_000_000
+    klines = [_b(ts0 + i * 300_000, 100, 100.1, 99.9, 100) for i in range(200)]
+    data = _make_data(klines)
+    result = backtest.run_backtest(data, warmup_bars=50, collect_signals=False)
+    assert result.signals == []
+
+
+# ─── format_result_omits_htf_when_empty (преserved) ───────────────────────
 
 
 def test_format_result_omits_htf_when_empty():
