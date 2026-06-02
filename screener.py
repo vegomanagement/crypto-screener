@@ -4106,50 +4106,101 @@ def cmd_backtest(chat_id: int, args: str = ""):
     )
 
     def _run():
+        import time as _t
+        t0 = _t.time()
         try:
-            # Гарантируем что primary TF доступен (на случай нестандартного выбора)
+            # ── Шаг 1: загрузка klines ──
+            tg_send("⏳ <b>Шаг 1/3:</b> Загружаю историю с Bybit...",
+                    chat_id=chat_id)
             tfs_to_fetch = sorted(set(["5", "15", "60", "240", "D",
                                        tf_primary]))
             data = bt_data.fetch_all(
                 symbol_full, days,
                 tfs=tfs_to_fetch,
-                fetch_funding_data=False,  # speed: skip extra endpoints
+                fetch_funding_data=False,
                 fetch_oi_data=False,
             )
             n_bars = len(data["klines"].get(tf_primary) or [])
+            fetch_time = _t.time() - t0
             log.info(f"[/backtest] fetched {n_bars} {tf_primary}m bars "
-                     f"for {symbol_full}")
+                     f"for {symbol_full} in {fetch_time:.1f}s")
+            tg_send(
+                f"✅ <b>Шаг 1/3:</b> Загружено {n_bars} {tf_primary}m баров "
+                f"({fetch_time:.0f}с).\n"
+                f"⏳ <b>Шаг 2/3:</b> Replay стратегии...",
+                chat_id=chat_id,
+            )
 
-            if compare_mode:
-                cmp = bt_compare.compare(data, [
-                    bt_compare.Config(name="baseline"),
-                    bt_compare.Config(
-                        name="no_p3",
-                        overrides={"KILLZONE_GATE_ENABLED": False,
-                                   "STRUCTURE_GATE_ENABLED": False},
-                    ),
-                    bt_compare.Config(
-                        name="no_p4",
-                        overrides={"HTF_BIAS_GATE_ENABLED": False},
-                    ),
-                    bt_compare.Config(
-                        name="all_gates_off",
-                        overrides={"KILLZONE_GATE_ENABLED": False,
-                                   "STRUCTURE_GATE_ENABLED": False,
-                                   "HTF_BIAS_GATE_ENABLED": False},
-                    ),
-                ], tf_primary=tf_primary, warmup_bars=200)
-                body = bt_compare.format_comparison(cmp, max_name_len=15)
-            else:
-                result = bt_backtest.run_backtest(
-                    data, tf_primary=tf_primary, warmup_bars=200,
-                )
-                body = bt_backtest.format_result(result)
+            # ── Шаг 2: replay ──
+            t1 = _t.time()
+            # Progress callback пишет в лог (Telegram прогресс отдельно)
+            def _bg_progress(msg):
+                log.info(f"[/backtest] {msg}")
 
-            tg_send(f"<pre>{body}</pre>", chat_id=chat_id)
+            # Опциональный inline-прогресс через тред-таймер для long runs
+            progress_state = {"sent_5min": False, "sent_10min": False}
+
+            def _periodic_check():
+                elapsed = _t.time() - t1
+                if elapsed > 5 * 60 and not progress_state["sent_5min"]:
+                    tg_send(f"⏳ Replay идёт, прошло {elapsed/60:.1f} мин...",
+                            chat_id=chat_id)
+                    progress_state["sent_5min"] = True
+                if elapsed > 10 * 60 and not progress_state["sent_10min"]:
+                    tg_send(f"⏳ Замечу: уже {elapsed/60:.1f} мин. "
+                            f"Большие периоды реально долгие на 5m primary "
+                            f"(O(N²) slicing). Жди...", chat_id=chat_id)
+                    progress_state["sent_10min"] = True
+
+            # Запускаем таймер для периодических обновлений
+            _periodic_t = threading.Timer(5 * 60, _periodic_check)
+            _periodic_t.daemon = True
+            _periodic_t.start()
+
+            try:
+                if compare_mode:
+                    cmp = bt_compare.compare(data, [
+                        bt_compare.Config(name="baseline"),
+                        bt_compare.Config(
+                            name="no_p3",
+                            overrides={"KILLZONE_GATE_ENABLED": False,
+                                       "STRUCTURE_GATE_ENABLED": False},
+                        ),
+                        bt_compare.Config(
+                            name="no_p4",
+                            overrides={"HTF_BIAS_GATE_ENABLED": False},
+                        ),
+                        bt_compare.Config(
+                            name="all_gates_off",
+                            overrides={"KILLZONE_GATE_ENABLED": False,
+                                       "STRUCTURE_GATE_ENABLED": False,
+                                       "HTF_BIAS_GATE_ENABLED": False},
+                        ),
+                    ], tf_primary=tf_primary, warmup_bars=200)
+                    body = bt_compare.format_comparison(cmp, max_name_len=15)
+                else:
+                    result = bt_backtest.run_backtest(
+                        data, tf_primary=tf_primary, warmup_bars=200,
+                        progress_each=1000,
+                    )
+                    body = bt_backtest.format_result(result)
+            finally:
+                _periodic_t.cancel()
+
+            replay_time = _t.time() - t1
+            total_time = _t.time() - t0
+            log.info(f"[/backtest] replay completed in {replay_time:.1f}s "
+                     f"(total {total_time:.1f}s)")
+
+            # ── Шаг 3: ответ ──
+            footer = (f"\n\n⏱ Fetch: {fetch_time:.0f}с · "
+                      f"Replay: {replay_time:.0f}с · "
+                      f"Total: {total_time:.0f}с")
+            tg_send(f"<pre>{body}</pre>{footer}", chat_id=chat_id)
         except Exception as e:
             log.exception(f"[/backtest] failed: {e}")
-            tg_send(f"❌ Backtest error: {e}", chat_id=chat_id)
+            tg_send(f"❌ Backtest error: {type(e).__name__}: {e}",
+                    chat_id=chat_id)
 
     threading.Thread(target=_run, daemon=True).start()
 
