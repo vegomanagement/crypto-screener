@@ -3253,8 +3253,8 @@ def cmd_help(chat_id: int):
         "/history             — последние 10 сигналов\n"
         "/stats               — win-rate + risk-adjusted метрики (30д)\n"
         "/trades [days]       — последние закрытые сделки с R-исходом\n"
-        "/backtest [sym days] — прогон стратегии на истории\n"
-        "                       /backtest BTC 30  · /backtest BTC 30 compare\n"
+        "/backtest [sym days] — прогон стратегии на истории (до 365 дней)\n"
+        "                       /backtest BTC 30  · /backtest BTC 180 compare\n"
         "/digest              — дневной дайджест\n\n"
         "💬 <b>Свободный чат — пиши без команд!</b>\n"
         "<i>анализируй BTC 4H</i>     → полный разбор\n"
@@ -4045,15 +4045,16 @@ def cmd_trades(chat_id: int, args: str = ""):
 def cmd_backtest(chat_id: int, args: str = ""):
     """
     Прогон стратегии на исторических данных (Этап 13 backtest harness).
-    Запускается в background thread — может занять 30-90 секунд.
+    Запускается в background thread.
 
       /backtest                  — BTC 7 дней baseline
       /backtest ETH              — ETH 7 дней baseline
       /backtest BTC 30           — BTC за 30 дней
-      /backtest BTC 30 compare   — 4 конфига: baseline / no_p3 / no_p4 / all_gates_off
+      /backtest BTC 180 compare  — compare-режим (4 конфига) на полугоду
+      /backtest BTC 365          — год данных (может занять 3-7 мин)
 
-    Сообщение «🔄 Запускаю...» отправляется сразу, итоговая таблица —
-    когда backtest завершится.
+    Максимум 365 дней. Compare-режим 4× медленнее baseline.
+    Сообщение «🔄 Запускаю...» отправляется сразу, итог — когда готов.
     """
     parts = [p for p in args.strip().split() if p]
     symbol = "BTC"
@@ -4070,12 +4071,20 @@ def cmd_backtest(chat_id: int, args: str = ""):
             symbol = p.upper().replace("USDT", "").replace(".P", "")
 
     symbol_full = symbol if symbol.endswith("USDT") else symbol + "USDT"
-    days = max(1, min(60, days))
+    days = max(1, min(365, days))
+
+    # Оценка длительности: baseline ~30-60 сек/30d, compare 4×, longer 1.5-2× линейно.
+    if days <= 30:
+        eta = "30-90 сек" if not compare_mode else "2-4 мин"
+    elif days <= 90:
+        eta = "1-3 мин" if not compare_mode else "5-10 мин"
+    else:
+        eta = "3-7 мин" if not compare_mode else "10-20 мин"
 
     tg_send(
         f"🔄 <b>Backtest {symbol_full} {days}d</b> "
         f"({'compare' if compare_mode else 'baseline'})\n"
-        f"Запускаю — может занять 30-90 сек...",
+        f"Запускаю — может занять {eta}...",
         chat_id=chat_id,
     )
 
