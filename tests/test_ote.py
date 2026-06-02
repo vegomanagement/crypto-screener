@@ -173,3 +173,53 @@ def test_otezone_has_all_fields():
               "impulse_start", "impulse_end", "fib_62", "fib_79",
               "entry_min", "entry_max", "sl"):
         assert hasattr(ote, f)
+
+
+# ─── Regression: правильное натяжение Fib ────────────────────────────────
+
+
+def test_bull_impulse_start_is_preceding_swing_low_not_resistance():
+    """
+    ICT-канон: для bull BOS импульс натягивается ОТ последнего swing LOW
+    ДО new high (не от low бара резистанса!). Regression на предыдущий баг.
+
+    В _bull_impulse_series swing low около i=5 с low=90. Резистанс на i=12
+    с high=110. После BOS на ~i=19 — impulse_start должен быть ~90, не ~105.
+    """
+    klines = _bull_impulse_series()
+    ote = compute_ote_zone(klines, "long", swing_length=3)
+    assert ote is not None
+    # Импульс должен начинаться от swing low (≈90), не от low бара резистанса
+    assert ote.impulse_start <= 92, \
+        f"impulse_start={ote.impulse_start} должен быть около swing low (~90)"
+    # И заканчиваться где-то на peak (≥ 110)
+    assert ote.impulse_end >= 110, \
+        f"impulse_end={ote.impulse_end} должен быть около new high (~110+)"
+
+
+def test_bear_impulse_start_is_preceding_swing_high():
+    """Зеркально: для bear BOS импульс от swing HIGH (не от high бара поддержки)."""
+    klines = _bear_impulse_series()
+    ote = compute_ote_zone(klines, "short", swing_length=3)
+    assert ote is not None
+    # impulse_start ≈ swing high (≈110)
+    assert ote.impulse_start >= 108, \
+        f"impulse_start={ote.impulse_start} должен быть около swing high (~110)"
+    # impulse_end ≈ swing low (≤90)
+    assert ote.impulse_end <= 92, \
+        f"impulse_end={ote.impulse_end} должен быть около swing low (~88)"
+
+
+def test_bull_fib_levels_lie_between_swings():
+    """Fib-уровни ДОЛЖНЫ быть между impulse_start и impulse_end."""
+    klines = _bull_impulse_series()
+    ote = compute_ote_zone(klines, "long", swing_length=3)
+    assert ote is not None
+    assert ote.impulse_start < ote.fib_79 < ote.fib_62 < ote.impulse_end
+
+
+def test_bear_fib_levels_lie_between_swings():
+    klines = _bear_impulse_series()
+    ote = compute_ote_zone(klines, "short", swing_length=3)
+    assert ote is not None
+    assert ote.impulse_end < ote.fib_62 < ote.fib_79 < ote.impulse_start

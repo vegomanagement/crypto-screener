@@ -24,7 +24,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from structure import detect_structure
+from structure import detect_structure, find_swing_points
 
 __all__ = [
     "OTEZone",
@@ -93,23 +93,31 @@ def compute_ote_zone(
     if (len(klines) - 1) - last.at > max_bars_since:
         return None
 
-    # Identify impulse start (swing point, который был пробит)
-    impulse_start_idx = last.swing_at
-    impulse_end_idx   = last.at
+    # ICT-канон: импульс натягивается между ДВУМЯ соседними swing-точками.
+    # Для bull BOS:
+    #   • импульс шёл от последнего swing LOW (перед BOS-баром)
+    #   • до new high, сделанного после пробоя ресистанса (last.level)
+    # Берём:
+    #   impulse_start = price последнего swing LOW до last.at
+    #   impulse_end   = highest high в [последний swing low ... current]
+    # Симметрично для bear.
+    swings = find_swing_points(klines, swing_length)
+    impulse_end_idx = last.at
 
     if last.direction == "bull":
-        # Impulse: from swing_low_price (level) up to close_price
-        impulse_start = last.level   # это был swing high, который был пробит
-        # Wait — last.level это уровень who was BROKEN. Для bull BOS/CHOCH
-        # was breaks swing HIGH, который был resistance. Но импульс шёл UP от
-        # каких-то предыдущих low. Возьмём low бар на swing_at как импульс_start.
-        # На самом деле для OTE нужен SWING LOW from which impulse started.
-
-        # Простейшая трактовка: impulse = from swing_at's bar low to event bar high
-        bar_at_swing = klines[last.swing_at]
-        bar_at_event = klines[last.at]
-        impulse_start = bar_at_swing["l"]
-        impulse_end   = bar_at_event["h"]
+        # ICT-канон: импульс = leg от swing LOW (от которого начался рост к
+        # сломанному resistance) ДО new high после пробоя.
+        # Берём swing low ПЕРЕД сломанным swing high (last.swing_at), не после.
+        preceding_lows = [s for s in swings
+                          if s.kind == "L" and s.index < last.swing_at]
+        if not preceding_lows:
+            return None
+        start_swing = preceding_lows[-1]
+        impulse_start_idx = start_swing.index
+        impulse_start = float(start_swing.price)
+        # Highest high от swing low до current (impulse peak)
+        seg = klines[start_swing.index : len(klines)]
+        impulse_end = max(b["h"] for b in seg) if seg else float(last.close)
         if impulse_end <= impulse_start:
             return None
         delta = impulse_end - impulse_start
@@ -119,11 +127,17 @@ def compute_ote_zone(
         entry_max = max(fib_62, fib_79)
         sl = impulse_start * (1 - SL_BUFFER_PCT)
     else:
-        # Bear: impulse from swing_high down to event_bar's low
-        bar_at_swing = klines[last.swing_at]
-        bar_at_event = klines[last.at]
-        impulse_start = bar_at_swing["h"]
-        impulse_end   = bar_at_event["l"]
+        # Bear: swing HIGH ПЕРЕД сломанным swing low (last.swing_at)
+        preceding_highs = [s for s in swings
+                           if s.kind == "H" and s.index < last.swing_at]
+        if not preceding_highs:
+            return None
+        start_swing = preceding_highs[-1]
+        impulse_start_idx = start_swing.index
+        impulse_start = float(start_swing.price)
+        # Lowest low от swing high до current (impulse bottom)
+        seg = klines[start_swing.index : len(klines)]
+        impulse_end = min(b["l"] for b in seg) if seg else float(last.close)
         if impulse_end >= impulse_start:
             return None
         delta = impulse_start - impulse_end
@@ -137,7 +151,7 @@ def compute_ote_zone(
         direction=direction,
         impulse_start_idx=impulse_start_idx,
         impulse_end_idx=impulse_end_idx,
-        impulse_start=float(impulse_start),
+        impulse_start=impulse_start,
         impulse_end=float(impulse_end),
         fib_62=float(fib_62),
         fib_79=float(fib_79),
