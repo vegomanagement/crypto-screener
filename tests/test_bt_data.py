@@ -121,19 +121,58 @@ def test_fetch_klines_dedup_overlap(tmp_cache):
     assert len(seen_ts) == len(set(seen_ts)), "должно быть без дубликатов"
 
 
-def test_fetch_klines_uses_cache(tmp_cache):
-    """Если кеш есть — net не вызываем."""
+def test_fetch_klines_uses_cache_when_covers_range(tmp_cache):
+    """Если кеш покрывает запрошенный диапазон — net не вызываем."""
     cache_path = bt_data._cache_path("BTCUSDT", "klines", "5")
     cache_path.parent.mkdir(parents=True, exist_ok=True)
-    fake = [{"ts": 1700000000000, "o": 100, "h": 101, "l": 99, "c": 100, "v": 1}]
+    # FAKE_NOW = 2026-06-02 00:00. days=1 → start ≥ 2026-06-01.
+    # Кешируем 30-дневное окно (5 мая → 2 июня) — покрывает 1-day запрос.
+    import datetime as _dt
+    base = _dt.datetime(2026, 5, 3, 0, 0, tzinfo=_dt.timezone.utc)
+    fake = [
+        {"ts": int((base + _dt.timedelta(hours=12 * i)).timestamp() * 1000),
+         "o": 100, "h": 101, "l": 99, "c": 100, "v": 1}
+        for i in range(60)
+    ]
     cache_path.write_text("\n".join(json.dumps(r) for r in fake))
 
-    # session.get не должен вызываться
     sess = MagicMock()
     sess.get.side_effect = AssertionError("net вызван при наличии кеша")
     result = bt_data.fetch_klines("BTCUSDT", "5", days=1,
                                   cache=True, session=sess)
-    assert result == fake
+    # Возвращены только бары с ts >= start (1 день назад)
+    assert all(r["ts"] >= _ms(2026, 6, 1, 0) for r in result)
+
+
+def test_fetch_klines_refetches_when_cache_too_short(tmp_cache):
+    """
+    Главный bug-fix: cache был 7d, но запрашиваем 30d → должны re-fetch,
+    НЕ возвращать кеш.
+    """
+    cache_path = bt_data._cache_path("BTCUSDT", "klines", "5")
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    # Кешируем всего 1 день (29 мая → 1 июня)
+    fake_cached = [
+        {"ts": _ms(2026, 6, 1, h), "o": 100, "h": 101, "l": 99, "c": 100, "v": 1}
+        for h in range(24)
+    ]
+    cache_path.write_text("\n".join(json.dumps(r) for r in fake_cached))
+
+    # Запрашиваем 30 дней — кеш покрывает только 1 → должен re-fetch
+    import datetime as _dt
+    base2 = _dt.datetime(2026, 5, 3, 0, 0, tzinfo=_dt.timezone.utc)
+    new_rows = [
+        _kline_row(int((base2 + _dt.timedelta(hours=i)).timestamp() * 1000),
+                   200, 201, 199, 200, 5)
+        for i in range(50)
+    ]
+    sess = _mock_session([{"result": {"list": new_rows}}])
+    result = bt_data.fetch_klines("BTCUSDT", "5", days=30,
+                                  cache=True, session=sess)
+    # Should NOT be old fake — re-fetched fresh
+    assert len(result) > 0
+    # И не равно старому кешу
+    assert result != fake_cached
 
 
 def test_fetch_klines_writes_cache(tmp_cache):
