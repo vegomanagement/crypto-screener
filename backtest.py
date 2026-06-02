@@ -75,6 +75,7 @@ class BacktestResult:
     skipped_count:    int       = 0
     stats:            dict      = field(default_factory=dict)
     config_overrides: dict | None = None
+    htf_diag:         dict      = field(default_factory=dict)
 
 
 # ─── Local detect_signals (без impo screener.py — оно тянет config.py) ────
@@ -363,6 +364,12 @@ def run_backtest(
     skipped = 0
     last_signal_idx: dict[tuple, int] = {}
 
+    # HTF bias diagnostics — на каждый сигнал считаем bias.strength + direction.
+    htf_strength_counts = {"strong": 0, "moderate": 0, "weak": 0, "neutral": 0,
+                           "missing": 0}
+    htf_p4_blocks = 0
+    htf_strong_directions = {"long": 0, "short": 0}
+
     with _config_override(config_overrides):
         for idx in range(warmup_bars, len(klines_primary)):
             klines_so_far = klines_primary[:idx + 1]
@@ -388,6 +395,21 @@ def run_backtest(
                     confluence_score=default_conf_score,
                     confluence_factors=[],
                 )
+
+                # HTF diagnostics: htf_bias заполняется в _htf_pda_bias_gate
+                hb = d.get("htf_bias")
+                if hb is None:
+                    htf_strength_counts["missing"] += 1
+                else:
+                    strength = hb.get("strength", "neutral")
+                    htf_strength_counts[strength] = (
+                        htf_strength_counts.get(strength, 0) + 1)
+                    if strength == "strong":
+                        bias_dir = hb.get("direction", "neutral")
+                        htf_strong_directions[bias_dir] = (
+                            htf_strong_directions.get(bias_dir, 0) + 1)
+                if d.get("verdict") == "WAIT" and "P4 HTF" in (d.get("reason") or ""):
+                    htf_p4_blocks += 1
 
                 if d["verdict"] not in ("LONG", "SHORT"):
                     skipped += 1
@@ -440,6 +462,11 @@ def run_backtest(
         skipped_count=skipped,
         stats=stats,
         config_overrides=config_overrides,
+        htf_diag={
+            "strength_counts":   htf_strength_counts,
+            "strong_directions": htf_strong_directions,
+            "p4_blocks":         htf_p4_blocks,
+        },
     )
 
 
@@ -470,6 +497,29 @@ def format_result(result: BacktestResult) -> str:
             lines.append("\nBy signal type:")
             for st, n, wr, ar in s["by_signal"][:10]:
                 lines.append(f"  {st:<22} n={n:>4} wr={wr:>5.1f}% avgR={ar:+.2f}")
+
+    # HTF P4 diagnostics — критично для понимания, работает ли P4-гейт
+    if result.htf_diag:
+        sc = result.htf_diag.get("strength_counts") or {}
+        sd = result.htf_diag.get("strong_directions") or {}
+        p4b = result.htf_diag.get("p4_blocks", 0)
+        total = sum(sc.values())
+        if total > 0:
+            lines.append("\nHTF bias (per signal):")
+            lines.append(
+                f"  strong={sc.get('strong',0)} · "
+                f"moderate={sc.get('moderate',0)} · "
+                f"weak={sc.get('weak',0)} · "
+                f"neutral={sc.get('neutral',0)} · "
+                f"missing={sc.get('missing',0)}"
+            )
+            if sc.get("strong", 0) > 0:
+                lines.append(
+                    f"  strong→long={sd.get('long',0)} · "
+                    f"strong→short={sd.get('short',0)}"
+                )
+            lines.append(f"  P4 blocks: {p4b} (WAIT-by-HTF)")
+
     if result.config_overrides:
         lines.append(f"\nConfig overrides: {result.config_overrides}")
     return "\n".join(lines)

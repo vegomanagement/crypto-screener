@@ -398,3 +398,60 @@ def test_run_backtest_missing_primary_tf_returns_empty():
             "funding": [], "oi": []}
     result = backtest.run_backtest(data, tf_primary="60", warmup_bars=10)
     assert result.trades == []
+
+
+# ─── HTF diagnostics ──────────────────────────────────────────────────────
+
+
+def test_backtest_result_has_htf_diag():
+    """BacktestResult всегда содержит htf_diag dict."""
+    result = backtest.BacktestResult(symbol="X", days=1)
+    assert isinstance(result.htf_diag, dict)
+
+
+def test_run_backtest_populates_htf_diag():
+    """run_backtest заполняет htf_diag даже на пустых данных."""
+    data = _make_data([])
+    result = backtest.run_backtest(data)
+    # Пустой data → htf_diag default-empty
+    assert isinstance(result.htf_diag, dict)
+
+
+def test_format_result_shows_htf_diag_when_populated():
+    """format_result показывает HTF секцию если есть data."""
+    result = backtest.BacktestResult(
+        symbol="X", days=1,
+        stats={"total": 5, "closed": 5, "win_rate": 50, "avg_r": 0.5,
+               "hits": {"tp1": 2, "tp2": 1, "tp3": 0, "sl": 2, "tie": 0,
+                        "expired": 0},
+               "risk": {"profit_factor": 1.2, "sharpe_r": 0.1,
+                        "sortino_r": 0.2, "max_drawdown_r": -1.5,
+                        "max_consec_loss": 2, "best_r": 2.5, "worst_r": -1.0}},
+        htf_diag={
+            "strength_counts": {"strong": 10, "moderate": 50, "weak": 20,
+                                "neutral": 100, "missing": 5},
+            "strong_directions": {"long": 4, "short": 6},
+            "p4_blocks": 3,
+        },
+    )
+    out = backtest.format_result(result)
+    assert "HTF bias" in out
+    assert "strong=10" in out
+    assert "P4 blocks: 3" in out
+
+
+def test_format_result_omits_htf_when_empty():
+    """Если total counts = 0 — секция не показывается."""
+    result = backtest.BacktestResult(
+        symbol="X", days=1,
+        stats={"total": 0, "closed": 0, "win_rate": 0, "avg_r": 0,
+               "hits": {}, "risk": {}},
+        htf_diag={
+            "strength_counts": {"strong": 0, "moderate": 0, "weak": 0,
+                                "neutral": 0, "missing": 0},
+            "strong_directions": {"long": 0, "short": 0},
+            "p4_blocks": 0,
+        },
+    )
+    out = backtest.format_result(result)
+    assert "HTF bias" not in out
