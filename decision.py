@@ -90,10 +90,17 @@ HTF_BIAS_GATE_ENABLED = True
 
 # ─── Этап 12 фаза 3: Optimal Trade Entry (OTE) ────────────────────────────
 # PDF SMC: entry на Fibonacci 62-79% retracement последнего impulse leg.
-# Когда OTE-zone детектирован (есть свежий BOS/CHoCH в направлении сигнала),
-# entry zone заменяется на Fib-zone вместо ATR-зоны. SL ставится за extreme
-# импульса. Fallback на ATR-уровни если impulse не идентифицирован.
-OTE_ENABLED = True
+# Текущая реализация overlay'ит OTE на существующие сигналы — но сигналы
+# триггерятся на свече пробоя/паттерна, а OTE-zone находится в pullback'е.
+# Эти точки почти НИКОГДА не совпадают → OTE редко применяется, эффект
+# близок к нулю (проверено бектестом: baseline до/после OTE = идентично).
+#
+# Канон ICT требует ДРУГОЙ архитектуры: OTE = сам entry trigger (новый
+# signal_type), не overlay. Это будущая работа.
+#
+# Пока отключаем по умолчанию. Код _try_apply_ote остаётся для будущей
+# реактивации через флаг override (например, через cmd_backtest config).
+OTE_ENABLED = False
 
 # ─── Liquidity-aware levels (Этап 8) ──────────────────────────────────────
 # Двигаем TP/SL к карте ликвидности с жёсткими guardrails.
