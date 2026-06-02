@@ -3255,6 +3255,7 @@ def cmd_help(chat_id: int):
         "/trades [days]       — последние закрытые сделки с R-исходом\n"
         "/backtest [sym days] — прогон стратегии на истории (до 365 дней)\n"
         "                       /backtest BTC 30  · /backtest BTC 180 compare\n"
+        "                       /backtest BTC 30 tf=15  — другой primary TF\n"
         "/digest              — дневной дайджест\n\n"
         "💬 <b>Свободный чат — пиши без команд!</b>\n"
         "<i>анализируй BTC 4H</i>     → полный разбор\n"
@@ -4047,11 +4048,18 @@ def cmd_backtest(chat_id: int, args: str = ""):
     Прогон стратегии на исторических данных (Этап 13 backtest harness).
     Запускается в background thread.
 
-      /backtest                  — BTC 7 дней baseline
+      /backtest                  — BTC 7 дней baseline (primary TF 5m)
       /backtest ETH              — ETH 7 дней baseline
       /backtest BTC 30           — BTC за 30 дней
       /backtest BTC 180 compare  — compare-режим (4 конфига) на полугоду
       /backtest BTC 365          — год данных (может занять 3-7 мин)
+      /backtest BTC 30 tf=15     — primary TF 15m (вместо дефолтного 5m)
+      /backtest BTC 30 tf=1H     — алиасы: 1H/4H/1D тоже распознаются
+      /backtest BTC 30 tf=15 compare — комбо: 15m + compare-режим
+
+    tf= — primary TF (5/15/60/240/D). Без него backtest идёт на 5m
+    (ICT-канон). При выборе другого TF expiry/cooldown масштабируются
+    автоматически (7d expiry / 1h cooldown в реальном времени).
 
     Максимум 365 дней. Compare-режим 4× медленнее baseline.
     Сообщение «🔄 Запускаю...» отправляется сразу, итог — когда готов.
@@ -4060,6 +4068,7 @@ def cmd_backtest(chat_id: int, args: str = ""):
     symbol = "BTC"
     days = 7
     compare_mode = False
+    tf_primary = "5"   # ICT-канон по умолчанию
 
     for p in parts:
         pl = p.lower()
@@ -4067,6 +4076,13 @@ def cmd_backtest(chat_id: int, args: str = ""):
             days = int(p)
         elif pl in ("compare", "cmp", "--compare"):
             compare_mode = True
+        elif pl.startswith("tf="):
+            tf_val = p.split("=", 1)[1].upper()
+            # Нормализация: 1H→60, 4H→240 и т.д.
+            tf_aliases = {"1H": "60", "2H": "120", "4H": "240",
+                          "5M": "5", "15M": "15", "30M": "30",
+                          "1D": "D"}
+            tf_primary = tf_aliases.get(tf_val, tf_val)
         else:
             symbol = p.upper().replace("USDT", "").replace(".P", "")
 
@@ -4081,23 +4097,28 @@ def cmd_backtest(chat_id: int, args: str = ""):
     else:
         eta = "3-7 мин" if not compare_mode else "10-20 мин"
 
+    tf_label = f"tf={tf_primary}" if tf_primary != "5" else ""
     tg_send(
         f"🔄 <b>Backtest {symbol_full} {days}d</b> "
-        f"({'compare' if compare_mode else 'baseline'})\n"
+        f"({'compare' if compare_mode else 'baseline'}{', ' + tf_label if tf_label else ''})\n"
         f"Запускаю — может занять {eta}...",
         chat_id=chat_id,
     )
 
     def _run():
         try:
+            # Гарантируем что primary TF доступен (на случай нестандартного выбора)
+            tfs_to_fetch = sorted(set(["5", "15", "60", "240", "D",
+                                       tf_primary]))
             data = bt_data.fetch_all(
                 symbol_full, days,
-                tfs=["5", "15", "60", "240", "D"],
+                tfs=tfs_to_fetch,
                 fetch_funding_data=False,  # speed: skip extra endpoints
                 fetch_oi_data=False,
             )
-            n_bars = len(data["klines"].get("5") or [])
-            log.info(f"[/backtest] fetched {n_bars} 5m bars for {symbol_full}")
+            n_bars = len(data["klines"].get(tf_primary) or [])
+            log.info(f"[/backtest] fetched {n_bars} {tf_primary}m bars "
+                     f"for {symbol_full}")
 
             if compare_mode:
                 cmp = bt_compare.compare(data, [
@@ -4117,10 +4138,12 @@ def cmd_backtest(chat_id: int, args: str = ""):
                                    "STRUCTURE_GATE_ENABLED": False,
                                    "HTF_BIAS_GATE_ENABLED": False},
                     ),
-                ], warmup_bars=200)
+                ], tf_primary=tf_primary, warmup_bars=200)
                 body = bt_compare.format_comparison(cmp, max_name_len=15)
             else:
-                result = bt_backtest.run_backtest(data, warmup_bars=200)
+                result = bt_backtest.run_backtest(
+                    data, tf_primary=tf_primary, warmup_bars=200,
+                )
                 body = bt_backtest.format_result(result)
 
             tg_send(f"<pre>{body}</pre>", chat_id=chat_id)

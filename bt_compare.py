@@ -66,20 +66,23 @@ def compare(
     data: dict,
     configs: list[Config | dict],
     *,
+    tf_primary: str = "5",
     warmup_bars: int = backtest.DEFAULT_WARMUP_BARS,
-    expiry_bars: int = backtest.DEFAULT_EXPIRY_BARS,
-    cooldown_bars: int = backtest.DEFAULT_COOLDOWN_BARS,
+    expiry_bars: int | None = None,
+    cooldown_bars: int | None = None,
     default_conf_score: int = backtest.DEFAULT_CONF_SCORE,
 ) -> ComparisonResult:
     """
     Запускает backtest для каждого Config, возвращает ComparisonResult.
     Принимает Config объекты или dicts формата {"name": ..., "overrides": ...}.
+    tf_primary прокидывается в run_backtest (5/15/60/240/D).
     """
     cfg_objs = [_to_config(c) for c in configs]
     results = []
     for cfg in cfg_objs:
         res = backtest.run_backtest(
             data,
+            tf_primary=tf_primary,
             warmup_bars=warmup_bars,
             expiry_bars=expiry_bars,
             cooldown_bars=cooldown_bars,
