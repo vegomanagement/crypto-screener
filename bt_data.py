@@ -171,11 +171,18 @@ def fetch_klines(
     """
     iv = tf_to_bybit_interval(tf)
     path = _cache_path(symbol, "klines", tf)
-    if cache and path.exists():
-        return _read_cache(path)
-
     start_ms = _ago_ms(days)
     end_ms   = _now_ms()
+
+    if cache and path.exists():
+        cached = _read_cache(path)
+        # Cache считается валидным если он покрывает запрошенный start_ms
+        # (т.е. самый старый закешированный бар не моложе start_ms).
+        # Иначе — re-fetch full range (заодно обновим кеш для будущих
+        # коротких запросов: они тоже извлекут срез из этого же файла).
+        if cached and cached[0]["ts"] <= start_ms:
+            return [k for k in cached if start_ms <= k["ts"] <= end_ms]
+
     bars_per_request = KLINE_MAX_LIMIT
     minutes = tf_to_minutes(tf)
     window_ms = bars_per_request * minutes * 60_000
@@ -245,11 +252,14 @@ def fetch_funding(
     Funding rate history. Bybit обновляет каждые 8 часов → ~3 точки в день.
     """
     path = _cache_path(symbol, "funding")
-    if cache and path.exists():
-        return _read_cache(path)
-
     start_ms = _ago_ms(days)
     end_ms   = _now_ms()
+
+    if cache and path.exists():
+        cached = _read_cache(path)
+        if cached and cached[0]["ts"] <= start_ms:
+            return [f for f in cached if start_ms <= f["ts"] <= end_ms]
+
     out: list[dict] = []
     cur_end = end_ms
 
@@ -313,11 +323,14 @@ def fetch_open_interest(
     1h, 4h, 1d. По умолчанию — 1h.
     """
     path = _cache_path(symbol, f"oi_{interval}")
-    if cache and path.exists():
-        return _read_cache(path)
-
     start_ms = _ago_ms(days)
     end_ms   = _now_ms()
+
+    if cache and path.exists():
+        cached = _read_cache(path)
+        if cached and cached[0]["ts"] <= start_ms:
+            return [o for o in cached if start_ms <= o["ts"] <= end_ms]
+
     out: list[dict] = []
     cursor: str | None = None
     cur_end = end_ms
