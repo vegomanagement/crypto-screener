@@ -27,6 +27,7 @@ Pure stdlib. Klines: {"ts", "o", "h", "l", "c", "v"}.
 
 from __future__ import annotations
 
+import bisect
 from datetime import datetime, timezone
 
 __all__ = [
@@ -272,15 +273,47 @@ def _ms_to_dt(ms: int) -> datetime:
     return datetime.fromtimestamp(ms / 1000, tz=timezone.utc)
 
 
-def _slice_klines_up_to(klines: list, ts_ms: int) -> list:
-    """Бары с ts ≤ ts_ms (предполагает отсортированный по ts вход)."""
-    out = []
-    for k in klines:
-        if k["ts"] <= ts_ms:
-            out.append(k)
-        else:
-            break
-    return out
+_TS_CACHE_KEY = "_bt_market_ts_cache"
+
+
+def _get_ts_cache(data: dict) -> dict[str, list[int]]:
+    """
+    Lazy-builds per-TF ts list, кешируется на data dict.
+    Используется bisect для O(log N) поиска границы slice вместо O(N) скана.
+    """
+    cache = data.get(_TS_CACHE_KEY)
+    if cache is None:
+        cache = {
+            tf: [k["ts"] for k in kl]
+            for tf, kl in (data.get("klines") or {}).items()
+        }
+        data[_TS_CACHE_KEY] = cache
+    return cache
+
+
+def _slice_klines_up_to(
+    klines: list,
+    ts_ms: int,
+    ts_list: list[int] | None = None,
+) -> list:
+    """
+    Бары с ts ≤ ts_ms (предполагает отсортированный по ts вход).
+
+    Если передан ts_list (предварительно построенный) — используем bisect
+    для O(log N) лукапа. Иначе fallback на O(N) линейный скан (для прямых
+    вызовов из тестов или старого кода).
+    """
+    if ts_list is None:
+        out = []
+        for k in klines:
+            if k["ts"] <= ts_ms:
+                out.append(k)
+            else:
+                break
+        return out
+    # bisect_right: индекс ПЕРВОГО элемента с ts > ts_ms
+    idx = bisect.bisect_right(ts_list, ts_ms)
+    return klines[:idx]
 
 
 def build_market_at(
@@ -305,9 +338,12 @@ def build_market_at(
 
     cur_ts = klines_5m[idx]["ts"]
 
+    # O(log N) slice через bisect + кеш ts-списков на data dict.
+    ts_cache = _get_ts_cache(data)
     sliced: dict[str, list] = {}
     for tf, kl in data["klines"].items():
-        sliced[tf] = _slice_klines_up_to(kl, cur_ts)
+        sliced[tf] = _slice_klines_up_to(kl, cur_ts,
+                                         ts_list=ts_cache.get(tf))
 
     primary = sliced.get(tf_primary) or []
     if not primary:

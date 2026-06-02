@@ -291,3 +291,79 @@ def test_build_market_at_safe_with_empty_funding_oi():
     m = bt_market.build_market_at(data, idx=49)
     assert m["bybit"]["funding"] == 0.0
     assert m["bybit"]["oi_chg"] == 0.0
+
+
+# ─── bisect-optimization (ts_cache + bisect_right) ────────────────────────
+
+
+def test_slice_with_bisect_matches_linear():
+    """Bisect-вариант _slice_klines_up_to даёт тот же результат, что linear."""
+    klines = [_b(i * 1000, 100, 101, 99, 100) for i in range(100)]
+    target_ts = 50_000   # граница в середине
+
+    linear_result = bt_market._slice_klines_up_to(klines, target_ts)
+    ts_list = [k["ts"] for k in klines]
+    bisect_result = bt_market._slice_klines_up_to(klines, target_ts,
+                                                  ts_list=ts_list)
+    assert linear_result == bisect_result
+    assert len(bisect_result) == 51   # ts 0..50000 включительно
+
+
+def test_slice_bisect_empty_klines():
+    assert bt_market._slice_klines_up_to([], 100, ts_list=[]) == []
+
+
+def test_slice_bisect_ts_before_all():
+    """ts_ms меньше первого бара → пустой результат."""
+    klines = [_b(100, 100, 101, 99, 100), _b(200, 100, 101, 99, 100)]
+    ts_list = [100, 200]
+    assert bt_market._slice_klines_up_to(klines, 50, ts_list=ts_list) == []
+
+
+def test_slice_bisect_ts_after_all():
+    """ts_ms больше последнего бара → все бары."""
+    klines = [_b(100, 100, 101, 99, 100), _b(200, 100, 101, 99, 100)]
+    ts_list = [100, 200]
+    assert bt_market._slice_klines_up_to(klines, 500, ts_list=ts_list) == klines
+
+
+def test_slice_bisect_exact_boundary():
+    """ts_ms равен ts бара → бар включён (right boundary inclusive)."""
+    klines = [_b(100, 100, 101, 99, 100), _b(200, 100, 101, 99, 100)]
+    ts_list = [100, 200]
+    out = bt_market._slice_klines_up_to(klines, 100, ts_list=ts_list)
+    assert len(out) == 1
+    assert out[0]["ts"] == 100
+
+
+def test_ts_cache_built_on_first_call():
+    """_get_ts_cache билдит кеш и сохраняет на data dict."""
+    data = _fake_data(n_5m=100)
+    assert bt_market._TS_CACHE_KEY not in data
+    cache = bt_market._get_ts_cache(data)
+    assert bt_market._TS_CACHE_KEY in data
+    assert "5" in cache
+    assert len(cache["5"]) == len(data["klines"]["5"])
+    # ts списки отсортированы
+    assert cache["5"] == sorted(cache["5"])
+
+
+def test_ts_cache_reused_on_subsequent_calls():
+    """Кеш не пересобирается каждый раз."""
+    data = _fake_data(n_5m=100)
+    cache1 = bt_market._get_ts_cache(data)
+    cache2 = bt_market._get_ts_cache(data)
+    assert cache1 is cache2   # same object
+
+
+def test_build_market_at_correctness_preserved():
+    """Bisect-оптимизация не меняет результат build_market_at."""
+    data = _fake_data(n_5m=200)
+    # Прогон через ВСЕ idx — каждый должен корректно работать
+    for idx in (50, 100, 150, 199):
+        m = bt_market.build_market_at(data, idx=idx)
+        cur_ts = data["klines"]["5"][idx]["ts"]
+        # Все klines в _klines не должны иметь ts больше cur_ts
+        for tf, kl in m["_klines"].items():
+            for k in kl:
+                assert k["ts"] <= cur_ts
