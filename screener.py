@@ -36,6 +36,7 @@ import minor_patterns
 import backtest as bt_backtest
 import bt_data
 import bt_compare
+import bt_hyperopt
 from webhook_utils import parse_alert_ts
 
 try:
@@ -2601,6 +2602,54 @@ def tg_send_photo(photo_bytes: bytes, caption: str, chat_id=None,
     return True
 
 
+def tg_send_document(doc_bytes: bytes, filename: str,
+                     caption: str = "", chat_id=None) -> bool:
+    """
+    Отправляет файл (JSON dump, CSV, лог) как Telegram-attachment.
+    """
+    cid = chat_id or TELEGRAM_CHAT_ID
+    files = {"document": (filename, doc_bytes, "application/octet-stream")}
+    data  = {"chat_id": cid, "caption": caption[:1024], "parse_mode": "HTML"}
+    try:
+        r = requests.post(
+            f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendDocument",
+            data=data, files=files, timeout=30,
+        )
+        r.raise_for_status()
+        return True
+    except Exception as e:
+        log.error(f"Telegram sendDocument: {e}")
+        return False
+
+
+def tg_send_chunked(text: str, chat_id=None, chunk: int = 3800) -> None:
+    """
+    Шлёт длинный текст пачками по ≤chunk символов (лимит Telegram 4096).
+    Сохраняет `<pre>...</pre>` обёртку если она была.
+    """
+    cid = chat_id or TELEGRAM_CHAT_ID
+    wrap_pre = text.startswith("<pre>") and text.endswith("</pre>")
+    inner = text[5:-6] if wrap_pre else text
+    if len(text) <= chunk:
+        tg_send(text, chat_id=cid)
+        return
+    lines = inner.split("\n")
+    buf, parts = [], []
+    cur = 0
+    for ln in lines:
+        if cur + len(ln) + 1 > chunk and buf:
+            parts.append("\n".join(buf))
+            buf, cur = [], 0
+        buf.append(ln)
+        cur += len(ln) + 1
+    if buf:
+        parts.append("\n".join(buf))
+    for i, p in enumerate(parts, 1):
+        body = f"<pre>{p}</pre>" if wrap_pre else p
+        prefix = f"({i}/{len(parts)})\n" if len(parts) > 1 else ""
+        tg_send(prefix + body, chat_id=cid)
+
+
 def _register_bot_commands() -> None:
     """Register slash commands so Telegram shows them in the / menu."""
     commands = [
@@ -2618,6 +2667,8 @@ def _register_bot_commands() -> None:
         {"command": "stats",    "description": "Win-rate по типам сигналов (30 дней)"},
         {"command": "trades",   "description": "Последние закрытые сделки с R-исходом"},
         {"command": "backtest", "description": "Прогон стратегии на истории: /backtest BTC 30"},
+        {"command": "btdiag",   "description": "Диагностика: funnel + breakdown сигналов: /btdiag BTC 30"},
+        {"command": "hyperopt", "description": "Optuna-тюнинг параметров: /hyperopt BTC 60 30"},
         {"command": "history",  "description": "Последние 10 сигналов из БД"},
         {"command": "digest",   "description": "Дневной дайджест с LLM-анализом"},
         {"command": "scan",     "description": "Ручной запуск автосканера"},
@@ -3256,6 +3307,11 @@ def cmd_help(chat_id: int):
         "/backtest [sym days] — прогон стратегии на истории (до 365 дней)\n"
         "                       /backtest BTC 30  · /backtest BTC 180 compare\n"
         "                       /backtest BTC 30 tf=15  — другой primary TF\n"
+        "/btdiag [sym days]   — диагностика: funnel + breakdown сигналов\n"
+        "                       /btdiag BTC 30  — куда уходят сигналы\n"
+        "/hyperopt [sym days trials] — Optuna-тюнинг параметров\n"
+        "                       /hyperopt BTC 60 30\n"
+        "                       /hyperopt BTC 60 50 walkforward\n"
         "/digest              — дневной дайджест\n\n"
         "💬 <b>Свободный чат — пиши без команд!</b>\n"
         "<i>анализируй BTC 4H</i>     → полный разбор\n"
@@ -3468,6 +3524,8 @@ def handle_update(update: dict):
     elif cmd == "/stats":              cmd_stats(chat_id, args)
     elif cmd == "/trades":             cmd_trades(chat_id, args)
     elif cmd == "/backtest":           cmd_backtest(chat_id, args)
+    elif cmd == "/btdiag":             cmd_btdiag(chat_id, args)
+    elif cmd == "/hyperopt":           cmd_hyperopt(chat_id, args)
     elif cmd == "/top":                cmd_top(chat_id)
     elif cmd == "/movers":             cmd_movers(chat_id)
     elif cmd == "/risk":               cmd_risk(chat_id, args)
@@ -4200,6 +4258,257 @@ def cmd_backtest(chat_id: int, args: str = ""):
         except Exception as e:
             log.exception(f"[/backtest] failed: {e}")
             tg_send(f"❌ Backtest error: {type(e).__name__}: {e}",
+                    chat_id=chat_id)
+
+    threading.Thread(target=_run, daemon=True).start()
+
+
+# ─── BACKTEST DIAGNOSTIC (/btdiag) ───────────────────────────────────────────
+
+
+def _parse_btdiag_args(args: str) -> tuple[str, int]:
+    """Парсит '/btdiag BTC 30' → ('BTCUSDT', 30). Дефолты: BTC 30."""
+    parts = [p for p in args.strip().split() if p]
+    symbol, days = "BTC", 30
+    for p in parts:
+        if p.isdigit():
+            days = int(p)
+        else:
+            symbol = p.upper().replace("USDT", "").replace(".P", "")
+    symbol_full = symbol if symbol.endswith("USDT") else symbol + "USDT"
+    days = max(1, min(365, days))
+    return symbol_full, days
+
+
+def cmd_btdiag(chat_id: int, args: str = ""):
+    """
+    Диагностический backtest: funnel + breakdown + комиссии + JSON dump.
+
+      /btdiag             — BTCUSDT 30d
+      /btdiag ETH 60      — ETHUSDT 60d
+      /btdiag BTC 90      — BTCUSDT 90d (~2-3 мин)
+
+    Шлёт текстовый отчёт и JSON-файл со всеми сигналами/трейдами.
+    """
+    symbol_full, days = _parse_btdiag_args(args)
+
+    eta = "30-90 сек" if days <= 30 else ("1-3 мин" if days <= 90 else "3-7 мин")
+    tg_send(
+        f"🔬 <b>Btdiag {symbol_full} {days}d</b>\n"
+        f"Запускаю — может занять {eta}...",
+        chat_id=chat_id,
+    )
+
+    def _run():
+        import time as _t
+        t0 = _t.time()
+        try:
+            tg_send("⏳ <b>Шаг 1/2:</b> Загружаю историю...", chat_id=chat_id)
+            data = bt_data.fetch_all(
+                symbol_full, days,
+                tfs=["5", "15", "60", "240", "D"],
+                fetch_funding_data=False, fetch_oi_data=False,
+            )
+            n_bars = len(data["klines"].get("5") or [])
+            fetch_time = _t.time() - t0
+            tg_send(
+                f"✅ <b>Шаг 1/2:</b> {n_bars} 5m баров ({fetch_time:.0f}с).\n"
+                f"⏳ <b>Шаг 2/2:</b> Replay + breakdown...",
+                chat_id=chat_id,
+            )
+
+            t1 = _t.time()
+            result = bt_backtest.run_backtest(
+                data, warmup_bars=200, progress_each=1000,
+                collect_signals=True,
+            )
+            replay_time = _t.time() - t1
+            total_time = _t.time() - t0
+
+            body = bt_backtest.format_result(result)
+            footer = (f"\n\n⏱ Fetch: {fetch_time:.0f}с · "
+                      f"Replay: {replay_time:.0f}с · "
+                      f"Total: {total_time:.0f}с")
+
+            tg_send_chunked(f"<pre>{body}</pre>{footer}", chat_id=chat_id)
+
+            # JSON dump через sendDocument
+            import tempfile as _tempfile
+            with _tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
+                tmp_path = f.name
+            try:
+                bt_backtest.dump_result_json(result, tmp_path)
+                with open(tmp_path, "rb") as f:
+                    payload = f.read()
+                tg_send_document(
+                    payload,
+                    f"btdiag_{symbol_full}_{days}d.json",
+                    caption=f"Полный dump: {len(result.signals)} сигналов, "
+                            f"{len(result.trades)} трейдов",
+                    chat_id=chat_id,
+                )
+            finally:
+                try:
+                    os.unlink(tmp_path)
+                except OSError:
+                    pass
+
+        except Exception as e:
+            log.exception(f"[/btdiag] failed: {e}")
+            tg_send(f"❌ Btdiag error: {type(e).__name__}: {e}",
+                    chat_id=chat_id)
+
+    threading.Thread(target=_run, daemon=True).start()
+
+
+# ─── HYPEROPT (/hyperopt) ────────────────────────────────────────────────────
+
+
+def _parse_hyperopt_args(args: str) -> tuple[str, int, int, bool, str]:
+    """
+    Парсит '/hyperopt BTC 60 50 walkforward metric=sharpe_r'.
+    Дефолты: BTC 60d 30 trials, без walkforward, metric=profit_factor.
+    """
+    parts = [p for p in args.strip().split() if p]
+    symbol, days, trials = "BTC", 60, 30
+    walkforward = False
+    metric = "profit_factor"
+    int_seen = 0
+    for p in parts:
+        pl = p.lower()
+        if p.isdigit():
+            v = int(p)
+            if int_seen == 0:
+                days = v
+            else:
+                trials = v
+            int_seen += 1
+        elif pl in ("walkforward", "wf", "--walkforward"):
+            walkforward = True
+        elif pl.startswith("metric="):
+            val = p.split("=", 1)[1].lower()
+            if val in bt_hyperopt.VALID_METRICS:
+                metric = val
+        else:
+            symbol = p.upper().replace("USDT", "").replace(".P", "")
+    symbol_full = symbol if symbol.endswith("USDT") else symbol + "USDT"
+    days = max(7, min(365, days))
+    trials = max(5, min(200, trials))
+    return symbol_full, days, trials, walkforward, metric
+
+
+def cmd_hyperopt(chat_id: int, args: str = ""):
+    """
+    Optuna-based тюнинг decision-параметров.
+
+      /hyperopt                       — BTC 60d, 30 trials, PF
+      /hyperopt ETH 90 50             — ETH 90d, 50 trials
+      /hyperopt BTC 60 30 walkforward — out-of-sample валидация на 3 окнах
+      /hyperopt BTC 60 50 metric=sharpe_r
+
+    Защита: trial с closed<10 трейдов отбрасывается (anti-overfit).
+    Walk-forward optimize на 70% train → backtest на 30% test, mean OOS.
+
+    Один trial ≈ один backtest. 30 trials × 60d ≈ 5-10 мин.
+    """
+    symbol_full, days, trials, walkforward, metric = _parse_hyperopt_args(args)
+
+    if walkforward:
+        eta = f"{int(trials * 3 * 0.7 / 15)}-{int(trials * 3 / 10)} мин"
+    else:
+        eta = f"{int(trials / 15)}-{int(trials / 8)} мин"
+
+    tg_send(
+        f"🧪 <b>Hyperopt {symbol_full} {days}d</b>\n"
+        f"Trials: {trials} · metric: {metric} · "
+        f"{'walk-forward (3 windows)' if walkforward else 'single-shot'}\n"
+        f"ETA ~{eta}...",
+        chat_id=chat_id,
+    )
+
+    def _run():
+        import time as _t
+        t0 = _t.time()
+        try:
+            tg_send("⏳ <b>Шаг 1/2:</b> Загружаю историю...", chat_id=chat_id)
+            data = bt_data.fetch_all(
+                symbol_full, days,
+                tfs=["5", "15", "60", "240", "D"],
+                fetch_funding_data=False, fetch_oi_data=False,
+            )
+            n_bars = len(data["klines"].get("5") or [])
+            fetch_time = _t.time() - t0
+            tg_send(
+                f"✅ <b>Шаг 1/2:</b> {n_bars} 5m баров ({fetch_time:.0f}с).\n"
+                f"⏳ <b>Шаг 2/2:</b> Optuna {trials} trials...",
+                chat_id=chat_id,
+            )
+
+            t1 = _t.time()
+            last_log = [_t.time()]
+
+            def _progress(msg: str):
+                # Throttle: send TG update раз в ~30 сек чтобы не флудить
+                now = _t.time()
+                if now - last_log[0] >= 30:
+                    elapsed = now - t1
+                    tg_send(f"⏳ {msg} · прошло {elapsed/60:.1f} мин",
+                            chat_id=chat_id)
+                    last_log[0] = now
+                log.info(f"[/hyperopt] {msg}")
+
+            result = bt_hyperopt.hyperopt(
+                data, n_trials=trials, metric=metric,
+                seed=42, min_trades=10, warmup_bars=200,
+                progress=_progress,
+            )
+
+            if walkforward:
+                tg_send("⏳ Walk-forward валидация (3 окна)...",
+                        chat_id=chat_id)
+                wf = bt_hyperopt.hyperopt_walkforward(
+                    data, n_windows=3, train_test_ratio=0.7,
+                    n_trials=trials, metric=metric,
+                    seed=42, min_trades=10, warmup_bars=200,
+                    progress=_progress,
+                )
+                result.walkforward = wf
+
+            opt_time = _t.time() - t1
+            total_time = _t.time() - t0
+
+            body = bt_hyperopt.format_hyperopt(result, top_n=10)
+            footer = (f"\n\n⏱ Fetch: {fetch_time:.0f}с · "
+                      f"Optimize: {opt_time:.0f}с · "
+                      f"Total: {total_time:.0f}с")
+
+            tg_send_chunked(f"<pre>{body}</pre>{footer}", chat_id=chat_id)
+
+            # JSON dump
+            import tempfile as _tempfile
+            with _tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
+                tmp_path = f.name
+            try:
+                bt_hyperopt.dump_result_json(result, tmp_path)
+                with open(tmp_path, "rb") as f:
+                    payload = f.read()
+                tg_send_document(
+                    payload,
+                    f"hyperopt_{symbol_full}_{days}d_{trials}t.json",
+                    caption=(f"Trials dump: {trials}t · "
+                            f"best {metric}="
+                            f"{result.best_value if result.best_value is not None else '—'}"),
+                    chat_id=chat_id,
+                )
+            finally:
+                try:
+                    os.unlink(tmp_path)
+                except OSError:
+                    pass
+
+        except Exception as e:
+            log.exception(f"[/hyperopt] failed: {e}")
+            tg_send(f"❌ Hyperopt error: {type(e).__name__}: {e}",
                     chat_id=chat_id)
 
     threading.Thread(target=_run, daemon=True).start()
