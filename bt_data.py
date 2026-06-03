@@ -1,12 +1,16 @@
 """
 bt_data.py — historical data fetcher для бектеста.
 
-Тянет klines (multi-TF), funding rate, open interest с публичных Bybit V5
-endpoints (без аутентификации). Кеширует в bt_cache/{symbol}_{kind}.jsonl,
-чтобы не делать повторные запросы.
+Тянет klines (multi-TF), funding rate, open interest. Чейн fallback для klines:
+Bybit V5 → Binance Futures → Hyperliquid (если первые два геоблочат).
+Funding/OI — только Bybit (нет универсального source).
+
+Кеширует в bt_cache/{symbol}_{kind}.jsonl, чтобы не делать повторные запросы.
 
 API endpoints:
   • /v5/market/kline           — klines history (max 1000 per request)
+  • /fapi/v1/klines            — Binance Futures klines (max 1500)
+  • /info candleSnapshot       — Hyperliquid (max ~5000)
   • /v5/market/funding/history — funding rate history (max 200 per request)
   • /v5/market/open-interest   — OI history (max 200 per request)
 
@@ -39,9 +43,11 @@ __all__ = [
 
 BYBIT_BASE          = "https://api.bybit.com"
 BINANCE_FAPI        = "https://fapi.binance.com"
+HL_INFO             = "https://api.hyperliquid.xyz/info"
 CACHE_DIR           = Path("bt_cache")
 KLINE_MAX_LIMIT     = 1000
 BINANCE_KLINE_LIMIT = 1500
+HL_KLINE_LIMIT      = 5000
 FUNDING_MAX_LIMIT   = 200
 OI_MAX_LIMIT        = 200
 DEFAULT_CATEGORY    = "linear"  # USDT perpetual futures
@@ -53,6 +59,13 @@ RETRY_BACKOFF_SEC   = 2
 _BINANCE_INTERVAL_MAP = {
     "1": "1m", "3": "3m", "5": "5m", "15": "15m", "30": "30m",
     "60": "1h", "120": "2h", "240": "4h", "360": "6h", "480": "8h",
+    "720": "12h", "D": "1d", "W": "1w", "M": "1M",
+}
+
+# Bybit V5 → Hyperliquid interval mapping
+_HL_INTERVAL_MAP = {
+    "1": "1m", "3": "3m", "5": "5m", "15": "15m", "30": "30m",
+    "60": "1h", "120": "2h", "240": "4h", "480": "8h",
     "720": "12h", "D": "1d", "W": "1w", "M": "1M",
 }
 
@@ -254,6 +267,96 @@ def _fetch_klines_binance(
     return out
 
 
+def _hl_symbol(symbol: str) -> str:
+    """BTCUSDT → BTC. HL использует bare coin tickers, не пары."""
+    s = symbol.upper().replace(".P", "")
+    for suffix in ("USDT", "USDC", "USD", "PERP"):
+        if s.endswith(suffix):
+            return s[: -len(suffix)]
+    return s
+
+
+def _parse_hl_kline_row(row: dict) -> dict:
+    """
+    Hyperliquid candle dict: {t (start ms), T (close ms), o, h, l, c, v, n, s, i}
+    Возвращает наш стандартный формат.
+    """
+    return {
+        "ts": int(row["t"]),
+        "o":  float(row["o"]),
+        "h":  float(row["h"]),
+        "l":  float(row["l"]),
+        "c":  float(row["c"]),
+        "v":  float(row["v"]),
+    }
+
+
+def _post_with_retry(
+    url: str,
+    payload: dict,
+    session: requests.Session | None = None,
+):
+    """HL POST с retry на network errors / 5xx (HL не использует GET-params)."""
+    sess = session or requests
+    last_exc: Exception | None = None
+    for attempt in range(RETRY_ATTEMPTS):
+        try:
+            r = sess.post(url, json=payload, timeout=REQUEST_TIMEOUT)
+            r.raise_for_status()
+            return r.json()
+        except (requests.exceptions.RequestException,
+                requests.exceptions.HTTPError) as e:
+            last_exc = e
+            if attempt + 1 < RETRY_ATTEMPTS:
+                time.sleep(RETRY_BACKOFF_SEC ** attempt)
+    raise RuntimeError(f"Hyperliquid request failed after {RETRY_ATTEMPTS} "
+                       f"retries: {last_exc}")
+
+
+def _fetch_klines_hl(
+    symbol: str, tf: str, start_ms: int, end_ms: int,
+    *, session=None,
+) -> list[dict]:
+    """
+    Hyperliquid paginated kline fetch — fallback когда Bybit И Binance заблочены.
+    Endpoint `candleSnapshot` поддерживает startTime/endTime, max ~5000
+    свечей за запрос.
+    """
+    iv_bybit = tf_to_bybit_interval(tf)
+    iv = _HL_INTERVAL_MAP.get(iv_bybit)
+    if iv is None:
+        raise RuntimeError(f"No Hyperliquid interval mapping for tf={tf}")
+
+    coin = _hl_symbol(symbol)
+    minutes = tf_to_minutes(tf)
+    window_ms = HL_KLINE_LIMIT * minutes * 60_000
+
+    out: list[dict] = []
+    cur_start = start_ms
+    while cur_start < end_ms:
+        cur_end = min(end_ms, cur_start + window_ms)
+        payload = {
+            "type": "candleSnapshot",
+            "req": {"coin": coin, "interval": iv,
+                    "startTime": cur_start, "endTime": cur_end},
+        }
+        data = _post_with_retry(HL_INFO, payload, session=session)
+        if not isinstance(data, list) or not data:
+            break
+        parsed = [_parse_hl_kline_row(r) for r in data
+                  if isinstance(r, dict) and "t" in r]
+        parsed = [p for p in parsed if start_ms <= p["ts"] < end_ms]
+        if not parsed:
+            break
+        out.extend(parsed)
+        last_ts = parsed[-1]["ts"]
+        cur_start = last_ts + minutes * 60_000
+        if len(data) < HL_KLINE_LIMIT:
+            break
+
+    return out
+
+
 def fetch_klines(
     symbol: str,
     tf: str,
@@ -279,27 +382,39 @@ def fetch_klines(
 
     # 1) Try Bybit (prod-primary)
     out: list[dict] = []
+    _bybit_err: Exception | None = None
     try:
         out = _fetch_klines_bybit(symbol, tf, start_ms, end_ms,
                                   session=session, category=category)
     except RuntimeError as e:
         # 403 / network — fall through
-        out = []
-        _last_err = e
-    else:
-        _last_err = None
+        _bybit_err = e
 
     # 2) Fallback to Binance Futures
+    _binance_err: Exception | None = None
     if not out:
         try:
             out = _fetch_klines_binance(symbol, tf, start_ms, end_ms,
                                         session=session)
         except RuntimeError as e:
-            if _last_err is not None:
-                raise RuntimeError(
-                    f"Both exchanges failed. Bybit: {_last_err}. Binance: {e}"
-                ) from e
-            raise
+            _binance_err = e
+
+    # 3) Fallback to Hyperliquid (geo-friendly, не блокируется в US/EU)
+    _hl_err: Exception | None = None
+    if not out:
+        try:
+            out = _fetch_klines_hl(symbol, tf, start_ms, end_ms,
+                                   session=session)
+        except RuntimeError as e:
+            _hl_err = e
+
+    if not out and (_bybit_err or _binance_err or _hl_err):
+        raise RuntimeError(
+            f"All exchanges failed for {symbol} tf={tf}. "
+            f"Bybit: {_bybit_err}. "
+            f"Binance: {_binance_err}. "
+            f"Hyperliquid: {_hl_err}."
+        )
 
     # Дедупликация по ts
     seen: set[int] = set()

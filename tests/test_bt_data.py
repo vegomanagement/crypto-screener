@@ -427,3 +427,165 @@ def test_binance_interval_mapping():
     assert bt_data._BINANCE_INTERVAL_MAP["60"] == "1h"
     assert bt_data._BINANCE_INTERVAL_MAP["240"] == "4h"
     assert bt_data._BINANCE_INTERVAL_MAP["D"] == "1d"
+
+
+# ─── Hyperliquid fallback ────────────────────────────────────────────────
+
+
+def _hl_kline_row(ts_ms, o, h, lo, c, v):
+    """Hyperliquid candle dict format."""
+    return {
+        "t": ts_ms, "T": ts_ms + 300_000 - 1,
+        "o": str(o), "h": str(h), "l": str(lo), "c": str(c), "v": str(v),
+        "s": "BTC", "i": "5m", "n": 100,
+    }
+
+
+def test_hl_symbol_strips_quote_suffix():
+    assert bt_data._hl_symbol("BTCUSDT") == "BTC"
+    assert bt_data._hl_symbol("ETHUSDC") == "ETH"
+    assert bt_data._hl_symbol("SOLUSD") == "SOL"
+    assert bt_data._hl_symbol("BTCUSDT.P") == "BTC"
+    assert bt_data._hl_symbol("BTC") == "BTC"
+
+
+def test_hl_interval_mapping():
+    assert bt_data._HL_INTERVAL_MAP["5"] == "5m"
+    assert bt_data._HL_INTERVAL_MAP["15"] == "15m"
+    assert bt_data._HL_INTERVAL_MAP["60"] == "1h"
+    assert bt_data._HL_INTERVAL_MAP["240"] == "4h"
+    assert bt_data._HL_INTERVAL_MAP["D"] == "1d"
+
+
+def test_parse_hl_kline_row():
+    row = _hl_kline_row(1700000000000, 100, 101, 99, 100.5, 12.3)
+    parsed = bt_data._parse_hl_kline_row(row)
+    assert parsed == {"ts": 1700000000000, "o": 100.0, "h": 101.0,
+                      "l": 99.0, "c": 100.5, "v": 12.3}
+
+
+def test_fetch_klines_hl_basic(tmp_cache):
+    """Прямой вызов _fetch_klines_hl с моком HL responses."""
+    base_ts = _ms(2026, 6, 1, 10)
+    rows = [_hl_kline_row(base_ts + i * 300_000, 100, 101, 99, 100, 1)
+            for i in range(10)]
+
+    sess = MagicMock()
+    call_count = {"n": 0}
+
+    def _post(url, json=None, timeout=None):
+        call_count["n"] += 1
+        resp = MagicMock()
+        # Первый вызов — отдаём rows, потом пусто (терминация)
+        resp.json = lambda: rows if call_count["n"] == 1 else []
+        resp.raise_for_status = lambda: None
+        return resp
+
+    sess.post = _post
+    start_ms = _ms(2026, 6, 1, 9)
+    end_ms = _ms(2026, 6, 1, 12)
+    result = bt_data._fetch_klines_hl(
+        "BTCUSDT", "5", start_ms, end_ms, session=sess)
+    assert len(result) > 0
+    for k in result:
+        assert "ts" in k and "o" in k and "c" in k
+
+
+def test_fetch_klines_hl_filters_outside_window(tmp_cache):
+    """HL вернул свечи вне [start, end) — должны быть отфильтрованы."""
+    base_ts = _ms(2026, 6, 1, 10)
+    # 5 свечей внутри окна, 5 после
+    rows = [_hl_kline_row(base_ts + i * 300_000, 100, 101, 99, 100, 1)
+            for i in range(10)]
+
+    sess = MagicMock()
+    sess.post = lambda *a, **kw: type("R", (), {
+        "json": lambda self=None: rows,
+        "raise_for_status": lambda self=None: None,
+    })()
+    start_ms = base_ts
+    end_ms = base_ts + 5 * 300_000   # ровно 5 свечей
+    result = bt_data._fetch_klines_hl(
+        "BTCUSDT", "5", start_ms, end_ms, session=sess)
+    assert len(result) == 5
+
+
+def test_fetch_klines_hl_unknown_tf_raises():
+    with pytest.raises(RuntimeError, match="No Hyperliquid interval"):
+        bt_data._fetch_klines_hl("BTCUSDT", "garbage", 0, 1)
+
+
+def test_fetch_klines_falls_back_to_hl_when_bybit_and_binance_fail(tmp_cache):
+    """
+    Главный fix: оба Bybit и Binance геоблочат → HL должен сработать.
+    """
+    import requests as _req
+
+    base_ts = _ms(2026, 6, 1, 10)
+    hl_rows = [_hl_kline_row(base_ts + i * 300_000, 333, 334, 332, 333, 5)
+               for i in range(20)]
+
+    hl_call_count = {"n": 0}
+
+    def _selective_get(url, params=None, timeout=None):
+        # Bybit и Binance — оба GET → роняем
+        err = _req.exceptions.HTTPError(
+            "403 Client Error: Forbidden" if "bybit" in url
+            else "451 Client Error: Unavailable"
+        )
+        resp = MagicMock()
+        resp.raise_for_status = MagicMock(side_effect=err)
+        return resp
+
+    def _hl_post(url, json=None, timeout=None):
+        hl_call_count["n"] += 1
+        resp = MagicMock()
+        resp.json = lambda: hl_rows if hl_call_count["n"] == 1 else []
+        resp.raise_for_status = lambda: None
+        return resp
+
+    sess = MagicMock()
+    sess.get = _selective_get
+    sess.post = _hl_post
+
+    monkeypatch_attr = bt_data.RETRY_BACKOFF_SEC
+    bt_data.RETRY_BACKOFF_SEC = 0
+    try:
+        result = bt_data.fetch_klines("BTCUSDT", "5", days=1,
+                                      cache=False, session=sess)
+    finally:
+        bt_data.RETRY_BACKOFF_SEC = monkeypatch_attr
+
+    assert len(result) > 0
+    assert result[0]["o"] == 333.0   # данные ИЗ HL
+
+
+def test_fetch_klines_raises_when_all_three_fail(monkeypatch, tmp_cache):
+    """Все три эксченджа упали → RuntimeError с упоминанием каждого."""
+    import requests as _req
+
+    def _get_fail(url, params=None, timeout=None):
+        err = _req.exceptions.HTTPError("403 Client Error")
+        resp = MagicMock()
+        resp.raise_for_status = MagicMock(side_effect=err)
+        return resp
+
+    def _post_fail(url, json=None, timeout=None):
+        err = _req.exceptions.HTTPError("503 Server Error")
+        resp = MagicMock()
+        resp.raise_for_status = MagicMock(side_effect=err)
+        return resp
+
+    sess = MagicMock()
+    sess.get = _get_fail
+    sess.post = _post_fail
+    monkeypatch.setattr(bt_data, "RETRY_BACKOFF_SEC", 0)
+
+    with pytest.raises(RuntimeError) as exc_info:
+        bt_data.fetch_klines("BTCUSDT", "5", days=1,
+                             cache=False, session=sess)
+
+    msg = str(exc_info.value)
+    assert "Bybit" in msg
+    assert "Binance" in msg
+    assert "Hyperliquid" in msg
