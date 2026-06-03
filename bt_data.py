@@ -138,8 +138,10 @@ def _request_with_retry(
     url: str,
     params: dict,
     session: requests.Session | None = None,
+    *,
+    source: str = "Bybit",
 ) -> dict:
-    """Bybit GET с retry на network errors / 5xx."""
+    """GET с retry на network errors / 5xx. `source` идёт в ошибку для логов."""
     sess = session or requests
     last_exc: Exception | None = None
     for attempt in range(RETRY_ATTEMPTS):
@@ -152,8 +154,8 @@ def _request_with_retry(
             last_exc = e
             if attempt + 1 < RETRY_ATTEMPTS:
                 time.sleep(RETRY_BACKOFF_SEC ** attempt)
-    raise RuntimeError(f"Bybit request failed after {RETRY_ATTEMPTS} retries: "
-                       f"{last_exc}")
+    raise RuntimeError(f"{source} request failed after {RETRY_ATTEMPTS} "
+                       f"retries: {last_exc}")
 
 
 # ─── Klines ────────────────────────────────────────────────────────────────
@@ -251,7 +253,8 @@ def _fetch_klines_binance(
             "limit": BINANCE_KLINE_LIMIT,
         }
         data = _request_with_retry(
-            f"{BINANCE_FAPI}/fapi/v1/klines", params, session=session)
+            f"{BINANCE_FAPI}/fapi/v1/klines", params, session=session,
+            source="Binance")
         if not isinstance(data, list) or not data:
             break
         parsed = [_parse_binance_kline_row(r) for r in data]
@@ -321,6 +324,15 @@ def _fetch_klines_hl(
     Hyperliquid paginated kline fetch — fallback когда Bybit И Binance заблочены.
     Endpoint `candleSnapshot` поддерживает startTime/endTime, max ~5000
     свечей за запрос.
+
+    HL имеет ограниченный retention для коротких TF (~5000 баров):
+      5m  ~17d, 15m ~50d, 1h ~7m, 4h ~2y, 1d ~13y
+    Поэтому итерируемся НАЗАД от end_ms — получаем сначала свежие данные,
+    а недоступная старая часть просто отсутствует (graceful). Это симметрично
+    с Bybit, который тоже идёт newest→oldest.
+
+    Если HL вернул 0 свечей за весь запрос — `RuntimeError`, чтобы caller
+    знал что HL не покрыл диапазон (vs silent empty).
     """
     iv_bybit = tf_to_bybit_interval(tf)
     iv = _HL_INTERVAL_MAP.get(iv_bybit)
@@ -332,26 +344,41 @@ def _fetch_klines_hl(
     window_ms = HL_KLINE_LIMIT * minutes * 60_000
 
     out: list[dict] = []
-    cur_start = start_ms
-    while cur_start < end_ms:
-        cur_end = min(end_ms, cur_start + window_ms)
+    cur_end = end_ms
+    while cur_end > start_ms:
+        cur_start = max(start_ms, cur_end - window_ms)
         payload = {
             "type": "candleSnapshot",
             "req": {"coin": coin, "interval": iv,
                     "startTime": cur_start, "endTime": cur_end},
         }
         data = _post_with_retry(HL_INFO, payload, session=session)
-        if not isinstance(data, list) or not data:
-            break
+        if not isinstance(data, list):
+            # HL может вернуть {"error": "..."} вместо списка
+            err_msg = (data.get("error") if isinstance(data, dict)
+                       else f"unexpected type {type(data).__name__}")
+            raise RuntimeError(
+                f"Hyperliquid candleSnapshot for {coin} {iv} returned non-list: "
+                f"{err_msg}"
+            )
+        if not data:
+            # Этот чанк пустой — HL не имеет данных в [cur_start, cur_end).
+            # Это нормально для retention-edge: продолжаем — может в более
+            # свежих чанках данные есть. Но если ВЕСЬ диапазон пустой —
+            # raise в конце.
+            cur_end = cur_start
+            continue
         parsed = [_parse_hl_kline_row(r) for r in data
                   if isinstance(r, dict) and "t" in r]
-        parsed = [p for p in parsed if start_ms <= p["ts"] < end_ms]
+        parsed = [p for p in parsed if start_ms <= p["ts"] < cur_end]
+        parsed.sort(key=lambda x: x["ts"])
         if not parsed:
-            break
-        out.extend(parsed)
-        last_ts = parsed[-1]["ts"]
-        cur_start = last_ts + minutes * 60_000
+            cur_end = cur_start
+            continue
+        out = parsed + out
+        cur_end = parsed[0]["ts"]
         if len(data) < HL_KLINE_LIMIT:
+            # HL вернул меньше лимита → дальше история закончилась
             break
 
     return out
@@ -401,7 +428,9 @@ def fetch_klines(
 
     # 3) Fallback to Hyperliquid (geo-friendly, не блокируется в US/EU)
     _hl_err: Exception | None = None
+    _hl_attempted = False
     if not out:
+        _hl_attempted = True
         try:
             out = _fetch_klines_hl(symbol, tf, start_ms, end_ms,
                                    session=session)
@@ -409,11 +438,18 @@ def fetch_klines(
             _hl_err = e
 
     if not out and (_bybit_err or _binance_err or _hl_err):
+        if _hl_err is not None:
+            hl_msg = str(_hl_err)
+        elif _hl_attempted:
+            hl_msg = (f"no data in range (retention exceeded for {tf}m? "
+                      f"5m=~17d, 15m=~50d)")
+        else:
+            hl_msg = "not attempted"
         raise RuntimeError(
             f"All exchanges failed for {symbol} tf={tf}. "
             f"Bybit: {_bybit_err}. "
             f"Binance: {_binance_err}. "
-            f"Hyperliquid: {_hl_err}."
+            f"Hyperliquid: {hl_msg}."
         )
 
     # Дедупликация по ts

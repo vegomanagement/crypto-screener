@@ -38,10 +38,12 @@ def _kline_row(ts_ms, o, h, lo, c, v):
     return [str(ts_ms), str(o), str(h), str(lo), str(c), str(v), "0"]
 
 
-def _mock_session(responses):
+def _mock_session(responses, *, hl_responses=None):
     """
-    Возвращает session-like объект, у которого .get(url, params, timeout)
-    возвращает последовательно из списка responses.
+    Возвращает session-like объект:
+      • .get(url, params, timeout) — последовательно из `responses`
+      • .post(url, json, timeout) — последовательно из `hl_responses`
+        (для Hyperliquid fallback). По умолчанию пустой список — HL graceful.
     """
     sess = MagicMock()
     iterator = iter(responses)
@@ -56,7 +58,20 @@ def _mock_session(responses):
         resp.raise_for_status = lambda: None
         return resp
 
+    hl_iter = iter(hl_responses or [])
+
+    def _post(url, json=None, timeout=None):
+        resp = MagicMock()
+        try:
+            payload = next(hl_iter)
+        except StopIteration:
+            payload = []   # HL graceful empty
+        resp.json = lambda: payload
+        resp.raise_for_status = lambda: None
+        return resp
+
     sess.get = _get
+    sess.post = _post
     return sess
 
 
@@ -558,6 +573,163 @@ def test_fetch_klines_falls_back_to_hl_when_bybit_and_binance_fail(tmp_cache):
 
     assert len(result) > 0
     assert result[0]["o"] == 333.0   # данные ИЗ HL
+
+
+def test_fetch_klines_hl_iterates_backward(tmp_cache):
+    """
+    HL итерация: начинаем от end_ms, идём назад. Когда первый чанк пуст
+    (retention-edge — данные есть только для свежего диапазона), переходим
+    к более старому. НЕ break'аемся.
+    """
+    base_ts = _ms(2026, 6, 1, 10)
+    # Только самый свежий chunk имеет данные
+    fresh_rows = [_hl_kline_row(base_ts + i * 300_000, 100, 101, 99, 100, 1)
+                  for i in range(10)]
+
+    calls = {"n": 0}
+
+    def _post(url, json=None, timeout=None):
+        calls["n"] += 1
+        resp = MagicMock()
+        # Первый чанк (самый свежий end) — даём данные.
+        # Последующие (более старые) — пусто. Цикл должен корректно
+        # завершиться, а не зависнуть.
+        resp.json = lambda: fresh_rows if calls["n"] == 1 else []
+        resp.raise_for_status = lambda: None
+        return resp
+
+    sess = MagicMock()
+    sess.post = _post
+    sess.get = lambda *a, **kw: None  # unused
+
+    # Запрашиваем длинный диапазон (5d) — должен пройти даже с empty чанками.
+    start_ms = base_ts - 5 * 86_400_000
+    end_ms = base_ts + 10 * 300_000
+    result = bt_data._fetch_klines_hl(
+        "BTCUSDT", "5", start_ms, end_ms, session=sess)
+    assert len(result) > 0
+    assert result[0]["o"] == 100.0
+
+
+def test_fetch_klines_hl_continues_past_empty_chunks(tmp_cache):
+    """
+    HL отдал empty в середине → продолжаем backward, не break.
+    Backward iteration: call#1 = newest window (empty), call#2 = older window
+    с данными в нём, call#3+ = ещё старее (empty). Должны вернуть данные.
+    """
+    minutes = 5
+    window_ms = bt_data.HL_KLINE_LIMIT * minutes * 60_000
+
+    end_ms = _ms(2026, 6, 1, 10)
+    # window2 covers [end_ms - 2*window_ms, end_ms - window_ms]
+    # Расставим все 5 свечей хорошо внутри window2 (не на границе).
+    window2_anchor = end_ms - window_ms - 10_000_000
+    older_rows = [_hl_kline_row(window2_anchor + i * 300_000, 200, 201, 199,
+                                  200, 2) for i in range(5)]
+
+    state = {"call": 0}
+
+    def _post(url, json=None, timeout=None):
+        state["call"] += 1
+        resp = MagicMock()
+        if state["call"] == 1:
+            payload = []           # newest chunk пустой
+        elif state["call"] == 2:
+            payload = older_rows   # средний чанк с данными
+        else:
+            payload = []           # совсем старые тоже пустые
+        resp.json = lambda: payload
+        resp.raise_for_status = lambda: None
+        return resp
+
+    sess = MagicMock()
+    sess.post = _post
+
+    start_ms = end_ms - 3 * window_ms
+    result = bt_data._fetch_klines_hl(
+        "BTCUSDT", "5", start_ms, end_ms, session=sess)
+    assert len(result) == 5
+    assert result[0]["o"] == 200.0
+
+
+def test_fetch_klines_hl_raises_on_error_dict_response(tmp_cache):
+    """HL вернул {error: ...} вместо списка → RuntimeError."""
+    sess = MagicMock()
+    sess.post = lambda *a, **kw: type("R", (), {
+        "json": lambda self=None: {"error": "coin not found"},
+        "raise_for_status": lambda self=None: None,
+    })()
+    with pytest.raises(RuntimeError, match="non-list"):
+        bt_data._fetch_klines_hl("FAKEUSDT", "5", 0, 1_000_000, session=sess)
+
+
+def test_fetch_klines_chain_error_message_surfaces_hl_retention(monkeypatch,
+                                                                  tmp_cache):
+    """
+    Bybit/Binance падают, HL возвращает empty (retention exceeded) →
+    chain error должен явно говорить «no data in range», а не «None».
+    """
+    import requests as _req
+
+    def _get_fail(url, params=None, timeout=None):
+        err = _req.exceptions.HTTPError("403 Client Error")
+        resp = MagicMock()
+        resp.raise_for_status = MagicMock(side_effect=err)
+        return resp
+
+    def _post_empty(url, json=None, timeout=None):
+        resp = MagicMock()
+        resp.json = lambda: []   # HL вернул пустой массив (нет данных в окне)
+        resp.raise_for_status = lambda: None
+        return resp
+
+    sess = MagicMock()
+    sess.get = _get_fail
+    sess.post = _post_empty
+    monkeypatch.setattr(bt_data, "RETRY_BACKOFF_SEC", 0)
+
+    with pytest.raises(RuntimeError) as exc_info:
+        bt_data.fetch_klines("BTCUSDT", "5", days=1,
+                             cache=False, session=sess)
+    msg = str(exc_info.value)
+    assert "Hyperliquid: no data in range" in msg
+    assert "retention" in msg
+
+
+def test_binance_error_message_says_binance_not_bybit(monkeypatch, tmp_cache):
+    """
+    Regression: раньше при падении Binance ошибка говорила
+    «Bybit request failed» из-за hardcoded source. Теперь — «Binance».
+    """
+    import requests as _req
+
+    def _bybit_ok_then_binance_fail(url, params=None, timeout=None):
+        if "bybit" in url:
+            # Bybit отвечает 200 но пустым списком (no data)
+            resp = MagicMock()
+            resp.json = lambda: {"result": {"list": []}}
+            resp.raise_for_status = lambda: None
+            return resp
+        # Binance — 451
+        err = _req.exceptions.HTTPError("451 Client Error: Unavailable")
+        resp = MagicMock()
+        resp.raise_for_status = MagicMock(side_effect=err)
+        return resp
+
+    sess = MagicMock()
+    sess.get = _bybit_ok_then_binance_fail
+    sess.post = lambda *a, **kw: type("R", (), {
+        "json": lambda self=None: [],
+        "raise_for_status": lambda self=None: None,
+    })()
+    monkeypatch.setattr(bt_data, "RETRY_BACKOFF_SEC", 0)
+
+    with pytest.raises(RuntimeError) as exc_info:
+        bt_data.fetch_klines("BTCUSDT", "5", days=1,
+                             cache=False, session=sess)
+    msg = str(exc_info.value)
+    # Должно содержать понятный source-aware Binance error
+    assert "Binance request failed" in msg
 
 
 def test_fetch_klines_raises_when_all_three_fail(monkeypatch, tmp_cache):
