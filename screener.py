@@ -3307,11 +3307,13 @@ def cmd_help(chat_id: int):
         "/backtest [sym days] — прогон стратегии на истории (до 365 дней)\n"
         "                       /backtest BTC 30  · /backtest BTC 180 compare\n"
         "                       /backtest BTC 30 tf=15  — другой primary TF\n"
-        "/btdiag [sym days]   — диагностика: funnel + breakdown сигналов\n"
+        "/btdiag [sym days [KEY=VAL ...]]  — диагностика: funnel + breakdown\n"
         "                       /btdiag BTC 30  — куда уходят сигналы\n"
-        "/hyperopt [sym days trials] — Optuna-тюнинг параметров\n"
+        "                       /btdiag BTC 30 KILLZONE_GATE_ENABLED=false\n"
+        "/hyperopt [sym days trials [KEY=VAL ...]] — Optuna-тюнинг параметров\n"
         "                       /hyperopt BTC 60 30\n"
         "                       /hyperopt BTC 60 50 walkforward\n"
+        "                       /hyperopt BTC 60 50 HTF_BIAS_GATE_ENABLED=false\n"
         "/digest              — дневной дайджест\n\n"
         "💬 <b>Свободный чат — пиши без команд!</b>\n"
         "<i>анализируй BTC 4H</i>     → полный разбор\n"
@@ -4266,35 +4268,54 @@ def cmd_backtest(chat_id: int, args: str = ""):
 # ─── BACKTEST DIAGNOSTIC (/btdiag) ───────────────────────────────────────────
 
 
-def _parse_btdiag_args(args: str) -> tuple[str, int]:
-    """Парсит '/btdiag BTC 30' → ('BTCUSDT', 30). Дефолты: BTC 30."""
+def _parse_btdiag_args(args: str) -> tuple[str, int, dict | None]:
+    """
+    Парсит '/btdiag BTC 30 KEY=VAL KEY2=VAL2' → ('BTCUSDT', 30, {KEY: VAL, ...}).
+    Дефолты: BTC 30, без overrides.
+
+    KEY=VAL tokens конвертируются: 'true'/'false' → bool, числа → int/float,
+    остальное → str (используется backtest._parse_overrides).
+    """
     parts = [p for p in args.strip().split() if p]
     symbol, days = "BTC", 30
+    override_parts: list[str] = []
     for p in parts:
-        if p.isdigit():
+        if "=" in p and not p.startswith("="):
+            override_parts.append(p)
+        elif p.isdigit():
             days = int(p)
         else:
             symbol = p.upper().replace("USDT", "").replace(".P", "")
     symbol_full = symbol if symbol.endswith("USDT") else symbol + "USDT"
     days = max(1, min(365, days))
-    return symbol_full, days
+    overrides = bt_backtest._parse_overrides(",".join(override_parts)) \
+        if override_parts else None
+    return symbol_full, days, overrides
 
 
 def cmd_btdiag(chat_id: int, args: str = ""):
     """
     Диагностический backtest: funnel + breakdown + комиссии + JSON dump.
 
-      /btdiag             — BTCUSDT 30d
-      /btdiag ETH 60      — ETHUSDT 60d
-      /btdiag BTC 90      — BTCUSDT 90d (~2-3 мин)
+      /btdiag                            — BTCUSDT 30d
+      /btdiag ETH 60                     — ETHUSDT 60d
+      /btdiag BTC 90                     — BTCUSDT 90d (~2-3 мин)
+      /btdiag BTC 30 KILLZONE_GATE_ENABLED=false
+                                         — отключить killzone gate для этого прогона
+      /btdiag BTC 30 KILLZONE_GATE_ENABLED=false STRUCTURE_GATE_ENABLED=false
+                                         — отключить оба P3 гейта
+
+    KEY=VALUE — override любой константы из decision.py для эксперимента
+    (не меняет prod-настройки). Полезно сравнивать «с гейтом vs без» без PR.
 
     Шлёт текстовый отчёт и JSON-файл со всеми сигналами/трейдами.
     """
-    symbol_full, days = _parse_btdiag_args(args)
+    symbol_full, days, overrides = _parse_btdiag_args(args)
 
     eta = "30-90 сек" if days <= 30 else ("1-3 мин" if days <= 90 else "3-7 мин")
+    ovr_label = (f"\n<i>overrides: {overrides}</i>" if overrides else "")
     tg_send(
-        f"🔬 <b>Btdiag {symbol_full} {days}d</b>\n"
+        f"🔬 <b>Btdiag {symbol_full} {days}d</b>{ovr_label}\n"
         f"Запускаю — может занять {eta}...",
         chat_id=chat_id,
     )
@@ -4321,6 +4342,7 @@ def cmd_btdiag(chat_id: int, args: str = ""):
             result = bt_backtest.run_backtest(
                 data, warmup_bars=200, progress_each=1000,
                 collect_signals=True,
+                config_overrides=overrides,
             )
             replay_time = _t.time() - t1
             total_time = _t.time() - t0
@@ -4340,9 +4362,10 @@ def cmd_btdiag(chat_id: int, args: str = ""):
                 bt_backtest.dump_result_json(result, tmp_path)
                 with open(tmp_path, "rb") as f:
                     payload = f.read()
+                ovr_tag = "_ovr" if overrides else ""
                 tg_send_document(
                     payload,
-                    f"btdiag_{symbol_full}_{days}d.json",
+                    f"btdiag_{symbol_full}_{days}d{ovr_tag}.json",
                     caption=f"Полный dump: {len(result.signals)} сигналов, "
                             f"{len(result.trades)} трейдов",
                     chat_id=chat_id,
@@ -4364,16 +4387,22 @@ def cmd_btdiag(chat_id: int, args: str = ""):
 # ─── HYPEROPT (/hyperopt) ────────────────────────────────────────────────────
 
 
-def _parse_hyperopt_args(args: str) -> tuple[str, int, int, bool, str]:
+def _parse_hyperopt_args(
+    args: str,
+) -> tuple[str, int, int, bool, str, dict | None]:
     """
-    Парсит '/hyperopt BTC 60 50 walkforward metric=sharpe_r'.
+    Парсит '/hyperopt BTC 60 50 walkforward metric=sharpe_r KEY=VAL'.
     Дефолты: BTC 60d 30 trials, без walkforward, metric=profit_factor.
+
+    KEY=VAL (кроме metric=) → fixed_params для всех trials (зафиксировано,
+    Optuna не сэмплирует — оптимизирует только остальное search-space).
     """
     parts = [p for p in args.strip().split() if p]
     symbol, days, trials = "BTC", 60, 30
     walkforward = False
     metric = "profit_factor"
     int_seen = 0
+    fixed_parts: list[str] = []
     for p in parts:
         pl = p.lower()
         if p.isdigit():
@@ -4389,12 +4418,16 @@ def _parse_hyperopt_args(args: str) -> tuple[str, int, int, bool, str]:
             val = p.split("=", 1)[1].lower()
             if val in bt_hyperopt.VALID_METRICS:
                 metric = val
+        elif "=" in p and not p.startswith("="):
+            fixed_parts.append(p)
         else:
             symbol = p.upper().replace("USDT", "").replace(".P", "")
     symbol_full = symbol if symbol.endswith("USDT") else symbol + "USDT"
     days = max(7, min(365, days))
     trials = max(5, min(200, trials))
-    return symbol_full, days, trials, walkforward, metric
+    fixed = bt_backtest._parse_overrides(",".join(fixed_parts)) \
+        if fixed_parts else None
+    return symbol_full, days, trials, walkforward, metric, fixed
 
 
 def cmd_hyperopt(chat_id: int, args: str = ""):
@@ -4405,21 +4438,26 @@ def cmd_hyperopt(chat_id: int, args: str = ""):
       /hyperopt ETH 90 50             — ETH 90d, 50 trials
       /hyperopt BTC 60 30 walkforward — out-of-sample валидация на 3 окнах
       /hyperopt BTC 60 50 metric=sharpe_r
+      /hyperopt BTC 60 50 KILLZONE_GATE_ENABLED=false
+                                     — зафиксировать flag, остальное искать
+      /hyperopt BTC 60 50 HTF_BIAS_GATE_ENABLED=false MIN_CONFIDENCE_FOR_TRADE=60
 
     Защита: trial с closed<10 трейдов отбрасывается (anti-overfit).
     Walk-forward optimize на 70% train → backtest на 30% test, mean OOS.
 
     Один trial ≈ один backtest. 30 trials × 60d ≈ 5-10 мин.
     """
-    symbol_full, days, trials, walkforward, metric = _parse_hyperopt_args(args)
+    symbol_full, days, trials, walkforward, metric, fixed = \
+        _parse_hyperopt_args(args)
 
     if walkforward:
         eta = f"{int(trials * 3 * 0.7 / 15)}-{int(trials * 3 / 10)} мин"
     else:
         eta = f"{int(trials / 15)}-{int(trials / 8)} мин"
 
+    fixed_label = (f"\n<i>fixed: {fixed}</i>" if fixed else "")
     tg_send(
-        f"🧪 <b>Hyperopt {symbol_full} {days}d</b>\n"
+        f"🧪 <b>Hyperopt {symbol_full} {days}d</b>{fixed_label}\n"
         f"Trials: {trials} · metric: {metric} · "
         f"{'walk-forward (3 windows)' if walkforward else 'single-shot'}\n"
         f"ETA ~{eta}...",
@@ -4459,6 +4497,7 @@ def cmd_hyperopt(chat_id: int, args: str = ""):
 
             result = bt_hyperopt.hyperopt(
                 data, n_trials=trials, metric=metric,
+                fixed_params=fixed,
                 seed=42, min_trades=10, warmup_bars=200,
                 progress=_progress,
             )
@@ -4469,6 +4508,7 @@ def cmd_hyperopt(chat_id: int, args: str = ""):
                 wf = bt_hyperopt.hyperopt_walkforward(
                     data, n_windows=3, train_test_ratio=0.7,
                     n_trials=trials, metric=metric,
+                    fixed_params=fixed,
                     seed=42, min_trades=10, warmup_bars=200,
                     progress=_progress,
                 )

@@ -377,6 +377,70 @@ def test_hyperopt_caps_infinity_metric(monkeypatch):
     assert result.best_value == 1e6
 
 
+# ─── fixed_params ─────────────────────────────────────────────────────────
+
+
+def test_hyperopt_fixed_params_applied_to_every_trial(monkeypatch):
+    """fixed_params попадают в config_overrides каждого backtest-вызова."""
+    pytest.importorskip("optuna")
+    import backtest as bt
+
+    seen_overrides: list[dict] = []
+
+    def fake_run(data, **kwargs):
+        seen_overrides.append(kwargs.get("config_overrides") or {})
+        return bt.BacktestResult(
+            symbol="X", days=1, trades=[], stats={
+                "closed": 30, "win_rate": 35.0, "avg_r": 0.5,
+                "risk": {"profit_factor": 1.5},
+            },
+        )
+
+    monkeypatch.setattr(bt, "run_backtest", fake_run)
+    bh.hyperopt(
+        {"symbol": "X", "days": 1, "klines": {"5": []}},
+        n_trials=5, metric="profit_factor",
+        search_space={"MIN_CONFIDENCE_FOR_TRADE": ("int", 60, 80)},
+        fixed_params={"KILLZONE_GATE_ENABLED": False,
+                      "HTF_BIAS_GATE_ENABLED": False},
+        min_trades=10, seed=42,
+    )
+
+    assert len(seen_overrides) == 5
+    for ovr in seen_overrides:
+        assert ovr["KILLZONE_GATE_ENABLED"] is False
+        assert ovr["HTF_BIAS_GATE_ENABLED"] is False
+        # MIN_CONFIDENCE_FOR_TRADE сэмплируется → должен быть в overrides
+        assert "MIN_CONFIDENCE_FOR_TRADE" in ovr
+
+
+def test_hyperopt_fixed_params_removed_from_search_space(monkeypatch):
+    """Параметр, попавший в fixed_params, не сэмплируется Optuna'ой."""
+    pytest.importorskip("optuna")
+    import backtest as bt
+
+    def fake_run(data, **kwargs):
+        return bt.BacktestResult(
+            symbol="X", days=1, trades=[], stats={
+                "closed": 30, "win_rate": 35.0, "avg_r": 0.5,
+                "risk": {"profit_factor": 1.5},
+            },
+        )
+
+    monkeypatch.setattr(bt, "run_backtest", fake_run)
+    result = bh.hyperopt(
+        {"symbol": "X", "days": 1, "klines": {"5": []}},
+        n_trials=3, metric="profit_factor",
+        search_space={"MIN_CONFIDENCE_FOR_TRADE": ("int", 60, 80),
+                      "KILLZONE_GATE_ENABLED": ("bool",)},
+        fixed_params={"KILLZONE_GATE_ENABLED": True},
+        min_trades=10, seed=42,
+    )
+    # Во всех trials KILLZONE_GATE_ENABLED должен быть True (fixed)
+    for t in result.trials:
+        assert t.params["KILLZONE_GATE_ENABLED"] is True
+
+
 # ─── dump_result_json ─────────────────────────────────────────────────────
 
 
