@@ -154,6 +154,113 @@ def test_api_klines_uppercases_symbol():
     assert data["symbol"] == "BTCUSDT"
 
 
+# ─── /api/market ──────────────────────────────────────────────────────────
+
+
+def test_api_market_invalid_symbol_400():
+    c = _client()
+    r = c.get("/api/market?symbol=BTC")
+    assert r.status_code == 400
+
+
+def test_api_market_success_with_mock():
+    """Полный fake market dict → compact JSON с правильной shape."""
+    c = _client()
+    fake_market = {
+        "price": 67500.0,
+        "change_24h": 1.25,
+        "bybit": {"funding": 0.0001, "vol_24h": 1500000, "open_interest": 250000},
+        "hl": {"funding": 0.00008},
+        "cvd": {"trend": "up", "divergence": False, "delta_5": 25000},
+        "vp": {"poc": 67000, "vah": 68000, "val": 66000},
+        "ema_biases": {"1h": "bull", "4h": "bull", "1d": "bear"},
+        "vwap": 67200,
+        "indicators": {"rsi": 55, "macd": "bull", "atr": 350, "atr_pct": 0.5},
+        "turtle_1h": "MID", "turtle_4h": "HIGH",
+        "liquidations": {"long_24h": 1500000, "short_24h": 800000},
+        "btc_corr": 1.0,
+    }
+    with patch.object(screener, "fetch_market", return_value=fake_market):
+        r = c.get("/api/market?symbol=BTCUSDT")
+    assert r.status_code == 200
+    data = r.get_json()
+    assert data["symbol"] == "BTCUSDT"
+    assert data["price"] == 67500.0
+    assert data["cvd"]["trend"] == "up"
+    assert data["ema_bias"]["1h"] == "bull"
+    assert data["funding"]["bybit"] == 0.0001
+    assert data["vp"]["poc"] == 67000
+    assert data["vwap"] == 67200
+    assert data["indicators"]["rsi"] == 55
+    assert data["turtle_1h"] == "MID"
+    assert data["liquidations"]["long_24h"] == 1500000
+
+
+def test_api_market_handles_missing_fields():
+    """Если fields отсутствуют — возвращаются None, без падений."""
+    c = _client()
+    with patch.object(screener, "fetch_market", return_value={"price": 100}):
+        r = c.get("/api/market?symbol=BTCUSDT")
+    assert r.status_code == 200
+    data = r.get_json()
+    assert data["price"] == 100
+    assert data["cvd"]["trend"] is None
+    assert data["ema_bias"]["1h"] is None
+
+
+def test_api_market_handles_fetch_exception():
+    """Если fetch_market падает — 500."""
+    c = _client()
+    with patch.object(screener, "fetch_market",
+                      side_effect=RuntimeError("API down")):
+        r = c.get("/api/market?symbol=BTCUSDT")
+    assert r.status_code == 500
+
+
+def test_api_market_handles_empty_market():
+    """fetch_market returns None/empty → 502."""
+    c = _client()
+    with patch.object(screener, "fetch_market", return_value=None):
+        r = c.get("/api/market?symbol=BTCUSDT")
+    assert r.status_code == 502
+
+
+def test_api_market_does_not_include_klines():
+    """JSON ответ не должен содержать heavy klines поле."""
+    c = _client()
+    fake_market = {
+        "price": 100, "_klines": {"60": [{"o": 1}] * 200},
+    }
+    with patch.object(screener, "fetch_market", return_value=fake_market):
+        r = c.get("/api/market?symbol=BTCUSDT")
+    data = r.get_json()
+    # Klines не должно быть в compact ответе
+    assert "_klines" not in data
+    assert "klines" not in data
+
+
+# ─── /ui updates: Engine Market panel ────────────────────────────────────
+
+
+def test_ui_html_has_engine_market_panel():
+    c = _client()
+    r = c.get("/ui")
+    body = r.get_data(as_text=True)
+    assert "Engine Market" in body
+    for ind_name in ("CVD trend", "MTF EMA bias", "Funding",
+                     "Open Interest", "VWAP", "VP POC",
+                     "Turtle 1H", "Liq long"):
+        assert ind_name in body, f"{ind_name} not in UI body"
+
+
+def test_ui_html_has_loadMarket_js():
+    c = _client()
+    r = c.get("/ui")
+    body = r.get_data(as_text=True)
+    assert "loadMarket" in body
+    assert "/api/market" in body
+
+
 # ─── /api/prices ──────────────────────────────────────────────────────────
 
 

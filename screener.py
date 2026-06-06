@@ -3037,7 +3037,40 @@ UI_CHART_HTML = """<!DOCTYPE html>
       <h2>Watchlist</h2>
       <div id="watchlist"></div>
     </div>
-    <h2>Indicators</h2>
+    <h2 style="margin-top: 0;">Engine Market</h2>
+    <div class="indicator">
+      <span class="indicator-name">CVD trend</span>
+      <span class="indicator-value" id="cvd">—</span>
+    </div>
+    <div class="indicator">
+      <span class="indicator-name">MTF EMA bias</span>
+      <span class="indicator-value" id="mtfbias">—</span>
+    </div>
+    <div class="indicator">
+      <span class="indicator-name">Funding (Bybit)</span>
+      <span class="indicator-value" id="funding">—</span>
+    </div>
+    <div class="indicator">
+      <span class="indicator-name">Open Interest</span>
+      <span class="indicator-value" id="oi">—</span>
+    </div>
+    <div class="indicator">
+      <span class="indicator-name">VWAP vs price</span>
+      <span class="indicator-value" id="vwapdelta">—</span>
+    </div>
+    <div class="indicator">
+      <span class="indicator-name">VP POC</span>
+      <span class="indicator-value" id="poc">—</span>
+    </div>
+    <div class="indicator">
+      <span class="indicator-name">Turtle 1H / 4H</span>
+      <span class="indicator-value" id="turtle">—</span>
+    </div>
+    <div class="indicator">
+      <span class="indicator-name">Liq long / short</span>
+      <span class="indicator-value" id="liqs">—</span>
+    </div>
+    <h2 style="margin-top: 20px;">Technical</h2>
     <div class="indicator">
       <span class="indicator-name">Price</span>
       <span class="indicator-value" id="price">—</span>
@@ -3238,10 +3271,85 @@ async function loadChart() {
     document.getElementById("status").textContent =
       `${sym} ${iv} · ${data.klines.length} bars · ${data.source}`;
 
-    // После klines — загружаем и накладываем signals
+    // После klines — загружаем signals overlay + engine market
     await loadSignals(sym);
+    loadMarket(sym);   // async, не блокирует chart
   } catch (e) {
     document.getElementById("status").textContent = `Error: ${e.message}`;
+  }
+}
+
+async function loadMarket(symbol) {
+  try {
+    const r = await fetch(`/api/market?symbol=${symbol}`);
+    if (!r.ok) {
+      ["cvd","mtfbias","funding","oi","vwapdelta","poc","turtle","liqs"]
+        .forEach(id => document.getElementById(id).textContent = "—");
+      return;
+    }
+    const m = await r.json();
+    if (m.error) {
+      ["cvd","mtfbias","funding","oi","vwapdelta","poc","turtle","liqs"]
+        .forEach(id => document.getElementById(id).textContent = "—");
+      return;
+    }
+    const setEl = (id, text, cls) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = text;
+      el.className = "indicator-value" + (cls ? " " + cls : "");
+    };
+    // CVD
+    const trend = (m.cvd && m.cvd.trend) || "—";
+    const cvdCls = trend === "up" ? "pos" : trend === "down" ? "neg" : "";
+    setEl("cvd", trend.toUpperCase(), cvdCls);
+    // MTF EMA bias
+    const eb = m.ema_bias || {};
+    const arrow = b => b === "bull" ? "▲" : b === "bear" ? "▼" : "▬";
+    setEl("mtfbias",
+      `${arrow(eb["1h"])}1H ${arrow(eb["4h"])}4H ${arrow(eb["1d"])}1D`);
+    // Funding
+    const fr = m.funding && m.funding.bybit;
+    if (fr != null) {
+      const pct = (fr * 100).toFixed(4);
+      const cls = fr > 0.0005 ? "neg" : fr < -0.0005 ? "pos" : "";
+      setEl("funding", pct + "%", cls);
+    } else {
+      setEl("funding", "—");
+    }
+    // OI (raw, в коинах)
+    if (m.open_int != null) {
+      const oi = m.open_int;
+      const fmt = oi > 1e6 ? (oi/1e6).toFixed(2) + "M"
+                : oi > 1e3 ? (oi/1e3).toFixed(2) + "K"
+                : oi.toFixed(0);
+      setEl("oi", fmt);
+    } else { setEl("oi", "—"); }
+    // VWAP delta
+    if (m.vwap != null && m.price != null) {
+      const d = ((m.price - m.vwap) / m.vwap) * 100;
+      setEl("vwapdelta", (d >= 0 ? "+" : "") + d.toFixed(2) + "%",
+            d >= 0 ? "pos" : "neg");
+    } else { setEl("vwapdelta", "—"); }
+    // VP POC
+    if (m.vp && m.vp.poc != null) {
+      const dig = digits(m.vp.poc);
+      setEl("poc", fmtNum(m.vp.poc, dig));
+    } else { setEl("poc", "—"); }
+    // Turtle zones
+    const t1 = m.turtle_1h || "—";
+    const t4 = m.turtle_4h || "—";
+    setEl("turtle", `${t1} / ${t4}`);
+    // Liquidations
+    const liqs = m.liquidations || {};
+    if (liqs.long_24h != null || liqs.short_24h != null) {
+      const fmtL = v => v == null ? "—"
+        : v > 1e6 ? (v/1e6).toFixed(1) + "M"
+        : v > 1e3 ? (v/1e3).toFixed(1) + "K" : v.toFixed(0);
+      setEl("liqs", `${fmtL(liqs.long_24h)} / ${fmtL(liqs.short_24h)}`);
+    } else { setEl("liqs", "—"); }
+  } catch (e) {
+    console.warn("market load failed:", e);
   }
 }
 
@@ -3577,6 +3685,90 @@ def api_signals():
                         "error": "DB not initialized"}), 200
     except Exception as e:
         log.warning(f"/api/signals failed: {e}")
+        return jsonify({"error": str(e)[:200]}), 500
+
+
+@app.route("/api/market", methods=["GET"])
+def api_market():
+    """
+    Compact market snapshot для UI: CVD, MTF EMA bias, funding, OI,
+    VWAP, VP, indicators (RSI/MACD/ATR%), regime hints.
+
+    Параметр: symbol — BTCUSDT.
+
+    Под капотом: fetch_market() (13 parallel API calls). Может быть
+    медленным первый раз, но UI кэширует свои запросы.
+
+    Возвращает JSON без heavy-данных (klines не включаются).
+    """
+    symbol = (request.args.get("symbol") or "BTCUSDT").upper().strip()
+    if not symbol.endswith("USDT"):
+        return jsonify({"error": "invalid symbol"}), 400
+
+    try:
+        m = fetch_market(symbol)
+        if not m:
+            return jsonify({"error": "no market data"}), 502
+
+        # Стрипуем heavy-поля, оставляем только compact summary
+        b = m.get("bybit") or {}
+        hl = m.get("hl") or {}
+        cvd = m.get("cvd") or {}
+        vp = m.get("vp") or {}
+        ind = m.get("indicators") or {}
+        ema_biases = m.get("ema_biases") or {}
+        vwap = m.get("vwap")
+        liqs = m.get("liquidations") or {}
+
+        def _safe_float(v):
+            try:
+                return float(v) if v is not None else None
+            except (ValueError, TypeError):
+                return None
+
+        out = {
+            "symbol":     symbol,
+            "price":      _safe_float(m.get("price")),
+            "change_24h": _safe_float(m.get("change_24h")),
+            "cvd": {
+                "trend":      cvd.get("trend"),
+                "divergence": cvd.get("divergence"),
+                "delta_5":    _safe_float(cvd.get("delta_5")),
+            },
+            "ema_bias": {
+                "1h": ema_biases.get("1h"),
+                "4h": ema_biases.get("4h"),
+                "1d": ema_biases.get("1d"),
+            },
+            "funding": {
+                "bybit": _safe_float(b.get("funding")),
+                "hl":    _safe_float(hl.get("funding")),
+            },
+            "vol_24h":   _safe_float(b.get("vol_24h")),
+            "open_int":  _safe_float(b.get("open_interest")),
+            "vp": {
+                "poc": _safe_float(vp.get("poc")),
+                "vah": _safe_float(vp.get("vah")),
+                "val": _safe_float(vp.get("val")),
+            },
+            "vwap":       _safe_float(vwap),
+            "indicators": {
+                "rsi":    _safe_float(ind.get("rsi")),
+                "macd":   ind.get("macd"),
+                "atr":    _safe_float(ind.get("atr")),
+                "atr_pct": _safe_float(ind.get("atr_pct")),
+            },
+            "turtle_1h":   m.get("turtle_1h"),
+            "turtle_4h":   m.get("turtle_4h"),
+            "liquidations": {
+                "long_24h":  _safe_float(liqs.get("long_24h")),
+                "short_24h": _safe_float(liqs.get("short_24h")),
+            },
+            "btc_corr": _safe_float(m.get("btc_corr")),
+        }
+        return jsonify(out), 200
+    except Exception as e:
+        log.warning(f"/api/market failed for {symbol}: {e}")
         return jsonify({"error": str(e)[:200]}), 500
 
 
