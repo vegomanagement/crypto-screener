@@ -152,3 +152,110 @@ def test_api_klines_uppercases_symbol():
         r = c.get("/api/klines?symbol=btcusdt&interval=60")
     data = r.get_json()
     assert data["symbol"] == "BTCUSDT"
+
+
+# ─── /api/prices ──────────────────────────────────────────────────────────
+
+
+def test_api_prices_default_returns_watchlist():
+    """Без параметров — возвращает UI_DEFAULT_WATCHLIST."""
+    c = _client()
+    fake_prices = {
+        sym: {"price": 100.0, "change_24h": 1.5, "vol_24h": 1000}
+        for sym in screener.UI_DEFAULT_WATCHLIST
+    }
+    with patch.object(screener, "_fetch_bulk_prices_bybit",
+                      return_value=fake_prices):
+        r = c.get("/api/prices")
+    assert r.status_code == 200
+    data = r.get_json()
+    assert "prices" in data
+    assert len(data["prices"]) == len(screener.UI_DEFAULT_WATCHLIST)
+    for item in data["prices"]:
+        assert "symbol" in item
+        assert "price" in item
+        assert "change_24h" in item
+
+
+def test_api_prices_custom_symbols_sorted_by_change():
+    """С параметром symbols — фильтр и сортировка по abs change."""
+    c = _client()
+    fake = {
+        "BTCUSDT": {"price": 100, "change_24h": 2.5, "vol_24h": 0},
+        "ETHUSDT": {"price": 50, "change_24h": -3.0, "vol_24h": 0},
+    }
+    with patch.object(screener, "_fetch_bulk_prices_bybit",
+                      return_value=fake):
+        r = c.get("/api/prices?symbols=BTCUSDT,ETHUSDT")
+    data = r.get_json()
+    syms = [p["symbol"] for p in data["prices"]]
+    # ETH с -3.0% должен идти первым (abs change бóльше)
+    assert syms[0] == "ETHUSDT"
+    assert syms[1] == "BTCUSDT"
+
+
+def test_api_prices_invalid_symbols_filtered():
+    """Не-USDT символы отфильтровываются."""
+    c = _client()
+    with patch.object(screener, "_fetch_bulk_prices_bybit",
+                      return_value={}):
+        with patch.object(screener, "_fetch_bulk_prices_binance",
+                          return_value={}):
+            r = c.get("/api/prices?symbols=BTC,ETH,SOLUSDT")
+    assert r.status_code == 200
+    data = r.get_json()
+    # Только SOLUSDT мог попасть в запрос — но fake возвращает пусто
+    assert data["prices"] == []
+
+
+def test_api_prices_uses_binance_fallback_when_bybit_misses():
+    """Если Bybit вернул не все символы — Binance fallback на missing."""
+    c = _client()
+    with patch.object(
+        screener, "_fetch_bulk_prices_bybit",
+        return_value={"BTCUSDT": {"price": 100, "change_24h": 1, "vol_24h": 0}},
+    ) as bybit_mock:
+        with patch.object(
+            screener, "_fetch_bulk_prices_binance",
+            return_value={"ETHUSDT": {"price": 50, "change_24h": 2, "vol_24h": 0}},
+        ) as binance_mock:
+            r = c.get("/api/prices?symbols=BTCUSDT,ETHUSDT")
+    data = r.get_json()
+    syms = {p["symbol"] for p in data["prices"]}
+    assert syms == {"BTCUSDT", "ETHUSDT"}
+    # Binance был вызван ТОЛЬКО для отсутствующего ETHUSDT
+    assert binance_mock.called
+    binance_args = binance_mock.call_args[0][0]
+    assert binance_args == ["ETHUSDT"]
+    assert bybit_mock.called
+
+
+def test_api_prices_empty_symbols_param_returns_200():
+    c = _client()
+    with patch.object(screener, "_fetch_bulk_prices_bybit",
+                      return_value={}):
+        with patch.object(screener, "_fetch_bulk_prices_binance",
+                          return_value={}):
+            r = c.get("/api/prices?symbols=")
+    # symbols=empty → fallback на UI_DEFAULT_WATCHLIST
+    # mocks возвращают пусто → prices=[]
+    assert r.status_code == 200
+
+
+# ─── /ui updates: watchlist panel ────────────────────────────────────────
+
+
+def test_ui_html_has_watchlist_panel():
+    c = _client()
+    r = c.get("/ui")
+    body = r.get_data(as_text=True)
+    assert "Watchlist" in body
+    assert 'id="watchlist"' in body
+
+
+def test_ui_html_has_loadWatchlist_js():
+    c = _client()
+    r = c.get("/ui")
+    body = r.get_data(as_text=True)
+    assert "loadWatchlist" in body
+    assert "/api/prices" in body

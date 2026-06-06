@@ -2985,6 +2985,19 @@ UI_CHART_HTML = """<!DOCTYPE html>
   .pos { color: var(--green); }
   .neg { color: var(--red); }
   .status { font-size: 12px; color: var(--text-dim); margin-top: 16px; }
+  .watchlist-row {
+    display: grid; grid-template-columns: 1fr auto auto;
+    gap: 8px; align-items: center;
+    padding: 8px 10px; cursor: pointer;
+    border-radius: 6px; transition: background 0.1s;
+    font-family: "SF Mono", Menlo, monospace; font-size: 12px;
+  }
+  .watchlist-row:hover { background: var(--bg); }
+  .watchlist-row.active { background: var(--bg); outline: 1px solid var(--blue); }
+  .watchlist-symbol { font-weight: 600; }
+  .watchlist-price { color: var(--text-dim); text-align: right; }
+  .watchlist-change { text-align: right; font-weight: 600; min-width: 56px; }
+  .sidebar-section { margin-bottom: 20px; }
   @media (max-width: 800px) {
     .layout { grid-template-columns: 1fr; height: auto; }
     #chart { height: 60vh; }
@@ -3020,6 +3033,10 @@ UI_CHART_HTML = """<!DOCTYPE html>
 <div class="layout">
   <div id="chart"></div>
   <aside class="sidebar">
+    <div class="sidebar-section">
+      <h2>Watchlist</h2>
+      <div id="watchlist"></div>
+    </div>
     <h2>Indicators</h2>
     <div class="indicator">
       <span class="indicator-name">Price</span>
@@ -3216,9 +3233,56 @@ async function loadChart() {
   }
 }
 
+async function loadWatchlist() {
+  try {
+    const r = await fetch("/api/prices");
+    if (!r.ok) return;
+    const data = await r.json();
+    const cur = document.getElementById("symbol").value;
+    const html = (data.prices || []).map(p => {
+      const ch = p.change_24h || 0;
+      const chCls = ch >= 0 ? "pos" : "neg";
+      const chStr = (ch >= 0 ? "+" : "") + ch.toFixed(2) + "%";
+      const sym = p.symbol.replace("USDT", "");
+      const active = p.symbol === cur ? " active" : "";
+      const d = digits(p.price);
+      return `<div class="watchlist-row${active}" data-symbol="${p.symbol}">
+        <div class="watchlist-symbol">${sym}</div>
+        <div class="watchlist-price">${fmtNum(p.price, d)}</div>
+        <div class="watchlist-change ${chCls}">${chStr}</div>
+      </div>`;
+    }).join("");
+    document.getElementById("watchlist").innerHTML = html;
+    // Click handler — переключает символ
+    document.querySelectorAll(".watchlist-row").forEach(row => {
+      row.addEventListener("click", () => {
+        const sym = row.getAttribute("data-symbol");
+        const select = document.getElementById("symbol");
+        // Если символа нет в dropdown, добавляем его
+        if (![...select.options].some(o => o.value === sym)) {
+          const opt = document.createElement("option");
+          opt.value = sym;
+          opt.textContent = sym.replace("USDT", "");
+          select.appendChild(opt);
+        }
+        select.value = sym;
+        loadChart();
+        loadWatchlist();   // refresh active marker
+      });
+    });
+  } catch (e) {
+    console.warn("watchlist load failed:", e);
+  }
+}
+
 initChart();
 loadChart();
-document.getElementById("symbol").addEventListener("change", loadChart);
+loadWatchlist();
+setInterval(loadWatchlist, 30000);   // auto-refresh каждые 30s
+document.getElementById("symbol").addEventListener("change", () => {
+  loadChart();
+  loadWatchlist();
+});
 document.getElementById("interval").addEventListener("change", loadChart);
 </script>
 </body>
@@ -3235,6 +3299,111 @@ def ui_chart():
 def api_symbols():
     """Список символов из watchlist."""
     return jsonify({"symbols": list(SYMBOLS)}), 200
+
+
+# Дефолтный watchlist для UI (если SYMBOLS env-var задаёт только основные)
+UI_DEFAULT_WATCHLIST = [
+    "BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT",
+    "ADAUSDT", "DOGEUSDT", "AVAXUSDT", "LINKUSDT", "MATICUSDT",
+    "DOTUSDT", "ARBUSDT", "OPUSDT", "SUIUSDT", "TONUSDT",
+]
+
+
+def _fetch_bulk_prices_bybit(symbols: list) -> dict:
+    """Возвращает {symbol: {price, change_24h, vol_24h}} из Bybit."""
+    out = {}
+    try:
+        r = requests.get(
+            f"{BYBIT}/v5/market/tickers",
+            params={"category": "linear"}, timeout=8,
+        )
+        r.raise_for_status()
+        data = r.json()
+        tickers = (data.get("result") or {}).get("list") or []
+        wanted = set(symbols)
+        for t in tickers:
+            sym = t.get("symbol")
+            if sym not in wanted:
+                continue
+            try:
+                out[sym] = {
+                    "price":      float(t.get("lastPrice", 0)),
+                    "change_24h": float(t.get("price24hPcnt", 0)) * 100,
+                    "vol_24h":    float(t.get("volume24h", 0)),
+                }
+            except (ValueError, TypeError):
+                continue
+    except Exception as e:
+        log.warning(f"Bybit bulk tickers: {e}")
+    return out
+
+
+def _fetch_bulk_prices_binance(symbols: list) -> dict:
+    """Fallback: Binance Futures bulk tickers."""
+    out = {}
+    try:
+        r = requests.get(
+            f"{BINANCE_FAPI}/fapi/v1/ticker/24hr", timeout=8,
+        )
+        r.raise_for_status()
+        tickers = r.json()
+        wanted = set(symbols)
+        for t in tickers:
+            sym = t.get("symbol")
+            if sym not in wanted:
+                continue
+            try:
+                out[sym] = {
+                    "price":      float(t.get("lastPrice", 0)),
+                    "change_24h": float(t.get("priceChangePercent", 0)),
+                    "vol_24h":    float(t.get("volume", 0)),
+                }
+            except (ValueError, TypeError):
+                continue
+    except Exception as e:
+        log.warning(f"Binance bulk tickers: {e}")
+    return out
+
+
+@app.route("/api/prices", methods=["GET"])
+def api_prices():
+    """
+    Bulk цены для нескольких символов одним запросом. Параметры:
+      symbols — comma-separated список (e.g. BTCUSDT,ETHUSDT)
+      или omit → берём UI_DEFAULT_WATCHLIST
+
+    Использует Bybit bulk tickers с fallback на Binance Futures.
+    Сортирует ответ по abs(change_24h) убывая (movers топ).
+    """
+    raw = request.args.get("symbols")
+    if raw:
+        symbols = [s.strip().upper() for s in raw.split(",") if s.strip()]
+        symbols = [s for s in symbols if s.endswith("USDT")]
+    else:
+        symbols = list(UI_DEFAULT_WATCHLIST)
+    if not symbols:
+        return jsonify({"prices": []}), 200
+
+    # Bybit first
+    prices_map = _fetch_bulk_prices_bybit(symbols)
+
+    # Binance fallback для отсутствующих
+    missing = [s for s in symbols if s not in prices_map]
+    if missing:
+        fallback = _fetch_bulk_prices_binance(missing)
+        prices_map.update(fallback)
+
+    items = []
+    for sym in symbols:
+        p = prices_map.get(sym)
+        if not p:
+            continue
+        items.append({"symbol": sym, **p})
+
+    # Сортировка: movers (top abs change) первыми
+    items.sort(key=lambda x: -abs(x.get("change_24h", 0)))
+
+    return jsonify({"prices": items}), 200
 
 
 @app.route("/api/klines", methods=["GET"])
