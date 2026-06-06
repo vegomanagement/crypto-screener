@@ -3308,13 +3308,13 @@ def cmd_help(chat_id: int):
         "/backtest [sym days] — прогон стратегии на истории (до 365 дней)\n"
         "                       /backtest BTC 30  · /backtest BTC 180 compare\n"
         "                       /backtest BTC 30 tf=15  — другой primary TF\n"
-        "/btdiag [sym days [KEY=VAL ...]]  — диагностика: funnel + breakdown\n"
+        "/btdiag [sym days [preset=NAME] [KEY=VAL ...]] — диагностика: funnel + breakdown\n"
         "                       /btdiag BTC 30  — куда уходят сигналы\n"
-        "                       /btdiag BTC 30 KILLZONE_GATE_ENABLED=false\n"
-        "/scanbt [SYM1,SYM2... days [KEY=VAL ...]] — backtest нескольких монет\n"
-        "                       /scanbt BTC,ETH,SOL 30\n"
-        "                       /scanbt BTC,ETH 30 KILLZONE_GATE_ENABLED=false\n"
-        "/hyperopt [sym days trials [KEY=VAL ...]] — Optuna-тюнинг параметров\n"
+        "                       /btdiag BTC 30 preset=no_gates  — все P3/P4 OFF\n"
+        "                       /btdiag BTC 30 preset=wide_tp  — TP 3/5/8 ATR\n"
+        "/scanbt [SYM1,SYM2... days [preset=NAME] [KEY=VAL ...]] — backtest нескольких монет\n"
+        "                       /scanbt BTC,ETH,SOL 30 preset=no_p3\n"
+        "/hyperopt [sym days trials [preset=NAME] [KEY=VAL ...]] — Optuna-тюнинг\n"
         "                       /hyperopt BTC 60 30\n"
         "                       /hyperopt BTC 60 50 walkforward\n"
         "                       /hyperopt BTC 60 50 HTF_BIAS_GATE_ENABLED=false\n"
@@ -4273,18 +4273,83 @@ def cmd_backtest(chat_id: int, args: str = ""):
 # ─── BACKTEST DIAGNOSTIC (/btdiag) ───────────────────────────────────────────
 
 
+# Named config presets — shorthand для частых combinations.
+# Используются через токен preset=NAME в /btdiag, /hyperopt, /scanbt.
+# Explicit KEY=VAL после preset перекрывают значения из preset'а.
+CONFIG_PRESETS: dict[str, dict] = {
+    "no_p3": {
+        "KILLZONE_GATE_ENABLED": False,
+        "STRUCTURE_GATE_ENABLED": False,
+    },
+    "no_p4": {
+        "HTF_BIAS_GATE_ENABLED": False,
+    },
+    "no_gates": {
+        "KILLZONE_GATE_ENABLED": False,
+        "STRUCTURE_GATE_ENABLED": False,
+        "HTF_BIAS_GATE_ENABLED": False,
+    },
+    "wide_tp": {
+        "ATR_TP1_DIST": 3.0,
+        "ATR_TP2_DIST": 5.0,
+        "ATR_TP3_DIST": 8.0,
+    },
+    "narrow_tp": {
+        "ATR_TP1_DIST": 1.0,
+        "ATR_TP2_DIST": 1.8,
+        "ATR_TP3_DIST": 3.0,
+    },
+    "tight_sl": {
+        "ATR_SL_DIST": 0.7,
+    },
+    "loose_sl": {
+        "ATR_SL_DIST": 1.5,
+    },
+    "aggressive": {
+        "MIN_CONFIDENCE_FOR_TRADE": 55,
+        "ATR_TP1_DIST": 3.0,
+        "ATR_TP2_DIST": 5.0,
+        "ATR_TP3_DIST": 8.0,
+    },
+    "conservative": {
+        "MIN_CONFIDENCE_FOR_TRADE": 72,
+        "STRUCTURE_GATE_ENABLED": True,
+        "KILLZONE_GATE_ENABLED": True,
+    },
+}
+
+
+def _extract_preset_tokens(parts: list[str]) -> tuple[list[str], dict]:
+    """
+    Из списка token'ов вытаскивает все `preset=NAME`, мерджит их в один dict
+    overrides (сохраняя порядок), возвращает (parts без preset-токенов,
+    preset_overrides). Несуществующие presets молча пропускаются.
+    """
+    other: list[str] = []
+    preset_ovr: dict = {}
+    for p in parts:
+        if p.lower().startswith("preset="):
+            name = p.split("=", 1)[1].strip().lower()
+            if name in CONFIG_PRESETS:
+                preset_ovr.update(CONFIG_PRESETS[name])
+        else:
+            other.append(p)
+    return other, preset_ovr
+
+
 def _parse_btdiag_args(args: str) -> tuple[str, int, dict | None]:
     """
-    Парсит '/btdiag BTC 30 KEY=VAL KEY2=VAL2' → ('BTCUSDT', 30, {KEY: VAL, ...}).
+    Парсит '/btdiag BTC 30 preset=no_gates KEY=VAL' → ('BTCUSDT', 30, dict).
     Дефолты: BTC 30, без overrides.
 
-    KEY=VAL tokens конвертируются: 'true'/'false' → bool, числа → int/float,
-    остальное → str (используется backtest._parse_overrides).
+    preset=NAME — shorthand из CONFIG_PRESETS. Explicit KEY=VAL применяется
+    ПОСЛЕ preset'а, перебивая его значения.
     """
-    parts = [p for p in args.strip().split() if p]
+    raw_parts = [p for p in args.strip().split() if p]
+    raw_parts, preset_ovr = _extract_preset_tokens(raw_parts)
     symbol, days = "BTC", 30
     override_parts: list[str] = []
-    for p in parts:
+    for p in raw_parts:
         if "=" in p and not p.startswith("="):
             override_parts.append(p)
         elif p.isdigit():
@@ -4293,9 +4358,13 @@ def _parse_btdiag_args(args: str) -> tuple[str, int, dict | None]:
             symbol = p.upper().replace("USDT", "").replace(".P", "")
     symbol_full = symbol if symbol.endswith("USDT") else symbol + "USDT"
     days = max(1, min(365, days))
-    overrides = bt_backtest._parse_overrides(",".join(override_parts)) \
-        if override_parts else None
-    return symbol_full, days, overrides
+    explicit_ovr = (bt_backtest._parse_overrides(",".join(override_parts))
+                    if override_parts else None)
+    # Merge: preset сначала, explicit перебивает
+    merged: dict = dict(preset_ovr)
+    if explicit_ovr:
+        merged.update(explicit_ovr)
+    return symbol_full, days, (merged or None)
 
 
 def cmd_btdiag(chat_id: int, args: str = ""):
@@ -4394,16 +4463,18 @@ def cmd_btdiag(chat_id: int, args: str = ""):
 
 def _parse_scanbt_args(args: str) -> tuple[list[str], int, dict | None]:
     """
-    Парсит '/scanbt BTC,ETH,SOL 30 KEY=VAL' → (['BTCUSDT','ETHUSDT','SOLUSDT'],
-    30, overrides).
+    Парсит '/scanbt BTC,ETH,SOL 30 preset=no_p3 KEY=VAL' → (
+        ['BTCUSDT','ETHUSDT','SOLUSDT'], 30, merged_overrides).
 
     Символы — comma-separated, без пробелов. Дефолт: ['BTC','ETH','SOL'], 30d.
+    preset=NAME применяется первым, explicit KEY=VAL перебивает.
     """
-    parts = [p for p in args.strip().split() if p]
+    raw_parts = [p for p in args.strip().split() if p]
+    raw_parts, preset_ovr = _extract_preset_tokens(raw_parts)
     symbols_raw = "BTC,ETH,SOL"
     days = 30
     override_parts: list[str] = []
-    for p in parts:
+    for p in raw_parts:
         if "=" in p and not p.startswith("="):
             override_parts.append(p)
         elif p.isdigit():
@@ -4422,9 +4493,12 @@ def _parse_scanbt_args(args: str) -> tuple[list[str], int, dict | None]:
         if full not in syms:
             syms.append(full)
     days = max(1, min(365, days))
-    overrides = bt_backtest._parse_overrides(",".join(override_parts)) \
-        if override_parts else None
-    return syms, days, overrides
+    explicit_ovr = (bt_backtest._parse_overrides(",".join(override_parts))
+                    if override_parts else None)
+    merged: dict = dict(preset_ovr)
+    if explicit_ovr:
+        merged.update(explicit_ovr)
+    return syms, days, (merged or None)
 
 
 def _format_scanbt_table(rows: list[dict]) -> str:
@@ -4542,19 +4616,21 @@ def _parse_hyperopt_args(
     args: str,
 ) -> tuple[str, int, int, bool, str, dict | None]:
     """
-    Парсит '/hyperopt BTC 60 50 walkforward metric=sharpe_r KEY=VAL'.
+    Парсит '/hyperopt BTC 60 50 walkforward metric=sharpe_r preset=no_p4 KEY=VAL'.
     Дефолты: BTC 60d 30 trials, без walkforward, metric=profit_factor.
 
-    KEY=VAL (кроме metric=) → fixed_params для всех trials (зафиксировано,
-    Optuna не сэмплирует — оптимизирует только остальное search-space).
+    preset=NAME → fixed_params из CONFIG_PRESETS.
+    KEY=VAL (кроме metric= и preset=) → fixed_params для всех trials.
+    Explicit KEY=VAL перебивает preset values.
     """
-    parts = [p for p in args.strip().split() if p]
+    raw_parts = [p for p in args.strip().split() if p]
+    raw_parts, preset_ovr = _extract_preset_tokens(raw_parts)
     symbol, days, trials = "BTC", 60, 30
     walkforward = False
     metric = "profit_factor"
     int_seen = 0
     fixed_parts: list[str] = []
-    for p in parts:
+    for p in raw_parts:
         pl = p.lower()
         if p.isdigit():
             v = int(p)
@@ -4576,9 +4652,12 @@ def _parse_hyperopt_args(
     symbol_full = symbol if symbol.endswith("USDT") else symbol + "USDT"
     days = max(7, min(365, days))
     trials = max(5, min(200, trials))
-    fixed = bt_backtest._parse_overrides(",".join(fixed_parts)) \
-        if fixed_parts else None
-    return symbol_full, days, trials, walkforward, metric, fixed
+    explicit_fixed = (bt_backtest._parse_overrides(",".join(fixed_parts))
+                      if fixed_parts else None)
+    merged: dict = dict(preset_ovr)
+    if explicit_fixed:
+        merged.update(explicit_fixed)
+    return symbol_full, days, trials, walkforward, metric, (merged or None)
 
 
 def cmd_hyperopt(chat_id: int, args: str = ""):
