@@ -391,6 +391,84 @@ def test_format_result_shows_expectancy_line():
     assert "avgWin" in out
 
 
+# ─── Expectancy by signal type ───────────────────────────────────────────
+
+
+def test_expectancy_by_signal_type_empty():
+    assert backtest._expectancy_by_signal_type([]) == []
+
+
+def test_expectancy_by_signal_type_groups_by_type():
+    trades = [
+        _trade("tp1_hit", 1.5, sig="OB_BULL"),
+        _trade("sl_hit", -1.0, sig="OB_BULL"),
+        _trade("sl_hit", -1.0, sig="FVG_BULL"),
+        _trade("sl_hit", -1.0, sig="FVG_BULL"),
+    ]
+    out = backtest._expectancy_by_signal_type(trades)
+    # Должно быть 2 группы, отсортированы по n убывая (обе по 2)
+    types = [r[0] for r in out]
+    assert "OB_BULL" in types
+    assert "FVG_BULL" in types
+
+
+def test_expectancy_by_signal_type_winning_losing_split():
+    """OB winning (WR 100% > BE), FVG losing (WR 0%)."""
+    trades = [
+        _trade("tp1_hit", 2.0, sig="OB_BULL"),
+        _trade("tp1_hit", 2.0, sig="OB_BULL"),
+        _trade("tp1_hit", 2.0, sig="OB_BULL"),
+        _trade("sl_hit", -1.0, sig="FVG_BULL"),
+        _trade("sl_hit", -1.0, sig="FVG_BULL"),
+        _trade("sl_hit", -1.0, sig="FVG_BULL"),
+    ]
+    out = backtest._expectancy_by_signal_type(trades)
+    by_type = {r[0]: r for r in out}
+    assert by_type["OB_BULL"][6] == "winning"
+    assert by_type["FVG_BULL"][6] == "losing"
+
+
+def test_expectancy_by_signal_type_skips_open_trades():
+    """Open trades игнорируются — они не закрыты."""
+    trades = [
+        _trade("tp1_hit", 1.5, sig="OB_BULL"),
+        _trade("open", 0.0, sig="OB_BULL"),
+    ]
+    out = backtest._expectancy_by_signal_type(trades)
+    by_type = {r[0]: r for r in out}
+    assert by_type["OB_BULL"][1] == 1   # n = 1, не 2
+
+
+def test_format_result_shows_expectancy_by_signal_section():
+    """format_result содержит «Expectancy by signal type»."""
+    trades = [
+        _trade("tp1_hit", 1.5, sig="OB_BULL"),
+        _trade("sl_hit", -1.0, sig="OB_BULL"),
+    ]
+    stats = backtest._aggregate_stats(trades, days=7)
+    r = backtest.BacktestResult(symbol="BTC", days=7, trades=trades, stats=stats)
+    out = backtest.format_result(r)
+    assert "Expectancy by signal type" in out
+    assert "OB_BULL" in out
+
+
+def test_format_result_marks_low_sample_with_neutral_emoji():
+    """Если n<5 трейдов на тип — emoji • (нейтральный), не verdict."""
+    trades = [
+        _trade("tp1_hit", 1.5, sig="OB_BULL"),
+        _trade("sl_hit", -1.0, sig="OB_BULL"),
+    ]
+    stats = backtest._aggregate_stats(trades, days=7)
+    r = backtest.BacktestResult(symbol="BTC", days=7, trades=trades, stats=stats)
+    out = backtest.format_result(r)
+    # 2 трейдов — должен быть нейтральный маркер
+    lines_with_obbull = [l_ for l_ in out.split("\n") if "OB_BULL" in l_]
+    # 2 строки: одна из "By signal type", вторая из "Expectancy by signal type"
+    exp_line = [l_ for l_ in lines_with_obbull if "BE=" in l_]
+    assert exp_line, "Expectancy line for OB_BULL not found"
+    assert "•" in exp_line[0]   # neutral marker
+
+
 # ─── CLI parsing ───────────────────────────────────────────────────────────
 
 
