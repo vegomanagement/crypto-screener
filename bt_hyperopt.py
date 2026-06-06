@@ -205,6 +205,7 @@ def hyperopt(
     n_trials:           int = DEFAULT_N_TRIALS,
     metric:             str = DEFAULT_METRIC,
     search_space:       dict | None = None,
+    fixed_params:       dict | None = None,
     seed:               int | None = 42,
     min_trades:         int = DEFAULT_MIN_TRADES,
     warmup_bars:        int = backtest.DEFAULT_WARMUP_BARS,
@@ -221,6 +222,9 @@ def hyperopt(
     metric: см. VALID_METRICS
     min_trades: trials с closed < min_trades получают penalty (защита от
                 overfitting "0 трейдов = бесконечный PF")
+    fixed_params: dict ключей которые НЕ ищутся (берутся как константы во
+                  всех trials). Удаляются из search_space. Полезно
+                  зафиксировать гипотезу: «оптимизируй штрафы при HTF=False».
     """
     if metric not in VALID_METRICS:
         raise ValueError(
@@ -229,17 +233,23 @@ def hyperopt(
     optuna = _require_optuna()
 
     space = build_search_space(search_space)
+    # Убираем fixed_params из space — их Optuna не сэмплирует
+    if fixed_params:
+        space = {k: v for k, v in space.items() if k not in fixed_params}
+    fixed = dict(fixed_params) if fixed_params else {}
     trials_log: list[HyperoptTrial] = []
 
     def objective(trial) -> float:
         params = _sample_params(trial, space)
+        # Накладываем fixed-params: они константны во всех trials
+        merged = {**fixed, **params}
         res = backtest.run_backtest(
             data,
             warmup_bars=warmup_bars,
             expiry_bars=expiry_bars,
             cooldown_bars=cooldown_bars,
             default_conf_score=default_conf_score,
-            config_overrides=params,
+            config_overrides=merged,
             taker_fee_pct=taker_fee_pct,
             collect_signals=False,
         )
@@ -256,7 +266,7 @@ def hyperopt(
 
         trials_log.append(HyperoptTrial(
             trial_idx=trial.number,
-            params=dict(params),
+            params=dict(merged),
             metric=metric,
             metric_value=float(stored_value),
             stats=dict(res.stats or {}),
@@ -310,6 +320,7 @@ def hyperopt_walkforward(
     n_trials:           int = 30,
     metric:             str = DEFAULT_METRIC,
     search_space:       dict | None = None,
+    fixed_params:       dict | None = None,
     seed:               int | None = 42,
     min_trades:         int = DEFAULT_MIN_TRADES,
     warmup_bars:        int = backtest.DEFAULT_WARMUP_BARS,
@@ -353,6 +364,7 @@ def hyperopt_walkforward(
         train_hopt = hyperopt(
             train_data,
             n_trials=n_trials, metric=metric, search_space=search_space,
+            fixed_params=fixed_params,
             seed=seed, min_trades=min_trades, warmup_bars=warmup_bars,
             expiry_bars=expiry_bars, cooldown_bars=cooldown_bars,
             default_conf_score=default_conf_score, taker_fee_pct=taker_fee_pct,
