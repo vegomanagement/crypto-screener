@@ -3070,6 +3070,15 @@ UI_CHART_HTML = """<!DOCTYPE html>
       <span class="indicator-name">Low</span>
       <span class="indicator-value" id="low">—</span>
     </div>
+    <h2 style="margin-top: 20px;">Signals (30d)</h2>
+    <label style="display: flex; align-items: center; gap: 8px;
+                  margin: 8px 0; cursor: pointer; font-size: 12px;">
+      <input type="checkbox" id="toggleSignals" checked>
+      Show entries / TP / SL markers
+    </label>
+    <div id="signalsCount"
+         style="font-size: 11px; color: var(--text-dim);
+                margin-top: 4px;">—</div>
     <div class="status">
       Read-only viewer. Webhook signals → Telegram bot.
       <br>See <code>/strategy</code> for research commands.
@@ -3228,6 +3237,9 @@ async function loadChart() {
     chart.timeScale().fitContent();
     document.getElementById("status").textContent =
       `${sym} ${iv} · ${data.klines.length} bars · ${data.source}`;
+
+    // После klines — загружаем и накладываем signals
+    await loadSignals(sym);
   } catch (e) {
     document.getElementById("status").textContent = `Error: ${e.message}`;
   }
@@ -3275,6 +3287,70 @@ async function loadWatchlist() {
   }
 }
 
+async function loadSignals(symbol) {
+  const showSignals = document.getElementById("toggleSignals");
+  if (showSignals && !showSignals.checked) {
+    candleSeries.setMarkers([]);
+    return;
+  }
+  try {
+    const r = await fetch(`/api/signals?symbol=${symbol}&days=30&limit=80`);
+    if (!r.ok) return;
+    const data = await r.json();
+    if (!data.signals || !data.signals.length) {
+      candleSeries.setMarkers([]);
+      return;
+    }
+    const markers = [];
+    for (const s of data.signals) {
+      // Entry marker
+      const isLong = s.direction === "long";
+      markers.push({
+        time: s.ts,
+        position: isLong ? "belowBar" : "aboveBar",
+        color: isLong ? "#3fb950" : "#f85149",
+        shape: isLong ? "arrowUp" : "arrowDown",
+        text: (isLong ? "L" : "S") +
+              (s.confidence ? "·" + s.confidence : ""),
+      });
+      // Exit marker (если уже закрылась)
+      if (s.hit_ts && s.hit_level) {
+        const hit = s.hit_level.toUpperCase();
+        let color, text;
+        if (hit === "SL") {
+          color = "#f85149"; text = "SL";
+        } else if (hit.startsWith("TP")) {
+          color = "#3fb950"; text = hit;
+        } else {
+          color = "#8b949e"; text = hit.slice(0, 4);
+        }
+        markers.push({
+          time: s.hit_ts,
+          position: "inBar",
+          color: color,
+          shape: "circle",
+          text: text,
+        });
+      }
+    }
+    candleSeries.setMarkers(markers);
+    const stat = document.getElementById("signalsCount");
+    if (stat) {
+      const wins = data.signals.filter(s =>
+        s.hit_level && s.hit_level.toUpperCase().startsWith("TP")).length;
+      const losses = data.signals.filter(s =>
+        s.hit_level && s.hit_level.toUpperCase() === "SL").length;
+      const closed = wins + losses;
+      const wr = closed > 0 ? (wins / closed * 100).toFixed(1) : "—";
+      stat.textContent =
+        `${data.signals.length} signals · ${closed} closed · ` +
+        `WR ${wr}% (${wins}W/${losses}L)`;
+    }
+  } catch (e) {
+    console.warn("signals load failed:", e);
+  }
+}
+
 initChart();
 loadChart();
 loadWatchlist();
@@ -3284,6 +3360,9 @@ document.getElementById("symbol").addEventListener("change", () => {
   loadWatchlist();
 });
 document.getElementById("interval").addEventListener("change", loadChart);
+document.getElementById("toggleSignals").addEventListener("change", () => {
+  loadSignals(document.getElementById("symbol").value);
+});
 </script>
 </body>
 </html>"""
@@ -3404,6 +3483,101 @@ def api_prices():
     items.sort(key=lambda x: -abs(x.get("change_24h", 0)))
 
     return jsonify({"prices": items}), 200
+
+
+@app.route("/api/signals", methods=["GET"])
+def api_signals():
+    """
+    Recent signals из signal_outcomes для overlay на chart'е.
+    Параметры:
+      symbol — BTCUSDT (default: BTCUSDT)
+      days — сколько дней назад (default: 30, max: 90)
+      limit — макс кол-во сигналов (default: 100, max: 200)
+
+    Возвращает {signals: [{ts, direction, entry, sl, tp1, tp2, tp3,
+                           status, r_multiple, hit_ts, hit_level,
+                           signal_type, confidence, verdict}]}
+
+    ts (entry_ts) — unix seconds для совместимости с Lightweight Charts.
+    """
+    symbol = (request.args.get("symbol") or "BTCUSDT").upper().strip()
+    try:
+        days = int(request.args.get("days") or "30")
+    except ValueError:
+        days = 30
+    days = max(1, min(90, days))
+    try:
+        limit = int(request.args.get("limit") or "100")
+    except ValueError:
+        limit = 100
+    limit = max(1, min(200, limit))
+
+    try:
+        from datetime import datetime as _dt, timedelta as _td, timezone as _tz
+        cutoff = _dt.now(_tz.utc) - _td(days=days)
+        cutoff_iso = cutoff.isoformat()
+
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        try:
+            rows = conn.execute(
+                """
+                SELECT entry_ts, entry_price, signal_type, direction,
+                       verdict, sl, tp1, tp2, tp3, status,
+                       hit_level, hit_at, r_multiple, confidence
+                FROM signal_outcomes
+                WHERE symbol = ?
+                  AND verdict IN ('LONG', 'SHORT')
+                  AND entry_ts >= ?
+                ORDER BY entry_ts DESC
+                LIMIT ?
+                """,
+                (symbol, cutoff_iso, limit),
+            ).fetchall()
+        finally:
+            conn.close()
+
+        signals = []
+        for r in rows:
+            ts_raw = r["entry_ts"]
+            try:
+                ts_sec = int(_dt.fromisoformat(
+                    ts_raw.replace("Z", "+00:00")).timestamp())
+            except (ValueError, AttributeError):
+                continue
+            hit_ts = None
+            if r["hit_at"]:
+                try:
+                    hit_ts = int(_dt.fromisoformat(
+                        r["hit_at"].replace("Z", "+00:00")).timestamp())
+                except (ValueError, AttributeError):
+                    pass
+            signals.append({
+                "ts":          ts_sec,
+                "entry":       r["entry_price"],
+                "signal_type": r["signal_type"],
+                "direction":   r["direction"],
+                "verdict":     r["verdict"],
+                "sl":          r["sl"], "tp1": r["tp1"],
+                "tp2":         r["tp2"], "tp3": r["tp3"],
+                "status":      r["status"],
+                "hit_level":   r["hit_level"],
+                "hit_ts":      hit_ts,
+                "r_multiple":  r["r_multiple"],
+                "confidence":  r["confidence"],
+            })
+
+        # Reverse → oldest first для chart'а
+        signals.reverse()
+        return jsonify({"symbol": symbol, "days": days,
+                        "signals": signals}), 200
+    except sqlite3.OperationalError as e:
+        log.warning(f"/api/signals SQL: {e}")
+        return jsonify({"symbol": symbol, "signals": [],
+                        "error": "DB not initialized"}), 200
+    except Exception as e:
+        log.warning(f"/api/signals failed: {e}")
+        return jsonify({"error": str(e)[:200]}), 500
 
 
 @app.route("/api/klines", methods=["GET"])
