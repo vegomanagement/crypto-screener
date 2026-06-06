@@ -2998,6 +2998,50 @@ UI_CHART_HTML = """<!DOCTYPE html>
   .watchlist-price { color: var(--text-dim); text-align: right; }
   .watchlist-change { text-align: right; font-weight: 600; min-width: 56px; }
   .sidebar-section { margin-bottom: 20px; }
+  .bottom-analysis {
+    background: var(--panel);
+    border-top: 1px solid var(--border);
+    padding: 12px 16px;
+    max-height: 200px; overflow-y: auto;
+  }
+  .ba-header {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 8px;
+  }
+  .ba-title {
+    font-size: 13px; font-weight: 600;
+    text-transform: uppercase; color: var(--text-dim);
+    letter-spacing: 0.5px;
+  }
+  .ba-status {
+    margin-left: auto; font-size: 11px; color: var(--text-dim);
+  }
+  .ba-refresh {
+    background: var(--blue); color: white; border: 0;
+    padding: 4px 10px; border-radius: 4px; cursor: pointer;
+    font-size: 11px; font-weight: 500;
+  }
+  .ba-refresh:hover { opacity: 0.85; }
+  .ba-confluence {
+    font-size: 13px; font-weight: 600; margin-bottom: 6px;
+    padding: 6px 10px; background: var(--bg);
+    border-radius: 4px; display: inline-block;
+  }
+  .ba-brief {
+    font-size: 12px; color: var(--text);
+    line-height: 1.6; margin-bottom: 6px;
+    font-family: "SF Mono", Menlo, monospace;
+  }
+  .ba-factors {
+    display: flex; gap: 6px; flex-wrap: wrap;
+  }
+  .ba-factor {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 3px; padding: 2px 8px;
+    font-size: 11px; color: var(--text-dim);
+  }
+  .ba-factor.pos { color: var(--green); border-color: var(--green); }
+  .ba-factor.neg { color: var(--red); border-color: var(--red); }
   @media (max-width: 800px) {
     .layout { grid-template-columns: 1fr; height: auto; }
     #chart { height: 60vh; }
@@ -3126,6 +3170,19 @@ UI_CHART_HTML = """<!DOCTYPE html>
       <br>See <code>/strategy</code> for research commands.
     </div>
   </aside>
+</div>
+
+<div class="bottom-analysis" id="bottomAnalysis">
+  <div class="ba-header">
+    <span class="ba-title">📋 Engine Analysis</span>
+    <span class="ba-status" id="analysisStatus">—</span>
+    <button class="ba-refresh" onclick="loadAnalysis(true)">Refresh</button>
+  </div>
+  <div class="ba-content">
+    <div class="ba-confluence" id="confluencePanel">—</div>
+    <div class="ba-brief" id="briefPanel">—</div>
+    <div class="ba-factors" id="factorsPanel"></div>
+  </div>
 </div>
 
 <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
@@ -3280,10 +3337,11 @@ async function loadChart() {
     document.getElementById("status").textContent =
       `${sym} ${iv} · ${data.klines.length} bars · ${data.source}`;
 
-    // После klines — signals + SMC zones + engine market
+    // После klines — signals + SMC zones + engine market + analysis
     await loadSignals(sym);
     loadZones(sym);    // async, не блокирует chart
-    loadMarket(sym);   // async, не блокирует chart
+    loadMarket(sym);   // async
+    loadAnalysis();    // engine analysis bottom panel
   } catch (e) {
     document.getElementById("status").textContent = `Error: ${e.message}`;
   }
@@ -3466,6 +3524,58 @@ async function loadZones(symbol) {
     }
   } catch (e) {
     console.warn("zones load failed:", e);
+  }
+}
+
+async function loadAnalysis(force = false) {
+  const sym = document.getElementById("symbol").value;
+  const status = document.getElementById("analysisStatus");
+  if (status) status.textContent = "Loading...";
+  try {
+    const url = `/api/analysis?symbol=${sym}` + (force ? "&force=true" : "");
+    const r = await fetch(url);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data = await r.json();
+    if (data.error) throw new Error(data.error);
+
+    const cp = document.getElementById("confluencePanel");
+    if (data.confluence != null) {
+      let cls = "";
+      if (data.confluence >= 65) cls = "pos";
+      else if (data.confluence < 45) cls = "neg";
+      cp.textContent = `Confluence: ${data.confluence}/100`;
+      cp.className = "ba-confluence " + cls;
+    } else {
+      cp.textContent = "Confluence: —";
+    }
+
+    const bp = document.getElementById("briefPanel");
+    bp.textContent = data.brief_raw || "—";
+
+    const fp = document.getElementById("factorsPanel");
+    fp.innerHTML = "";
+    for (const f of (data.confluence_factors || [])) {
+      const span = document.createElement("span");
+      let cls = "ba-factor";
+      const fl = f.toLowerCase();
+      if (fl.includes("✅") || fl.includes("+") || fl.includes("bull")) {
+        cls += " pos";
+      } else if (fl.includes("❌") || fl.includes("против") ||
+                 fl.includes("-") || fl.includes("bear")) {
+        cls += " neg";
+      }
+      span.className = cls;
+      span.textContent = f.slice(0, 60);
+      fp.appendChild(span);
+    }
+
+    if (status) {
+      const cacheStr = data.cached
+        ? ` (cached ${data.age_sec}s ago)` : " (fresh)";
+      status.textContent = `${sym}${cacheStr}`;
+    }
+  } catch (e) {
+    if (status) status.textContent = `Error: ${e.message}`;
   }
 }
 
@@ -3932,6 +4042,80 @@ def api_zones():
         }), 200
     except Exception as e:
         log.warning(f"/api/zones failed: {e}")
+        return jsonify({"error": str(e)[:200]}), 500
+
+
+# Кеш для market briefs (TTL 5 минут) чтобы не качать API на каждый ui-load
+_ANALYSIS_CACHE: dict = {}
+_ANALYSIS_TTL_SEC = 300
+
+
+@app.route("/api/analysis", methods=["GET"])
+def api_analysis():
+    """
+    Deterministic market analysis для UI: market_brief из llm_agents,
+    confluence score.
+
+    Параметры:
+      symbol — BTCUSDT
+      force — пересчитать без кеша (true/false), default false
+
+    Возвращает {symbol, brief: [строки], confluence, factors, cached, ts}.
+
+    LLM в этой версии НЕ вызывается (стоимость + latency). Только
+    deterministic engine output. Будущий PR может добавить опциональный
+    LLM-comment.
+    """
+    import time as _time
+    symbol = (request.args.get("symbol") or "BTCUSDT").upper().strip()
+    force = (request.args.get("force") or "").lower() == "true"
+    if not symbol.endswith("USDT"):
+        return jsonify({"error": "invalid symbol"}), 400
+
+    now = _time.time()
+    if not force and symbol in _ANALYSIS_CACHE:
+        cached = _ANALYSIS_CACHE[symbol]
+        if now - cached["ts"] < _ANALYSIS_TTL_SEC:
+            data = dict(cached["data"])
+            data["cached"] = True
+            data["age_sec"] = round(now - cached["ts"], 1)
+            return jsonify(data), 200
+
+    try:
+        market = fetch_market(symbol)
+        if not market:
+            return jsonify({"error": "no market data"}), 502
+
+        from llm_agents import market_brief
+        brief_text = market_brief(market)
+        brief_lines = [
+            line.strip() for line in brief_text.split("·")
+            if line.strip()
+        ]
+
+        confluence_score = None
+        confluence_factors: list = []
+        try:
+            score, factors = compute_confluence_score(
+                "GENERIC", market, {})
+            confluence_score = score
+            confluence_factors = factors[:8]
+        except Exception as e:
+            log.debug(f"confluence calc failed: {e}")
+
+        out = {
+            "symbol":    symbol,
+            "brief":     brief_lines[:8],
+            "brief_raw": brief_text,
+            "confluence": confluence_score,
+            "confluence_factors": confluence_factors,
+            "cached":    False,
+            "ts":        now,
+        }
+        _ANALYSIS_CACHE[symbol] = {"ts": now, "data": dict(out)}
+        return jsonify(out), 200
+    except Exception as e:
+        log.warning(f"/api/analysis failed for {symbol}: {e}")
         return jsonify({"error": str(e)[:200]}), 500
 
 
