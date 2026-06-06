@@ -141,30 +141,34 @@ def test_normalize_tf_handles_unknown_passthrough():
 
 
 def test_hyperopt_args_default():
-    sym, days, trials, wf, metric, fixed = screener._parse_hyperopt_args("")
+    sym, days, trials, wf, metric, fixed, tf = \
+        screener._parse_hyperopt_args("")
     assert sym == "BTCUSDT"
     assert days == 60
     assert trials == 30
     assert wf is False
     assert metric == "profit_factor"
     assert fixed is None
+    assert tf == "5"
 
 
 def test_hyperopt_args_full():
-    sym, days, trials, wf, metric, fixed = screener._parse_hyperopt_args(
-        "ETH 90 50 walkforward metric=sharpe_r"
-    )
+    sym, days, trials, wf, metric, fixed, tf = \
+        screener._parse_hyperopt_args(
+            "ETH 90 50 walkforward metric=sharpe_r"
+        )
     assert sym == "ETHUSDT"
     assert days == 90
     assert trials == 50
     assert wf is True
     assert metric == "sharpe_r"
     assert fixed is None
+    assert tf == "5"
 
 
 def test_hyperopt_args_wf_aliases():
     for tag in ("walkforward", "wf", "--walkforward", "WF"):
-        _, _, _, wf, _, _ = screener._parse_hyperopt_args(f"BTC 60 30 {tag}")
+        _, _, _, wf, *_ = screener._parse_hyperopt_args(f"BTC 60 30 {tag}")
         assert wf is True, f"alias {tag!r} не распознан"
 
 
@@ -175,13 +179,15 @@ def test_hyperopt_args_two_ints_are_days_then_trials():
 
 
 def test_hyperopt_args_invalid_metric_falls_back_to_default():
-    *_, metric, _ = screener._parse_hyperopt_args("BTC 60 30 metric=garbage")
+    _, _, _, _, metric, _, _ = screener._parse_hyperopt_args(
+        "BTC 60 30 metric=garbage")
     assert metric == "profit_factor"
 
 
 def test_hyperopt_args_valid_metrics():
     for m in ("avg_r", "avg_r_net", "win_rate", "sortino_r", "expectancy"):
-        *_, metric, _ = screener._parse_hyperopt_args(f"BTC 60 30 metric={m}")
+        _, _, _, _, metric, _, _ = screener._parse_hyperopt_args(
+            f"BTC 60 30 metric={m}")
         assert metric == m
 
 
@@ -195,13 +201,13 @@ def test_hyperopt_args_clamps_days_and_trials():
 
 
 def test_hyperopt_args_fixed_params_single():
-    _, _, _, _, _, fixed = screener._parse_hyperopt_args(
+    _, _, _, _, _, fixed, _ = screener._parse_hyperopt_args(
         "BTC 60 30 KILLZONE_GATE_ENABLED=false")
     assert fixed == {"KILLZONE_GATE_ENABLED": False}
 
 
 def test_hyperopt_args_fixed_params_multiple_with_metric():
-    _, _, _, _, metric, fixed = screener._parse_hyperopt_args(
+    _, _, _, _, metric, fixed, _ = screener._parse_hyperopt_args(
         "BTC 60 30 metric=sharpe_r HTF_BIAS_GATE_ENABLED=false "
         "MIN_CONFIDENCE_FOR_TRADE=57"
     )
@@ -212,11 +218,29 @@ def test_hyperopt_args_fixed_params_multiple_with_metric():
 
 def test_hyperopt_args_metric_not_in_fixed_params():
     """metric=... должен идти ТОЛЬКО в metric, не в fixed_params."""
-    _, _, _, _, metric, fixed = screener._parse_hyperopt_args(
+    _, _, _, _, metric, fixed, _ = screener._parse_hyperopt_args(
         "BTC 60 30 metric=sharpe_r"
     )
     assert metric == "sharpe_r"
     assert fixed is None
+
+
+def test_hyperopt_args_tf_option():
+    """tf= в /hyperopt тоже работает."""
+    _, _, _, _, _, _, tf = screener._parse_hyperopt_args(
+        "BTC 60 30 tf=15")
+    assert tf == "15"
+    _, _, _, _, _, _, tf = screener._parse_hyperopt_args(
+        "BTC 60 30 tf=1H")
+    assert tf == "60"
+
+
+def test_hyperopt_args_tf_not_in_fixed():
+    """tf=... должен идти ТОЛЬКО в tf_primary, не в fixed_params."""
+    _, _, _, _, _, fixed, tf = screener._parse_hyperopt_args(
+        "BTC 60 30 tf=15 KILLZONE_GATE_ENABLED=false")
+    assert tf == "15"
+    assert fixed == {"KILLZONE_GATE_ENABLED": False}
 
 
 def test_hyperopt_args_strips_usdt_p():
@@ -289,15 +313,16 @@ def test_btdiag_and_hyperopt_in_help_text():
 def test_scanbt_args_default():
     import importlib
     importlib.reload(screener)
-    syms, days, ovr, sort_by = screener._parse_scanbt_args("")
+    syms, days, ovr, sort_by, tf = screener._parse_scanbt_args("")
     assert syms == ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
     assert days == 30
     assert ovr is None
     assert sort_by == "pf"
+    assert tf == "5"
 
 
 def test_scanbt_args_comma_separated_symbols():
-    syms, days, _, _ = screener._parse_scanbt_args("BTC,ETH,SOL 60")
+    syms, days, *_ = screener._parse_scanbt_args("BTC,ETH,SOL 60")
     assert syms == ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
     assert days == 60
 
@@ -318,7 +343,7 @@ def test_scanbt_args_dedupes():
 
 
 def test_scanbt_args_overrides():
-    syms, days, ovr, _ = screener._parse_scanbt_args(
+    syms, days, ovr, *_ = screener._parse_scanbt_args(
         "BTC,ETH 30 KILLZONE_GATE_ENABLED=false MIN_CONFIDENCE_FOR_TRADE=55"
     )
     assert syms == ["BTCUSDT", "ETHUSDT"]
@@ -328,9 +353,9 @@ def test_scanbt_args_overrides():
 
 
 def test_scanbt_args_clamps_days():
-    _, days, _, _ = screener._parse_scanbt_args("BTC,ETH 0")
+    _, days, *_ = screener._parse_scanbt_args("BTC,ETH 0")
     assert days == 1
-    _, days, _, _ = screener._parse_scanbt_args("BTC,ETH 5000")
+    _, days, *_ = screener._parse_scanbt_args("BTC,ETH 5000")
     assert days == 365
 
 
@@ -344,22 +369,46 @@ def test_scanbt_args_ignores_empty_symbols():
 
 def test_scanbt_args_sort_valid_values():
     for col in ("pf", "wr", "avg_r", "avg_r_net", "max_dd", "closed"):
-        _, _, _, sort_by = screener._parse_scanbt_args(
+        _, _, _, sort_by, _ = screener._parse_scanbt_args(
             f"BTC,ETH 30 sort={col}")
         assert sort_by == col, f"sort={col} не распознался"
 
 
 def test_scanbt_args_sort_invalid_falls_back_to_pf():
-    _, _, _, sort_by = screener._parse_scanbt_args("BTC,ETH 30 sort=garbage")
+    _, _, _, sort_by, _ = screener._parse_scanbt_args(
+        "BTC,ETH 30 sort=garbage")
     assert sort_by == "pf"
 
 
 def test_scanbt_args_sort_not_in_overrides():
     """sort=COL не должен попадать в overrides как KEY=VAL."""
-    _, _, ovr, sort_by = screener._parse_scanbt_args(
+    _, _, ovr, sort_by, _ = screener._parse_scanbt_args(
         "BTC,ETH 30 sort=avg_r_net KILLZONE_GATE_ENABLED=false"
     )
     assert sort_by == "avg_r_net"
+    assert ovr == {"KILLZONE_GATE_ENABLED": False}
+
+
+# ─── /scanbt tf= option ───────────────────────────────────────────────────
+
+
+def test_scanbt_args_tf_option():
+    """tf= в /scanbt тоже работает."""
+    _, _, _, _, tf = screener._parse_scanbt_args("BTC,ETH 30 tf=15")
+    assert tf == "15"
+    _, _, _, _, tf = screener._parse_scanbt_args("BTC,ETH 30 tf=1H")
+    assert tf == "60"
+    _, _, _, _, tf = screener._parse_scanbt_args("BTC,ETH 30 tf=4H")
+    assert tf == "240"
+    _, _, _, _, tf = screener._parse_scanbt_args("BTC,ETH 30 tf=1D")
+    assert tf == "D"
+
+
+def test_scanbt_args_tf_not_in_overrides():
+    """tf=COL не попадает в overrides как KEY=VAL."""
+    _, _, ovr, _, tf = screener._parse_scanbt_args(
+        "BTC,ETH 30 tf=60 KILLZONE_GATE_ENABLED=false")
+    assert tf == "60"
     assert ovr == {"KILLZONE_GATE_ENABLED": False}
 
 
@@ -493,7 +542,7 @@ def test_btdiag_args_no_preset_no_explicit_returns_none():
 
 
 def test_scanbt_args_preset_applied():
-    syms, days, ovr, _ = screener._parse_scanbt_args(
+    syms, days, ovr, *_ = screener._parse_scanbt_args(
         "BTC,ETH 30 preset=wide_tp"
     )
     assert syms == ["BTCUSDT", "ETHUSDT"]
@@ -502,14 +551,14 @@ def test_scanbt_args_preset_applied():
 
 
 def test_hyperopt_args_preset_applied():
-    _, _, _, _, _, fixed = screener._parse_hyperopt_args(
+    _, _, _, _, _, fixed, _ = screener._parse_hyperopt_args(
         "BTC 60 30 preset=no_p4"
     )
     assert fixed == {"HTF_BIAS_GATE_ENABLED": False}
 
 
 def test_hyperopt_args_preset_plus_explicit():
-    _, _, _, _, metric, fixed = screener._parse_hyperopt_args(
+    _, _, _, _, metric, fixed, _ = screener._parse_hyperopt_args(
         "BTC 60 30 metric=sharpe_r preset=aggressive MIN_CONFIDENCE_FOR_TRADE=60"
     )
     assert metric == "sharpe_r"

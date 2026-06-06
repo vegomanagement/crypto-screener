@@ -220,6 +220,7 @@ def hyperopt(
     cooldown_bars:      int | None = None,
     default_conf_score: int = backtest.DEFAULT_CONF_SCORE,
     taker_fee_pct:      float = backtest.DEFAULT_TAKER_FEE_PCT,
+    tf_primary:         str = "5",
     progress:           Callable[[str], None] | None = None,
 ) -> HyperoptResult:
     """
@@ -232,6 +233,7 @@ def hyperopt(
     fixed_params: dict ключей которые НЕ ищутся (берутся как константы во
                   всех trials). Удаляются из search_space. Полезно
                   зафиксировать гипотезу: «оптимизируй штрафы при HTF=False».
+    tf_primary: '5'|'15'|'60'|'240'|'D' — primary TF. Default 5m.
     """
     if metric not in VALID_METRICS:
         raise ValueError(
@@ -252,6 +254,7 @@ def hyperopt(
         merged = {**fixed, **params}
         res = backtest.run_backtest(
             data,
+            tf_primary=tf_primary,
             warmup_bars=warmup_bars,
             expiry_bars=expiry_bars,
             cooldown_bars=cooldown_bars,
@@ -335,6 +338,7 @@ def hyperopt_walkforward(
     cooldown_bars:      int | None = None,
     default_conf_score: int = backtest.DEFAULT_CONF_SCORE,
     taker_fee_pct:      float = backtest.DEFAULT_TAKER_FEE_PCT,
+    tf_primary:         str = "5",
     progress:           Callable[[str], None] | None = None,
 ) -> dict:
     """
@@ -344,8 +348,10 @@ def hyperopt_walkforward(
 
     Защита от overfitting сильнее чем у обычного hyperopt: если стратегия
     «выучила» шум train-окна, она провалится на test.
+
+    tf_primary: '5'|'15'|'60'|'240'|'D'. Окна нарезаются по этому TF.
     """
-    primary = data["klines"].get("5") or []
+    primary = data["klines"].get(tf_primary) or data["klines"].get("5") or []
     bounds = bt_walkforward._window_bounds(len(primary), n_windows)
 
     per_window: list[dict] = []
@@ -365,8 +371,10 @@ def hyperopt_walkforward(
                 f"train [{w_start}, {train_end}] test [{test_start}, {w_end}]"
             )
 
-        train_data = bt_walkforward.slice_data_window(data, w_start, train_end)
-        test_data  = bt_walkforward.slice_data_window(data, test_start, w_end)
+        train_data = bt_walkforward.slice_data_window(
+            data, w_start, train_end, tf_primary=tf_primary)
+        test_data  = bt_walkforward.slice_data_window(
+            data, test_start, w_end, tf_primary=tf_primary)
 
         train_hopt = hyperopt(
             train_data,
@@ -375,11 +383,13 @@ def hyperopt_walkforward(
             seed=seed, min_trades=min_trades, warmup_bars=warmup_bars,
             expiry_bars=expiry_bars, cooldown_bars=cooldown_bars,
             default_conf_score=default_conf_score, taker_fee_pct=taker_fee_pct,
+            tf_primary=tf_primary,
         )
 
         best_params = train_hopt.best_params or {}
         test_res = backtest.run_backtest(
             test_data,
+            tf_primary=tf_primary,
             warmup_bars=warmup_bars,
             expiry_bars=expiry_bars,
             cooldown_bars=cooldown_bars,
