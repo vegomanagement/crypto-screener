@@ -485,6 +485,47 @@ def test_scanbt_command_routed(monkeypatch):
     assert called.get("args") == "BTC,ETH 30"
 
 
+# ─── /strategy command ───────────────────────────────────────────────────
+
+
+def test_strategy_command_routed(monkeypatch):
+    """Проверяем что /strategy вызывает cmd_strategy."""
+    called = {}
+
+    def fake_cmd(chat_id):
+        called["chat_id"] = chat_id
+
+    monkeypatch.setattr(screener, "cmd_strategy", fake_cmd)
+    update = {"message": {"chat": {"id": 321},
+                          "text": "/strategy",
+                          "from": {"id": 321}}}
+    screener.handle_update(update)
+    assert called.get("chat_id") == 321
+
+
+def test_strategy_message_contains_key_findings(monkeypatch):
+    """cmd_strategy должен показать топ-3 эксперимента и presets."""
+    captured = []
+
+    def fake_send(text, chat_id=None, **kw):
+        captured.append(text)
+        return True
+
+    import importlib
+    importlib.reload(screener)
+    screener.tg_send = fake_send
+    screener.cmd_strategy(0)
+    full = "\n".join(captured)
+    # Ключевые элементы: walkforward, presets, anti-patterns
+    assert "OOS" in full or "walkforward" in full
+    assert "wide_tp" in full
+    assert "killzone" in full.lower()
+    assert "STRATEGY.md" in full
+    assert "/hyperopt" in full
+    assert "/scanbt" in full
+    assert "/btdiag" in full
+
+
 # ─── CONFIG_PRESETS ──────────────────────────────────────────────────────
 
 

@@ -2670,6 +2670,7 @@ def _register_bot_commands() -> None:
         {"command": "btdiag",   "description": "Диагностика: funnel + breakdown сигналов: /btdiag BTC 30"},
         {"command": "scanbt",   "description": "Backtest на нескольких монетах: /scanbt BTC,ETH,SOL 30"},
         {"command": "hyperopt", "description": "Optuna-тюнинг параметров: /hyperopt BTC 60 30"},
+        {"command": "strategy", "description": "Сводка по стратегии и команды для экспериментов"},
         {"command": "history",  "description": "Последние 10 сигналов из БД"},
         {"command": "digest",   "description": "Дневной дайджест с LLM-анализом"},
         {"command": "scan",     "description": "Ручной запуск автосканера"},
@@ -3533,6 +3534,7 @@ def handle_update(update: dict):
     elif cmd == "/btdiag":             cmd_btdiag(chat_id, args)
     elif cmd == "/scanbt":             cmd_scanbt(chat_id, args)
     elif cmd == "/hyperopt":           cmd_hyperopt(chat_id, args)
+    elif cmd == "/strategy":           cmd_strategy(chat_id)
     elif cmd == "/top":                cmd_top(chat_id)
     elif cmd == "/movers":             cmd_movers(chat_id)
     elif cmd == "/risk":               cmd_risk(chat_id, args)
@@ -4268,6 +4270,79 @@ def cmd_backtest(chat_id: int, args: str = ""):
                     chat_id=chat_id)
 
     threading.Thread(target=_run, daemon=True).start()
+
+
+# ─── STRATEGY OVERVIEW (/strategy) ──────────────────────────────────────────
+
+
+def cmd_strategy(chat_id: int):
+    """
+    Печатает компактную сводку по стратегии и доступным командам для
+    экспериментов. Дублирует ключевые выводы из STRATEGY.md в чате,
+    чтобы не нужно было читать GitHub.
+    """
+    text = (
+        "📋 <b>Strategy overview</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━\n\n"
+
+        "🔍 <b>Где мы сейчас</b>\n"
+        "Last hyperopt BTC 60d (5m):\n"
+        "  • in-sample best PF: <b>1.21</b> (52 trades, WR 21%)\n"
+        "  • OOS mean PF: <b>0.62</b> — стратегия теряет на новых данных\n"
+        "  • avg_r_net = <b>-0.98</b> — комиссии съедают весь edge\n\n"
+
+        "Прод-бот /stats 30d: WinR <b>18.4%</b>, AvgR <b>-0.41</b>, PF <b>0.42</b>\n\n"
+
+        "🎯 <b>Что найдено</b>\n"
+        "  ✅ Killzone gate РАБОТАЕТ — НЕ убирать "
+        "(без него MaxDD <b>-129R</b>)\n"
+        "  ❌ HTF gate НЕ работает (Optuna его отключает)\n"
+        "  💡 Edge есть (один trial дал +10.95R) — нужно его выделить\n"
+        "  💸 Комиссии 0.06%×2 убивают узкие R-units\n\n"
+
+        "🧪 <b>Топ-3 эксперимента сейчас</b>\n\n"
+
+        "<b>1. (CRITICAL) Wider TPs:</b>\n"
+        "<code>/hyperopt BTC 60 50 walkforward preset=wide_tp</code>\n"
+        "→ Цель: avgR > 4R компенсирует WR 19%\n\n"
+
+        "<b>2. Multi-symbol edge discovery:</b>\n"
+        "<code>/scanbt BTC,ETH,SOL,ARB,LINK 30 sort=avg_r_net</code>\n"
+        "→ Ищем монету с positive net post-fee\n\n"
+
+        "<b>3. Higher TF (меньше шума):</b>\n"
+        "<code>/hyperopt BTC 90 30 tf=1H walkforward</code>\n"
+        "→ Тестируем гипотезу что 1h даёт больше edge\n\n"
+
+        "📚 <b>Все команды для research</b>\n\n"
+
+        "  /btdiag SYMBOL DAYS [tf=N] [preset=NAME]\n"
+        "    Диагностика с funnel + breakdown + JSON dump\n\n"
+
+        "  /hyperopt SYMBOL DAYS TRIALS [tf=N] [walkforward]\n"
+        "    Optuna-тюнинг с walk-forward OOS валидацией\n\n"
+
+        "  /scanbt SYMS DAYS [tf=N] [sort=COL]\n"
+        "    Multi-symbol comparison таблицей\n\n"
+
+        "  /backtest SYMBOL DAYS [compare]\n"
+        "    Базовый replay (3 P3/P4 конфигурации)\n\n"
+
+        "🎛 <b>Presets:</b>\n"
+        "  <code>no_p3</code> · <code>no_p4</code> · <code>no_gates</code>\n"
+        "  <code>wide_tp</code> · <code>narrow_tp</code>\n"
+        "  <code>tight_sl</code> · <code>loose_sl</code>\n"
+        "  <code>aggressive</code> · <code>conservative</code>\n\n"
+
+        "🛡 <b>Anti-patterns</b>\n"
+        "  ✗ НЕ убирать killzone gate (MaxDD взрывается)\n"
+        "  ✗ НЕ доверять in-sample PF без walkforward\n"
+        "  ✗ НЕ менять prod-defaults до OOS PF > 1.3\n\n"
+
+        "📖 Полная документация: <a href=\"https://github.com/"
+        "vegomanagement/crypto-screener/blob/main/STRATEGY.md\">STRATEGY.md</a>"
+    )
+    tg_send(text, chat_id=chat_id)
 
 
 # ─── BACKTEST DIAGNOSTIC (/btdiag) ───────────────────────────────────────────
