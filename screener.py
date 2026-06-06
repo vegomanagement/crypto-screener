@@ -3112,6 +3112,15 @@ UI_CHART_HTML = """<!DOCTYPE html>
     <div id="signalsCount"
          style="font-size: 11px; color: var(--text-dim);
                 margin-top: 4px;">—</div>
+    <h2 style="margin-top: 20px;">SMC Zones</h2>
+    <label style="display: flex; align-items: center; gap: 8px;
+                  margin: 8px 0; cursor: pointer; font-size: 12px;">
+      <input type="checkbox" id="toggleZones" checked>
+      Show OB / FVG / MB / BB zones
+    </label>
+    <div id="zonesCount"
+         style="font-size: 11px; color: var(--text-dim);
+                margin-top: 4px;">—</div>
     <div class="status">
       Read-only viewer. Webhook signals → Telegram bot.
       <br>See <code>/strategy</code> for research commands.
@@ -3271,8 +3280,9 @@ async function loadChart() {
     document.getElementById("status").textContent =
       `${sym} ${iv} · ${data.klines.length} bars · ${data.source}`;
 
-    // После klines — загружаем signals overlay + engine market
+    // После klines — signals + SMC zones + engine market
     await loadSignals(sym);
+    loadZones(sym);    // async, не блокирует chart
     loadMarket(sym);   // async, не блокирует chart
   } catch (e) {
     document.getElementById("status").textContent = `Error: ${e.message}`;
@@ -3395,6 +3405,70 @@ async function loadWatchlist() {
   }
 }
 
+let zonePriceLines = [];
+
+function clearZones() {
+  for (const pl of zonePriceLines) {
+    try { candleSeries.removePriceLine(pl); } catch (e) {}
+  }
+  zonePriceLines = [];
+}
+
+async function loadZones(symbol) {
+  clearZones();
+  const showZones = document.getElementById("toggleZones");
+  if (showZones && !showZones.checked) return;
+  try {
+    const iv = document.getElementById("interval").value;
+    const r = await fetch(`/api/zones?symbol=${symbol}&interval=${iv}&limit=5`);
+    if (!r.ok) return;
+    const data = await r.json();
+    const z = data.zones || {};
+    const addLine = (price, color, title) => {
+      try {
+        const pl = candleSeries.createPriceLine({
+          price: price, color: color, lineWidth: 1,
+          lineStyle: 2, axisLabelVisible: true, title: title,
+        });
+        zonePriceLines.push(pl);
+      } catch (e) {}
+    };
+    // OB — top + bottom (bull green, bear red)
+    for (const o of (z.ob || [])) {
+      const col = o.direction === "bull" ? "#3fb950" : "#f85149";
+      addLine(o.top, col, "OB↑");
+      addLine(o.bottom, col, "OB↓");
+    }
+    // FVG — top + bottom
+    for (const f of (z.fvg || [])) {
+      const col = f.direction === "bull" ? "#39c5cf" : "#d29922";
+      addLine(f.top, col, "FVG↑");
+      addLine(f.bottom, col, "FVG↓");
+    }
+    // MB/BB — single level
+    for (const m of (z.mb || [])) {
+      const col = m.direction === "bull" ? "#bc8cff" : "#e9a8ff";
+      addLine(m.level, col, "MB");
+    }
+    for (const b of (z.bb || [])) {
+      const col = b.direction === "bull" ? "#58a6ff" : "#f85149";
+      addLine(b.level, col, "BB");
+    }
+    // Update zones count
+    const cnt = document.getElementById("zonesCount");
+    if (cnt) {
+      const total = (z.ob || []).length + (z.fvg || []).length +
+                    (z.mb || []).length + (z.bb || []).length;
+      cnt.textContent =
+        `${total} zones: ${(z.ob || []).length} OB · ` +
+        `${(z.fvg || []).length} FVG · ${(z.mb || []).length} MB · ` +
+        `${(z.bb || []).length} BB`;
+    }
+  } catch (e) {
+    console.warn("zones load failed:", e);
+  }
+}
+
 async function loadSignals(symbol) {
   const showSignals = document.getElementById("toggleSignals");
   if (showSignals && !showSignals.checked) {
@@ -3470,6 +3544,9 @@ document.getElementById("symbol").addEventListener("change", () => {
 document.getElementById("interval").addEventListener("change", loadChart);
 document.getElementById("toggleSignals").addEventListener("change", () => {
   loadSignals(document.getElementById("symbol").value);
+});
+document.getElementById("toggleZones").addEventListener("change", () => {
+  loadZones(document.getElementById("symbol").value);
 });
 </script>
 </body>
@@ -3693,13 +3770,6 @@ def api_market():
     """
     Compact market snapshot для UI: CVD, MTF EMA bias, funding, OI,
     VWAP, VP, indicators (RSI/MACD/ATR%), regime hints.
-
-    Параметр: symbol — BTCUSDT.
-
-    Под капотом: fetch_market() (13 parallel API calls). Может быть
-    медленным первый раз, но UI кэширует свои запросы.
-
-    Возвращает JSON без heavy-данных (klines не включаются).
     """
     symbol = (request.args.get("symbol") or "BTCUSDT").upper().strip()
     if not symbol.endswith("USDT"):
@@ -3710,7 +3780,6 @@ def api_market():
         if not m:
             return jsonify({"error": "no market data"}), 502
 
-        # Стрипуем heavy-поля, оставляем только compact summary
         b = m.get("bybit") or {}
         hl = m.get("hl") or {}
         cvd = m.get("cvd") or {}
@@ -3769,6 +3838,100 @@ def api_market():
         return jsonify(out), 200
     except Exception as e:
         log.warning(f"/api/market failed for {symbol}: {e}")
+        return jsonify({"error": str(e)[:200]}), 500
+
+
+@app.route("/api/zones", methods=["GET"])
+def api_zones():
+    """
+    Smart-money zones для overlay на chart'е: Order Blocks, Mitigation
+    Blocks, Breaker Blocks, FVGs.
+    """
+    symbol = (request.args.get("symbol") or "BTCUSDT").upper().strip()
+    interval = (request.args.get("interval") or "60").strip()
+    try:
+        limit = int(request.args.get("limit") or "8")
+    except ValueError:
+        limit = 8
+    limit = max(1, min(20, limit))
+
+    if not symbol.endswith("USDT"):
+        return jsonify({"error": "invalid symbol"}), 400
+
+    try:
+        rows = _klines(symbol, interval, 300)
+        if not rows or len(rows) < 30:
+            return jsonify({"symbol": symbol, "interval": interval,
+                            "zones": {"ob": [], "mb": [], "bb": [],
+                                      "fvg": []}}), 200
+
+        ob_zones = []
+        try:
+            obs = order_blocks.find_order_blocks(rows)
+            obs = [o for o in obs if o.validated and not o.mitigated]
+            for o in obs[-limit:]:
+                ob_zones.append({
+                    "direction": o.direction,
+                    "top":       float(o.body_high),
+                    "bottom":    float(o.body_low),
+                    "idx":       int(o.candle_idx),
+                })
+        except Exception as e:
+            log.debug(f"OB detect failed: {e}")
+
+        mb_zones = []
+        bb_zones = []
+        try:
+            from structure import find_swing_points
+            swings = find_swing_points(rows)
+            mbs = block_patterns.find_mitigation_blocks(rows, swings)
+            for mb in mbs[-limit:]:
+                mb_zones.append({
+                    "direction": mb.direction,
+                    "level":     float(mb.level),
+                    "idx":       int(mb.test_at),
+                })
+            bbs = block_patterns.find_breaker_blocks(rows, swings)
+            for bb in bbs[-limit:]:
+                bb_zones.append({
+                    "direction": bb.direction,
+                    "level":     float(bb.level),
+                    "idx":       int(bb.test_at),
+                })
+        except Exception as e:
+            log.debug(f"MB/BB detect failed: {e}")
+
+        # Простой FVG-detect (3-candle gap), recent внутри последних 100 баров
+        fvg_zones = []
+        try:
+            scan_start = max(2, len(rows) - 100)
+            for i in range(scan_start, len(rows)):
+                c0, c2 = rows[i], rows[i - 2]
+                if c0["l"] > c2["h"]:
+                    fvg_zones.append({
+                        "direction": "bull",
+                        "top":       float(c0["l"]),
+                        "bottom":    float(c2["h"]),
+                        "idx":       i,
+                    })
+                elif c0["h"] < c2["l"]:
+                    fvg_zones.append({
+                        "direction": "bear",
+                        "top":       float(c2["l"]),
+                        "bottom":    float(c0["h"]),
+                        "idx":       i,
+                    })
+            fvg_zones = fvg_zones[-limit:]
+        except Exception as e:
+            log.debug(f"FVG detect failed: {e}")
+
+        return jsonify({
+            "symbol": symbol, "interval": interval,
+            "zones": {"ob": ob_zones, "mb": mb_zones,
+                      "bb": bb_zones, "fvg": fvg_zones},
+        }), 200
+    except Exception as e:
+        log.warning(f"/api/zones failed: {e}")
         return jsonify({"error": str(e)[:200]}), 500
 
 
