@@ -259,3 +259,169 @@ def test_ui_html_has_loadWatchlist_js():
     body = r.get_data(as_text=True)
     assert "loadWatchlist" in body
     assert "/api/prices" in body
+
+
+# ─── /api/signals ─────────────────────────────────────────────────────────
+
+
+def _setup_signals_db(monkeypatch, tmp_path):
+    """Создаёт временную БД с signal_outcomes и подменяет DB_PATH."""
+    import sqlite3 as _sq
+    db_path = str(tmp_path / "signals.db")
+    monkeypatch.setattr(screener, "DB_PATH", db_path)
+
+    conn = _sq.connect(db_path)
+    # Минимальная schema — нужна только для тестов api_signals
+    conn.execute("""
+        CREATE TABLE signal_outcomes(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            signal_id INTEGER, symbol TEXT, signal_type TEXT,
+            direction TEXT, entry_price REAL, entry_ts TEXT,
+            decision_json TEXT, verdict TEXT,
+            entry_min REAL, entry_max REAL,
+            sl REAL, tp1 REAL, tp2 REAL, tp3 REAL,
+            rr1 REAL, rr2 REAL, rr3 REAL, confidence INTEGER,
+            status TEXT, hit_level TEXT, hit_at TEXT,
+            r_multiple REAL, expires_at TEXT, last_checked TEXT
+        )
+    """)
+    conn.commit()
+    return conn, db_path
+
+
+def test_api_signals_returns_empty_when_no_data(monkeypatch, tmp_path):
+    conn, _ = _setup_signals_db(monkeypatch, tmp_path)
+    conn.close()
+    c = _client()
+    # После reload screener — DB_PATH пересоздаст путь. Подменим снова.
+    monkeypatch.setattr(screener, "DB_PATH",
+                        str(tmp_path / "signals.db"))
+    r = c.get("/api/signals?symbol=BTCUSDT")
+    assert r.status_code == 200
+    data = r.get_json()
+    assert data["symbol"] == "BTCUSDT"
+    assert data["signals"] == []
+
+
+def test_api_signals_returns_signals_from_db(monkeypatch, tmp_path):
+    conn, db_path = _setup_signals_db(monkeypatch, tmp_path)
+    from datetime import datetime as _dt, timezone as _tz
+    now = _dt.now(_tz.utc)
+    conn.execute(
+        """INSERT INTO signal_outcomes
+           (symbol, signal_type, direction, verdict,
+            entry_price, entry_ts, sl, tp1, tp2, tp3,
+            status, hit_level, hit_at, r_multiple, confidence)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        ("BTCUSDT", "OB_BULL", "long", "LONG",
+         50000.0, now.isoformat(),
+         49500.0, 50500.0, 51000.0, 52000.0,
+         "tp1_hit", "TP1", now.isoformat(),
+         1.5, 75),
+    )
+    conn.commit()
+    conn.close()
+    c = _client()
+    monkeypatch.setattr(screener, "DB_PATH", db_path)
+    r = c.get("/api/signals?symbol=BTCUSDT")
+    data = r.get_json()
+    assert len(data["signals"]) == 1
+    s = data["signals"][0]
+    assert s["direction"] == "long"
+    assert s["signal_type"] == "OB_BULL"
+    assert s["entry"] == 50000.0
+    assert s["sl"] == 49500.0
+    assert s["hit_level"] == "TP1"
+    assert s["r_multiple"] == 1.5
+    assert "ts" in s and isinstance(s["ts"], int)
+    assert "hit_ts" in s and isinstance(s["hit_ts"], int)
+
+
+def test_api_signals_filters_by_symbol(monkeypatch, tmp_path):
+    """Сигналы других символов не возвращаются."""
+    conn, db_path = _setup_signals_db(monkeypatch, tmp_path)
+    from datetime import datetime as _dt, timezone as _tz
+    now = _dt.now(_tz.utc)
+    for sym in ("BTCUSDT", "ETHUSDT"):
+        conn.execute(
+            """INSERT INTO signal_outcomes
+               (symbol, signal_type, direction, verdict,
+                entry_price, entry_ts, status)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (sym, "OB_BULL", "long", "LONG",
+             100.0, now.isoformat(), "open"),
+        )
+    conn.commit()
+    conn.close()
+    c = _client()
+    monkeypatch.setattr(screener, "DB_PATH", db_path)
+    r = c.get("/api/signals?symbol=BTCUSDT")
+    data = r.get_json()
+    assert len(data["signals"]) == 1
+
+
+def test_api_signals_clamps_days_and_limit(monkeypatch, tmp_path):
+    _, db_path = _setup_signals_db(monkeypatch, tmp_path)
+    c = _client()
+    monkeypatch.setattr(screener, "DB_PATH", db_path)
+    # days=9999 → clamp на 90
+    r = c.get("/api/signals?symbol=BTCUSDT&days=9999&limit=9999")
+    data = r.get_json()
+    assert data["days"] == 90
+
+
+def test_api_signals_excludes_non_long_short(monkeypatch, tmp_path):
+    """WAIT / SKIP verdict сигналы НЕ возвращаются."""
+    conn, db_path = _setup_signals_db(monkeypatch, tmp_path)
+    from datetime import datetime as _dt, timezone as _tz
+    now = _dt.now(_tz.utc)
+    for verdict in ("LONG", "WAIT", "SKIP", "SHORT"):
+        conn.execute(
+            """INSERT INTO signal_outcomes
+               (symbol, signal_type, direction, verdict,
+                entry_price, entry_ts, status)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            ("BTCUSDT", "OB_BULL", "long", verdict,
+             100.0, now.isoformat(), "open"),
+        )
+    conn.commit()
+    conn.close()
+    c = _client()
+    monkeypatch.setattr(screener, "DB_PATH", db_path)
+    r = c.get("/api/signals?symbol=BTCUSDT")
+    data = r.get_json()
+    verdicts = {s["verdict"] for s in data["signals"]}
+    assert verdicts == {"LONG", "SHORT"}
+
+
+def test_api_signals_handles_missing_db(monkeypatch, tmp_path):
+    """Если DB не существует — 200 + signals=[]."""
+    monkeypatch.setattr(screener, "DB_PATH",
+                        str(tmp_path / "nonexistent.db"))
+    c = _client()
+    monkeypatch.setattr(screener, "DB_PATH",
+                        str(tmp_path / "nonexistent.db"))
+    r = c.get("/api/signals?symbol=BTCUSDT")
+    # Эндпойнт graceful: пустая БД → пустой список
+    assert r.status_code == 200
+    data = r.get_json()
+    assert data["signals"] == []
+
+
+def test_ui_has_signals_toggle():
+    """UI содержит чекбокс toggleSignals и метку Signals."""
+    c = _client()
+    r = c.get("/ui")
+    body = r.get_data(as_text=True)
+    assert 'id="toggleSignals"' in body
+    assert "Show entries / TP / SL markers" in body
+    assert 'id="signalsCount"' in body
+
+
+def test_ui_has_loadSignals_js():
+    c = _client()
+    r = c.get("/ui")
+    body = r.get_data(as_text=True)
+    assert "loadSignals" in body
+    assert "/api/signals" in body
+    assert "setMarkers" in body   # вызов LightweightCharts API
