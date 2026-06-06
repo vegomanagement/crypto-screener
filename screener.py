@@ -36,6 +36,7 @@ import minor_patterns
 import backtest as bt_backtest
 import bt_data
 import bt_compare
+import bt_equity_chart
 import bt_hyperopt
 from webhook_utils import parse_alert_ts
 
@@ -4555,6 +4556,25 @@ def cmd_btdiag(chat_id: int, args: str = ""):
                     os.unlink(tmp_path)
                 except OSError:
                     pass
+
+            # Equity curve PNG — визуальная сводка
+            try:
+                equity = (result.stats or {}).get("equity") or []
+                png = bt_equity_chart.render_equity_curve(
+                    equity, symbol_full.replace("USDT", ""),
+                    days, stats=result.stats,
+                )
+                if png:
+                    final_r = equity[-1] if equity else 0.0
+                    emoji = "🟢" if final_r > 0 else ("🔴" if final_r < 0 else "⚪")
+                    tg_send_photo(
+                        png,
+                        f"{emoji} Equity curve: итог {final_r:+.2f}R",
+                        chat_id=chat_id,
+                        filename=f"equity_{symbol_full}_{days}d.png",
+                    )
+            except Exception as e:
+                log.warning(f"[/btdiag] equity chart failed: {e}")
 
         except Exception as e:
             log.exception(f"[/btdiag] failed: {e}")
