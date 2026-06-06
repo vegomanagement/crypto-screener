@@ -74,6 +74,21 @@ def test_default_search_space_has_expected_keys():
     assert space["MIN_CONFIDENCE_FOR_TRADE"][0] == "int"
 
 
+def test_default_search_space_includes_tp_sl_multipliers():
+    """TP/SL multipliers критичны для решения negative avgR_net — должны
+    быть в default search-space."""
+    space = bh.DEFAULT_SEARCH_SPACE
+    for key in ("ATR_SL_DIST", "ATR_TP1_DIST", "ATR_TP2_DIST", "ATR_TP3_DIST"):
+        assert key in space, f"{key} missing from DEFAULT_SEARCH_SPACE"
+        assert space[key][0] == "float", f"{key} should be float-search"
+    # TP1 max < TP2 max < TP3 max — иерархия типичных значений
+    assert space["ATR_TP1_DIST"][2] <= space["ATR_TP2_DIST"][2]
+    assert space["ATR_TP2_DIST"][2] <= space["ATR_TP3_DIST"][2]
+    # SL range разумный (не слишком широкий)
+    assert space["ATR_SL_DIST"][1] >= 0.5
+    assert space["ATR_SL_DIST"][2] <= 3.0
+
+
 def test_build_search_space_no_overrides_returns_default_copy():
     s = bh.build_search_space()
     assert s == bh.DEFAULT_SEARCH_SPACE
