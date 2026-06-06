@@ -760,6 +760,52 @@ def _expectancy_summary(stats: dict, trades: list) -> dict:
     }
 
 
+def _expectancy_by_signal_type(trades: list) -> list[tuple]:
+    """
+    Группирует closed trades по signal_type, считает expectancy на каждый
+    тип. Возвращает list[(signal_type, n, wr, avg_win, avg_loss,
+    breakeven_wr, verdict)] отсортированный по n убывая.
+
+    Полезно для отключения убыточных типов сигналов: если FVG_BULL имеет
+    WR 5% при breakeven 30% → verdict 'losing', стоит отключить.
+    """
+    from collections import defaultdict
+    groups: dict[str, list] = defaultdict(list)
+    for t in trades:
+        if t.status == "open":
+            continue
+        groups[t.signal_type].append(t)
+
+    out: list[tuple] = []
+    for sig_type, ts in groups.items():
+        n = len(ts)
+        if n == 0:
+            continue
+        winners = [t for t in ts if (t.r_multiple or 0) > 0]
+        losers  = [t for t in ts if (t.r_multiple or 0) <= 0]
+        wr = round(len(winners) / n * 100, 1) if n else 0.0
+        avg_win = (round(sum(t.r_multiple for t in winners) / len(winners), 2)
+                   if winners else 0.0)
+        avg_loss = (round(sum(t.r_multiple for t in losers) / len(losers), 2)
+                    if losers else 0.0)
+        denom = avg_win - avg_loss
+        breakeven_wr = (round(-avg_loss / denom * 100, 1)
+                        if denom > 0 else None)
+        if breakeven_wr is not None:
+            gap = wr - breakeven_wr
+            if gap > 1:
+                verdict = "winning"
+            elif gap < -1:
+                verdict = "losing"
+            else:
+                verdict = "breakeven"
+        else:
+            verdict = "unknown"
+        out.append((sig_type, n, wr, avg_win, avg_loss, breakeven_wr, verdict))
+    out.sort(key=lambda x: -x[1])
+    return out
+
+
 def _fmt_bd_row(item: tuple) -> str:
     """Форматирует одну строку breakdown-таблицы (поддерживает 4- и 5-tuple)."""
     if len(item) == 5:
@@ -815,6 +861,24 @@ def format_result(result: BacktestResult) -> str:
             lines.append("\nBy signal type:")
             for item in s["by_signal"][:10]:
                 lines.append(_fmt_bd_row(item))
+
+        # Expectancy-breakdown по signal_type: показывает где есть edge
+        sig_exp = _expectancy_by_signal_type(result.trades)
+        if sig_exp:
+            lines.append("\nExpectancy by signal type "
+                         "(verdict-эмодзи на типы с >=5 трейдов):")
+            for (sig, n, wr, awn, aln, be, verdict) in sig_exp[:15]:
+                be_str = f"{be}%" if be is not None else "—"
+                if n >= 5:
+                    emoji = {"winning": "✅", "losing": "❌",
+                             "breakeven": "🟡"}.get(verdict, "⚪")
+                else:
+                    emoji = "•"   # слишком мало данных
+                lines.append(
+                    f"  {sig:<22} n={n:>4} wr={wr:>5.1f}% "
+                    f"avgWin={awn:+.2f} avgLoss={aln:+.2f} BE={be_str:>6} "
+                    f"{emoji}"
+                )
 
     # Funnel: detected → !WAIT → !SKIP → trade
     if result.funnel:
