@@ -2668,6 +2668,7 @@ def _register_bot_commands() -> None:
         {"command": "trades",   "description": "Последние закрытые сделки с R-исходом"},
         {"command": "backtest", "description": "Прогон стратегии на истории: /backtest BTC 30"},
         {"command": "btdiag",   "description": "Диагностика: funnel + breakdown сигналов: /btdiag BTC 30"},
+        {"command": "scanbt",   "description": "Backtest на нескольких монетах: /scanbt BTC,ETH,SOL 30"},
         {"command": "hyperopt", "description": "Optuna-тюнинг параметров: /hyperopt BTC 60 30"},
         {"command": "history",  "description": "Последние 10 сигналов из БД"},
         {"command": "digest",   "description": "Дневной дайджест с LLM-анализом"},
@@ -3310,6 +3311,9 @@ def cmd_help(chat_id: int):
         "/btdiag [sym days [KEY=VAL ...]]  — диагностика: funnel + breakdown\n"
         "                       /btdiag BTC 30  — куда уходят сигналы\n"
         "                       /btdiag BTC 30 KILLZONE_GATE_ENABLED=false\n"
+        "/scanbt [SYM1,SYM2... days [KEY=VAL ...]] — backtest нескольких монет\n"
+        "                       /scanbt BTC,ETH,SOL 30\n"
+        "                       /scanbt BTC,ETH 30 KILLZONE_GATE_ENABLED=false\n"
         "/hyperopt [sym days trials [KEY=VAL ...]] — Optuna-тюнинг параметров\n"
         "                       /hyperopt BTC 60 30\n"
         "                       /hyperopt BTC 60 50 walkforward\n"
@@ -3527,6 +3531,7 @@ def handle_update(update: dict):
     elif cmd == "/trades":             cmd_trades(chat_id, args)
     elif cmd == "/backtest":           cmd_backtest(chat_id, args)
     elif cmd == "/btdiag":             cmd_btdiag(chat_id, args)
+    elif cmd == "/scanbt":             cmd_scanbt(chat_id, args)
     elif cmd == "/hyperopt":           cmd_hyperopt(chat_id, args)
     elif cmd == "/top":                cmd_top(chat_id)
     elif cmd == "/movers":             cmd_movers(chat_id)
@@ -4380,6 +4385,152 @@ def cmd_btdiag(chat_id: int, args: str = ""):
             log.exception(f"[/btdiag] failed: {e}")
             tg_send(f"❌ Btdiag error: {type(e).__name__}: {e}",
                     chat_id=chat_id)
+
+    threading.Thread(target=_run, daemon=True).start()
+
+
+# ─── SCAN BACKTEST (/scanbt) ─────────────────────────────────────────────────
+
+
+def _parse_scanbt_args(args: str) -> tuple[list[str], int, dict | None]:
+    """
+    Парсит '/scanbt BTC,ETH,SOL 30 KEY=VAL' → (['BTCUSDT','ETHUSDT','SOLUSDT'],
+    30, overrides).
+
+    Символы — comma-separated, без пробелов. Дефолт: ['BTC','ETH','SOL'], 30d.
+    """
+    parts = [p for p in args.strip().split() if p]
+    symbols_raw = "BTC,ETH,SOL"
+    days = 30
+    override_parts: list[str] = []
+    for p in parts:
+        if "=" in p and not p.startswith("="):
+            override_parts.append(p)
+        elif p.isdigit():
+            days = int(p)
+        elif "," in p:
+            symbols_raw = p
+        else:
+            # одиночный символ — добавим
+            symbols_raw = p
+    syms = []
+    for s in symbols_raw.split(","):
+        s = s.strip().upper().replace(".P", "").replace("USDT", "")
+        if not s:
+            continue
+        full = s if s.endswith("USDT") else s + "USDT"
+        if full not in syms:
+            syms.append(full)
+    days = max(1, min(365, days))
+    overrides = bt_backtest._parse_overrides(",".join(override_parts)) \
+        if override_parts else None
+    return syms, days, overrides
+
+
+def _format_scanbt_table(rows: list[dict]) -> str:
+    """Pretty-print таблица результатов scanbt."""
+    if not rows:
+        return "(no symbols)"
+    header = (f"{'Symbol':<10} {'Trades':>7} {'WR%':>6} {'AvgR':>7} "
+              f"{'netR':>7} {'PF':>6} {'MaxDD':>8}")
+    lines = [header, "-" * len(header)]
+    for r in rows:
+        lines.append(
+            f"{r['symbol']:<10} "
+            f"{r['closed']:>7} "
+            f"{r['win_rate']:>5.1f}% "
+            f"{r['avg_r']:>+7.2f} "
+            f"{r['avg_r_net']:>+7.2f} "
+            f"{r['pf']:>6} "
+            f"{r['max_dd']:>+8.2f}"
+        )
+    return "\n".join(lines)
+
+
+def cmd_scanbt(chat_id: int, args: str = ""):
+    """
+    Multi-symbol backtest: сравнить стратегию на нескольких монетах
+    с одинаковыми параметрами.
+
+      /scanbt                                — BTC,ETH,SOL 30d baseline
+      /scanbt BTC,ETH 60                     — две монеты 60d
+      /scanbt BTC,ETH,SOL,ARB,DOGE 30        — 5 монет
+      /scanbt BTC,ETH 30 KILLZONE_GATE_ENABLED=false STRUCTURE_GATE_ENABLED=false
+                                             — те же overrides для всех
+
+    Выводит compare-таблицу. Для каждого символа: closed, WR, avgR, netR,
+    PF, MaxDD. Помогает найти где у стратегии есть edge.
+    """
+    symbols, days, overrides = _parse_scanbt_args(args)
+    if not symbols:
+        tg_send("❌ Не указаны символы. Пример: /scanbt BTC,ETH,SOL 30",
+                chat_id=chat_id)
+        return
+
+    n_sym = len(symbols)
+    eta = (f"{n_sym}-{n_sym * 2} мин" if days <= 30
+           else f"{n_sym * 2}-{n_sym * 4} мин")
+    ovr_label = (f"\n<i>overrides: {overrides}</i>" if overrides else "")
+    tg_send(
+        f"📊 <b>Scanbt {n_sym} symbols ({days}d)</b>{ovr_label}\n"
+        f"{', '.join(s.replace('USDT','') for s in symbols)}\n"
+        f"ETA ~{eta}...",
+        chat_id=chat_id,
+    )
+
+    def _run():
+        import time as _t
+        t0 = _t.time()
+        rows: list[dict] = []
+        failed: list[tuple[str, str]] = []
+
+        for i, sym in enumerate(symbols, start=1):
+            try:
+                tg_send(
+                    f"⏳ <b>{i}/{n_sym}</b> {sym}: fetch + backtest...",
+                    chat_id=chat_id,
+                )
+                data = bt_data.fetch_all(
+                    sym, days,
+                    tfs=["5", "15", "60", "240", "D"],
+                    fetch_funding_data=False, fetch_oi_data=False,
+                )
+                result = bt_backtest.run_backtest(
+                    data, warmup_bars=200, progress_each=2000,
+                    collect_signals=False,
+                    config_overrides=overrides,
+                )
+                s = result.stats or {}
+                risk = (s.get("risk") or {})
+                pf = risk.get("profit_factor", 0)
+                rows.append({
+                    "symbol":    sym.replace("USDT", ""),
+                    "closed":    s.get("closed", 0),
+                    "win_rate":  s.get("win_rate", 0),
+                    "avg_r":     s.get("avg_r", 0),
+                    "avg_r_net": s.get("avg_r_net", 0),
+                    "pf":        pf if isinstance(pf, (int, float)) else str(pf),
+                    "max_dd":    risk.get("max_drawdown_r", 0),
+                })
+            except Exception as e:
+                log.exception(f"[/scanbt] {sym} failed: {e}")
+                failed.append((sym, f"{type(e).__name__}: {str(e)[:120]}"))
+
+        # Сортировка по PF убыванию (лучшие монеты сверху)
+        def _pf_key(r):
+            v = r["pf"]
+            if isinstance(v, str):
+                return -float("inf") if v != "∞" else float("inf")
+            return v
+        rows.sort(key=_pf_key, reverse=True)
+
+        total_time = _t.time() - t0
+        body = _format_scanbt_table(rows)
+        footer = f"\n\n⏱ Total: {total_time:.0f}с"
+        if failed:
+            footer += "\n\n❌ Failed:\n" + "\n".join(
+                f"  {sym}: {err}" for sym, err in failed)
+        tg_send_chunked(f"<pre>{body}</pre>{footer}", chat_id=chat_id)
 
     threading.Thread(target=_run, daemon=True).start()
 

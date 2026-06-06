@@ -230,3 +230,109 @@ def test_btdiag_and_hyperopt_in_help_text():
     full = "\n".join(captured)
     assert "/btdiag" in full
     assert "/hyperopt" in full
+    assert "/scanbt" in full
+
+
+# ─── _parse_scanbt_args ───────────────────────────────────────────────────
+
+
+def test_scanbt_args_default():
+    import importlib
+    importlib.reload(screener)
+    syms, days, ovr = screener._parse_scanbt_args("")
+    assert syms == ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
+    assert days == 30
+    assert ovr is None
+
+
+def test_scanbt_args_comma_separated_symbols():
+    syms, days, _ = screener._parse_scanbt_args("BTC,ETH,SOL 60")
+    assert syms == ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
+    assert days == 60
+
+
+def test_scanbt_args_single_symbol():
+    syms, *_ = screener._parse_scanbt_args("BTC 30")
+    assert syms == ["BTCUSDT"]
+
+
+def test_scanbt_args_strips_usdt_p_suffix():
+    syms, *_ = screener._parse_scanbt_args("BTCUSDT.P,ETHUSDT 30")
+    assert syms == ["BTCUSDT", "ETHUSDT"]
+
+
+def test_scanbt_args_dedupes():
+    syms, *_ = screener._parse_scanbt_args("BTC,ETH,BTC,ETH,SOL 30")
+    assert syms == ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
+
+
+def test_scanbt_args_overrides():
+    syms, days, ovr = screener._parse_scanbt_args(
+        "BTC,ETH 30 KILLZONE_GATE_ENABLED=false MIN_CONFIDENCE_FOR_TRADE=55"
+    )
+    assert syms == ["BTCUSDT", "ETHUSDT"]
+    assert days == 30
+    assert ovr == {"KILLZONE_GATE_ENABLED": False,
+                   "MIN_CONFIDENCE_FOR_TRADE": 55}
+
+
+def test_scanbt_args_clamps_days():
+    _, days, _ = screener._parse_scanbt_args("BTC,ETH 0")
+    assert days == 1
+    _, days, _ = screener._parse_scanbt_args("BTC,ETH 5000")
+    assert days == 365
+
+
+def test_scanbt_args_ignores_empty_symbols():
+    syms, *_ = screener._parse_scanbt_args("BTC,,ETH, 30")
+    assert syms == ["BTCUSDT", "ETHUSDT"]
+
+
+# ─── _format_scanbt_table ─────────────────────────────────────────────────
+
+
+def test_format_scanbt_table_empty():
+    out = screener._format_scanbt_table([])
+    assert "no symbols" in out
+
+
+def test_format_scanbt_table_basic():
+    rows = [
+        {"symbol": "BTC", "closed": 42, "win_rate": 26.2, "avg_r": 0.46,
+         "avg_r_net": 0.40, "pf": 1.62, "max_dd": -9.0},
+        {"symbol": "ETH", "closed": 30, "win_rate": 18.5, "avg_r": -0.20,
+         "avg_r_net": -0.30, "pf": 0.85, "max_dd": -15.0},
+    ]
+    out = screener._format_scanbt_table(rows)
+    assert "Symbol" in out
+    assert "WR%" in out
+    assert "PF" in out
+    assert "BTC" in out
+    assert "ETH" in out
+    assert "26.2" in out
+
+
+def test_format_scanbt_table_handles_infinity_pf():
+    rows = [{"symbol": "BTC", "closed": 5, "win_rate": 100.0, "avg_r": 1.5,
+             "avg_r_net": 1.4, "pf": "∞", "max_dd": 0.0}]
+    out = screener._format_scanbt_table(rows)
+    assert "∞" in out
+
+
+# ─── /scanbt routing ──────────────────────────────────────────────────────
+
+
+def test_scanbt_command_routed(monkeypatch):
+    called = {}
+
+    def fake_cmd(chat_id, args):
+        called["chat_id"] = chat_id
+        called["args"] = args
+
+    monkeypatch.setattr(screener, "cmd_scanbt", fake_cmd)
+    update = {"message": {"chat": {"id": 789},
+                          "text": "/scanbt BTC,ETH 30",
+                          "from": {"id": 789}}}
+    screener.handle_update(update)
+    assert called.get("chat_id") == 789
+    assert called.get("args") == "BTC,ETH 30"
