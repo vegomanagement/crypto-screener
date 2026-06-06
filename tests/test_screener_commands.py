@@ -336,3 +336,86 @@ def test_scanbt_command_routed(monkeypatch):
     screener.handle_update(update)
     assert called.get("chat_id") == 789
     assert called.get("args") == "BTC,ETH 30"
+
+
+# ─── CONFIG_PRESETS ──────────────────────────────────────────────────────
+
+
+def test_config_presets_has_expected_keys():
+    assert "no_gates" in screener.CONFIG_PRESETS
+    assert "no_p3" in screener.CONFIG_PRESETS
+    assert "no_p4" in screener.CONFIG_PRESETS
+    assert "wide_tp" in screener.CONFIG_PRESETS
+    assert "aggressive" in screener.CONFIG_PRESETS
+
+
+def test_extract_preset_tokens_extracts_and_removes():
+    parts = ["BTC", "30", "preset=no_p3", "MIN_CONFIDENCE_FOR_TRADE=55"]
+    other, ovr = screener._extract_preset_tokens(parts)
+    assert "preset=no_p3" not in other
+    assert "BTC" in other
+    assert "30" in other
+    assert "MIN_CONFIDENCE_FOR_TRADE=55" in other
+    assert ovr == {"KILLZONE_GATE_ENABLED": False,
+                   "STRUCTURE_GATE_ENABLED": False}
+
+
+def test_extract_preset_tokens_unknown_preset_silently_skipped():
+    other, ovr = screener._extract_preset_tokens(["BTC", "preset=garbage"])
+    assert ovr == {}
+    assert "preset=garbage" not in other
+
+
+def test_extract_preset_tokens_multiple_presets_merge():
+    other, ovr = screener._extract_preset_tokens(
+        ["BTC", "preset=no_p3", "preset=wide_tp"])
+    # Оба применились
+    assert ovr["KILLZONE_GATE_ENABLED"] is False
+    assert ovr["ATR_TP1_DIST"] == 3.0
+
+
+def test_btdiag_args_preset_applied():
+    sym, days, ovr = screener._parse_btdiag_args("BTC 30 preset=no_p3")
+    assert ovr == {"KILLZONE_GATE_ENABLED": False,
+                   "STRUCTURE_GATE_ENABLED": False}
+
+
+def test_btdiag_args_explicit_override_beats_preset():
+    """preset=no_p3 включает STRUCTURE=False, но явное STRUCTURE=True перебивает."""
+    _, _, ovr = screener._parse_btdiag_args(
+        "BTC 30 preset=no_p3 STRUCTURE_GATE_ENABLED=true"
+    )
+    assert ovr["KILLZONE_GATE_ENABLED"] is False
+    assert ovr["STRUCTURE_GATE_ENABLED"] is True
+
+
+def test_btdiag_args_no_preset_no_explicit_returns_none():
+    _, _, ovr = screener._parse_btdiag_args("BTC 30")
+    assert ovr is None
+
+
+def test_scanbt_args_preset_applied():
+    syms, days, ovr = screener._parse_scanbt_args(
+        "BTC,ETH 30 preset=wide_tp"
+    )
+    assert syms == ["BTCUSDT", "ETHUSDT"]
+    assert ovr == {"ATR_TP1_DIST": 3.0, "ATR_TP2_DIST": 5.0,
+                   "ATR_TP3_DIST": 8.0}
+
+
+def test_hyperopt_args_preset_applied():
+    _, _, _, _, _, fixed = screener._parse_hyperopt_args(
+        "BTC 60 30 preset=no_p4"
+    )
+    assert fixed == {"HTF_BIAS_GATE_ENABLED": False}
+
+
+def test_hyperopt_args_preset_plus_explicit():
+    _, _, _, _, metric, fixed = screener._parse_hyperopt_args(
+        "BTC 60 30 metric=sharpe_r preset=aggressive MIN_CONFIDENCE_FOR_TRADE=60"
+    )
+    assert metric == "sharpe_r"
+    # aggressive preset: MIN_CONFIDENCE=55, TP wide
+    # explicit MIN_CONFIDENCE_FOR_TRADE=60 перебивает 55
+    assert fixed["MIN_CONFIDENCE_FOR_TRADE"] == 60
+    assert fixed["ATR_TP1_DIST"] == 3.0
