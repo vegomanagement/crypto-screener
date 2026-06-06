@@ -59,6 +59,19 @@ TradingView alert (JSON)
 | `/digest` | Daily debrief — references real engine performance, not just prose |
 | 📸 **Send a photo** | Chart screenshot analysis — compares user's view with engine verdict & objective data |
 
+### Strategy research / backtest commands
+
+| Command | Description |
+|---------|-------------|
+| `/backtest BTC 30 [compare] [tf=N]` | Replay strategy on historical data |
+| `/btdiag SYMBOL DAYS [tf=N] [preset=NAME] [KEY=VAL ...]` | Diagnostic backtest: signal funnel + breakdown by killzone/HTF/RR/signal_type, expectancy verdict, JSON dump |
+| `/hyperopt SYMBOL DAYS TRIALS [tf=N] [walkforward] [metric=X] [preset=NAME] [KEY=VAL ...]` | Optuna-based parameter tuning with walk-forward OOS validation |
+| `/scanbt SYMS DAYS [tf=N] [preset=NAME] [sort=COL] [KEY=VAL ...]` | Multi-symbol backtest comparison |
+
+**Available presets:** `no_p3`, `no_p4`, `no_gates`, `wide_tp`, `narrow_tp`, `tight_sl`, `loose_sl`, `aggressive`, `conservative`.
+
+📖 See [STRATEGY.md](STRATEGY.md) for findings from past experiments, anti-patterns to avoid, and recommended next experiments.
+
 **Photo tip:** add a caption like `BTC 4H — думаю шорт отсюда` and the LLM will compare your analysis with engine-recommended levels.
 
 ---
