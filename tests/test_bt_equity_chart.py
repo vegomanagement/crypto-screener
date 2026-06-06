@@ -68,3 +68,52 @@ def test_render_long_equity_series():
                                               stats={"closed": 100})
     assert len(out) > 5000   # достаточно большой PNG
     assert out[:8] == b"\x89PNG\r\n\x1a\n"
+
+
+# ─── render_multi_equity_curves ──────────────────────────────────────────
+
+
+def test_render_multi_empty_returns_placeholder():
+    out = bt_equity_chart.render_multi_equity_curves([], "BTC", 30)
+    assert out[:8] == b"\x89PNG\r\n\x1a\n"
+
+
+def test_render_multi_basic_with_4_configs():
+    """4 кривые на одном графике, как в /backtest compare."""
+    curves = [
+        ("baseline", [0.5, 1.0, -0.5, 0.5], {"closed": 4}),
+        ("no_p3", [-1.0, -2.5, -3.5, -5.0], {"closed": 4}),
+        ("no_p4", [0.0, 0.5, 1.5, 2.0], {"closed": 4}),
+        ("all_gates_off", [1.0, 3.0, 2.0, 4.5], {"closed": 4}),
+    ]
+    out = bt_equity_chart.render_multi_equity_curves(curves, "BTC", 30)
+    assert isinstance(out, bytes)
+    assert out[:8] == b"\x89PNG\r\n\x1a\n"
+    assert len(out) > 5000
+
+
+def test_render_multi_handles_one_empty_curve():
+    """Одна из кривых пустая (0 trades) — рисуется только не-пустая."""
+    curves = [
+        ("baseline", [1.5, 2.0], {"closed": 2}),
+        ("no_p3", [], {"closed": 0}),
+    ]
+    out = bt_equity_chart.render_multi_equity_curves(curves, "BTC", 30)
+    assert out[:8] == b"\x89PNG\r\n\x1a\n"
+
+
+def test_render_multi_no_stats():
+    """stats может быть None."""
+    curves = [("A", [1.0, 2.0], None), ("B", [0.5, 1.5], None)]
+    out = bt_equity_chart.render_multi_equity_curves(curves, "X", 7)
+    assert out[:8] == b"\x89PNG\r\n\x1a\n"
+
+
+def test_render_multi_palette_handles_many_curves():
+    """Более 5 кривых — палитра должна wrap-around'иться."""
+    curves = [
+        (f"cfg_{i}", [float(i)], {"closed": 1})
+        for i in range(10)
+    ]
+    out = bt_equity_chart.render_multi_equity_curves(curves, "BTC", 30)
+    assert out[:8] == b"\x89PNG\r\n\x1a\n"

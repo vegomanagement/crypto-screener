@@ -4265,6 +4265,42 @@ def cmd_backtest(chat_id: int, args: str = ""):
                       f"Replay: {replay_time:.0f}с · "
                       f"Total: {total_time:.0f}с")
             tg_send(f"<pre>{body}</pre>{footer}", chat_id=chat_id)
+
+            # Equity chart — single для baseline, multi для compare
+            try:
+                sym_short = symbol_full.replace("USDT", "")
+                if compare_mode:
+                    # 4 кривые на одном графике
+                    curves = []
+                    for cfg, res in zip(cmp.configs, cmp.results):
+                        equity = (res.stats or {}).get("equity") or []
+                        curves.append((cfg.name, equity, res.stats))
+                    png = bt_equity_chart.render_multi_equity_curves(
+                        curves, sym_short, days,
+                    )
+                    if png:
+                        tg_send_photo(
+                            png, "📊 Equity comparison: 4 configs",
+                            chat_id=chat_id,
+                            filename=f"compare_{symbol_full}_{days}d.png",
+                        )
+                else:
+                    equity = (result.stats or {}).get("equity") or []
+                    png = bt_equity_chart.render_equity_curve(
+                        equity, sym_short, days, stats=result.stats,
+                    )
+                    if png:
+                        final_r = equity[-1] if equity else 0.0
+                        emoji = ("🟢" if final_r > 0
+                                 else "🔴" if final_r < 0 else "⚪")
+                        tg_send_photo(
+                            png,
+                            f"{emoji} Equity curve: итог {final_r:+.2f}R",
+                            chat_id=chat_id,
+                            filename=f"equity_{symbol_full}_{days}d.png",
+                        )
+            except Exception as e:
+                log.warning(f"[/backtest] equity chart failed: {e}")
         except Exception as e:
             log.exception(f"[/backtest] failed: {e}")
             tg_send(f"❌ Backtest error: {type(e).__name__}: {e}",
