@@ -2907,6 +2907,383 @@ def health():
     return jsonify({"status": "running", "time": datetime.now(timezone.utc).isoformat()}), 200
 
 
+# ─── UI ROUTES (chart viewer) ─────────────────────────────────────────────
+#
+# Простой read-only UI для просмотра charts и indicators в браузере.
+# Не требует auth (личное использование). Использует Lightweight Charts
+# от TradingView через CDN — без build-step.
+#
+# Routes:
+#   GET /ui                    — главная страница с chart viewer
+#   GET /api/klines            — JSON-ответ klines для символа/интервала
+#   GET /api/symbols           — список доступных символов из watchlist
+#
+# Безопасность: webhook() / pipeline НЕ тронуты, эти endpoints read-only.
+
+UI_CHART_HTML = """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crypto Screener — Chart Viewer</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --panel: #161b22;
+    --border: #21262d;
+    --text: #c9d1d9;
+    --text-dim: #8b949e;
+    --green: #3fb950;
+    --red: #f85149;
+    --blue: #58a6ff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 14px;
+  }
+  header {
+    display: flex; gap: 12px; align-items: center;
+    padding: 10px 16px; background: var(--panel);
+    border-bottom: 1px solid var(--border);
+  }
+  header h1 { margin: 0; font-size: 16px; font-weight: 600; }
+  header select, header input {
+    background: var(--bg); color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 6px 10px; font-size: 13px;
+  }
+  header button {
+    background: var(--blue); color: white; border: 0;
+    padding: 6px 14px; border-radius: 6px; cursor: pointer;
+    font-size: 13px; font-weight: 500;
+  }
+  header button:hover { opacity: 0.85; }
+  .layout {
+    display: grid;
+    grid-template-columns: 1fr 280px;
+    gap: 0; height: calc(100vh - 51px);
+  }
+  #chart { background: var(--panel); }
+  .sidebar {
+    background: var(--panel); border-left: 1px solid var(--border);
+    padding: 16px; overflow-y: auto;
+  }
+  .sidebar h2 {
+    margin: 0 0 12px; font-size: 13px; font-weight: 600;
+    text-transform: uppercase; color: var(--text-dim);
+    letter-spacing: 0.5px;
+  }
+  .indicator {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 6px; padding: 10px 12px; margin-bottom: 8px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .indicator-name { font-size: 12px; color: var(--text-dim); }
+  .indicator-value { font-weight: 600; font-family: "SF Mono", Menlo, monospace; }
+  .pos { color: var(--green); }
+  .neg { color: var(--red); }
+  .status { font-size: 12px; color: var(--text-dim); margin-top: 16px; }
+  @media (max-width: 800px) {
+    .layout { grid-template-columns: 1fr; height: auto; }
+    #chart { height: 60vh; }
+    .sidebar { border-left: 0; border-top: 1px solid var(--border); }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>📊 Chart Viewer</h1>
+  <select id="symbol">
+    <option value="BTCUSDT">BTC</option>
+    <option value="ETHUSDT">ETH</option>
+    <option value="SOLUSDT">SOL</option>
+    <option value="BNBUSDT">BNB</option>
+    <option value="XRPUSDT">XRP</option>
+    <option value="ADAUSDT">ADA</option>
+    <option value="DOGEUSDT">DOGE</option>
+    <option value="AVAXUSDT">AVAX</option>
+    <option value="LINKUSDT">LINK</option>
+    <option value="MATICUSDT">MATIC</option>
+  </select>
+  <select id="interval">
+    <option value="5">5m</option>
+    <option value="15">15m</option>
+    <option value="60" selected>1H</option>
+    <option value="240">4H</option>
+    <option value="D">1D</option>
+  </select>
+  <button onclick="loadChart()">Reload</button>
+  <span id="status" style="margin-left: auto; color: var(--text-dim); font-size: 12px;"></span>
+</header>
+<div class="layout">
+  <div id="chart"></div>
+  <aside class="sidebar">
+    <h2>Indicators</h2>
+    <div class="indicator">
+      <span class="indicator-name">Price</span>
+      <span class="indicator-value" id="price">—</span>
+    </div>
+    <div class="indicator">
+      <span class="indicator-name">24h Change</span>
+      <span class="indicator-value" id="chg24">—</span>
+    </div>
+    <div class="indicator">
+      <span class="indicator-name">EMA 20</span>
+      <span class="indicator-value" id="ema20">—</span>
+    </div>
+    <div class="indicator">
+      <span class="indicator-name">EMA 50</span>
+      <span class="indicator-value" id="ema50">—</span>
+    </div>
+    <div class="indicator">
+      <span class="indicator-name">RSI 14</span>
+      <span class="indicator-value" id="rsi14">—</span>
+    </div>
+    <div class="indicator">
+      <span class="indicator-name">ATR 14</span>
+      <span class="indicator-value" id="atr14">—</span>
+    </div>
+    <div class="indicator">
+      <span class="indicator-name">High</span>
+      <span class="indicator-value" id="high">—</span>
+    </div>
+    <div class="indicator">
+      <span class="indicator-name">Low</span>
+      <span class="indicator-value" id="low">—</span>
+    </div>
+    <div class="status">
+      Read-only viewer. Webhook signals → Telegram bot.
+      <br>See <code>/strategy</code> for research commands.
+    </div>
+  </aside>
+</div>
+
+<script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+<script>
+let chart, candleSeries, ema20Series, ema50Series;
+
+function ema(values, period) {
+  const k = 2 / (period + 1);
+  const out = [];
+  let prev = null;
+  for (let i = 0; i < values.length; i++) {
+    const v = values[i];
+    prev = prev === null ? v : v * k + prev * (1 - k);
+    out.push(prev);
+  }
+  return out;
+}
+
+function rsi(closes, period = 14) {
+  if (closes.length <= period) return null;
+  let gains = 0, losses = 0;
+  for (let i = 1; i <= period; i++) {
+    const d = closes[i] - closes[i - 1];
+    if (d > 0) gains += d; else losses -= d;
+  }
+  let avgG = gains / period, avgL = losses / period;
+  for (let i = period + 1; i < closes.length; i++) {
+    const d = closes[i] - closes[i - 1];
+    avgG = (avgG * (period - 1) + (d > 0 ? d : 0)) / period;
+    avgL = (avgL * (period - 1) + (d < 0 ? -d : 0)) / period;
+  }
+  if (avgL === 0) return 100;
+  const rs = avgG / avgL;
+  return 100 - 100 / (1 + rs);
+}
+
+function atr(klines, period = 14) {
+  if (klines.length < period + 1) return null;
+  let sum = 0;
+  for (let i = klines.length - period; i < klines.length; i++) {
+    const c = klines[i], p = klines[i - 1];
+    const tr = Math.max(
+      c.h - c.l,
+      Math.abs(c.h - p.c),
+      Math.abs(c.l - p.c),
+    );
+    sum += tr;
+  }
+  return sum / period;
+}
+
+function fmtNum(v, digits) {
+  if (v == null) return "—";
+  return Number(v).toLocaleString("en-US", {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  });
+}
+
+function digits(v) {
+  if (v >= 1000) return 2;
+  if (v >= 1) return 4;
+  if (v >= 0.01) return 6;
+  return 8;
+}
+
+function initChart() {
+  const el = document.getElementById("chart");
+  chart = LightweightCharts.createChart(el, {
+    width: el.clientWidth, height: el.clientHeight,
+    layout: { background: { color: "#161b22" }, textColor: "#c9d1d9" },
+    grid: {
+      vertLines: { color: "#21262d" },
+      horzLines: { color: "#21262d" },
+    },
+    timeScale: { timeVisible: true, secondsVisible: false },
+    crosshair: { mode: 1 },
+  });
+  candleSeries = chart.addCandlestickSeries({
+    upColor: "#3fb950", downColor: "#f85149",
+    borderVisible: false,
+    wickUpColor: "#3fb950", wickDownColor: "#f85149",
+  });
+  ema20Series = chart.addLineSeries({
+    color: "#58a6ff", lineWidth: 1, priceLineVisible: false,
+  });
+  ema50Series = chart.addLineSeries({
+    color: "#d29922", lineWidth: 1, priceLineVisible: false,
+  });
+  new ResizeObserver(() => {
+    chart.applyOptions({
+      width: el.clientWidth, height: el.clientHeight,
+    });
+  }).observe(el);
+}
+
+async function loadChart() {
+  const sym = document.getElementById("symbol").value;
+  const iv = document.getElementById("interval").value;
+  document.getElementById("status").textContent =
+    `Loading ${sym} ${iv}...`;
+  try {
+    const r = await fetch(
+      `/api/klines?symbol=${sym}&interval=${iv}&limit=300`);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data = await r.json();
+    if (!data.klines || !data.klines.length) {
+      throw new Error("No klines");
+    }
+    const candles = data.klines.map(k => ({
+      time: Math.floor(k.ts / 1000),
+      open: k.o, high: k.h, low: k.l, close: k.c,
+    }));
+    candleSeries.setData(candles);
+
+    const closes = data.klines.map(k => k.c);
+    const e20 = ema(closes, 20);
+    const e50 = ema(closes, 50);
+    ema20Series.setData(candles.map((c, i) => ({
+      time: c.time, value: e20[i],
+    })));
+    ema50Series.setData(candles.map((c, i) => ({
+      time: c.time, value: e50[i],
+    })));
+
+    const last = data.klines[data.klines.length - 1];
+    const first = data.klines[0];
+    const d = digits(last.c);
+    document.getElementById("price").textContent = fmtNum(last.c, d);
+    const ch = ((last.c - first.c) / first.c) * 100;
+    const chgEl = document.getElementById("chg24");
+    chgEl.textContent = (ch >= 0 ? "+" : "") + ch.toFixed(2) + "%";
+    chgEl.className = "indicator-value " + (ch >= 0 ? "pos" : "neg");
+    document.getElementById("ema20").textContent =
+      fmtNum(e20[e20.length - 1], d);
+    document.getElementById("ema50").textContent =
+      fmtNum(e50[e50.length - 1], d);
+    const rsiVal = rsi(closes, 14);
+    const rsiEl = document.getElementById("rsi14");
+    rsiEl.textContent = rsiVal ? rsiVal.toFixed(1) : "—";
+    rsiEl.className = "indicator-value " + (
+      rsiVal > 70 ? "neg" : rsiVal < 30 ? "pos" : "");
+    const atrVal = atr(data.klines, 14);
+    document.getElementById("atr14").textContent =
+      atrVal ? fmtNum(atrVal, d) : "—";
+    document.getElementById("high").textContent =
+      fmtNum(Math.max(...data.klines.map(k => k.h)), d);
+    document.getElementById("low").textContent =
+      fmtNum(Math.min(...data.klines.map(k => k.l)), d);
+
+    chart.timeScale().fitContent();
+    document.getElementById("status").textContent =
+      `${sym} ${iv} · ${data.klines.length} bars · ${data.source}`;
+  } catch (e) {
+    document.getElementById("status").textContent = `Error: ${e.message}`;
+  }
+}
+
+initChart();
+loadChart();
+document.getElementById("symbol").addEventListener("change", loadChart);
+document.getElementById("interval").addEventListener("change", loadChart);
+</script>
+</body>
+</html>"""
+
+
+@app.route("/ui", methods=["GET"])
+def ui_chart():
+    """Главная UI-страница: chart viewer с indicators."""
+    return UI_CHART_HTML, 200, {"Content-Type": "text/html; charset=utf-8"}
+
+
+@app.route("/api/symbols", methods=["GET"])
+def api_symbols():
+    """Список символов из watchlist."""
+    return jsonify({"symbols": list(SYMBOLS)}), 200
+
+
+@app.route("/api/klines", methods=["GET"])
+def api_klines():
+    """
+    JSON klines для UI. Параметры:
+      symbol — BTCUSDT, ETHUSDT и т.д.
+      interval — 5/15/60/240/D
+      limit — кол-во баров (1-500)
+
+    Используется уже существующий _klines() с fallback chain
+    Bybit → Binance → Hyperliquid.
+    """
+    symbol = (request.args.get("symbol") or "").upper().strip()
+    interval = (request.args.get("interval") or "60").strip()
+    try:
+        limit = int(request.args.get("limit") or "300")
+    except ValueError:
+        limit = 300
+    limit = max(1, min(500, limit))
+
+    if not symbol or not symbol.endswith("USDT"):
+        return jsonify({"error": "invalid symbol"}), 400
+
+    try:
+        rows = _klines(symbol, interval, limit)
+        # _klines() возвращает list[{o,h,l,c,v}] но без ts. Поскольку UI
+        # нужен ts, считаем его обратно от now() с шагом interval.
+        from datetime import datetime as _dt, timezone as _tz
+        mins = {"5": 5, "15": 15, "30": 30, "60": 60, "120": 120,
+                "240": 240, "D": 1440, "W": 10080}.get(interval, 60)
+        now_ms = int(_dt.now(_tz.utc).timestamp() * 1000)
+        step_ms = mins * 60_000
+        klines = []
+        for i, r in enumerate(rows):
+            ts = now_ms - (len(rows) - 1 - i) * step_ms
+            klines.append({
+                "ts": ts, "o": r["o"], "h": r["h"],
+                "l": r["l"], "c": r["c"], "v": r.get("v", 0),
+            })
+        return jsonify({
+            "symbol": symbol, "interval": interval,
+            "klines": klines, "source": "auto-fallback",
+        }), 200
+    except Exception as e:
+        log.warning(f"/api/klines failed: {e}")
+        return jsonify({"error": str(e)[:200]}), 500
+
+
 # ─── TELEGRAM COMMANDS ────────────────────────────────────────────────────────
 
 def cmd_status(chat_id: int):
