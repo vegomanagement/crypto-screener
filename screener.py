@@ -4497,21 +4497,22 @@ SCANBT_VALID_SORT = ("pf", "wr", "avg_r", "avg_r_net", "max_dd", "closed")
 
 def _parse_scanbt_args(
     args: str,
-) -> tuple[list[str], int, dict | None, str]:
+) -> tuple[list[str], int, dict | None, str, str]:
     """
-    Парсит '/scanbt BTC,ETH,SOL 30 preset=no_p3 sort=avg_r_net KEY=VAL' → (
-        ['BTCUSDT','ETHUSDT','SOLUSDT'], 30, merged_overrides, 'avg_r_net').
+    Парсит '/scanbt BTC,ETH,SOL 30 tf=15 preset=no_p3 sort=avg_r_net KEY=VAL' → (
+        ['BTCUSDT','ETHUSDT','SOLUSDT'], 30, merged_overrides, 'avg_r_net', '15').
 
-    Символы — comma-separated, без пробелов. Дефолт: ['BTC','ETH','SOL'], 30d.
+    Дефолты: ['BTC','ETH','SOL'], 30d, sort='pf', tf='5'.
     preset=NAME применяется первым, explicit KEY=VAL перебивает.
     sort= одно из: pf | wr | avg_r | avg_r_net | max_dd | closed.
-    Дефолт sort='pf'. Невалидный sort игнорируется (fallback на pf).
+    tf= — primary TF: 5|15|60|240|D (или alias 1H/4H/1D).
     """
     raw_parts = [p for p in args.strip().split() if p]
     raw_parts, preset_ovr = _extract_preset_tokens(raw_parts)
     symbols_raw = "BTC,ETH,SOL"
     days = 30
     sort_by = "pf"
+    tf_primary = "5"
     override_parts: list[str] = []
     for p in raw_parts:
         pl = p.lower()
@@ -4519,6 +4520,8 @@ def _parse_scanbt_args(
             val = p.split("=", 1)[1].lower()
             if val in SCANBT_VALID_SORT:
                 sort_by = val
+        elif pl.startswith("tf="):
+            tf_primary = _normalize_tf(p.split("=", 1)[1])
         elif "=" in p and not p.startswith("="):
             override_parts.append(p)
         elif p.isdigit():
@@ -4542,7 +4545,7 @@ def _parse_scanbt_args(
     merged: dict = dict(preset_ovr)
     if explicit_ovr:
         merged.update(explicit_ovr)
-    return syms, days, (merged or None), sort_by
+    return syms, days, (merged or None), sort_by, tf_primary
 
 
 _SCANBT_SORT_KEY_MAP = {
@@ -4600,7 +4603,7 @@ def cmd_scanbt(chat_id: int, args: str = ""):
     Выводит compare-таблицу. Для каждого символа: closed, WR, avgR, netR,
     PF, MaxDD. Помогает найти где у стратегии есть edge.
     """
-    symbols, days, overrides, sort_by = _parse_scanbt_args(args)
+    symbols, days, overrides, sort_by, tf_primary = _parse_scanbt_args(args)
     if not symbols:
         tg_send("❌ Не указаны символы. Пример: /scanbt BTC,ETH,SOL 30",
                 chat_id=chat_id)
@@ -4611,8 +4614,10 @@ def cmd_scanbt(chat_id: int, args: str = ""):
            else f"{n_sym * 2}-{n_sym * 4} мин")
     ovr_label = (f"\n<i>overrides: {overrides}</i>" if overrides else "")
     sort_label = f" · sort={sort_by}" if sort_by != "pf" else ""
+    tf_label = f" tf={tf_primary}" if tf_primary != "5" else ""
     tg_send(
-        f"📊 <b>Scanbt {n_sym} symbols ({days}d)</b>{sort_label}{ovr_label}\n"
+        f"📊 <b>Scanbt {n_sym} symbols ({days}d){tf_label}</b>"
+        f"{sort_label}{ovr_label}\n"
         f"{', '.join(s.replace('USDT','') for s in symbols)}\n"
         f"ETA ~{eta}...",
         chat_id=chat_id,
@@ -4623,6 +4628,8 @@ def cmd_scanbt(chat_id: int, args: str = ""):
         t0 = _t.time()
         rows: list[dict] = []
         failed: list[tuple[str, str]] = []
+        tfs_to_fetch = sorted(set(["5", "15", "60", "240", "D",
+                                   tf_primary]))
 
         for i, sym in enumerate(symbols, start=1):
             try:
@@ -4632,11 +4639,12 @@ def cmd_scanbt(chat_id: int, args: str = ""):
                 )
                 data = bt_data.fetch_all(
                     sym, days,
-                    tfs=["5", "15", "60", "240", "D"],
+                    tfs=tfs_to_fetch,
                     fetch_funding_data=False, fetch_oi_data=False,
                 )
                 result = bt_backtest.run_backtest(
-                    data, warmup_bars=200, progress_each=2000,
+                    data, tf_primary=tf_primary,
+                    warmup_bars=200, progress_each=2000,
                     collect_signals=False,
                     config_overrides=overrides,
                 )
@@ -4676,20 +4684,22 @@ def cmd_scanbt(chat_id: int, args: str = ""):
 
 def _parse_hyperopt_args(
     args: str,
-) -> tuple[str, int, int, bool, str, dict | None]:
+) -> tuple[str, int, int, bool, str, dict | None, str]:
     """
-    Парсит '/hyperopt BTC 60 50 walkforward metric=sharpe_r preset=no_p4 KEY=VAL'.
-    Дефолты: BTC 60d 30 trials, без walkforward, metric=profit_factor.
+    Парсит '/hyperopt BTC 60 50 walkforward tf=15 metric=sharpe_r preset=no_p4 KEY=VAL'.
+    Дефолты: BTC 60d 30 trials, без walkforward, metric=profit_factor, tf='5'.
 
     preset=NAME → fixed_params из CONFIG_PRESETS.
-    KEY=VAL (кроме metric= и preset=) → fixed_params для всех trials.
+    KEY=VAL (кроме metric=, preset=, tf=) → fixed_params для всех trials.
     Explicit KEY=VAL перебивает preset values.
+    tf= — primary TF: 5|15|60|240|D (или alias 1H/4H/1D).
     """
     raw_parts = [p for p in args.strip().split() if p]
     raw_parts, preset_ovr = _extract_preset_tokens(raw_parts)
     symbol, days, trials = "BTC", 60, 30
     walkforward = False
     metric = "profit_factor"
+    tf_primary = "5"
     int_seen = 0
     fixed_parts: list[str] = []
     for p in raw_parts:
@@ -4707,6 +4717,8 @@ def _parse_hyperopt_args(
             val = p.split("=", 1)[1].lower()
             if val in bt_hyperopt.VALID_METRICS:
                 metric = val
+        elif pl.startswith("tf="):
+            tf_primary = _normalize_tf(p.split("=", 1)[1])
         elif "=" in p and not p.startswith("="):
             fixed_parts.append(p)
         else:
@@ -4719,7 +4731,8 @@ def _parse_hyperopt_args(
     merged: dict = dict(preset_ovr)
     if explicit_fixed:
         merged.update(explicit_fixed)
-    return symbol_full, days, trials, walkforward, metric, (merged or None)
+    return (symbol_full, days, trials, walkforward, metric,
+            (merged or None), tf_primary)
 
 
 def cmd_hyperopt(chat_id: int, args: str = ""):
@@ -4739,8 +4752,8 @@ def cmd_hyperopt(chat_id: int, args: str = ""):
 
     Один trial ≈ один backtest. 30 trials × 60d ≈ 5-10 мин.
     """
-    symbol_full, days, trials, walkforward, metric, fixed = \
-        _parse_hyperopt_args(args)
+    (symbol_full, days, trials, walkforward, metric, fixed,
+     tf_primary) = _parse_hyperopt_args(args)
 
     if walkforward:
         eta = f"{int(trials * 3 * 0.7 / 15)}-{int(trials * 3 / 10)} мин"
@@ -4748,8 +4761,9 @@ def cmd_hyperopt(chat_id: int, args: str = ""):
         eta = f"{int(trials / 15)}-{int(trials / 8)} мин"
 
     fixed_label = (f"\n<i>fixed: {fixed}</i>" if fixed else "")
+    tf_label = f" tf={tf_primary}" if tf_primary != "5" else ""
     tg_send(
-        f"🧪 <b>Hyperopt {symbol_full} {days}d</b>{fixed_label}\n"
+        f"🧪 <b>Hyperopt {symbol_full} {days}d{tf_label}</b>{fixed_label}\n"
         f"Trials: {trials} · metric: {metric} · "
         f"{'walk-forward (3 windows)' if walkforward else 'single-shot'}\n"
         f"ETA ~{eta}...",
@@ -4761,15 +4775,18 @@ def cmd_hyperopt(chat_id: int, args: str = ""):
         t0 = _t.time()
         try:
             tg_send("⏳ <b>Шаг 1/2:</b> Загружаю историю...", chat_id=chat_id)
+            tfs_to_fetch = sorted(set(["5", "15", "60", "240", "D",
+                                       tf_primary]))
             data = bt_data.fetch_all(
                 symbol_full, days,
-                tfs=["5", "15", "60", "240", "D"],
+                tfs=tfs_to_fetch,
                 fetch_funding_data=False, fetch_oi_data=False,
             )
-            n_bars = len(data["klines"].get("5") or [])
+            n_bars = len(data["klines"].get(tf_primary) or [])
             fetch_time = _t.time() - t0
             tg_send(
-                f"✅ <b>Шаг 1/2:</b> {n_bars} 5m баров ({fetch_time:.0f}с).\n"
+                f"✅ <b>Шаг 1/2:</b> {n_bars} {tf_primary}m баров "
+                f"({fetch_time:.0f}с).\n"
                 f"⏳ <b>Шаг 2/2:</b> Optuna {trials} trials...",
                 chat_id=chat_id,
             )
@@ -4790,6 +4807,7 @@ def cmd_hyperopt(chat_id: int, args: str = ""):
             result = bt_hyperopt.hyperopt(
                 data, n_trials=trials, metric=metric,
                 fixed_params=fixed,
+                tf_primary=tf_primary,
                 seed=42, min_trades=10, warmup_bars=200,
                 progress=_progress,
             )
@@ -4801,6 +4819,7 @@ def cmd_hyperopt(chat_id: int, args: str = ""):
                     data, n_windows=3, train_test_ratio=0.7,
                     n_trials=trials, metric=metric,
                     fixed_params=fixed,
+                    tf_primary=tf_primary,
                     seed=42, min_trades=10, warmup_bars=200,
                     progress=_progress,
                 )
@@ -4824,9 +4843,10 @@ def cmd_hyperopt(chat_id: int, args: str = ""):
                 bt_hyperopt.dump_result_json(result, tmp_path)
                 with open(tmp_path, "rb") as f:
                     payload = f.read()
+                tf_tag = f"_tf{tf_primary}" if tf_primary != "5" else ""
                 tg_send_document(
                     payload,
-                    f"hyperopt_{symbol_full}_{days}d_{trials}t.json",
+                    f"hyperopt_{symbol_full}_{days}d{tf_tag}_{trials}t.json",
                     caption=(f"Trials dump: {trials}t · "
                             f"best {metric}="
                             f"{result.best_value if result.best_value is not None else '—'}"),
