@@ -144,6 +144,79 @@ def test_api_klines_handles_klines_exception():
     assert "error" in r.get_json()
 
 
+# ─── /api/zones ───────────────────────────────────────────────────────────
+
+
+def test_api_zones_invalid_symbol_400():
+    c = _client()
+    r = c.get("/api/zones?symbol=BTC")
+    assert r.status_code == 400
+
+
+def test_api_zones_empty_klines_returns_empty_zones(monkeypatch):
+    c = _client()
+    monkeypatch.setattr(screener, "_klines", lambda *a, **kw: [])
+    r = c.get("/api/zones?symbol=BTCUSDT&interval=60")
+    data = r.get_json()
+    assert r.status_code == 200
+    assert data["zones"]["ob"] == []
+    assert data["zones"]["fvg"] == []
+
+
+def test_api_zones_detects_fvg_with_synthetic_data(monkeypatch):
+    """FVG: 3-candle gap (c0.l > c2.h) → bull FVG."""
+    c = _client()
+    rows = [{"o": 100, "h": 101, "l": 99, "c": 100, "v": 0}
+            for _ in range(50)]
+    rows[-3] = {"o": 100, "h": 101, "l": 99, "c": 101, "v": 0}
+    rows[-2] = {"o": 101, "h": 102, "l": 100, "c": 102, "v": 0}
+    rows[-1] = {"o": 103, "h": 104, "l": 103, "c": 103.5, "v": 0}
+    monkeypatch.setattr(screener, "_klines", lambda *a, **kw: rows)
+    r = c.get("/api/zones?symbol=BTCUSDT&interval=60&limit=10")
+    data = r.get_json()
+    assert r.status_code == 200
+    fvgs = data["zones"]["fvg"]
+    assert len(fvgs) >= 1
+    bull_fvg = [f for f in fvgs if f["direction"] == "bull"]
+    assert bull_fvg, "no bull FVG detected"
+
+
+def test_api_zones_clamps_limit(monkeypatch):
+    c = _client()
+    monkeypatch.setattr(screener, "_klines", lambda *a, **kw: [])
+    r = c.get("/api/zones?symbol=BTCUSDT&limit=9999")
+    assert r.status_code == 200
+
+
+def test_api_zones_handles_klines_exception(monkeypatch):
+    c = _client()
+
+    def _raise(*a, **kw):
+        raise RuntimeError("API")
+    monkeypatch.setattr(screener, "_klines", _raise)
+    r = c.get("/api/zones?symbol=BTCUSDT")
+    assert r.status_code == 500
+
+
+def test_ui_has_zones_toggle_and_count():
+    c = _client()
+    r = c.get("/ui")
+    body = r.get_data(as_text=True)
+    assert "SMC Zones" in body
+    assert 'id="toggleZones"' in body
+    assert 'id="zonesCount"' in body
+    assert "Show OB / FVG / MB / BB zones" in body
+
+
+def test_ui_has_loadZones_js():
+    c = _client()
+    r = c.get("/ui")
+    body = r.get_data(as_text=True)
+    assert "loadZones" in body
+    assert "/api/zones" in body
+    assert "createPriceLine" in body
+
+
 def test_api_klines_uppercases_symbol():
     """btcusdt → BTCUSDT."""
     c = _client()
