@@ -322,6 +322,75 @@ def test_format_result_with_trades():
     assert "TP1/2/3" in out
 
 
+# ─── Expectancy summary ──────────────────────────────────────────────────
+
+
+def test_expectancy_summary_empty_returns_empty():
+    assert backtest._expectancy_summary({}, []) == {}
+
+
+def test_expectancy_summary_basic_winning_config():
+    """avgWin=2, avgLoss=-1 → breakeven WR = 33.3%. WR 50% → winning."""
+    trades = [
+        _trade("tp1_hit", 2.0),
+        _trade("tp1_hit", 2.0),
+        _trade("sl_hit", -1.0),
+        _trade("sl_hit", -1.0),
+    ]
+    stats = backtest._aggregate_stats(trades, days=7)
+    out = backtest._expectancy_summary(stats, trades)
+    assert out["avg_win"] == 2.0
+    assert out["avg_loss"] == -1.0
+    assert out["breakeven_wr"] == 33.3
+    assert out["verdict"] == "winning"   # WR 50% > 33.3%
+    assert out["gap_pp"] > 0
+
+
+def test_expectancy_summary_losing_config():
+    """WR 25% при breakeven WR 33% → losing."""
+    trades = [
+        _trade("tp1_hit", 2.0),
+        _trade("sl_hit", -1.0),
+        _trade("sl_hit", -1.0),
+        _trade("sl_hit", -1.0),
+    ]
+    stats = backtest._aggregate_stats(trades, days=7)
+    out = backtest._expectancy_summary(stats, trades)
+    assert out["verdict"] == "losing"
+    assert out["gap_pp"] < 0
+
+
+def test_expectancy_summary_only_winners():
+    """Все winners → avg_loss=0 → breakeven очень мал → winning."""
+    trades = [_trade("tp1_hit", 1.5) for _ in range(3)]
+    stats = backtest._aggregate_stats(trades, days=7)
+    out = backtest._expectancy_summary(stats, trades)
+    assert out["avg_loss"] == 0.0
+    assert out["verdict"] == "winning"
+
+
+def test_expectancy_summary_only_losers():
+    """Все losers → avg_win=0 → breakeven 100% → losing."""
+    trades = [_trade("sl_hit", -1.0) for _ in range(3)]
+    stats = backtest._aggregate_stats(trades, days=7)
+    out = backtest._expectancy_summary(stats, trades)
+    assert out["avg_win"] == 0.0
+    assert out["breakeven_wr"] == 100.0
+
+
+def test_format_result_shows_expectancy_line():
+    trades = [
+        _trade("tp1_hit", 1.5),
+        _trade("sl_hit", -1.0),
+    ]
+    stats = backtest._aggregate_stats(trades, days=7)
+    r = backtest.BacktestResult(symbol="BTC", days=7, trades=trades, stats=stats)
+    out = backtest.format_result(r)
+    assert "Expectancy:" in out
+    assert "breakeven WR" in out
+    assert "avgWin" in out
+
+
 # ─── CLI parsing ───────────────────────────────────────────────────────────
 
 

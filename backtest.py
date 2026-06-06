@@ -706,6 +706,60 @@ def run_backtest(
 # ─── Pretty-print summary ─────────────────────────────────────────────────
 
 
+def _expectancy_summary(stats: dict, trades: list) -> dict:
+    """
+    Считает понятные expectancy-метрики:
+      avg_win:    средний R на выигрышной сделке
+      avg_loss:   средний R на проигрышной сделке (отрицательный)
+      breakeven_wr: WR% для нулевой expectancy при таких avg_win/avg_loss
+      verdict:    "winning" | "breakeven" | "losing"
+      gap_pp:     насколько твой WR выше/ниже breakeven (percentage points)
+
+    Возвращает {} если меньше 1 closed trade.
+    """
+    closed = [t for t in trades if t.status not in ("open",)]
+    closed_winners = [t for t in closed if (t.r_multiple or 0) > 0]
+    closed_losers  = [t for t in closed if (t.r_multiple or 0) <= 0]
+
+    if not closed:
+        return {}
+
+    if closed_winners:
+        avg_win = sum(t.r_multiple for t in closed_winners) / len(closed_winners)
+    else:
+        avg_win = 0.0
+    if closed_losers:
+        avg_loss = sum(t.r_multiple for t in closed_losers) / len(closed_losers)
+    else:
+        avg_loss = 0.0
+
+    # Breakeven WR: р * avg_win + (1-p) * avg_loss = 0 →
+    # p = -avg_loss / (avg_win - avg_loss)
+    denom = avg_win - avg_loss
+    breakeven_wr = (-avg_loss / denom * 100) if denom > 0 else None
+
+    your_wr = stats.get("win_rate") or 0
+    if breakeven_wr is not None:
+        gap_pp = your_wr - breakeven_wr
+        if gap_pp > 1:
+            verdict = "winning"
+        elif gap_pp < -1:
+            verdict = "losing"
+        else:
+            verdict = "breakeven"
+    else:
+        gap_pp = None
+        verdict = "unknown"
+
+    return {
+        "avg_win":      round(avg_win, 2),
+        "avg_loss":     round(avg_loss, 2),
+        "breakeven_wr": round(breakeven_wr, 1) if breakeven_wr is not None else None,
+        "verdict":      verdict,
+        "gap_pp":       round(gap_pp, 1) if gap_pp is not None else None,
+    }
+
+
 def _fmt_bd_row(item: tuple) -> str:
     """Форматирует одну строку breakdown-таблицы (поддерживает 4- и 5-tuple)."""
     if len(item) == 5:
@@ -744,6 +798,19 @@ def format_result(result: BacktestResult) -> str:
                      f"Expired: {hits.get('expired',0)}")
         if result.taker_fee_pct:
             lines.append(f"Fee: {result.taker_fee_pct * 100:.3f}% taker × 2 legs")
+        # Expectancy-summary: avg win, avg loss, breakeven WR
+        exp_sum = _expectancy_summary(s, result.trades)
+        if exp_sum and exp_sum.get("breakeven_wr") is not None:
+            verdict_emoji = {"winning": "✅", "losing": "❌",
+                             "breakeven": "🟡"}.get(exp_sum["verdict"], "⚪")
+            gap = exp_sum["gap_pp"]
+            gap_str = f"{gap:+.1f}pp" if gap is not None else "?"
+            lines.append(
+                f"Expectancy: avgWin {exp_sum['avg_win']:+.2f}R · "
+                f"avgLoss {exp_sum['avg_loss']:+.2f}R · "
+                f"breakeven WR {exp_sum['breakeven_wr']}% "
+                f"(you: {s['win_rate']}% {gap_str}) {verdict_emoji}"
+            )
         if s.get("by_signal"):
             lines.append("\nBy signal type:")
             for item in s["by_signal"][:10]:
