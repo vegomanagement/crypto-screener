@@ -85,6 +85,13 @@ DEFAULT_SEARCH_SPACE: dict = {
     "FUNDING_VETO_PENALTY":       ("int", 5, 20),
     "MACD_VETO_PENALTY":          ("int", 5, 15),
     "RSI_DIV_VETO_PENALTY":       ("int", 8, 20),
+    # TP/SL multipliers — критично для решения проблемы negative avgR_net.
+    # Hyperopt-анализ показал что текущие 1.5/2.5/4 ATR + WR 19% дают
+    # отрицательную expectancy после комиссий. Поиск более широких TP.
+    "ATR_SL_DIST":                ("float", 0.7, 2.0),
+    "ATR_TP1_DIST":               ("float", 1.5, 5.0),
+    "ATR_TP2_DIST":               ("float", 2.5, 8.0),
+    "ATR_TP3_DIST":               ("float", 4.0, 12.0),
 }
 
 
