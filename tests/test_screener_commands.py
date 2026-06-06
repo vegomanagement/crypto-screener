@@ -12,27 +12,28 @@ import screener
 
 
 def test_btdiag_args_default():
-    assert screener._parse_btdiag_args("") == ("BTCUSDT", 30, None)
+    assert screener._parse_btdiag_args("") == ("BTCUSDT", 30, None, "5")
 
 
 def test_btdiag_args_symbol_only():
-    assert screener._parse_btdiag_args("ETH") == ("ETHUSDT", 30, None)
+    assert screener._parse_btdiag_args("ETH") == ("ETHUSDT", 30, None, "5")
 
 
 def test_btdiag_args_days_only():
-    assert screener._parse_btdiag_args("60") == ("BTCUSDT", 60, None)
+    assert screener._parse_btdiag_args("60") == ("BTCUSDT", 60, None, "5")
 
 
 def test_btdiag_args_symbol_and_days():
-    assert screener._parse_btdiag_args("SOL 90") == ("SOLUSDT", 90, None)
+    assert screener._parse_btdiag_args("SOL 90") == ("SOLUSDT", 90, None, "5")
 
 
 def test_btdiag_args_order_invariant():
-    assert screener._parse_btdiag_args("30 BTC") == ("BTCUSDT", 30, None)
+    assert screener._parse_btdiag_args("30 BTC") == ("BTCUSDT", 30, None, "5")
 
 
 def test_btdiag_args_strips_usdt_p_suffix():
-    assert screener._parse_btdiag_args("BTCUSDT.P 30") == ("BTCUSDT", 30, None)
+    assert screener._parse_btdiag_args("BTCUSDT.P 30") == (
+        "BTCUSDT", 30, None, "5")
 
 
 def test_btdiag_args_clamps_days():
@@ -41,15 +42,16 @@ def test_btdiag_args_clamps_days():
 
 
 def test_btdiag_args_single_override():
-    sym, days, ovr = screener._parse_btdiag_args(
+    sym, days, ovr, tf = screener._parse_btdiag_args(
         "BTC 30 KILLZONE_GATE_ENABLED=false")
     assert sym == "BTCUSDT"
     assert days == 30
     assert ovr == {"KILLZONE_GATE_ENABLED": False}
+    assert tf == "5"
 
 
 def test_btdiag_args_multiple_overrides():
-    _, _, ovr = screener._parse_btdiag_args(
+    _, _, ovr, _ = screener._parse_btdiag_args(
         "BTC 30 KILLZONE_GATE_ENABLED=false STRUCTURE_GATE_ENABLED=false "
         "MIN_CONFIDENCE_FOR_TRADE=55"
     )
@@ -61,19 +63,19 @@ def test_btdiag_args_multiple_overrides():
 
 
 def test_btdiag_args_float_override():
-    _, _, ovr = screener._parse_btdiag_args(
+    _, _, ovr, _ = screener._parse_btdiag_args(
         "BTC 30 SL_BUFFER_ATR=0.5")
     assert ovr == {"SL_BUFFER_ATR": 0.5}
 
 
 def test_btdiag_args_string_override_fallback():
-    _, _, ovr = screener._parse_btdiag_args("BTC 30 MODE=experimental")
+    _, _, ovr, _ = screener._parse_btdiag_args("BTC 30 MODE=experimental")
     assert ovr == {"MODE": "experimental"}
 
 
 def test_btdiag_args_mixed_order_overrides_and_symbol():
     """Overrides + symbol + days в любом порядке — корректно парсится."""
-    sym, days, ovr = screener._parse_btdiag_args(
+    sym, days, ovr, _ = screener._parse_btdiag_args(
         "KILLZONE_GATE_ENABLED=false ETH 60 STRUCTURE_GATE_ENABLED=false"
     )
     assert sym == "ETHUSDT"
@@ -83,8 +85,56 @@ def test_btdiag_args_mixed_order_overrides_and_symbol():
 
 
 def test_btdiag_args_ignores_lone_equals():
-    _, _, ovr = screener._parse_btdiag_args("BTC 30 = =foo")
+    _, _, ovr, _ = screener._parse_btdiag_args("BTC 30 = =foo")
     assert ovr is None or ovr == {}
+
+
+# ─── _parse_btdiag_args: tf= option ───────────────────────────────────────
+
+
+def test_btdiag_args_tf_default_is_5():
+    _, _, _, tf = screener._parse_btdiag_args("BTC 30")
+    assert tf == "5"
+
+
+def test_btdiag_args_tf_numeric():
+    for v in ("15", "60", "240"):
+        _, _, _, tf = screener._parse_btdiag_args(f"BTC 30 tf={v}")
+        assert tf == v, f"tf={v} not preserved"
+
+
+def test_btdiag_args_tf_aliases_normalized():
+    assert screener._parse_btdiag_args("BTC 30 tf=1H")[3] == "60"
+    assert screener._parse_btdiag_args("BTC 30 tf=4H")[3] == "240"
+    assert screener._parse_btdiag_args("BTC 30 tf=1D")[3] == "D"
+    assert screener._parse_btdiag_args("BTC 30 tf=15M")[3] == "15"
+
+
+def test_btdiag_args_tf_uppercase_case_insensitive():
+    assert screener._parse_btdiag_args("BTC 30 TF=4h")[3] == "240"
+
+
+def test_btdiag_args_tf_not_in_overrides():
+    """tf=COL должен идти ТОЛЬКО в tf_primary, не в overrides."""
+    _, _, ovr, tf = screener._parse_btdiag_args(
+        "BTC 30 tf=15 KILLZONE_GATE_ENABLED=false")
+    assert tf == "15"
+    assert ovr == {"KILLZONE_GATE_ENABLED": False}
+
+
+def test_btdiag_args_tf_with_preset():
+    """tf= и preset= одновременно работают."""
+    _, _, ovr, tf = screener._parse_btdiag_args(
+        "BTC 30 tf=60 preset=no_p3")
+    assert tf == "60"
+    assert ovr == {"KILLZONE_GATE_ENABLED": False,
+                   "STRUCTURE_GATE_ENABLED": False}
+
+
+def test_normalize_tf_handles_unknown_passthrough():
+    """Неизвестный TF возвращается as-is (для forward-compat)."""
+    assert screener._normalize_tf("99") == "99"
+    assert screener._normalize_tf("garbage") == "GARBAGE"
 
 
 # ─── _parse_hyperopt_args ─────────────────────────────────────────────────
@@ -375,14 +425,14 @@ def test_extract_preset_tokens_multiple_presets_merge():
 
 
 def test_btdiag_args_preset_applied():
-    sym, days, ovr = screener._parse_btdiag_args("BTC 30 preset=no_p3")
+    sym, days, ovr, _ = screener._parse_btdiag_args("BTC 30 preset=no_p3")
     assert ovr == {"KILLZONE_GATE_ENABLED": False,
                    "STRUCTURE_GATE_ENABLED": False}
 
 
 def test_btdiag_args_explicit_override_beats_preset():
     """preset=no_p3 включает STRUCTURE=False, но явное STRUCTURE=True перебивает."""
-    _, _, ovr = screener._parse_btdiag_args(
+    _, _, ovr, _ = screener._parse_btdiag_args(
         "BTC 30 preset=no_p3 STRUCTURE_GATE_ENABLED=true"
     )
     assert ovr["KILLZONE_GATE_ENABLED"] is False
@@ -390,7 +440,7 @@ def test_btdiag_args_explicit_override_beats_preset():
 
 
 def test_btdiag_args_no_preset_no_explicit_returns_none():
-    _, _, ovr = screener._parse_btdiag_args("BTC 30")
+    _, _, ovr, _ = screener._parse_btdiag_args("BTC 30")
     assert ovr is None
 
 

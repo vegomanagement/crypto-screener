@@ -4337,20 +4337,40 @@ def _extract_preset_tokens(parts: list[str]) -> tuple[list[str], dict]:
     return other, preset_ovr
 
 
-def _parse_btdiag_args(args: str) -> tuple[str, int, dict | None]:
+_TF_ALIASES = {
+    "1H": "60", "2H": "120", "4H": "240",
+    "5M": "5", "15M": "15", "30M": "30",
+    "1D": "D",
+}
+
+
+def _normalize_tf(raw: str) -> str:
+    """'1H'→'60', '5'→'5', '4H'→'240'. Unknown → as-is (передастся as-is)."""
+    s = raw.upper()
+    return _TF_ALIASES.get(s, s)
+
+
+def _parse_btdiag_args(args: str) -> tuple[str, int, dict | None, str]:
     """
-    Парсит '/btdiag BTC 30 preset=no_gates KEY=VAL' → ('BTCUSDT', 30, dict).
-    Дефолты: BTC 30, без overrides.
+    Парсит '/btdiag BTC 30 tf=15 preset=no_gates KEY=VAL' → (
+        'BTCUSDT', 30, overrides_dict, '15').
+
+    Дефолты: BTC 30d, tf=5 (ICT-канон), без overrides.
 
     preset=NAME — shorthand из CONFIG_PRESETS. Explicit KEY=VAL применяется
     ПОСЛЕ preset'а, перебивая его значения.
+    tf= — primary TF: 5|15|60|240|D (или alias 1H/4H/1D).
     """
     raw_parts = [p for p in args.strip().split() if p]
     raw_parts, preset_ovr = _extract_preset_tokens(raw_parts)
     symbol, days = "BTC", 30
+    tf_primary = "5"
     override_parts: list[str] = []
     for p in raw_parts:
-        if "=" in p and not p.startswith("="):
+        pl = p.lower()
+        if pl.startswith("tf="):
+            tf_primary = _normalize_tf(p.split("=", 1)[1])
+        elif "=" in p and not p.startswith("="):
             override_parts.append(p)
         elif p.isdigit():
             days = int(p)
@@ -4364,7 +4384,7 @@ def _parse_btdiag_args(args: str) -> tuple[str, int, dict | None]:
     merged: dict = dict(preset_ovr)
     if explicit_ovr:
         merged.update(explicit_ovr)
-    return symbol_full, days, (merged or None)
+    return symbol_full, days, (merged or None), tf_primary
 
 
 def cmd_btdiag(chat_id: int, args: str = ""):
@@ -4384,12 +4404,18 @@ def cmd_btdiag(chat_id: int, args: str = ""):
 
     Шлёт текстовый отчёт и JSON-файл со всеми сигналами/трейдами.
     """
-    symbol_full, days, overrides = _parse_btdiag_args(args)
+    symbol_full, days, overrides, tf_primary = _parse_btdiag_args(args)
 
-    eta = "30-90 сек" if days <= 30 else ("1-3 мин" if days <= 90 else "3-7 мин")
+    # На больших TF меньше баров → быстрее. Корректировка ETA.
+    tf_speedup = {"5": 1.0, "15": 0.5, "60": 0.3, "240": 0.2, "D": 0.15}
+    speedup = tf_speedup.get(tf_primary, 1.0)
+    base_eta = "30-90 сек" if days <= 30 else (
+        "1-3 мин" if days <= 90 else "3-7 мин")
+    eta = base_eta if speedup >= 0.9 else f"~{int(60 * speedup)}-{int(180 * speedup)} сек"
     ovr_label = (f"\n<i>overrides: {overrides}</i>" if overrides else "")
+    tf_label = f" tf={tf_primary}" if tf_primary != "5" else ""
     tg_send(
-        f"🔬 <b>Btdiag {symbol_full} {days}d</b>{ovr_label}\n"
+        f"🔬 <b>Btdiag {symbol_full} {days}d{tf_label}</b>{ovr_label}\n"
         f"Запускаю — может занять {eta}...",
         chat_id=chat_id,
     )
@@ -4399,22 +4425,26 @@ def cmd_btdiag(chat_id: int, args: str = ""):
         t0 = _t.time()
         try:
             tg_send("⏳ <b>Шаг 1/2:</b> Загружаю историю...", chat_id=chat_id)
+            tfs_to_fetch = sorted(set(["5", "15", "60", "240", "D",
+                                       tf_primary]))
             data = bt_data.fetch_all(
                 symbol_full, days,
-                tfs=["5", "15", "60", "240", "D"],
+                tfs=tfs_to_fetch,
                 fetch_funding_data=False, fetch_oi_data=False,
             )
-            n_bars = len(data["klines"].get("5") or [])
+            n_bars = len(data["klines"].get(tf_primary) or [])
             fetch_time = _t.time() - t0
             tg_send(
-                f"✅ <b>Шаг 1/2:</b> {n_bars} 5m баров ({fetch_time:.0f}с).\n"
+                f"✅ <b>Шаг 1/2:</b> {n_bars} {tf_primary}m баров "
+                f"({fetch_time:.0f}с).\n"
                 f"⏳ <b>Шаг 2/2:</b> Replay + breakdown...",
                 chat_id=chat_id,
             )
 
             t1 = _t.time()
             result = bt_backtest.run_backtest(
-                data, warmup_bars=200, progress_each=1000,
+                data, tf_primary=tf_primary,
+                warmup_bars=200, progress_each=1000,
                 collect_signals=True,
                 config_overrides=overrides,
             )
@@ -4437,9 +4467,10 @@ def cmd_btdiag(chat_id: int, args: str = ""):
                 with open(tmp_path, "rb") as f:
                     payload = f.read()
                 ovr_tag = "_ovr" if overrides else ""
+                tf_tag = f"_tf{tf_primary}" if tf_primary != "5" else ""
                 tg_send_document(
                     payload,
-                    f"btdiag_{symbol_full}_{days}d{ovr_tag}.json",
+                    f"btdiag_{symbol_full}_{days}d{tf_tag}{ovr_tag}.json",
                     caption=f"Полный dump: {len(result.signals)} сигналов, "
                             f"{len(result.trades)} трейдов",
                     chat_id=chat_id,
