@@ -4461,21 +4461,34 @@ def cmd_btdiag(chat_id: int, args: str = ""):
 # ─── SCAN BACKTEST (/scanbt) ─────────────────────────────────────────────────
 
 
-def _parse_scanbt_args(args: str) -> tuple[list[str], int, dict | None]:
+SCANBT_VALID_SORT = ("pf", "wr", "avg_r", "avg_r_net", "max_dd", "closed")
+
+
+def _parse_scanbt_args(
+    args: str,
+) -> tuple[list[str], int, dict | None, str]:
     """
-    Парсит '/scanbt BTC,ETH,SOL 30 preset=no_p3 KEY=VAL' → (
-        ['BTCUSDT','ETHUSDT','SOLUSDT'], 30, merged_overrides).
+    Парсит '/scanbt BTC,ETH,SOL 30 preset=no_p3 sort=avg_r_net KEY=VAL' → (
+        ['BTCUSDT','ETHUSDT','SOLUSDT'], 30, merged_overrides, 'avg_r_net').
 
     Символы — comma-separated, без пробелов. Дефолт: ['BTC','ETH','SOL'], 30d.
     preset=NAME применяется первым, explicit KEY=VAL перебивает.
+    sort= одно из: pf | wr | avg_r | avg_r_net | max_dd | closed.
+    Дефолт sort='pf'. Невалидный sort игнорируется (fallback на pf).
     """
     raw_parts = [p for p in args.strip().split() if p]
     raw_parts, preset_ovr = _extract_preset_tokens(raw_parts)
     symbols_raw = "BTC,ETH,SOL"
     days = 30
+    sort_by = "pf"
     override_parts: list[str] = []
     for p in raw_parts:
-        if "=" in p and not p.startswith("="):
+        pl = p.lower()
+        if pl.startswith("sort="):
+            val = p.split("=", 1)[1].lower()
+            if val in SCANBT_VALID_SORT:
+                sort_by = val
+        elif "=" in p and not p.startswith("="):
             override_parts.append(p)
         elif p.isdigit():
             days = int(p)
@@ -4498,7 +4511,28 @@ def _parse_scanbt_args(args: str) -> tuple[list[str], int, dict | None]:
     merged: dict = dict(preset_ovr)
     if explicit_ovr:
         merged.update(explicit_ovr)
-    return syms, days, (merged or None)
+    return syms, days, (merged or None), sort_by
+
+
+_SCANBT_SORT_KEY_MAP = {
+    "pf":         "pf",
+    "wr":         "win_rate",
+    "avg_r":      "avg_r",
+    "avg_r_net":  "avg_r_net",
+    "max_dd":     "max_dd",      # ascending (closer to 0 = better)
+    "closed":     "closed",
+}
+
+
+def _scanbt_sort_key(row: dict, sort_by: str):
+    """Возвращает sort-key с поддержкой строковых ∞/-∞ PF."""
+    field_name = _SCANBT_SORT_KEY_MAP.get(sort_by, "pf")
+    v = row.get(field_name, 0)
+    if isinstance(v, str):
+        if v == "∞":
+            return float("inf")
+        return -float("inf")
+    return v
 
 
 def _format_scanbt_table(rows: list[dict]) -> str:
@@ -4535,7 +4569,7 @@ def cmd_scanbt(chat_id: int, args: str = ""):
     Выводит compare-таблицу. Для каждого символа: closed, WR, avgR, netR,
     PF, MaxDD. Помогает найти где у стратегии есть edge.
     """
-    symbols, days, overrides = _parse_scanbt_args(args)
+    symbols, days, overrides, sort_by = _parse_scanbt_args(args)
     if not symbols:
         tg_send("❌ Не указаны символы. Пример: /scanbt BTC,ETH,SOL 30",
                 chat_id=chat_id)
@@ -4545,8 +4579,9 @@ def cmd_scanbt(chat_id: int, args: str = ""):
     eta = (f"{n_sym}-{n_sym * 2} мин" if days <= 30
            else f"{n_sym * 2}-{n_sym * 4} мин")
     ovr_label = (f"\n<i>overrides: {overrides}</i>" if overrides else "")
+    sort_label = f" · sort={sort_by}" if sort_by != "pf" else ""
     tg_send(
-        f"📊 <b>Scanbt {n_sym} symbols ({days}d)</b>{ovr_label}\n"
+        f"📊 <b>Scanbt {n_sym} symbols ({days}d)</b>{sort_label}{ovr_label}\n"
         f"{', '.join(s.replace('USDT','') for s in symbols)}\n"
         f"ETA ~{eta}...",
         chat_id=chat_id,
@@ -4590,13 +4625,9 @@ def cmd_scanbt(chat_id: int, args: str = ""):
                 log.exception(f"[/scanbt] {sym} failed: {e}")
                 failed.append((sym, f"{type(e).__name__}: {str(e)[:120]}"))
 
-        # Сортировка по PF убыванию (лучшие монеты сверху)
-        def _pf_key(r):
-            v = r["pf"]
-            if isinstance(v, str):
-                return -float("inf") if v != "∞" else float("inf")
-            return v
-        rows.sort(key=_pf_key, reverse=True)
+        # Сортировка по выбранной колонке (default 'pf').
+        rows.sort(key=lambda r: _scanbt_sort_key(r, sort_by),
+                  reverse=(sort_by != "max_dd"))
 
         total_time = _t.time() - t0
         body = _format_scanbt_table(rows)

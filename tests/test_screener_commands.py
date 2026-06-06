@@ -239,14 +239,15 @@ def test_btdiag_and_hyperopt_in_help_text():
 def test_scanbt_args_default():
     import importlib
     importlib.reload(screener)
-    syms, days, ovr = screener._parse_scanbt_args("")
+    syms, days, ovr, sort_by = screener._parse_scanbt_args("")
     assert syms == ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
     assert days == 30
     assert ovr is None
+    assert sort_by == "pf"
 
 
 def test_scanbt_args_comma_separated_symbols():
-    syms, days, _ = screener._parse_scanbt_args("BTC,ETH,SOL 60")
+    syms, days, _, _ = screener._parse_scanbt_args("BTC,ETH,SOL 60")
     assert syms == ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
     assert days == 60
 
@@ -267,7 +268,7 @@ def test_scanbt_args_dedupes():
 
 
 def test_scanbt_args_overrides():
-    syms, days, ovr = screener._parse_scanbt_args(
+    syms, days, ovr, _ = screener._parse_scanbt_args(
         "BTC,ETH 30 KILLZONE_GATE_ENABLED=false MIN_CONFIDENCE_FOR_TRADE=55"
     )
     assert syms == ["BTCUSDT", "ETHUSDT"]
@@ -277,15 +278,62 @@ def test_scanbt_args_overrides():
 
 
 def test_scanbt_args_clamps_days():
-    _, days, _ = screener._parse_scanbt_args("BTC,ETH 0")
+    _, days, _, _ = screener._parse_scanbt_args("BTC,ETH 0")
     assert days == 1
-    _, days, _ = screener._parse_scanbt_args("BTC,ETH 5000")
+    _, days, _, _ = screener._parse_scanbt_args("BTC,ETH 5000")
     assert days == 365
 
 
 def test_scanbt_args_ignores_empty_symbols():
     syms, *_ = screener._parse_scanbt_args("BTC,,ETH, 30")
     assert syms == ["BTCUSDT", "ETHUSDT"]
+
+
+# ─── /scanbt sort= option ─────────────────────────────────────────────────
+
+
+def test_scanbt_args_sort_valid_values():
+    for col in ("pf", "wr", "avg_r", "avg_r_net", "max_dd", "closed"):
+        _, _, _, sort_by = screener._parse_scanbt_args(
+            f"BTC,ETH 30 sort={col}")
+        assert sort_by == col, f"sort={col} не распознался"
+
+
+def test_scanbt_args_sort_invalid_falls_back_to_pf():
+    _, _, _, sort_by = screener._parse_scanbt_args("BTC,ETH 30 sort=garbage")
+    assert sort_by == "pf"
+
+
+def test_scanbt_args_sort_not_in_overrides():
+    """sort=COL не должен попадать в overrides как KEY=VAL."""
+    _, _, ovr, sort_by = screener._parse_scanbt_args(
+        "BTC,ETH 30 sort=avg_r_net KILLZONE_GATE_ENABLED=false"
+    )
+    assert sort_by == "avg_r_net"
+    assert ovr == {"KILLZONE_GATE_ENABLED": False}
+
+
+def test_scanbt_sort_key_handles_infinity_pf():
+    """∞ → inf, не-числовое → -inf."""
+    assert screener._scanbt_sort_key({"pf": "∞"}, "pf") == float("inf")
+    assert screener._scanbt_sort_key({"pf": "garbage"}, "pf") == -float("inf")
+    assert screener._scanbt_sort_key({"pf": 1.5}, "pf") == 1.5
+
+
+def test_scanbt_sort_key_maps_to_correct_field():
+    row = {"pf": 1.5, "win_rate": 30.0, "avg_r": 0.5,
+           "avg_r_net": 0.4, "max_dd": -10.0, "closed": 42}
+    assert screener._scanbt_sort_key(row, "pf") == 1.5
+    assert screener._scanbt_sort_key(row, "wr") == 30.0
+    assert screener._scanbt_sort_key(row, "avg_r") == 0.5
+    assert screener._scanbt_sort_key(row, "avg_r_net") == 0.4
+    assert screener._scanbt_sort_key(row, "max_dd") == -10.0
+    assert screener._scanbt_sort_key(row, "closed") == 42
+
+
+def test_scanbt_sort_key_unknown_col_falls_back_to_pf():
+    row = {"pf": 1.5}
+    assert screener._scanbt_sort_key(row, "garbage") == 1.5
 
 
 # ─── _format_scanbt_table ─────────────────────────────────────────────────
@@ -395,7 +443,7 @@ def test_btdiag_args_no_preset_no_explicit_returns_none():
 
 
 def test_scanbt_args_preset_applied():
-    syms, days, ovr = screener._parse_scanbt_args(
+    syms, days, ovr, _ = screener._parse_scanbt_args(
         "BTC,ETH 30 preset=wide_tp"
     )
     assert syms == ["BTCUSDT", "ETHUSDT"]
