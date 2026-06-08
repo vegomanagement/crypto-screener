@@ -3004,14 +3004,21 @@ UI_CHART_HTML = """<!DOCTYPE html>
   .neg { color: var(--red); }
   .status { font-size: 12px; color: var(--text-dim); margin-top: 16px; }
   .watchlist-row {
-    display: grid; grid-template-columns: 1fr auto auto;
-    gap: 8px; align-items: center;
+    display: grid; grid-template-columns: 20px 1fr auto auto;
+    gap: 6px; align-items: center;
     padding: 8px 10px; cursor: pointer;
     border-radius: 6px; transition: background 0.1s;
     font-family: "SF Mono", Menlo, monospace; font-size: 12px;
   }
   .watchlist-row:hover { background: var(--bg); }
   .watchlist-row.active { background: var(--bg); outline: 1px solid var(--blue); }
+  .watchlist-star {
+    cursor: pointer; font-size: 13px; line-height: 1;
+    color: var(--text-dim); user-select: none;
+    width: 18px; text-align: center;
+  }
+  .watchlist-star.fav { color: #d29922; }
+  .watchlist-star:hover { transform: scale(1.2); }
   .watchlist-symbol { font-weight: 600; }
   .watchlist-price { color: var(--text-dim); text-align: right; }
   .watchlist-change { text-align: right; font-weight: 600; min-width: 56px; }
@@ -3458,32 +3465,93 @@ async function loadMarket(symbol) {
   }
 }
 
+// ─── Favorites (localStorage persistence) ────────────────────────────────
+const FAVORITES_KEY = "screener_favorites";
+
+function getFavorites() {
+  try {
+    const raw = localStorage.getItem(FAVORITES_KEY);
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr : [];
+  } catch (e) { return []; }
+}
+
+function saveFavorites(favs) {
+  try {
+    localStorage.setItem(FAVORITES_KEY, JSON.stringify(favs));
+  } catch (e) {}
+}
+
+function isFavorite(symbol) {
+  return getFavorites().includes(symbol);
+}
+
+function toggleFavorite(symbol) {
+  const favs = getFavorites();
+  const idx = favs.indexOf(symbol);
+  if (idx >= 0) {
+    favs.splice(idx, 1);
+  } else {
+    favs.push(symbol);
+  }
+  saveFavorites(favs);
+  return idx < 0;   // true если добавили
+}
+
 async function loadWatchlist() {
   try {
     const r = await fetch("/api/prices");
     if (!r.ok) return;
     const data = await r.json();
     const cur = document.getElementById("symbol").value;
-    const html = (data.prices || []).map(p => {
+    const favs = new Set(getFavorites());
+
+    // Sort: favorites first (sorted alphabetically внутри),
+    // потом не-favorites (by abs change descending — как было)
+    const items = (data.prices || []).slice();
+    items.sort((a, b) => {
+      const af = favs.has(a.symbol) ? 1 : 0;
+      const bf = favs.has(b.symbol) ? 1 : 0;
+      if (af !== bf) return bf - af;   // favorites first
+      if (af && bf) return a.symbol.localeCompare(b.symbol);
+      return Math.abs(b.change_24h || 0) - Math.abs(a.change_24h || 0);
+    });
+
+    const html = items.map(p => {
       const ch = p.change_24h || 0;
       const chCls = ch >= 0 ? "pos" : "neg";
       const chStr = (ch >= 0 ? "+" : "") + ch.toFixed(2) + "%";
       const sym = p.symbol.replace("USDT", "");
       const active = p.symbol === cur ? " active" : "";
+      const fav = favs.has(p.symbol);
+      const star = fav ? "⭐" : "☆";
+      const starCls = fav ? "watchlist-star fav" : "watchlist-star";
       const d = digits(p.price);
       return `<div class="watchlist-row${active}" data-symbol="${p.symbol}">
+        <div class="${starCls}" data-fav-symbol="${p.symbol}">${star}</div>
         <div class="watchlist-symbol">${sym}</div>
         <div class="watchlist-price">${fmtNum(p.price, d)}</div>
         <div class="watchlist-change ${chCls}">${chStr}</div>
       </div>`;
     }).join("");
     document.getElementById("watchlist").innerHTML = html;
-    // Click handler — переключает символ
+
+    // Star click → toggle favorite (stopPropagation чтобы не switch symbol)
+    document.querySelectorAll(".watchlist-star").forEach(el => {
+      el.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        const s = el.getAttribute("data-fav-symbol");
+        toggleFavorite(s);
+        loadWatchlist();   // перерисовать с новой сортировкой
+      });
+    });
+
+    // Row click — переключает символ (остаётся как было)
     document.querySelectorAll(".watchlist-row").forEach(row => {
       row.addEventListener("click", () => {
         const sym = row.getAttribute("data-symbol");
         const select = document.getElementById("symbol");
-        // Если символа нет в dropdown, добавляем его
         if (![...select.options].some(o => o.value === sym)) {
           const opt = document.createElement("option");
           opt.value = sym;
@@ -3492,7 +3560,7 @@ async function loadWatchlist() {
         }
         select.value = sym;
         loadChart();
-        loadWatchlist();   // refresh active marker
+        loadWatchlist();
       });
     });
   } catch (e) {
