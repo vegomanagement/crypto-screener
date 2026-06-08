@@ -2960,6 +2960,24 @@ UI_CHART_HTML = """<!DOCTYPE html>
     font-size: 13px; font-weight: 500;
   }
   header button:hover { opacity: 0.85; }
+  .toolbar-sep {
+    width: 1px; height: 22px; background: var(--border);
+    margin: 0 4px;
+  }
+  .tool-btn, .tool-btn-secondary {
+    background: var(--bg) !important; color: var(--text) !important;
+    border: 1px solid var(--border) !important;
+    padding: 6px 12px !important;
+    font-weight: 500 !important;
+  }
+  .tool-btn:hover, .tool-btn-secondary:hover {
+    background: var(--panel) !important; opacity: 1 !important;
+  }
+  .tool-btn.active {
+    background: var(--blue) !important; color: white !important;
+    border-color: var(--blue) !important;
+  }
+  #chart.drawing-mode { cursor: crosshair; }
   .layout {
     display: grid;
     grid-template-columns: 1fr 280px;
@@ -3072,6 +3090,11 @@ UI_CHART_HTML = """<!DOCTYPE html>
     <option value="D">1D</option>
   </select>
   <button onclick="loadChart()">Reload</button>
+  <span class="toolbar-sep"></span>
+  <button id="btnHLine" class="tool-btn" onclick="toggleTool('hline')"
+          title="Click toolbar then click chart to place horizontal line">📏 H-Line</button>
+  <button id="btnClearDrawings" class="tool-btn-secondary"
+          onclick="clearDrawings()" title="Clear all drawings for this symbol">🧹 Clear</button>
   <span id="status" style="margin-left: auto; color: var(--text-dim); font-size: 12px;"></span>
 </header>
 <div class="layout">
@@ -3277,6 +3300,18 @@ function initChart() {
       width: el.clientWidth, height: el.clientHeight,
     });
   }).observe(el);
+
+  // Click handler для drawing tools (H-Line)
+  chart.subscribeClick(param => {
+    if (!activeTool || !param.point) return;
+    const price = candleSeries.coordinateToPrice(param.point.y);
+    if (price == null || !isFinite(price)) return;
+    if (activeTool === "hline") {
+      addHLine(price);
+      // Toggle off после одной линии
+      toggleTool("hline");
+    }
+  });
 }
 
 async function loadChart() {
@@ -3337,11 +3372,13 @@ async function loadChart() {
     document.getElementById("status").textContent =
       `${sym} ${iv} · ${data.klines.length} bars · ${data.source}`;
 
-    // После klines — signals + SMC zones + engine market + analysis
+    // После klines — signals + SMC zones + engine market + analysis +
+    // пользовательские drawing'и из localStorage
     await loadSignals(sym);
     loadZones(sym);    // async, не блокирует chart
     loadMarket(sym);   // async
     loadAnalysis();    // engine analysis bottom panel
+    loadDrawingsFromStorage();   // восстанавливаем H-Lines
   } catch (e) {
     document.getElementById("status").textContent = `Error: ${e.message}`;
   }
@@ -3464,6 +3501,83 @@ async function loadWatchlist() {
 }
 
 let zonePriceLines = [];
+let userDrawingLines = [];   // {price, title, color, lineObj}
+let activeTool = null;       // null | "hline"
+
+function _drawingsKey() {
+  const sym = document.getElementById("symbol").value;
+  return `screener_drawings_${sym}`;
+}
+
+function loadDrawingsFromStorage() {
+  // Remove existing drawn lines from chart
+  for (const d of userDrawingLines) {
+    try { candleSeries.removePriceLine(d.lineObj); } catch (e) {}
+  }
+  userDrawingLines = [];
+
+  const raw = localStorage.getItem(_drawingsKey());
+  if (!raw) return;
+  try {
+    const saved = JSON.parse(raw);
+    for (const d of saved) {
+      const lineObj = candleSeries.createPriceLine({
+        price: d.price, color: d.color || "#bc8cff",
+        lineWidth: 2, lineStyle: 0,
+        axisLabelVisible: true,
+        title: d.title || "",
+      });
+      userDrawingLines.push({ ...d, lineObj });
+    }
+  } catch (e) {
+    console.warn("loadDrawings failed:", e);
+  }
+}
+
+function saveDrawingsToStorage() {
+  const serializable = userDrawingLines.map(d => ({
+    price: d.price, color: d.color, title: d.title,
+  }));
+  localStorage.setItem(_drawingsKey(),
+                       JSON.stringify(serializable));
+}
+
+function toggleTool(tool) {
+  const wasActive = activeTool === tool;
+  activeTool = wasActive ? null : tool;
+  // Update button states
+  for (const id of ["btnHLine"]) {
+    document.getElementById(id).classList.remove("active");
+  }
+  if (!wasActive) {
+    const btnId = tool === "hline" ? "btnHLine" : null;
+    if (btnId) document.getElementById(btnId).classList.add("active");
+  }
+  // Cursor
+  const chartEl = document.getElementById("chart");
+  chartEl.classList.toggle("drawing-mode", activeTool !== null);
+}
+
+function addHLine(price) {
+  const color = "#bc8cff";
+  const title = `${price.toFixed(2)}`;
+  const lineObj = candleSeries.createPriceLine({
+    price: price, color: color,
+    lineWidth: 2, lineStyle: 0,
+    axisLabelVisible: true, title: title,
+  });
+  userDrawingLines.push({ price, color, title, lineObj });
+  saveDrawingsToStorage();
+}
+
+function clearDrawings() {
+  for (const d of userDrawingLines) {
+    try { candleSeries.removePriceLine(d.lineObj); } catch (e) {}
+  }
+  userDrawingLines = [];
+  saveDrawingsToStorage();
+}
+
 
 function clearZones() {
   for (const pl of zonePriceLines) {

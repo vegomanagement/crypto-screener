@@ -315,6 +315,50 @@ def test_ui_has_loadAnalysis_js():
     assert "/api/analysis" in body
 
 
+# ─── Drawing tools (H-Line, Clear) ────────────────────────────────────────
+
+
+def test_ui_has_drawing_tool_buttons():
+    c = _client()
+    r = c.get("/ui")
+    body = r.get_data(as_text=True)
+    assert 'id="btnHLine"' in body
+    assert 'id="btnClearDrawings"' in body
+    assert "H-Line" in body
+    assert "Clear" in body
+
+
+def test_ui_has_drawing_js_functions():
+    c = _client()
+    r = c.get("/ui")
+    body = r.get_data(as_text=True)
+    # ключевые функции
+    for fn in ("toggleTool", "addHLine", "clearDrawings",
+               "loadDrawingsFromStorage", "saveDrawingsToStorage"):
+        assert fn in body, f"{fn} not in UI body"
+    # subscribeClick для drawing
+    assert "subscribeClick" in body
+    # localStorage используется
+    assert "localStorage" in body
+
+
+def test_ui_drawing_mode_css_class():
+    c = _client()
+    r = c.get("/ui")
+    body = r.get_data(as_text=True)
+    assert "drawing-mode" in body   # для cursor crosshair
+    assert "tool-btn" in body
+    assert "tool-btn.active" in body
+
+
+def test_ui_drawings_state_key_pattern():
+    """JS должен использовать ключ типа screener_drawings_BTCUSDT."""
+    c = _client()
+    r = c.get("/ui")
+    body = r.get_data(as_text=True)
+    assert "screener_drawings_" in body
+
+
 def test_api_klines_uppercases_symbol():
     """btcusdt → BTCUSDT."""
     c = _client()
