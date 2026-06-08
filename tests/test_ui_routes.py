@@ -358,6 +358,46 @@ def test_ui_drawings_state_key_pattern():
     body = r.get_data(as_text=True)
     assert "screener_drawings_" in body
 
+# ─── Favorites system ────────────────────────────────────────────────────
+
+
+def test_ui_has_favorites_js_helpers():
+    c = _client()
+    r = c.get("/ui")
+    body = r.get_data(as_text=True)
+    for fn in ("getFavorites", "saveFavorites",
+               "isFavorite", "toggleFavorite"):
+        assert fn in body, f"{fn} not in UI body"
+
+
+def test_ui_favorites_localStorage_key():
+    c = _client()
+    r = c.get("/ui")
+    body = r.get_data(as_text=True)
+    assert "FAVORITES_KEY" in body
+    assert "screener_favorites" in body
+
+
+def test_ui_watchlist_has_star_column():
+    c = _client()
+    r = c.get("/ui")
+    body = r.get_data(as_text=True)
+    assert "watchlist-star" in body
+    assert "data-fav-symbol" in body
+    # star emoji в коде
+    assert "⭐" in body
+    assert "☆" in body
+
+
+def test_ui_watchlist_sort_favorites_first():
+    """В JS должна быть сортировка favorites first."""
+    c = _client()
+    r = c.get("/ui")
+    body = r.get_data(as_text=True)
+    # sort by favorite status
+    assert "favs.has" in body
+    assert "favorites first" in body or "favs first" in body or "af !== bf" in body
+
 
 def test_api_klines_uppercases_symbol():
     """btcusdt → BTCUSDT."""
