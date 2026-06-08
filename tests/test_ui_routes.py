@@ -217,6 +217,104 @@ def test_ui_has_loadZones_js():
     assert "createPriceLine" in body
 
 
+# ─── /api/analysis ────────────────────────────────────────────────────────
+
+
+def test_api_analysis_invalid_symbol_400():
+    c = _client()
+    r = c.get("/api/analysis?symbol=BTC")
+    assert r.status_code == 400
+
+
+def test_api_analysis_success_with_mocked_market():
+    c = _client()
+    fake_market = {
+        "price": 67500.0, "change_24h": 1.25,
+        "bybit": {"funding": 0.0001},
+        "cvd": {"trend": "up"},
+        "ema_biases": {"1h": "bull", "4h": "bull", "1d": "bear"},
+        "indicators": {"rsi": 55, "atr_pct": 0.5,
+                       "macd": {"trend": "bull"}},
+        "vp": {"poc": 67000},
+        "macro": {},
+    }
+    with patch.object(screener, "fetch_market", return_value=fake_market):
+        with patch.object(screener, "compute_confluence_score",
+                          return_value=(72, ["CVD ✅", "MTF bull"])):
+            r = c.get("/api/analysis?symbol=BTCUSDT&force=true")
+    assert r.status_code == 200
+    data = r.get_json()
+    assert data["symbol"] == "BTCUSDT"
+    assert data["confluence"] == 72
+    assert "brief" in data
+    assert "brief_raw" in data
+    assert isinstance(data["confluence_factors"], list)
+
+
+def test_api_analysis_caches_response():
+    """Второй запрос (без force) возвращает cached=True."""
+    c = _client()
+    fake_market = {"price": 100, "bybit": {}, "cvd": {},
+                   "ema_biases": {}, "indicators": {},
+                   "vp": {}, "macro": {}}
+    with patch.object(screener, "fetch_market",
+                      return_value=fake_market) as mock_fm:
+        with patch.object(screener, "compute_confluence_score",
+                          return_value=(50, [])):
+            r1 = c.get("/api/analysis?symbol=BTCUSDT")
+            r2 = c.get("/api/analysis?symbol=BTCUSDT")
+    assert r1.get_json()["cached"] is False
+    assert r2.get_json()["cached"] is True
+    assert mock_fm.call_count == 1
+
+
+def test_api_analysis_force_bypasses_cache():
+    c = _client()
+    fake_market = {"price": 100, "bybit": {}, "cvd": {},
+                   "ema_biases": {}, "indicators": {},
+                   "vp": {}, "macro": {}}
+    with patch.object(screener, "fetch_market",
+                      return_value=fake_market) as mock_fm:
+        with patch.object(screener, "compute_confluence_score",
+                          return_value=(50, [])):
+            c.get("/api/analysis?symbol=BTCUSDT")
+            c.get("/api/analysis?symbol=BTCUSDT&force=true")
+    assert mock_fm.call_count == 2
+
+
+def test_api_analysis_handles_empty_market():
+    c = _client()
+    with patch.object(screener, "fetch_market", return_value=None):
+        r = c.get("/api/analysis?symbol=BTCUSDT&force=true")
+    assert r.status_code == 502
+
+
+def test_api_analysis_handles_exception():
+    c = _client()
+    with patch.object(screener, "fetch_market",
+                      side_effect=RuntimeError("API down")):
+        r = c.get("/api/analysis?symbol=BTCUSDT&force=true")
+    assert r.status_code == 500
+
+
+def test_ui_has_bottom_analysis_panel():
+    c = _client()
+    r = c.get("/ui")
+    body = r.get_data(as_text=True)
+    assert "Engine Analysis" in body
+    assert 'id="bottomAnalysis"' in body
+    assert 'id="confluencePanel"' in body
+    assert 'id="briefPanel"' in body
+
+
+def test_ui_has_loadAnalysis_js():
+    c = _client()
+    r = c.get("/ui")
+    body = r.get_data(as_text=True)
+    assert "loadAnalysis" in body
+    assert "/api/analysis" in body
+
+
 def test_api_klines_uppercases_symbol():
     """btcusdt → BTCUSDT."""
     c = _client()
