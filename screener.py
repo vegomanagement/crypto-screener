@@ -2978,6 +2978,13 @@ UI_CHART_HTML = """<!DOCTYPE html>
     border-color: var(--blue) !important;
   }
   #chart.drawing-mode { cursor: crosshair; }
+  kbd {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 3px; padding: 2px 6px;
+    font-family: "SF Mono", Menlo, monospace;
+    font-size: 11px; color: var(--text);
+    display: inline-block;
+  }
   .layout {
     display: grid;
     grid-template-columns: 1fr 280px;
@@ -3929,6 +3936,133 @@ document.getElementById("toggleSignals").addEventListener("change", () => {
 });
 document.getElementById("toggleZones").addEventListener("change", () => {
   loadZones(document.getElementById("symbol").value);
+});
+
+// ─── Keyboard shortcuts ──────────────────────────────────────────────────
+// Power user navigation:
+//   ↑ / ↓     — navigate symbol in watchlist (prev/next)
+//   k / j     — same as ↑ / ↓ (vim-style)
+//   1-5       — switch interval (5m/15m/1H/4H/1D)
+//   f         — toggle favorite for current symbol
+//   r         — reload chart
+//   h         — toggle H-Line draw mode
+//   c         — clear all drawings
+//   Escape    — exit drawing mode
+//   ?         — show shortcuts help
+
+const KB_INTERVALS = ["5", "15", "60", "240", "D"];
+
+function _kbNavigateSymbol(direction) {
+  const rows = [...document.querySelectorAll(".watchlist-row")]
+    .map(r => r.getAttribute("data-symbol"));
+  if (!rows.length) return;
+  const cur = document.getElementById("symbol").value;
+  let idx = rows.indexOf(cur);
+  if (idx < 0) idx = 0;
+  else idx = (idx + direction + rows.length) % rows.length;
+  const next = rows[idx];
+  const select = document.getElementById("symbol");
+  if (![...select.options].some(o => o.value === next)) {
+    const opt = document.createElement("option");
+    opt.value = next;
+    opt.textContent = next.replace("USDT", "");
+    select.appendChild(opt);
+  }
+  select.value = next;
+  loadChart();
+  loadWatchlist();
+  if (typeof updateHash === "function") updateHash();
+}
+
+function _kbSetInterval(idx) {
+  if (idx < 0 || idx >= KB_INTERVALS.length) return;
+  const select = document.getElementById("interval");
+  select.value = KB_INTERVALS[idx];
+  loadChart();
+  if (typeof updateHash === "function") updateHash();
+}
+
+function _kbToggleFavorite() {
+  const sym = document.getElementById("symbol").value;
+  if (typeof toggleFavorite === "function") {
+    toggleFavorite(sym);
+    loadWatchlist();
+  }
+}
+
+function _kbShowHelp() {
+  const helpHtml = `
+<div id="kbHelpOverlay" onclick="document.getElementById('kbHelpOverlay').remove()"
+     style="position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 9999; cursor: pointer;">
+  <div style="background: var(--panel); border: 1px solid var(--border);
+              border-radius: 8px; padding: 24px; max-width: 420px;
+              font-family: 'SF Mono', Menlo, monospace; font-size: 12px;
+              color: var(--text);">
+    <h3 style="margin: 0 0 16px; font-size: 14px;">Keyboard shortcuts</h3>
+    <div style="display: grid; grid-template-columns: 80px 1fr;
+                gap: 8px 16px;">
+      <kbd>↑ / k</kbd><span>Previous coin in watchlist</span>
+      <kbd>↓ / j</kbd><span>Next coin in watchlist</span>
+      <kbd>1 - 5</kbd><span>Interval (5m/15m/1H/4H/1D)</span>
+      <kbd>f</kbd><span>Toggle favorite for current symbol</span>
+      <kbd>r</kbd><span>Reload chart</span>
+      <kbd>h</kbd><span>H-Line draw mode</span>
+      <kbd>c</kbd><span>Clear drawings</span>
+      <kbd>Esc</kbd><span>Exit drawing mode</span>
+      <kbd>?</kbd><span>Show this help</span>
+    </div>
+    <p style="margin: 16px 0 0; color: var(--text-dim); font-size: 11px;">
+      Click anywhere to close.
+    </p>
+  </div>
+</div>
+`;
+  const existing = document.getElementById("kbHelpOverlay");
+  if (existing) existing.remove();
+  document.body.insertAdjacentHTML("beforeend", helpHtml);
+}
+
+document.addEventListener("keydown", (ev) => {
+  // Skip when typing in inputs
+  const tag = (ev.target.tagName || "").toUpperCase();
+  if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+  if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
+
+  const k = ev.key;
+  if (k === "ArrowUp" || k === "k") {
+    ev.preventDefault();
+    _kbNavigateSymbol(-1);
+  } else if (k === "ArrowDown" || k === "j") {
+    ev.preventDefault();
+    _kbNavigateSymbol(1);
+  } else if (k >= "1" && k <= "5") {
+    ev.preventDefault();
+    _kbSetInterval(parseInt(k, 10) - 1);
+  } else if (k === "f" || k === "F") {
+    ev.preventDefault();
+    _kbToggleFavorite();
+  } else if (k === "r" || k === "R") {
+    ev.preventDefault();
+    loadChart();
+  } else if (k === "h" || k === "H") {
+    ev.preventDefault();
+    if (typeof toggleTool === "function") toggleTool("hline");
+  } else if (k === "c" || k === "C") {
+    ev.preventDefault();
+    if (typeof clearDrawings === "function") clearDrawings();
+  } else if (k === "Escape") {
+    if (typeof activeTool !== "undefined" && activeTool) {
+      ev.preventDefault();
+      toggleTool(activeTool);
+    }
+    const help = document.getElementById("kbHelpOverlay");
+    if (help) { ev.preventDefault(); help.remove(); }
+  } else if (k === "?") {
+    ev.preventDefault();
+    _kbShowHelp();
+  }
 });
 </script>
 </body>

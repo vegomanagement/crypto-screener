@@ -437,6 +437,62 @@ def test_ui_has_tf_aliases_for_routing():
     assert "history.replaceState" in body   # bookmark-friendly без history pollution
 
 
+# ─── Keyboard shortcuts ──────────────────────────────────────────────────
+
+
+def test_ui_has_keyboard_listener():
+    c = _client()
+    r = c.get("/ui")
+    body = r.get_data(as_text=True)
+    assert 'addEventListener("keydown"' in body
+    # Skip when typing in inputs
+    assert "INPUT" in body and "TEXTAREA" in body
+
+
+def test_ui_has_keyboard_helpers():
+    c = _client()
+    r = c.get("/ui")
+    body = r.get_data(as_text=True)
+    for fn in ("_kbNavigateSymbol", "_kbSetInterval",
+               "_kbToggleFavorite", "_kbShowHelp"):
+        assert fn in body, f"{fn} not in UI body"
+
+
+def test_ui_handles_arrow_and_vim_keys():
+    c = _client()
+    r = c.get("/ui")
+    body = r.get_data(as_text=True)
+    # ArrowUp/ArrowDown + j/k vim-style
+    assert "ArrowUp" in body
+    assert "ArrowDown" in body
+    assert '=== "k"' in body or '"k"' in body
+    assert '=== "j"' in body or '"j"' in body
+
+
+def test_ui_handles_interval_number_keys():
+    c = _client()
+    r = c.get("/ui")
+    body = r.get_data(as_text=True)
+    assert 'KB_INTERVALS' in body
+    assert '"1"' in body and '"5"' in body
+
+
+def test_ui_handles_other_shortcuts():
+    c = _client()
+    r = c.get("/ui")
+    body = r.get_data(as_text=True)
+    # f r h c Escape ?
+    for k in ('"f"', '"r"', '"h"', '"c"', '"Escape"', '"?"'):
+        assert k in body, f"shortcut key {k} not found"
+
+
+def test_ui_has_kbd_styling():
+    c = _client()
+    r = c.get("/ui")
+    body = r.get_data(as_text=True)
+    assert "<kbd>" in body or "kbd {" in body
+
+
 def test_api_klines_uppercases_symbol():
     """btcusdt → BTCUSDT."""
     c = _client()
