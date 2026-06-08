@@ -76,6 +76,38 @@ TradingView alert (JSON)
 
 ---
 
+## 📊 Web UI
+
+After deploy, open `https://your-bot.up.railway.app/ui` for a full TradingView-style web interface (no auth, single-user).
+
+### Features
+
+| Feature | Description |
+|---|---|
+| 📈 Candlestick chart | TradingView Lightweight Charts with EMA20 + EMA50 overlay |
+| 📊 Watchlist sidebar | 15 monetas с live-prices, ⭐ favorites pinned to top |
+| 🎯 Signals overlay | Past LONG/SHORT entries + TP/SL hits markers (from `signal_outcomes` DB) |
+| 🧠 Engine Market | CVD trend · MTF EMA bias · Funding · OI · VWAP · VP POC · Turtle zones · Liquidations |
+| 🔷 SMC Zones overlay | Order Blocks, FVGs, Mitigation Blocks, Breaker Blocks (auto-detected) |
+| 📋 Analysis bottom panel | Confluence score + market brief + factors chips (deterministic engine output) |
+| 📏 Drawing tools | H-Line + Clear (localStorage persistence per-symbol) |
+| 🔖 URL routing | Shareable links: `/ui#BTC/1H`, `/ui#ETH/4H` |
+| ⌨️ Keyboard shortcuts | Press `?` to see all shortcuts (j/k nav, 1-5 intervals, f favorite, h H-Line, etc.) |
+
+### REST API
+
+| Endpoint | Description |
+|---|---|
+| `GET /api/symbols` | Watchlist symbols list |
+| `GET /api/prices?symbols=BTCUSDT,...` | Bulk live prices (Bybit → Binance fallback) |
+| `GET /api/klines?symbol=X&interval=Y&limit=N` | OHLCV candles for chart |
+| `GET /api/signals?symbol=X&days=30` | Past signals from `signal_outcomes` |
+| `GET /api/market?symbol=X` | Full market snapshot (CVD/MTF/funding/...) |
+| `GET /api/zones?symbol=X&interval=Y` | SMC zones (OB/FVG/MB/BB) |
+| `GET /api/analysis?symbol=X` | Confluence + market brief (5-min TTL cache) |
+
+---
+
 ## Signal message format
 
 Each TradingView alert produces a compact message + TradingView-style PNG chart:
