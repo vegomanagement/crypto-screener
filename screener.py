@@ -3561,6 +3561,7 @@ async function loadWatchlist() {
         select.value = sym;
         loadChart();
         loadWatchlist();
+        if (typeof updateHash === "function") updateHash();
       });
     });
   } catch (e) {
@@ -3825,15 +3826,104 @@ async function loadSignals(symbol) {
   }
 }
 
+// ─── URL routing via hash (#BTCUSDT/1H) ──────────────────────────────────
+// Allow shareable links: /ui#BTCUSDT/60, /ui#ETH/4H, etc.
+const TF_ALIASES = {
+  "1H": "60", "2H": "120", "4H": "240",
+  "5M": "5", "15M": "15", "30M": "30",
+  "1D": "D",
+};
+const TF_REVERSE = {
+  "5": "5m", "15": "15m", "60": "1H", "240": "4H", "D": "1D",
+};
+
+function _normalizeSymbol(s) {
+  if (!s) return null;
+  let v = s.toUpperCase().replace(".P", "");
+  if (!v.endsWith("USDT")) v += "USDT";
+  return v;
+}
+function _normalizeInterval(s) {
+  if (!s) return null;
+  const v = s.toUpperCase();
+  return TF_ALIASES[v] || v;
+}
+
+function parseHash() {
+  const h = window.location.hash.replace(/^#/, "");
+  if (!h) return { symbol: null, interval: null };
+  const [rawSym, rawIv] = h.split("/");
+  return {
+    symbol:   _normalizeSymbol(rawSym),
+    interval: _normalizeInterval(rawIv),
+  };
+}
+
+function updateHash() {
+  const sym = document.getElementById("symbol").value;
+  const iv = document.getElementById("interval").value;
+  const symShort = sym.replace("USDT", "");
+  const ivDisp = TF_REVERSE[iv] || iv;
+  // skip update if hash matches (avoid hashchange loop)
+  const desired = `#${symShort}/${ivDisp}`;
+  if (window.location.hash !== desired) {
+    history.replaceState(null, "", desired);
+  }
+}
+
+function applyHashOnLoad() {
+  const { symbol, interval } = parseHash();
+  const symSelect = document.getElementById("symbol");
+  const ivSelect = document.getElementById("interval");
+  if (symbol) {
+    // Add to dropdown если ещё не там
+    if (![...symSelect.options].some(o => o.value === symbol)) {
+      const opt = document.createElement("option");
+      opt.value = symbol;
+      opt.textContent = symbol.replace("USDT", "");
+      symSelect.appendChild(opt);
+    }
+    symSelect.value = symbol;
+  }
+  if (interval && [...ivSelect.options].some(o => o.value === interval)) {
+    ivSelect.value = interval;
+  }
+}
+
+window.addEventListener("hashchange", () => {
+  const { symbol, interval } = parseHash();
+  const symSelect = document.getElementById("symbol");
+  const ivSelect = document.getElementById("interval");
+  if (symbol && symSelect.value !== symbol) {
+    if (![...symSelect.options].some(o => o.value === symbol)) {
+      const opt = document.createElement("option");
+      opt.value = symbol;
+      opt.textContent = symbol.replace("USDT", "");
+      symSelect.appendChild(opt);
+    }
+    symSelect.value = symbol;
+  }
+  if (interval && ivSelect.value !== interval) {
+    ivSelect.value = interval;
+  }
+  loadChart();
+});
+
 initChart();
+applyHashOnLoad();
 loadChart();
 loadWatchlist();
+updateHash();
 setInterval(loadWatchlist, 30000);   // auto-refresh каждые 30s
 document.getElementById("symbol").addEventListener("change", () => {
   loadChart();
   loadWatchlist();
+  updateHash();
 });
-document.getElementById("interval").addEventListener("change", loadChart);
+document.getElementById("interval").addEventListener("change", () => {
+  loadChart();
+  updateHash();
+});
 document.getElementById("toggleSignals").addEventListener("change", () => {
   loadSignals(document.getElementById("symbol").value);
 });

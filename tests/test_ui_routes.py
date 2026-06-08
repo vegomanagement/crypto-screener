@@ -399,6 +399,44 @@ def test_ui_watchlist_sort_favorites_first():
     assert "favorites first" in body or "favs first" in body or "af !== bf" in body
 
 
+# ─── URL routing via hash ────────────────────────────────────────────────
+
+
+def test_ui_has_url_routing_helpers():
+    c = _client()
+    r = c.get("/ui")
+    body = r.get_data(as_text=True)
+    for fn in ("parseHash", "updateHash", "applyHashOnLoad",
+               "_normalizeSymbol", "_normalizeInterval"):
+        assert fn in body, f"{fn} not in UI body"
+
+
+def test_ui_listens_to_hashchange():
+    c = _client()
+    r = c.get("/ui")
+    body = r.get_data(as_text=True)
+    assert 'addEventListener("hashchange"' in body
+
+
+def test_ui_calls_updateHash_on_symbol_change():
+    """При смене символа updateHash() должен вызываться."""
+    c = _client()
+    r = c.get("/ui")
+    body = r.get_data(as_text=True)
+    # Ищем что updateHash есть в обработчиках
+    assert "updateHash()" in body
+
+
+def test_ui_has_tf_aliases_for_routing():
+    """TF_ALIASES + TF_REVERSE для нормализации hash'ов."""
+    c = _client()
+    r = c.get("/ui")
+    body = r.get_data(as_text=True)
+    assert "TF_ALIASES" in body
+    assert "TF_REVERSE" in body
+    assert "history.replaceState" in body   # bookmark-friendly без history pollution
+
+
 def test_api_klines_uppercases_symbol():
     """btcusdt → BTCUSDT."""
     c = _client()
