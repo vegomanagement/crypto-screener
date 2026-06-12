@@ -523,6 +523,9 @@ def test_strategy_message_contains_key_findings(monkeypatch):
     assert "STRATEGY.md" in full
     assert "/hyperopt" in full
     assert "/scanbt" in full
+    # Web UI mention
+    assert "/ui" in full
+    assert "Web UI" in full or "UI" in full
     assert "/btdiag" in full
 
 

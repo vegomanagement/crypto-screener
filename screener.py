@@ -6041,6 +6041,15 @@ def cmd_strategy(chat_id: int):
         "  ✗ НЕ доверять in-sample PF без walkforward\n"
         "  ✗ НЕ менять prod-defaults до OOS PF > 1.3\n\n"
 
+        "🖥 <b>Web UI</b> доступен на /ui:\n"
+        "  • Chart + indicators + watchlist\n"
+        "  • Signals overlay (прошлые entries/TP/SL)\n"
+        "  • SMC zones (OB/FVG/MB/BB)\n"
+        "  • Engine market panel (CVD/MTF/funding/...)\n"
+        "  • Drawing tools (H-Line)\n"
+        "  • Shareable links: /ui#BTC/1H\n"
+        "  • Keyboard: ? для shortcuts\n\n"
+
         "📖 Полная документация: <a href=\"https://github.com/"
         "vegomanagement/crypto-screener/blob/main/STRATEGY.md\">STRATEGY.md</a>"
     )
