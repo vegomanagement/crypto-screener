@@ -72,32 +72,40 @@ class WalkForwardResult:
 def slice_data_window(data: dict, start_idx: int, end_idx: int,
                       *, tf_primary: str = "5") -> dict:
     """
-    Возвращает копию data dict, но с klines обрезанными по [start_idx, end_idx]
-    в primary TF. Klines других TF фильтруются по ts (slice до того же
-    временного диапазона).
-    Funding/OI тоже фильтруются по ts.
+    Primary trade bars are [start_idx, end_idx], closed as of now.
+    Other TFs retain historical context but must close by the last admitted
+    primary close. Funding/OI retain all prior observations up to that boundary
+    for correct carry-in state and elapsed-time lookbacks. Source rows/metadata
+    are not rewritten; the returned dict has no inherited timestamp-index cache.
     """
+    primary_interval_ms = bt_data.tf_to_minutes(tf_primary) * 60_000
     primary = data["klines"].get(tf_primary) or []
-    if not primary or start_idx >= len(primary):
+    now_ms = bt_data._now_ms()
+    window_primary = ([k for k in primary[start_idx:end_idx + 1]
+                       if k["ts"] + primary_interval_ms <= now_ms]
+                      if 0 <= start_idx <= end_idx else [])
+    if not window_primary:
         return {"symbol": data.get("symbol", "?"), "days": data.get("days", 0),
                 "klines": {}, "funding": [], "oi": []}
 
-    start_ts = primary[start_idx]["ts"]
-    end_idx_clamped = min(end_idx, len(primary) - 1)
-    end_ts = primary[end_idx_clamped]["ts"]
+    end_ts = window_primary[-1]["ts"] + primary_interval_ms
 
     sliced_klines = {}
     for tf, kl in data["klines"].items():
-        sliced_klines[tf] = [k for k in kl if start_ts <= k["ts"] <= end_ts]
+        duration_ms = bt_data.tf_to_minutes(tf) * 60_000
+        # Only primary bars drive this window's trades. Other TFs and event
+        # histories retain prior observable context, not invented neutral data.
+        sliced_klines[tf] = (window_primary if tf == tf_primary else
+                             [k for k in kl if k["ts"] + duration_ms <= end_ts])
 
     return {
         "symbol":  data.get("symbol", "?"),
         "days":    data.get("days", 0),
         "klines":  sliced_klines,
         "funding": [f for f in (data.get("funding") or [])
-                    if start_ts <= f["ts"] <= end_ts],
+                    if f["ts"] <= end_ts],
         "oi":      [o for o in (data.get("oi") or [])
-                    if start_ts <= o["ts"] <= end_ts],
+                    if o["ts"] <= end_ts],
     }
 
 

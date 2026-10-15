@@ -1,0 +1,17 @@
+{
+  "240": {
+    "count": 10,
+    "source": "bybit",
+    "last_open": 1792036800000,
+    "last_close": 1792051200000,
+    "aligned": true
+  },
+  "D": {
+    "count": 10,
+    "source": "bybit",
+    "last_open": 1791936000000,
+    "last_close": 1792022400000,
+    "aligned": true
+  },
+  "invalid_interval_status": 400
+}

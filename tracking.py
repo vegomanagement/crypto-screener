@@ -32,14 +32,16 @@ from datetime import datetime, timedelta, timezone
 log = logging.getLogger(__name__)
 
 
-EXPIRY_HOURS  = 168  # 7 дней — после этого open trade принудительно expired
+EXPIRY_HOURS  = 168  # 7d horizon; expired only with observable history/close
 
-# Same-bar tie-break: что делать, если в одной свече задеты И SL, И TP.
-# "conservative" — SL первым, full -1R (старое поведение, занижает winrate).
-# "fair" — ничья, r_multiple=0.0, status='tie_hit'. По умолчанию (P4-фикс).
-# На крипте 5m свеча часто свипает обе стороны → conservative системно ловит
-# ложные лоссы. Fair честнее показывает «исход был неоднозначен».
+# Legacy option name retained: "fair" now means AMBIGUOUS / unknown R,
+# not an invented zero-R exit. "conservative" is an explicit pessimistic
+# SL-first assumption, not an observed intrabar path. Full exit is at TP1.
+# Legacy persisted TP2/TP3/tie records stay readable, not rewritten.
 SAME_BAR_TIE_BREAK = "fair"
+
+REALIZED_STATUSES = frozenset({"tp1_hit", "tp2_hit", "tp3_hit",
+                               "sl_hit", "tie_hit", "expired"})
 
 EXTRA_COLS = [
     ("decision_json", "TEXT"),
@@ -119,6 +121,11 @@ def open_trade(conn, signal_id: int, decision: dict,
         else 0
     )
 
+    snapshot = dict(decision)
+    snapshot["_execution"] = {"as_of": now.isoformat(), "entry_ts": entry_ts,
+                              "entry_policy": "midpoint_touch_next_full_bar",
+                              "exit_policy": "full_tp1"}
+
     cur = conn.execute(
         """
         INSERT INTO signal_outcomes(
@@ -133,7 +140,7 @@ def open_trade(conn, signal_id: int, decision: dict,
         (
             signal_id, symbol, signal_type, direction,
             entry_price, entry_ts,
-            json.dumps(decision, ensure_ascii=False), verdict,
+            json.dumps(snapshot, ensure_ascii=False), verdict,
             e_min, e_max,
             decision.get("sl"), decision.get("tp1"),
             decision.get("tp2"), decision.get("tp3"),
@@ -153,18 +160,22 @@ def check_open_trades(conn, fetch_klines) -> dict:
     Идёт по открытым LONG/SHORT trades, фетчит klines с момента entry
     и проверяет первый touch SL / TP.
 
-    fetch_klines(symbol, interval, limit) → list[{"o","h","l","c","v"}]
-    Параметр интервала — '5' (5m); klines в порядке oldest→newest.
-
-    Conservative: если в одном баре low ≤ SL И high ≥ TP — считаем SL первым
-    (худший сценарий, иначе завышаем win-rate).
+    fetch_klines(symbol, interval, limit) returns oldest-first OHLCV with
+    real bar OPEN timestamps `ts` in milliseconds. Interval is '5' (5m).
+    Only closed contiguous post-as-of bars are evidence. Orders activate at
+    the next full bar; the signal-straddling bar is never back-projected.
+    Timestamp-less callbacks prove no fills or wins. Expiry follows backfill;
+    missing history or an unobservable expiry close is censored, not zero R.
+    _execution in existing decision_json stores precise as-of and fill-bar
+    provenance without changing the SQLite schema. Fill timestamps denote
+    bar starts, NOT exact intrabar instants. No funding/queue/spread model.
 
     Возвращает dict с агрегированной статистикой за прогон.
     """
     rows = conn.execute(
         """
         SELECT id, symbol, entry_ts, verdict, sl, tp1, tp2, tp3,
-               rr1, rr2, rr3, expires_at
+               rr1, rr2, rr3, expires_at, entry_price, decision_json
         FROM signal_outcomes
         WHERE status = 'open'
         """
@@ -179,18 +190,15 @@ def check_open_trades(conn, fetch_klines) -> dict:
 
     for row in rows:
         (oid, symbol, entry_ts, verdict, sl, tp1, tp2, tp3,
-         rr1, rr2, rr3, expires_at) = row
+         rr1, rr2, rr3, expires_at, entry_price, decision_json) = row
 
         checked += 1
 
-        # Проверка expiry
+        # Parse expiry, but resolve observable history before applying it.
+        exp_dt = None
         try:
             exp_dt = datetime.strptime(expires_at, "%Y-%m-%d %H:%M").replace(
                 tzinfo=timezone.utc)
-            if now > exp_dt:
-                _close_trade(conn, oid, "expired", None, 0.0, now)
-                closed += 1
-                continue
         except (TypeError, ValueError):
             pass
 
@@ -203,6 +211,14 @@ def check_open_trades(conn, fetch_klines) -> dict:
         except (TypeError, ValueError):
             continue
 
+        try:
+            execution = (json.loads(decision_json or "{}").get("_execution") or {})
+            if execution.get("entry_ts") == entry_ts:
+                entry_dt = datetime.fromisoformat(execution["as_of"])
+                entry_ts = entry_dt.isoformat()
+        except (TypeError, ValueError, KeyError):
+            pass
+
         minutes_since = max(1, int((now - entry_dt).total_seconds() / 60))
         # +2 бара буфер (на округление и текущий незакрытый бар)
         bars_needed = min(2000, max(2, minutes_since // 5 + 2))
@@ -213,8 +229,7 @@ def check_open_trades(conn, fetch_klines) -> dict:
             log.warning(f"tracking fetch_klines {symbol}: {e}")
             continue
 
-        if not klines:
-            continue
+        # Empty history still needs an explicit censored outcome at expiry.
 
         # Если API вернул больше баров чем нужно — обрезаем хвост по
         # числу баров с entry. Это защита от случаев, когда у нас
@@ -222,12 +237,41 @@ def check_open_trades(conn, fetch_klines) -> dict:
         if len(klines) > bars_needed:
             klines = klines[-bars_needed:]
 
-        hit = _detect_hit(klines, verdict, sl, tp1, tp2, tp3, rr1, rr2, rr3,
-                          entry_ts)
-        if hit:
-            level, r_mult = hit
-            status = f"{level.lower()}_hit"
+        cutoff = min(now, exp_dt) if exp_dt is not None else now
+        klines = [b for b in klines if isinstance(b.get("ts"), (int, float))
+                  and b["ts"] >= entry_dt.timestamp() * 1000
+                  and b["ts"] + 300000 <= cutoff.timestamp() * 1000]
+
+        # Only a contiguous prefix from activation can prove the FIRST exit.
+        expected = math.ceil(entry_dt.timestamp() * 1000 / 300000) * 300000
+        prefix = []
+        for bar in klines:
+            if bar["ts"] != expected:
+                break
+            prefix.append(bar)
+            expected += 300000
+        klines = prefix
+
+        observed = {}
+        outcome = (_simulate_execution([{}] + klines, 0, verdict, sl, tp1, tp2, tp3,
+                                       rr1, rr2, rr3, len(klines), entry=entry_price,
+                                       details=observed) if klines else None)
+        payload = json.loads(decision_json or "{}")
+        execution = payload.setdefault("_execution", {})
+        execution.setdefault("filled", False)
+        execution.update(observed, exit_policy="full_tp1")
+        conn.execute("UPDATE signal_outcomes SET decision_json=? WHERE id=?",
+                     (json.dumps(payload, ensure_ascii=False), oid))
+        if outcome and outcome[1] not in ("expired", "unfilled", "censored"):
+            _, status, level, r_mult = outcome
             _close_trade(conn, oid, status, level, r_mult, now)
+            closed += 1
+        elif exp_dt is not None and now > exp_dt:
+            complete = (klines and klines[0]["ts"] == entry_dt.timestamp() * 1000
+                        and klines[-1]["ts"] + 300000 == exp_dt.timestamp() * 1000)
+            result = outcome if complete else None
+            status, level, r = result[1:] if result else ("censored", None, None)
+            _close_trade(conn, oid, status, level, r, now)
             closed += 1
         else:
             conn.execute(
@@ -243,68 +287,145 @@ def check_open_trades(conn, fetch_klines) -> dict:
     }
 
 
-def _detect_hit(klines, verdict, sl, tp1, tp2, tp3, rr1, rr2, rr3,
-                entry_ts) -> tuple | None:
+def _simulate_execution(
+    klines_5m: list,
+    open_idx:  int,
+    verdict:   str,
+    sl:        float | None,
+    tp1:       float | None,
+    tp2:       float | None,
+    tp3:       float | None,
+    rr1:       float | None,
+    rr2:       float | None,
+    rr3:       float | None,
+    expiry_bars: int,
+    *, entry: float | None = None,
+    as_of: int | None = None, bar_ms: int | None = None,
+    details: dict | None = None,
+) -> tuple[int, str, str | None, float | None] | None:
     """
-    Walk через klines в хронологическом порядке.
-    Возвращает (hit_level, r_multiple) или None если ничего не задето.
+    Shared deterministic paper-execution kernel (full exit at TP1).
 
-    Same-bar tie-break (SL+TP в одной свече) определяется SAME_BAR_TIE_BREAK:
-      • "conservative" — SL первым, r_multiple=-1.0
-      • "fair" (default) — ("TIE", 0.0) → status='tie_hit', не считается
-        ни победой, ни классическим лоссом
-
-    Note: klines не имеют timestamps, поэтому считаем что fetch_klines
-    вернул свечи с момента entry до now включительно. Это допущение
-    верно для большинства fetch'еров (они отдают N последних свечей и
-    мы не знаем точно сколько прошло — но для проверки TP/SL это OK,
-    нам важен сам факт касания).
+    A midpoint must trade inside a bar before any exit is possible. A fill
+    and exit on a bar not opening at entry has unknown ordering; SL+TP is
+    likewise ambiguous by default. Unknown outcomes have R=None. A complete
+    horizon exits at the final close; a truncated/gapped dataset is censored.
+    Legacy calls infer intended entry from the signal close, never a fill.
+    Optional as_of/bar_ms enforce the decision-close clock and continuity.
+    Returns (last_observed_or_exit_idx, status, level, R), or None for an
+    invalid plan. details contains fill BAR provenance, not an exact time.
+    All prices are modeled executions: no liquidity/queue/funding precision.
     """
-    if sl is None or tp1 is None:
+    if sl is None or tp1 is None or verdict not in ("LONG", "SHORT"):
+        return None
+    if entry is None:
+        entry = klines_5m[open_idx].get("c")
+    if entry is None:
+        return None
+    if not all(math.isfinite(x) and x > 0 for x in (entry, sl, tp1)):
+        return None
+    if not (sl < entry < tp1 if verdict == "LONG" else tp1 < entry < sl):
         return None
 
-    # Заранее посчитаем уровни TP с RR
-    tps = []
-    if tp1 is not None:
-        tps.append(("TP1", tp1, rr1 or 1.5))
-    if tp2 is not None:
-        tps.append(("TP2", tp2, rr2 or 2.5))
-    if tp3 is not None:
-        tps.append(("TP3", tp3, rr3 or 4.0))
+    tps = [("TP1", tp1, abs(tp1 - entry) / abs(entry - sl))]
 
-    for bar in klines:
-        low  = bar.get("l", 0)
-        high = bar.get("h", 0)
+    end = min(len(klines_5m), open_idx + 1 + expiry_bars)
+    filled = False
+
+    for j in range(open_idx + 1, end):
+        bar = klines_5m[j]
+        if as_of is not None and bar_ms is not None:
+            expected_ts = as_of + (j - open_idx - 1) * bar_ms
+            if bar.get("ts") != expected_ts:
+                return (j, "censored", None, None)
+        prices = [bar.get(key) for key in ("o", "h", "l", "c")]
+        if not all(isinstance(p, (int, float)) and math.isfinite(p) and p > 0
+                   for p in prices):
+            return (j, "censored", None, None)
+        low, high = bar["l"], bar["h"]
+        if not low <= min(bar["o"], bar["c"]) <= max(bar["o"], bar["c"]) <= high:
+            return (j, "censored", None, None)
+        new_fill = not filled
+        if not filled:
+            if not low <= entry <= high:
+                continue
+            filled = True
+            if details is not None:
+                details.update(filled=True, fill_idx=j, fill_ts=bar.get("ts"))
+
+        if not new_fill and bar.get("o") is not None:
+            gap_stop = bar["o"] <= sl if verdict == "LONG" else bar["o"] >= sl
+            if gap_stop:
+                r = (bar["o"] - entry) / abs(entry - sl) * (1 if verdict == "LONG" else -1)
+                return (j, "sl_hit", "SL", r)
 
         if verdict == "LONG":
-            sl_hit = low  <= sl
-            tp_candidates = [(lvl, p, r) for (lvl, p, r) in tps if high >= p]
+            sl_hit = low <= sl
+            tp_cands = [(lvl, p, r) for (lvl, p, r) in tps if high >= p]
         elif verdict == "SHORT":
             sl_hit = high >= sl
-            tp_candidates = [(lvl, p, r) for (lvl, p, r) in tps if low <= p]
+            tp_cands = [(lvl, p, r) for (lvl, p, r) in tps if low <= p]
         else:
             return None
 
-        # Same-bar tie: оба задеты в одной свече
-        if sl_hit and tp_candidates:
+        if new_fill and bar.get("o") != entry and (sl_hit or tp_cands):
+            return (j, "ambiguous", "AMBIGUOUS", None)
+
+        # Same-bar tie: respect SAME_BAR_TIE_BREAK
+        if sl_hit and tp_cands:
             if SAME_BAR_TIE_BREAK == "conservative":
-                return ("SL", -1.0)
-            return ("TIE", 0.0)
-
+                return (j, "sl_hit", "SL", -1.0)
+            return (j, "ambiguous", "AMBIGUOUS", None)
         if sl_hit:
-            return ("SL", -1.0)
+            return (j, "sl_hit", "SL", -1.0)
+        if tp_cands:
+            level, _, rr = tp_cands[0]
+            return (j, f"{level.lower()}_hit", level, float(rr))
 
-        if tp_candidates:
-            # Берём САМЫЙ ДАЛЁКИЙ задетый TP (TP3 > TP2 > TP1 по приоритету)
-            tp_candidates.sort(key=lambda x: x[2], reverse=True)
-            level, _, rr = tp_candidates[0]
-            return (level, float(rr))
+    if end < open_idx + 1 + expiry_bars:
+        return (end - 1, "censored", None, None)
+    if not filled:
+        return (end - 1, "unfilled", None, None)
+    r = ((klines_5m[end - 1]["c"] - entry) / abs(entry - sl)
+         * (1 if verdict == "LONG" else -1))
+    return (end - 1, "expired", None, r)
 
+
+def _detect_hit(klines, verdict, sl, tp1, tp2, tp3, rr1, rr2, rr3,
+                entry_ts, *, entry=None) -> tuple | None:
+    """Timestamped post-as-of bars only; missing timestamps prove no hit.
+
+    Legacy positional API is retained. Pass the intended midpoint as entry
+    to validate fills. No claim of observed intrabar path is made.
+    """
+    try:
+        dt = datetime.fromisoformat(entry_ts)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        as_of = dt.timestamp() * 1000
+    except (TypeError, ValueError):
+        return None
+    bars = [b for b in klines if isinstance(b.get("ts"), (int, float))
+            and b["ts"] >= as_of]
+    prefix = []
+    expected = math.ceil(as_of / 300000) * 300000
+    for bar in bars:
+        if bar["ts"] != expected:
+            break
+        prefix.append(bar)
+        expected += 300000
+    bars = prefix
+    if not bars:
+        return None
+    result = _simulate_execution([{}] + bars, 0, verdict, sl, tp1, tp2, tp3,
+                                 rr1, rr2, rr3, len(bars), entry=entry)
+    if result and result[1] not in ("expired", "unfilled", "censored"):
+        return result[2], result[3]
     return None
 
 
 def _close_trade(conn, outcome_id: int, status: str,
-                 hit_level: str | None, r_mult: float,
+                 hit_level: str | None, r_mult: float | None,
                  closed_at: datetime) -> None:
     conn.execute(
         """
@@ -464,7 +585,7 @@ def compute_stats(conn, days: int = 30) -> dict:
         # open/skipped/suppressed — не закрытые торгуемые сделки:
         # suppressed = подавлен cooldown gate, юзер его не получил,
         # поэтому в win-rate не учитываем (статистика только по sent-сигналам).
-        if status in ("open", "skipped", "suppressed"):
+        if status not in REALIZED_STATUSES or r_mult is None:
             continue
 
         r = r_mult if r_mult is not None else 0
@@ -517,6 +638,9 @@ def compute_stats(conn, days: int = 30) -> dict:
         "win_rate":   round(win_rate, 1),
         "avg_r":      round(avg_r, 2),
         "suppressed": by_status.get("suppressed", 0),
+        "censored": by_status.get("censored", 0),
+        "unfilled": by_status.get("unfilled", 0),
+        "ambiguous": by_status.get("ambiguous", 0),
         "hits": {
             "tp1": by_status.get("tp1_hit", 0),
             "tp2": by_status.get("tp2_hit", 0),
@@ -590,11 +714,19 @@ def format_stats_message(stats: dict) -> str:
                 f"Пока нет торгуемых сигналов (LONG/SHORT).\n"
                 f"Статистика появится после первых закрытых сделок.")
 
+    excluded = (f"unfilled: {stats.get('unfilled', 0)} · "
+                f"censored: {stats.get('censored', 0)} · "
+                f"ambiguous: {stats.get('ambiguous', 0)} (вне R-статистики)")
+
     if closed == 0:
+        note = ("Пока нет исходов с известным R."
+                if any(stats.get(k) for k in ("unfilled", "censored", "ambiguous"))
+                else "Пока ни одна сделка не закрылась.")
         return (f"📊 <b>Статистика {days} дней</b>\n"
                 f"━━━━━━━━━━━━━━━━━━━━\n"
                 f"Всего: {stats['total']} · открыто: {stats['open']}\n"
-                f"Пока ни одна сделка не закрылась.")
+                f"{excluded}\n"
+                f"{note}")
 
     wr_icon = "🟢" if wr >= 55 else ("🟡" if wr >= 45 else "🔴")
     ar_icon = "🟢" if avg_r >= 0.5 else ("🟡" if avg_r >= 0 else "🔴")
@@ -611,6 +743,7 @@ def format_stats_message(stats: dict) -> str:
         f"  🛑 SL hit:  {hits['sl']}",
         f"  ↔️ Tie (same-bar SL+TP, 0R): {hits.get('tie', 0)}",
         f"  ⏰ Expired: {hits['expired']}",
+        excluded,
     ]
 
     if stats.get("suppressed"):
@@ -678,9 +811,9 @@ def format_stats_message(stats: dict) -> str:
 
 def recent_trades(conn, days: int = 7, limit: int = 30) -> list:
     """
-    Закрытые торгуемые сделки за N дней, новые сверху. Только статусы:
-    tp1_hit/tp2_hit/tp3_hit/sl_hit/tie_hit/expired. open/skipped/suppressed
-    не показываем — пользователь их не торговал.
+    Terminal paper outcomes, newest first, including unfilled/censored/
+    ambiguous attempts explicitly labeled without R. Historical TP2/TP3/tie
+    records stay readable. Open/skipped/suppressed are not listed.
     """
     since = (datetime.now(timezone.utc) - timedelta(days=days)).strftime(
         "%Y-%m-%d %H:%M")
@@ -691,7 +824,8 @@ def recent_trades(conn, days: int = 7, limit: int = 30) -> list:
         FROM signal_outcomes
         WHERE entry_ts >= ? AND verdict IN ('LONG', 'SHORT')
           AND status IN ('tp1_hit', 'tp2_hit', 'tp3_hit',
-                         'sl_hit', 'tie_hit', 'expired')
+                         'sl_hit', 'tie_hit', 'expired',
+                         'unfilled', 'censored', 'ambiguous')
         ORDER BY entry_ts DESC
         LIMIT ?
         """,
@@ -725,7 +859,8 @@ def format_trades_message(trades: list, days: int) -> str:
         verdict_ic = "🟢" if verdict == "LONG" else "🔴"
         sym_short  = (sym or "?").replace("USDT", "")
         time_short = (ts or "")[5:] if ts else "?"  # "MM-DD HH:MM"
-        r_str = f"{r_mult:+.2f}R" if r_mult is not None else "—"
+        r_str = (f"{r_mult:+.2f}R" if r_mult is not None
+                 else f"N/A ({status})")
         conf_str = f"c{conf}" if conf is not None else "c?"
         sig_short = (sig_type or "?")[:12]
         lines.append(

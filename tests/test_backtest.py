@@ -129,7 +129,7 @@ def test_simulate_outcome_sl_hit_long():
 
 
 def test_simulate_outcome_tie_same_bar(monkeypatch):
-    """Same-bar SL+TP → tie_hit (default fair)."""
+    """Default same-bar SL+TP policy is ambiguous, never fabricated 0R."""
     monkeypatch.setattr(tracking, "SAME_BAR_TIE_BREAK", "fair")
     klines = [_b(i, 100, 100.5, 99.5, 100) for i in range(50)]
     klines[10] = _b(10, 100, 110, 97, 105)   # high>=tp1 AND low<=sl
@@ -140,9 +140,9 @@ def test_simulate_outcome_tie_same_bar(monkeypatch):
     )
     assert out is not None
     _, status, hit_level, r_mult = out
-    assert status == "tie_hit"
-    assert hit_level == "TIE"
-    assert r_mult == 0.0
+    assert status == "ambiguous"
+    assert hit_level == "AMBIGUOUS"
+    assert r_mult is None
 
 
 def test_simulate_outcome_tie_conservative(monkeypatch):
@@ -182,8 +182,8 @@ def test_simulate_outcome_invalid_levels_returns_none():
     ) is None
 
 
-def test_simulate_outcome_tp3_priority_same_bar():
-    """Same-bar 3 TPs — берётся самый дальний (TP3)."""
+def test_simulate_outcome_full_tp1_exit_same_bar():
+    """Policy: full exit at TP1, never select TP3 after seeing the high."""
     klines = [_b(i, 100, 100.5, 99.5, 100) for i in range(50)]
     klines[10] = _b(10, 100, 110, 99.8, 109)
     out = backtest._simulate_outcome(
@@ -192,9 +192,9 @@ def test_simulate_outcome_tp3_priority_same_bar():
         rr1=1.5, rr2=2.5, rr3=4.0, expiry_bars=100,
     )
     _, status, hit_level, r_mult = out
-    assert status == "tp3_hit"
-    assert hit_level == "TP3"
-    assert r_mult == 4.0
+    assert status == "tp1_hit"
+    assert hit_level == "TP1"
+    assert r_mult == 1.5
 
 
 def test_simulate_outcome_short_mirror():
@@ -915,3 +915,119 @@ def test_format_result_omits_htf_when_empty():
     )
     out = backtest.format_result(result)
     assert "HTF bias" not in out
+
+def test_explicit_entry_must_fill_before_tp():
+    bars = [_b(0, 100, 101, 99, 100), _b(300000, 100, 104, 99, 103)]
+    out = backtest._simulate_outcome(
+        bars, 0, "LONG", 79, 103, 105, 108, 23, 25, 28, 1, entry=80)
+    assert out[1:] == ("unfilled", None, None)
+
+def test_midbar_fill_and_target_is_ambiguous_not_a_win():
+    bars = [_b(0, 102, 102, 102, 102), _b(300000, 102, 104, 99, 101)]
+    out = backtest._simulate_outcome(
+        bars, 0, "LONG", 98, 103, 105, 108, 1.5, 2.5, 4, 1, entry=100)
+    assert out[1:] == ("ambiguous", "AMBIGUOUS", None)
+
+def test_dataset_end_is_censored_not_zero_r_expiry():
+    bars = [_b(0, 100, 101, 99, 100), _b(300000, 100, 101, 99, 100)]
+    out = backtest._simulate_outcome(
+        bars, 0, "LONG", 98, 103, 105, 108, 1.5, 2.5, 4, 20, entry=100)
+    assert out[1:] == ("censored", None, None)
+
+def test_run_backtest_passes_midpoint_fill_and_excludes_unfilled(monkeypatch):
+    bars = [_b(0, 100, 101, 99, 100), _b(300000, 100, 104, 99, 103)]
+    monkeypatch.setattr(backtest.bt_market, "build_market_at", lambda *a, **k: {"ok": True})
+    monkeypatch.setattr(backtest, "_detect_all_signals", lambda bars: ["BOS_BULL"] if len(bars) == 1 else [])
+    monkeypatch.setattr(backtest, "make_decision", lambda **k: {
+        "verdict": "LONG", "direction": "long", "entry": {"min": 79, "max": 81},
+        "sl": 78, "tp1": 103, "tp2": 105, "tp3": 108, "rr1": 11.5})
+    result = backtest.run_backtest(_make_data(bars), warmup_bars=0, expiry_bars=1)
+    trade = result.trades[0]
+    assert trade.status == "unfilled"
+    assert trade.r_multiple is None and trade.r_net is None
+    assert trade.fee_r == 0
+    assert result.signals[0].became_trade is False
+    assert result.stats["closed"] == 0
+
+def test_entry_validation_rejects_wrong_side_and_nonfinite():
+    bars = [_b(0, 100, 101, 99, 100), _b(300000, 100, 104, 99, 103)]
+    for entry, sl, tp in [(100, 101, 103), (100, 98, 99), (float("nan"), 98, 103)]:
+        assert backtest._simulate_outcome(
+            bars, 0, "LONG", sl, tp, 105, 108, 1.5, 2.5, 4, 1, entry=entry) is None
+
+def test_known_fill_same_bar_sl_tp_is_unknown_not_zero_r(monkeypatch):
+    monkeypatch.setattr(tracking, "SAME_BAR_TIE_BREAK", "fair")
+    bars = [_b(0, 100, 101, 99, 100), _b(300000, 100, 110, 97, 105)]
+    out = backtest._simulate_outcome(
+        bars, 0, "LONG", 98, 103, 105, 108, 1.5, 2.5, 4, 1, entry=100)
+    assert out[1:] == ("ambiguous", "AMBIGUOUS", None)
+
+def test_fee_uses_exit_notional_when_known():
+    assert abs(backtest._fee_r(100, 98, 0.001, exit_price=103) - 0.1015) < 1e-9
+
+def test_expiry_marks_actual_close_and_charges_actual_exit_fee(monkeypatch):
+    bars = [_b(0, 100, 101, 99, 100), _b(300000, 100, 102, 99, 101)]
+    monkeypatch.setattr(backtest.bt_market, "build_market_at", lambda *a, **k: {"ok": True})
+    monkeypatch.setattr(backtest, "_detect_all_signals", lambda b: ["BOS_BULL"] if len(b) == 1 else [])
+    monkeypatch.setattr(backtest, "make_decision", lambda **k: {
+        "verdict": "LONG", "direction": "long", "entry": {"min": 100, "max": 100},
+        "sl": 98, "tp1": 103, "tp2": 105, "tp3": 108, "rr1": 99})
+    tr = backtest.run_backtest(_make_data(bars), warmup_bars=0,
+                               expiry_bars=1, taker_fee_pct=0.001).trades[0]
+    assert tr.status == "expired" and tr.r_multiple == 0.5
+    assert abs(tr.fee_r - 0.1005) < 1e-9
+
+def test_actual_r_uses_entry_and_exit_not_planned_rr():
+    bars = [_b(0, 100, 101, 99, 100), _b(300000, 100, 104, 99, 103)]
+    out = backtest._simulate_outcome(
+        bars, 0, "LONG", 98, 103, 105, 108, 99, 99, 99, 1, entry=100)
+    assert out[3] == 1.5
+
+def test_all_backtest_summaries_exclude_unknown_outcomes():
+    trades = [_trade("tp1_hit", 1.5)] + [
+        _trade(status, None) for status in ("unfilled", "censored", "ambiguous")]
+    assert backtest._aggregate_stats(trades, 7)["closed"] == 1
+    assert backtest._build_breakdown(trades)["by_signal_type"][0][1] == 1
+    assert backtest._expectancy_by_signal_type(trades)[0][1] == 1
+    assert backtest._expectancy_summary({"win_rate": 100}, trades)["avg_loss"] == 0
+
+def test_legacy_replay_api_still_validates_inferred_entry_fill():
+    bars = [_b(0, 80, 81, 79, 80), _b(300000, 100, 104, 99, 103)]
+    out = backtest._simulate_outcome(bars, 0, "LONG", 78, 103, 105, 108,
+                                     11.5, 12.5, 14, 1)
+    assert out[1] == "unfilled"
+
+def test_gap_through_stop_uses_bar_open_not_fictional_stop_price():
+    bars = [_b(0, 100, 101, 99, 100), _b(300000, 100, 101, 99, 100),
+            _b(600000, 95, 97, 94, 96)]
+    out = backtest._simulate_outcome(bars, 0, "LONG", 98, 103, 105, 108,
+                                     1.5, 2.5, 4, 2, entry=100)
+    assert out[1:] == ("sl_hit", "SL", -2.5)
+
+def test_replay_cannot_claim_exit_across_timestamp_gap():
+    bars = [_b(0, 100, 101, 99, 100), _b(300000, 100, 101, 99, 100),
+            _b(900000, 100, 110, 99, 109)]
+    out = backtest._simulate_outcome(bars, 0, "LONG", 98, 103, 105, 108,
+                                     1.5, 2.5, 4, 3, entry=100,
+                                     as_of=300000, bar_ms=300000)
+    assert out[1:] == ("censored", None, None)
+
+def test_run_backtest_exposes_fill_provenance_even_when_censored(monkeypatch):
+    bars = [_b(0, 100, 101, 99, 100), _b(300000, 100, 101, 99, 100)]
+    monkeypatch.setattr(backtest.bt_market, "build_market_at", lambda *a, **k: {"ok": True})
+    monkeypatch.setattr(backtest, "_detect_all_signals", lambda b: ["BOS_BULL"] if len(b) == 1 else [])
+    monkeypatch.setattr(backtest, "make_decision", lambda **k: {
+        "verdict": "LONG", "direction": "long", "entry": {"min": 100, "max": 100},
+        "sl": 98, "tp1": 103, "tp2": 105, "tp3": 108})
+    result = backtest.run_backtest(_make_data(bars), warmup_bars=0, expiry_bars=20)
+    tr = result.trades[0]
+    assert tr.as_of_ts == tr.fill_ts == 300000
+    assert tr.fill_idx == 1 and tr.filled is True
+    assert tr.status == "censored" and tr.close_ts is None and tr.close_idx is None
+    assert result.signals[0].became_trade is True
+
+def test_invalid_ohlc_never_becomes_realized_outcome():
+    bars = [_b(0, 100, 101, 99, 100), _b(300000, 100, 104, float("nan"), 103)]
+    out = backtest._simulate_outcome(bars, 0, "LONG", 98, 103, 105, 108,
+                                     1.5, 2.5, 4, 1, entry=100)
+    assert out[1:] == ("censored", None, None)

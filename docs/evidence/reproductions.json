@@ -1,0 +1,40 @@
+{
+  "htf_open_time_slice": "4H candle opened at 0 is admitted at 5m despite closing later",
+  "no_entry_fill_check": {
+    "intended_entry": 80,
+    "observed_range": [
+      99,
+      104
+    ],
+    "result": [
+      1,
+      "tp1_hit",
+      "TP1",
+      23.0
+    ]
+  },
+  "furthest_tp_selected": [
+    1,
+    "tp3_hit",
+    "TP3",
+    4.0
+  ],
+  "fabricated_candle_time": {
+    "ts": 1792060316170,
+    "misalignment_ms": 9116170
+  },
+  "api_schema_loss": {
+    "ema_bias": {
+      "1d": null,
+      "1h": null,
+      "4h": null
+    },
+    "open_int": null,
+    "vwap": null
+  },
+  "unauthenticated_webhook_accepted": {
+    "status": "queued",
+    "symbol": "BTCUSDT"
+  },
+  "unapproved_telegram_chat_accepted": true
+}

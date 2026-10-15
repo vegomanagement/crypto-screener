@@ -2,7 +2,85 @@
 
 from datetime import timezone
 
+import pytest
+
 import bt_market
+
+
+@pytest.mark.parametrize("decision_ms", [14_400_000 - 1, 14_400_000, 14_400_000 + 1])
+def test_snapshot_htf_close_boundary_future_mutation_invariant(decision_ms):
+    """Exchange ts is OPEN; unfinished HTF OHLCV must never enter a snapshot."""
+    from copy import deepcopy
+
+    data = {"klines": {
+        "5": [_b(decision_ms - 300_000, 100, 101, 99, 100)],
+        "240": [_b(0, 100, 110, 90, 105),
+                _b(14_400_000, 105, 120, 80, 110)],
+    }}
+    before = bt_market.build_market_at(data, 0)
+    expected = [b for b in data["klines"]["240"]
+                if b["ts"] + 14_400_000 <= decision_ms]
+    assert before["_klines"]["240"] == expected
+    changed = deepcopy(data)
+    for bar in changed["klines"]["240"]:
+        if bar["ts"] + 14_400_000 > decision_ms:
+            bar.update(o=999, h=9999, l=1, c=888, v=99999)
+    assert bt_market.build_market_at(changed, 0) == before
+    assert before["_klines"]["5"][0]["ts"] == decision_ms - 300_000
+
+
+@pytest.mark.parametrize("now_ms,expected_price", [(6 * 3_600_000, None),
+                                                  (8 * 3_600_000, 105)])
+def test_snapshot_rejects_unfinished_primary_even_when_last_bar_present(monkeypatch, now_ms,
+                                                                       expected_price):
+    import bt_data
+    monkeypatch.setattr(bt_data, "_now_ms", lambda: now_ms)
+    data = {"klines": {"240": [_b(0, 100, 110, 90, 100),
+                                     _b(4 * 3_600_000, 100, 110, 90, 105)]}}
+    result = bt_market.build_market_at(data, 1, tf_primary="240")
+    if expected_price is None:
+        assert result == {}
+    else:
+        assert result["price"] == expected_price
+
+
+@pytest.mark.parametrize("tf,interval_ms", [("5", 300_000), ("240", 14_400_000),
+                                           ("D", 86_400_000)])
+def test_primary_close_drives_funding_oi_and_session_clock(tf, interval_ms):
+    from copy import deepcopy
+
+    close_ms = 2 * 86_400_000
+    data = {"klines": {tf: [_b(close_ms - interval_ms, 100, 101, 99, 100)]},
+            "funding": [{"ts": close_ms - interval_ms - 1, "funding": 0.0001},
+                        {"ts": close_ms, "funding": 0.0005},
+                        {"ts": close_ms + 1, "funding": 999}],
+            "oi": [{"ts": close_ms - 86_400_000, "oi": 1000},
+                   {"ts": close_ms, "oi": 1200},
+                   {"ts": close_ms + 1, "oi": 999999}]}
+    market = bt_market.build_market_at(data, 0, tf_primary=tf)
+    assert int(market["ts"].timestamp() * 1000) == close_ms
+    assert market["ts"].hour == 0  # Session/day belongs to the close, not open.
+    assert market["bybit"] == {"funding": 0.0005, "oi_chg": 20.0}
+    changed = deepcopy(data)
+    changed["funding"][-1]["funding"] = -999
+    changed["oi"][-1]["oi"] = -999
+    assert bt_market.build_market_at(changed, 0, tf_primary=tf) == market
+
+
+def test_price_and_oi_holes_use_last_observation_at_or_before_horizon():
+    hour = 3_600_000
+    bars = [_b(h * hour, 100, 200, 90, value)
+            for h, value in [(0, 100), (2, 120), (25, 150), (26, 999)]]
+    # At 25h, the 24h-ago target is 1h: never use the 2h observation.
+    assert bt_market.compute_change_24h(bars, 2) == pytest.approx(50)
+    oi = [{"ts": b["ts"], "oi": b["c"]} for b in bars]
+    assert bt_market.oi_change_at(oi, 25 * hour) == pytest.approx(50)
+    assert bt_market.compute_change_24h(bars, -1) == 0
+
+
+def test_unknown_primary_tf_rejected_even_without_matching_data():
+    with pytest.raises(ValueError, match="Unsupported timeframe"):
+        bt_market.build_market_at({"klines": {}}, 0, tf_primary="7")
 
 
 def _b(ts, o, h, lo, c, v=100.0):
@@ -151,10 +229,22 @@ def test_change_24h_zero_when_too_short():
 
 def test_change_24h_correct_for_rally():
     """288 5m-баров (24ч), цена выросла с 100 до 110 → +10%."""
-    klines = [_b(i, 100, 100.5, 99.5, 100) for i in range(288)]
-    klines.append(_b(288, 110, 110.5, 109.5, 110))
+    # Millisecond OPEN timestamps, not ordinal bar numbers.
+    klines = [_b(i * 300_000, 100, 100.5, 99.5, 100) for i in range(288)]
+    klines.append(_b(288 * 300_000, 110, 110.5, 109.5, 110))
     chg = bt_market.compute_change_24h(klines, 288)
     assert abs(chg - 10.0) < 1e-6
+
+
+@pytest.mark.parametrize("tf,step,count", [("240", 14_400_000, 7), ("D", 86_400_000, 2)])
+def test_change_24h_uses_elapsed_time_for_primary_tf(tf, step, count):
+    bars = [_b(i * step, 100, 120, 90, 100 + i * 10)
+            for i in range(count)]
+    expected = (bars[-1]["c"] - 100) / 100 * 100
+    assert bt_market.compute_change_24h(bars, count - 1) == pytest.approx(expected)
+    market = bt_market.build_market_at({"klines": {tf: bars}}, count - 1,
+                                       tf_primary=tf)
+    assert market["change_24h"] == pytest.approx(expected)
 
 
 # ─── Pivots ────────────────────────────────────────────────────────────────
@@ -205,6 +295,19 @@ def test_oi_change_at_computes_24h_change():
     # past = hist[0].oi = 1000, cur = hist[24].oi = 1240 → +24%
     chg = bt_market.oi_change_at(hist, 24 * 3600_000, lookback_hours=24)
     assert abs(chg - 24.0) < 1e-6
+
+
+@pytest.mark.parametrize("hours", [[0, 4, 8, 12, 16, 20, 24],
+                                    [0, 1, 3, 7, 18, 23, 24],
+                                    list(range(49))])
+def test_oi_change_uses_time_not_number_of_observations(hours):
+    hour_ms = 3_600_000
+    # Last case has half-hour sampling; all histories span 24h.
+    scale = hour_ms // 2 if len(hours) == 49 else hour_ms
+    hist = [{"ts": h * scale, "oi": 1000 + h * scale / hour_ms * 10}
+            for h in hours]
+    hist.append({"ts": 24 * hour_ms + 1, "oi": 999999})
+    assert bt_market.oi_change_at(hist, 24 * hour_ms) == pytest.approx(24)
 
 
 # ─── build_market_at: интеграция ──────────────────────────────────────────
@@ -261,6 +364,18 @@ def test_build_market_at_klines_sliced_correctly():
     assert len(m["_klines"]["5"]) == 51   # 0..50 inclusive
     cur_ts = data["klines"]["5"][50]["ts"]
     assert all(k["ts"] <= cur_ts for k in m["_klines"]["5"])
+
+
+def test_pivots_use_latest_closed_daily_not_two_days_ago():
+    data = {"klines": {
+        "5": [_b(2 * 86_400_000 - 300_000, 100, 101, 99, 100)],
+        "D": [_b(0, 100, 110, 90, 100),
+              _b(86_400_000, 100, 120, 80, 105),
+              _b(2 * 86_400_000, 105, 999, 1, 900)],
+    }}
+    market = bt_market.build_market_at(data, 0)
+    assert market["pivots"]["PDH"] == 120
+    assert market["pivots"]["PDL"] == 80
 
 
 def test_build_market_at_pivots_computed_when_daily_present():

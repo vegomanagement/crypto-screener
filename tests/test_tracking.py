@@ -62,6 +62,17 @@ def _bar(o, h, low, c, v=100):
     return {"o": o, "h": h, "l": low, "c": c, "v": v}
 
 
+def _history(conn, bars):
+    """Real bar-open fixtures; explicitly move signal before closed history."""
+    now = datetime.now(timezone.utc)
+    end = now.replace(minute=now.minute // 5 * 5, second=0, microsecond=0)
+    start = end - timedelta(minutes=5 * len(bars))
+    conn.execute("UPDATE signal_outcomes SET entry_ts=?, decision_json='{}'",
+                 (start.strftime("%Y-%m-%d %H:%M"),))
+    return [dict(b, ts=int((start + timedelta(minutes=5 * i)).timestamp() * 1000))
+            for i, b in enumerate(bars)]
+
+
 # ─── Schema migration ────────────────────────────────────────────────────
 
 
@@ -130,6 +141,7 @@ def test_long_tp1_hit(conn):
                         "BTCUSDT", "BOS_BULL")
     # Bar with high reaching TP1 (103) but not breaching SL (98)
     bars = [_bar(100, 103.5, 99.5, 102.5)]
+    bars = _history(conn, bars)
     stats = tracking.check_open_trades(conn, fetch_klines=lambda *_: bars)
     assert stats["closed"] == 1
 
@@ -139,16 +151,17 @@ def test_long_tp1_hit(conn):
     assert row == ("tp1_hit", "TP1", 1.5)
 
 
-def test_long_tp3_takes_priority_over_tp1_in_same_bar(conn):
+def test_long_full_tp1_exit_even_if_bar_reaches_tp3(conn):
     tracking.open_trade(conn, 1, _decision(verdict="LONG"),
                         "BTCUSDT", "BOS_BULL")
-    # Bar reaches all three TPs simultaneously — выбираем самый дальний
+    # Explicit policy: full exit at TP1 even when all three targets trade.
     bars = [_bar(100, 110, 99.5, 109)]
+    bars = _history(conn, bars)
     tracking.check_open_trades(conn, fetch_klines=lambda *_: bars)
     row = conn.execute(
         "SELECT status, hit_level, r_multiple FROM signal_outcomes"
     ).fetchone()
-    assert row == ("tp3_hit", "TP3", 4.0)
+    assert row == ("tp1_hit", "TP1", 1.5)
 
 
 def test_long_sl_hit(conn):
@@ -156,6 +169,7 @@ def test_long_sl_hit(conn):
                         "BTCUSDT", "BOS_BULL")
     # Bar breaching SL with low (price drop)
     bars = [_bar(100, 101, 97, 97.5)]
+    bars = _history(conn, bars)
     tracking.check_open_trades(conn, fetch_klines=lambda *_: bars)
     row = conn.execute(
         "SELECT status, hit_level, r_multiple FROM signal_outcomes"
@@ -165,19 +179,20 @@ def test_long_sl_hit(conn):
 
 def test_long_same_bar_sl_and_tp_is_tie(conn):
     """
-    P4-фикс: same-bar SL+TP считаем ничьей (0R), а не -1R. По умолчанию
-    SAME_BAR_TIE_BREAK='fair'. Старое conservative покрывается отдельным
-    тестом ниже.
+    Conservative semantic policy: SL+TP order is unknown, R=None.
+    The legacy 'fair' option no longer invents a flat trade. An explicitly
+    pessimistic SL-first option is separately covered below.
     """
     tracking.open_trade(conn, 1, _decision(verdict="LONG"),
                         "BTCUSDT", "BOS_BULL")
     # Bar simultaneously sweeps SL and TP3
     bars = [_bar(100, 110, 97, 105)]
+    bars = _history(conn, bars)
     tracking.check_open_trades(conn, fetch_klines=lambda *_: bars)
     row = conn.execute(
         "SELECT status, hit_level, r_multiple FROM signal_outcomes"
     ).fetchone()
-    assert row == ("tie_hit", "TIE", 0.0)
+    assert row == ("ambiguous", "AMBIGUOUS", None)
 
 
 def test_long_same_bar_conservative_mode_returns_sl(monkeypatch):
@@ -185,22 +200,24 @@ def test_long_same_bar_conservative_mode_returns_sl(monkeypatch):
     monkeypatch.setattr(tracking, "SAME_BAR_TIE_BREAK", "conservative")
     # Прямо тестируем _detect_hit, чтобы не возиться с conn fixture повторно
     bars = [_bar(100, 110, 97, 105)]
+    bars = [dict(b, ts=1767225600000) for b in bars]
     hit = tracking._detect_hit(bars, "LONG", 98.0, 103.0, 105.0, 108.0,
-                               1.5, 2.5, 4.0, "2026-01-01 00:00")
+                               1.5, 2.5, 4.0, "2026-01-01 00:00", entry=100)
     assert hit == ("SL", -1.0)
 
 
 def test_short_same_bar_sl_and_tp_is_tie(conn):
-    """Симметрично для SHORT: tie вместо -1R."""
+    """SHORT: same-bar SL/TP is ambiguous, not an observed zero-R tie."""
     d = _decision(verdict="SHORT", sl=102.0, tp1=97.0, tp2=95.0, tp3=92.0)
     tracking.open_trade(conn, 1, d, "BTCUSDT", "BOS_BEAR")
     # high пробивает SL (102), low — TP3 (92) в одной свече
     bars = [_bar(100, 103, 91, 95)]
+    bars = _history(conn, bars)
     tracking.check_open_trades(conn, fetch_klines=lambda *_: bars)
     row = conn.execute(
         "SELECT status, hit_level, r_multiple FROM signal_outcomes"
     ).fetchone()
-    assert row == ("tie_hit", "TIE", 0.0)
+    assert row == ("ambiguous", "AMBIGUOUS", None)
 
 
 def test_short_tp1_hit(conn):
@@ -209,6 +226,7 @@ def test_short_tp1_hit(conn):
     tracking.open_trade(conn, 1, d, "BTCUSDT", "BOS_BEAR")
     # Bar reaches TP1 (96.5 <= 97) without breaching SL (102)
     bars = [_bar(100, 100.5, 96.5, 97.0)]
+    bars = _history(conn, bars)
     tracking.check_open_trades(conn, fetch_klines=lambda *_: bars)
     row = conn.execute(
         "SELECT status, hit_level, r_multiple FROM signal_outcomes"
@@ -220,6 +238,7 @@ def test_short_sl_hit(conn):
     d = _decision(verdict="SHORT", sl=102.0, tp1=97.0, tp2=95.0, tp3=92.0)
     tracking.open_trade(conn, 1, d, "BTCUSDT", "BOS_BEAR")
     bars = [_bar(100, 103, 99.5, 102.5)]
+    bars = _history(conn, bars)
     tracking.check_open_trades(conn, fetch_klines=lambda *_: bars)
     row = conn.execute(
         "SELECT status, hit_level, r_multiple FROM signal_outcomes"
@@ -231,6 +250,7 @@ def test_trade_still_open_when_nothing_touched(conn):
     tracking.open_trade(conn, 1, _decision(), "BTCUSDT", "BOS_BULL")
     bars = [_bar(100, 100.8, 99.5, 100.2),
             _bar(100.2, 101.0, 99.8, 100.5)]
+    bars = _history(conn, bars)
     stats = tracking.check_open_trades(conn, fetch_klines=lambda *_: bars)
     assert stats["closed"] == 0
     status = conn.execute(
@@ -246,14 +266,15 @@ def test_first_bar_with_hit_wins(conn):
         _bar(100, 103.5, 99.6, 103),    # TP1 hit
         _bar(103, 103, 97, 97.5),       # потом якобы SL — игнор
     ]
+    bars = _history(conn, bars)
     tracking.check_open_trades(conn, fetch_klines=lambda *_: bars)
     row = conn.execute(
         "SELECT hit_level FROM signal_outcomes").fetchone()
     assert row[0] == "TP1"
 
 
-def test_expired_trade_closes_with_zero_r(conn):
-    """Trade с истёкшим expires_at → status=expired, r_multiple=0."""
+def test_expired_trade_without_observable_history_is_censored(conn):
+    """Expired deadline with unknown history cannot imply a flat trade."""
     tracking.open_trade(conn, 1, _decision(), "BTCUSDT", "BOS_BULL")
     # Вручную выставляем expires_at в прошлое
     past = (datetime.now(timezone.utc) - timedelta(hours=1)).strftime(
@@ -265,7 +286,7 @@ def test_expired_trade_closes_with_zero_r(conn):
     assert stats["closed"] == 1
     row = conn.execute(
         "SELECT status, r_multiple FROM signal_outcomes").fetchone()
-    assert row == ("expired", 0.0)
+    assert row == ("censored", None)
 
 
 def test_skipped_trades_not_checked(conn):
@@ -760,3 +781,140 @@ def test_format_trades_message_renders_rows(conn):
     assert "-1.00R" in msg
     assert "c72" in msg and "c65" in msg
 
+def test_timestamp_less_history_cannot_award_a_win():
+    assert tracking._detect_hit([_bar(100, 110, 99, 109)], "LONG",
+                               98, 103, 105, 108, 1.5, 2.5, 4,
+                               "2026-01-01 00:00") is None
+
+def test_preentry_and_straddling_bars_are_not_execution_evidence():
+    start = int(datetime(2026, 1, 1, 0, 2, tzinfo=timezone.utc).timestamp() * 1000)
+    bars = [dict(_bar(100, 110, 97, 109), ts=start - 120000),
+            dict(_bar(100, 101, 99, 100), ts=start + 180000)]
+    assert tracking._detect_hit(bars, "LONG", 98, 103, 105, 108,
+                               1.5, 2.5, 4, "2026-01-01 00:02") is None
+
+def test_timestamped_tracking_requires_midpoint_fill():
+    ts = int(datetime(2026, 1, 1, tzinfo=timezone.utc).timestamp() * 1000)
+    bars = [dict(_bar(100, 110, 99, 109), ts=ts)]
+    assert tracking._detect_hit(bars, "LONG", 78, 103, 105, 108,
+                               11.5, 12.5, 14, "2026-01-01 00:00", entry=80) is None
+
+def test_expiry_is_checked_after_timestamped_backfill(conn):
+    oid = tracking.open_trade(conn, 1, _decision(), "BTCUSDT", "BOS_BULL")
+    now = datetime.now(timezone.utc)
+    start = now.replace(minute=now.minute // 5 * 5, second=0, microsecond=0) - timedelta(hours=2)
+    expiry = start + timedelta(minutes=10)
+    conn.execute("UPDATE signal_outcomes SET entry_ts=?, expires_at=? WHERE id=?",
+                 (start.strftime("%Y-%m-%d %H:%M"), expiry.strftime("%Y-%m-%d %H:%M"), oid))
+    bars = [dict(_bar(100, 104, 99, 103), ts=int(start.timestamp() * 1000))]
+    tracking.check_open_trades(conn, lambda *_: bars)
+    assert conn.execute("SELECT status FROM signal_outcomes").fetchone()[0] == "tp1_hit"
+
+def test_worker_passes_entry_to_fill_validation(conn):
+    oid = tracking.open_trade(conn, 1, _decision(entry={"min": 79, "max": 81}, sl=78),
+                              "BTCUSDT", "BOS_BULL")
+    start = datetime.now(timezone.utc).replace(second=0, microsecond=0) - timedelta(minutes=10)
+    conn.execute("UPDATE signal_outcomes SET entry_ts=? WHERE id=?",
+                 (start.strftime("%Y-%m-%d %H:%M"), oid))
+    bars = [dict(_bar(100, 110, 99, 109), ts=int(start.timestamp() * 1000))]
+    tracking.check_open_trades(conn, lambda *_: bars)
+    assert conn.execute("SELECT status FROM signal_outcomes").fetchone()[0] == "open"
+
+def test_expired_unknown_history_is_censored_not_zero_r(conn):
+    oid = tracking.open_trade(conn, 1, _decision(), "BTCUSDT", "BOS_BULL")
+    past = datetime.now(timezone.utc) - timedelta(hours=1)
+    conn.execute("UPDATE signal_outcomes SET expires_at=? WHERE id=?",
+                 (past.strftime("%Y-%m-%d %H:%M"), oid))
+    tracking.check_open_trades(conn, lambda *_: [_bar(100, 101, 99, 100)])
+    assert conn.execute("SELECT status, r_multiple FROM signal_outcomes").fetchone() == ("censored", None)
+
+def test_worker_ignores_bars_after_expiry(conn):
+    oid = tracking.open_trade(conn, 1, _decision(), "BTCUSDT", "BOS_BULL")
+    now = datetime.now(timezone.utc)
+    start = now.replace(minute=now.minute // 5 * 5, second=0, microsecond=0) - timedelta(hours=2)
+    exp = start + timedelta(minutes=5)
+    conn.execute("UPDATE signal_outcomes SET entry_ts=?, expires_at=? WHERE id=?",
+                 (start.strftime("%Y-%m-%d %H:%M"), exp.strftime("%Y-%m-%d %H:%M"), oid))
+    bars = [dict(_bar(100, 101, 99, 100), ts=int(start.timestamp() * 1000)),
+            dict(_bar(100, 110, 99, 109), ts=int(exp.timestamp() * 1000))]
+    tracking.check_open_trades(conn, lambda *_: bars)
+    assert conn.execute("SELECT status, r_multiple FROM signal_outcomes").fetchone() == ("expired", 0.0)
+
+def test_missing_initial_history_cannot_award_later_tp(conn):
+    oid = tracking.open_trade(conn, 1, _decision(), "BTCUSDT", "BOS_BULL")
+    now = datetime.now(timezone.utc)
+    start = now.replace(minute=now.minute // 5 * 5, second=0, microsecond=0) - timedelta(hours=2)
+    conn.execute("UPDATE signal_outcomes SET entry_ts=? WHERE id=?",
+                 (start.strftime("%Y-%m-%d %H:%M"), oid))
+    bars = [dict(_bar(100, 110, 99, 109), ts=int((start + timedelta(hours=1)).timestamp() * 1000))]
+    tracking.check_open_trades(conn, lambda *_: bars)
+    assert conn.execute("SELECT status FROM signal_outcomes").fetchone()[0] != "tp1_hit"
+
+def test_open_trade_keeps_precise_asof_without_schema_change(conn):
+    before = datetime.now(timezone.utc)
+    decision = _decision()
+    oid = tracking.open_trade(conn, 1, decision, "BTCUSDT", "BOS_BULL")
+    payload = json.loads(conn.execute("SELECT decision_json FROM signal_outcomes WHERE id=?", (oid,)).fetchone()[0])
+    precise = datetime.fromisoformat(payload["_execution"]["as_of"])
+    assert before <= precise <= datetime.now(timezone.utc)
+    assert "_execution" not in decision
+
+def test_worker_does_not_use_signal_minute_extrema(conn, monkeypatch):
+    asof = datetime(2026, 10, 15, 12, 0, 30, tzinfo=timezone.utc)
+    class Clock(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return asof
+    monkeypatch.setattr(tracking, "datetime", Clock)
+    oid = tracking.open_trade(conn, 1, _decision(), "BTCUSDT", "BOS_BULL")
+    asof += timedelta(minutes=10)
+    bars = [dict(_bar(100, 110, 99, 109), ts=int((asof - timedelta(minutes=10, seconds=30)).timestamp() * 1000)),
+            dict(_bar(100, 101, 99, 100), ts=int((asof - timedelta(minutes=5, seconds=30)).timestamp() * 1000))]
+    tracking.check_open_trades(conn, lambda *_: bars)
+    assert conn.execute("SELECT status FROM signal_outcomes WHERE id=?", (oid,)).fetchone()[0] == "open"
+
+def test_live_stats_exclude_censored_unfilled_and_ambiguous(conn):
+    _seed_closed_trade(conn, signal_type="X", status="tp1_hit", r_multiple=1.5)
+    for status in ("censored", "unfilled", "ambiguous"):
+        _seed_closed_trade(conn, signal_type="X", status=status, r_multiple=None)
+    s = tracking.compute_stats(conn)
+    assert s["closed"] == 1 and s["win_rate"] == 100
+    assert s["censored"] == s["unfilled"] == s["ambiguous"] == 1
+
+def test_direct_hit_api_does_not_claim_exit_across_missing_bars():
+    start = int(datetime(2026, 1, 1, tzinfo=timezone.utc).timestamp() * 1000)
+    bars = [dict(_bar(100, 101, 99, 100), ts=start),
+            dict(_bar(100, 104, 99, 103), ts=start + 600000)]
+    assert tracking._detect_hit(bars, "LONG", 98, 103, 105, 108,
+                               1.5, 2.5, 4, "2026-01-01 00:00", entry=100) is None
+
+def test_expired_empty_backfill_becomes_censored(conn):
+    oid = tracking.open_trade(conn, 1, _decision(), "BTCUSDT", "BOS_BULL")
+    past = datetime.now(timezone.utc) - timedelta(hours=1)
+    conn.execute("UPDATE signal_outcomes SET expires_at=? WHERE id=?",
+                 (past.strftime("%Y-%m-%d %H:%M"), oid))
+    tracking.check_open_trades(conn, lambda *_: [])
+    assert conn.execute("SELECT status, r_multiple FROM signal_outcomes").fetchone() == ("censored", None)
+
+def test_worker_persists_observed_fill_state_without_schema_change(conn):
+    tracking.open_trade(conn, 1, _decision(), "BTCUSDT", "BOS_BULL")
+    bars = _history(conn, [_bar(100, 101, 99, 100)])
+    tracking.check_open_trades(conn, lambda *_: bars)
+    payload = json.loads(conn.execute("SELECT decision_json FROM signal_outcomes").fetchone()[0])
+    assert payload["_execution"]["filled"] is True
+    assert payload["_execution"]["fill_ts"] == bars[0]["ts"]
+    assert payload["_execution"]["exit_policy"] == "full_tp1"
+
+def test_unknown_outcomes_are_not_formatted_as_zero_r(conn):
+    _seed_closed_trade(conn, signal_type="A", status="censored", r_multiple=None)
+    text = tracking.format_trades_message(tracking.recent_trades(conn), 7)
+    assert "+0.00R" not in text and "N/A" in text
+    stats = tracking.format_stats_message(tracking.compute_stats(conn))
+    assert "censored" in stats and "1" in stats
+
+def test_hit_asof_respects_explicit_timezone_offset():
+    ts = int(datetime(2026, 1, 1, tzinfo=timezone.utc).timestamp() * 1000)
+    bars = [dict(_bar(100, 104, 99, 103), ts=ts)]
+    assert tracking._detect_hit(bars, "LONG", 98, 103, 105, 108,
+                               1.5, 2.5, 4, "2026-01-01T03:00:00+03:00",
+                               entry=100) == ("TP1", 1.5)
