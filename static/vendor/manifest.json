@@ -1,0 +1,24 @@
+{
+  "package": "lightweight-charts",
+  "version": "4.1.3",
+  "files": [
+    {
+      "file": "lightweight-charts.standalone.production.js",
+      "url": "https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js",
+      "sha256": "0c146b9bfbc6e5f19da1a0de876dae43023c332d5157d82f7575f9b7653ee519",
+      "bytes": 160943
+    },
+    {
+      "file": "lightweight-charts.LICENSE",
+      "url": "https://raw.githubusercontent.com/tradingview/lightweight-charts/v4.1.3/LICENSE",
+      "sha256": "70c9d5382506dd184465425c08a99ad9bd6d9ac1313c252968ba0b585e5ef823",
+      "bytes": 11347
+    },
+    {
+      "file": "lightweight-charts.NOTICE",
+      "url": "https://raw.githubusercontent.com/tradingview/lightweight-charts/v4.1.3/NOTICE",
+      "sha256": "a6e5f48204b03e2acd95e8ad98715d5cdeb3679bff4b73d62714859dd4f95984",
+      "bytes": 101
+    }
+  ]
+}

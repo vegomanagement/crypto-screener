@@ -19,7 +19,7 @@ import requests
 import anthropic
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone, timedelta
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from market_candles import closed_candles, interval_ms
 
 from decision import make_decision, format_decision_header
@@ -4093,8 +4093,43 @@ document.addEventListener("keydown", (ev) => {
 
 @app.route("/ui", methods=["GET"])
 def ui_chart():
-    """Главная UI-страница: chart viewer с indicators."""
+    """Multi-chart research workspace; does not invoke notification workers."""
+    return render_template("workspace.html")
+
+
+@app.route("/ui/legacy", methods=["GET"])
+def ui_chart_legacy():
+    """Previous single-chart viewer retained for compatibility."""
     return UI_CHART_HTML, 200, {"Content-Type": "text/html; charset=utf-8"}
+
+
+@app.route("/api/chart/intervals", methods=["GET"])
+def api_chart_intervals():
+    from chart_data import list_chart_intervals
+    return jsonify({"intervals": list_chart_intervals()})
+
+
+@app.route("/api/chart", methods=["GET"])
+def api_chart_snapshot():
+    """One read-only snapshot supplies both chart bars and timestamped zones."""
+    from chart_data import build_chart_snapshot, list_chart_intervals
+    symbol = (request.args.get("symbol") or "BTCUSDT").upper().strip()
+    interval = (request.args.get("interval") or "240").strip()
+    supported = {i["value"] for i in list_chart_intervals() if i["available"]}
+    if (not re.fullmatch(r"[A-Z0-9]{2,26}USDT", symbol)
+            or interval not in supported):
+        return jsonify({"error": "unsupported symbol or interval"}), 400
+    try:
+        limit = max(10, min(500, int(request.args.get("limit", "300"))))
+    except ValueError:
+        return jsonify({"error": "invalid limit"}), 400
+    try:
+        snapshot = build_chart_snapshot(symbol, interval, limit, _klines)
+        return jsonify(snapshot), 200
+    except Exception as exc:
+        log.warning("Chart snapshot unavailable for %s %s: %s", symbol, interval, exc)
+        return jsonify({"error": "Market data unavailable or incomplete", "symbol": symbol,
+                        "interval": interval}), 502
 
 
 @app.route("/api/symbols", methods=["GET"])

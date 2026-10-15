@@ -1,0 +1,20 @@
+[
+  {
+    "interval": "2D",
+    "bars": 300,
+    "zones": 11,
+    "painted_pixels": 77487
+  },
+  {
+    "interval": "3D",
+    "bars": 300,
+    "zones": 8,
+    "painted_pixels": 56233
+  },
+  {
+    "interval": "M",
+    "bars": 32,
+    "zones": 2,
+    "painted_pixels": 5809
+  }
+]
