@@ -1,6 +1,33 @@
 """Тесты bt_walkforward.py — walk-forward analysis."""
 
+import pytest
+
 import bt_walkforward
+
+
+@pytest.mark.parametrize("start,end", [(-1, 5), (3, 2), (0, -1)])
+def test_invalid_window_bounds_never_select_future_or_negative_indices(start, end):
+    sliced = bt_walkforward.slice_data_window(_flat_data(10), start, end)
+    assert sliced["klines"] == {}
+    assert sliced["funding"] == []
+    assert sliced["oi"] == []
+
+
+@pytest.mark.parametrize("now_ms,expected_count", [(3 * 3_600_000, 0),
+                                                   (6 * 3_600_000, 1),
+                                                   (8 * 3_600_000, 2)])
+def test_window_does_not_admit_unfinished_primary(monkeypatch, now_ms, expected_count):
+    import bt_data
+    monkeypatch.setattr(bt_data, "_now_ms", lambda: now_ms)
+    data = {"klines": {"240": [_b(h * 3_600_000, 100, 101, 99, 100)
+                                     for h in (0, 4)]}}
+    sliced = bt_walkforward.slice_data_window(data, 0, 1, tf_primary="240")
+    assert len(sliced["klines"].get("240", [])) == expected_count
+
+
+def test_window_rejects_unknown_primary_tf_even_when_empty():
+    with pytest.raises(ValueError, match="Unsupported timeframe"):
+        bt_walkforward.slice_data_window({"klines": {}}, 0, 1, tf_primary="7")
 
 
 def _b(ts, o, h, lo, c, v=100.0):
@@ -65,14 +92,13 @@ def test_slice_data_window_empty_when_start_too_large():
 def test_slice_data_window_filters_funding_by_ts():
     data = _flat_data(n_bars=100)
     primary = data["klines"]["5"]
-    # Funding точка ВНЕ окна (раньше start)
+    # Funding before the trade window remains the valid as-of state.
     data["funding"] = [
         {"ts": primary[5]["ts"], "funding": 0.0001},   # вне окна [20, 50]
         {"ts": primary[30]["ts"], "funding": 0.0002},  # внутри
     ]
     sliced = bt_walkforward.slice_data_window(data, 20, 50)
-    assert len(sliced["funding"]) == 1
-    assert sliced["funding"][0]["funding"] == 0.0002
+    assert sliced["funding"] == data["funding"]
 
 
 def test_slice_data_window_multi_tf():
@@ -83,12 +109,53 @@ def test_slice_data_window_multi_tf():
         _b(base_ts + i * 900_000, 100, 100.1, 99.9, 100) for i in range(40)
     ]
     sliced = bt_walkforward.slice_data_window(data, 20, 50)
-    # 15m бары попадают только те, чьи ts в окне [start_ts, end_ts]
+    # Retain historical HTF context, but never bars closing after the window.
     assert "15" in sliced["klines"]
-    start_ts = data["klines"]["5"][20]["ts"]
-    end_ts   = data["klines"]["5"][50]["ts"]
+    end_ts = data["klines"]["5"][50]["ts"] + 300_000
     for k in sliced["klines"]["15"]:
-        assert start_ts <= k["ts"] <= end_ts
+        assert k["ts"] + 900_000 <= end_ts
+
+
+def test_slice_window_uses_primary_close_and_excludes_unfinished_htf():
+    data = {"klines": {
+        "5": [_b(0, 100, 101, 99, 100), _b(300_000, 100, 101, 99, 100)],
+        "15": [_b(0, 100, 120, 90, 110)],
+    }, "funding": [{"ts": 600_000, "funding": 0.001},
+                    {"ts": 600_001, "funding": 999}],
+       "oi": [{"ts": 600_000, "oi": 100}, {"ts": 600_001, "oi": 999}]}
+    sliced = bt_walkforward.slice_data_window(data, 0, 1)
+    assert sliced["klines"]["5"] == data["klines"]["5"]
+    assert sliced["klines"]["15"] == []
+    assert sliced["funding"] == data["funding"][:1]
+    assert sliced["oi"] == data["oi"][:1]
+
+
+def test_window_preserves_asof_context_without_admitting_future():
+    from copy import deepcopy
+
+    import bt_market
+
+    day = 86_400_000
+    data = {"klines": {
+        "5": [_b(day, 100, 101, 99, 100), _b(day + 300_000, 100, 101, 99, 100)],
+        "D": [_b(0, 100, 120, 90, 105), _b(day, 105, 999, 1, 900)],
+    }, "funding": [{"ts": day - 1, "funding": 0.001},
+                    {"ts": day + 600_001, "funding": 999}],
+       "oi": [{"ts": 600_000, "oi": 1000}, {"ts": day + 600_000, "oi": 1200},
+              {"ts": day + 600_001, "oi": 999999}]}
+    sliced = bt_walkforward.slice_data_window(data, 1, 1)
+    expected = bt_market.build_market_at(data, 1)
+    actual = bt_market.build_market_at(sliced, 0)
+    assert actual["bybit"] == expected["bybit"]
+    assert actual["pivots"] == expected["pivots"]
+    assert actual["_klines"]["D"] == expected["_klines"]["D"]
+    changed = deepcopy(data)
+    changed["klines"]["D"][-1]["c"] = -9999
+    changed["funding"][-1]["funding"] = -9999
+    changed["oi"][-1]["oi"] = -9999
+    # build_market_at lazily adds a timestamp index; it is not source data.
+    assert bt_walkforward.slice_data_window(changed, 1, 1) == {
+        k: v for k, v in sliced.items() if k != bt_market._TS_CACHE_KEY}
 
 
 # ─── walk_forward (stability mode) ─────────────────────────────────────────

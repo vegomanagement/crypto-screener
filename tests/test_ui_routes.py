@@ -92,8 +92,9 @@ def test_api_klines_success_with_mocked_data():
     """Мокаем _klines и проверяем что JSON собирается корректно."""
     c = _client()
     fake_rows = [
-        {"o": 100, "h": 101, "l": 99, "c": 100.5, "v": 12.0}
-        for _ in range(10)
+        {"ts": i * 3600000, "close_ts": (i + 1) * 3600000, "source": "bybit",
+         "o": 100, "h": 101, "l": 99, "c": 100.5, "v": 12.0}
+        for i in range(10)
     ]
     with patch.object(screener, "_klines", return_value=fake_rows):
         r = c.get("/api/klines?symbol=BTCUSDT&interval=60&limit=10")
@@ -127,7 +128,8 @@ def test_api_klines_clamps_limit():
 def test_api_klines_default_interval_60():
     """Если interval не указан — должен быть 60 (1h)."""
     c = _client()
-    fake_rows = [{"o": 100, "h": 101, "l": 99, "c": 100, "v": 0}]
+    fake_rows = [{"ts": 0, "close_ts": 3600000, "source": "bybit",
+                  "o": 100, "h": 101, "l": 99, "c": 100, "v": 0}]
     with patch.object(screener, "_klines", return_value=fake_rows):
         r = c.get("/api/klines?symbol=BTCUSDT")
     data = r.get_json()
@@ -496,7 +498,8 @@ def test_ui_has_kbd_styling():
 def test_api_klines_uppercases_symbol():
     """btcusdt → BTCUSDT."""
     c = _client()
-    fake_rows = [{"o": 100, "h": 101, "l": 99, "c": 100, "v": 0}]
+    fake_rows = [{"ts": 0, "close_ts": 3600000, "source": "bybit",
+                  "o": 100, "h": 101, "l": 99, "c": 100, "v": 0}]
     with patch.object(screener, "_klines", return_value=fake_rows):
         r = c.get("/api/klines?symbol=btcusdt&interval=60")
     data = r.get_json()

@@ -25,6 +25,7 @@ import json
 import sys
 import time
 from datetime import datetime, timezone
+from itertools import pairwise
 from pathlib import Path
 from typing import Callable
 
@@ -84,7 +85,10 @@ def tf_to_bybit_interval(tf: str) -> str:
         "1D": "D",  "1W": "W",   "1M": "M",
         "5M": "5",  "15M": "15", "30M": "30",
     }
-    return aliases.get(s, s)
+    iv = aliases.get(s, s)
+    if iv not in _BINANCE_INTERVAL_MAP:
+        raise ValueError(f"Unsupported timeframe: {tf!r}")
+    return iv
 
 
 def tf_to_minutes(tf: str) -> int:
@@ -95,7 +99,7 @@ def tf_to_minutes(tf: str) -> int:
     if iv == "W":
         return 7 * 1440
     if iv == "M":
-        return 30 * 1440
+        raise ValueError("Monthly timeframe is calendar-based, not a fixed duration")
     return int(iv)
 
 
@@ -134,6 +138,16 @@ def _write_cache(path: Path, rows: list[dict]) -> None:
             f.write(json.dumps(r) + "\n")
 
 
+def _event_cache_covers(rows: list[dict], start_ms: int, end_ms: int,
+                        cadence_ms: int) -> bool:
+    """Conservative cache-only coverage check; never fill missing observations."""
+    window = [r for r in rows if start_ms <= r["ts"] <= end_ms]
+    return bool(window and window[0]["ts"] < start_ms + cadence_ms
+                and window[-1]["ts"] >= end_ms - cadence_ms
+                and all(0 < b["ts"] - a["ts"] <= cadence_ms
+                        for a, b in pairwise(window)))
+
+
 def _request_with_retry(
     url: str,
     params: dict,
@@ -168,6 +182,7 @@ def _parse_kline_row(row: list) -> dict:
     """
     return {
         "ts":  int(row[0]),
+        "source": "bybit",
         "o":   float(row[1]),
         "h":   float(row[2]),
         "l":   float(row[3]),
@@ -219,6 +234,7 @@ def _parse_binance_kline_row(row: list) -> dict:
     """
     return {
         "ts": int(row[0]),
+        "source": "binance",
         "o":  float(row[1]),
         "h":  float(row[2]),
         "l":  float(row[3]),
@@ -286,6 +302,7 @@ def _parse_hl_kline_row(row: dict) -> dict:
     """
     return {
         "ts": int(row["t"]),
+        "source": "hyperliquid",
         "o":  float(row["o"]),
         "h":  float(row["h"]),
         "l":  float(row["l"]),
@@ -396,16 +413,25 @@ def fetch_klines(
     """
     Klines за последние `days` дней. Bybit → Binance Futures fallback.
     Кеш: bt_cache/{symbol}_klines_{tf}.jsonl. Cache учитывает диапазон.
-    Возвращает list[dict] oldest→newest.
+    Returns oldest→newest CLOSED bars (open ts + TF duration <= now).
+    Exchange open timestamps and venue source are preserved.
     """
+    interval_ms = tf_to_minutes(tf) * 60_000
     path = _cache_path(symbol, "klines", tf)
-    start_ms = _ago_ms(days)
-    end_ms   = _now_ms()
+    end_ms = _now_ms()
+    start_ms = end_ms - days * 86_400_000
 
     if cache and path.exists():
         cached = _read_cache(path)
-        if cached and cached[0]["ts"] <= start_ms:
-            return [k for k in cached if start_ms <= k["ts"] <= end_ms]
+        closed = [k for k in cached
+                  if start_ms <= k["ts"] and k["ts"] + interval_ms <= end_ms]
+        # A covering head alone says nothing about freshness or holes. Check
+        # the requested closed range, including its last fully closed bar.
+        if (closed and closed[0]["ts"] < start_ms + interval_ms
+                and closed[-1]["ts"] + 2 * interval_ms > end_ms
+                and all(b["ts"] - a["ts"] == interval_ms
+                        for a, b in pairwise(closed))):
+            return closed
 
     # 1) Try Bybit (prod-primary)
     out: list[dict] = []
@@ -456,6 +482,8 @@ def fetch_klines(
     seen: set[int] = set()
     deduped: list[dict] = []
     for r in out:
+        if not (start_ms <= r["ts"] and r["ts"] + interval_ms <= end_ms):
+            continue
         if r["ts"] in seen:
             continue
         seen.add(r["ts"])
@@ -497,16 +525,18 @@ def fetch_funding(
 
     if cache and path.exists():
         cached = _read_cache(path)
-        if cached and cached[0]["ts"] <= start_ms:
+        # Funding cadence can be shorter than 8h; do not assume a fixed
+        # observation count, but reject holes/tails exceeding this upper bound.
+        if _event_cache_covers(cached, start_ms, end_ms, 8 * 3_600_000):
             return [f for f in cached if start_ms <= f["ts"] <= end_ms]
 
     out: list[dict] = []
-    cur_end = end_ms
+    cur_end = end_ms + 1  # Event timestamps at exactly as-of are observable.
 
     while cur_end > start_ms:
         params = {
             "category": category, "symbol": symbol,
-            "startTime": start_ms, "endTime": cur_end,
+            "startTime": start_ms, "endTime": min(cur_end, end_ms),
             "limit": FUNDING_MAX_LIMIT,
         }
         data = _request_with_retry(
@@ -568,12 +598,14 @@ def fetch_open_interest(
 
     if cache and path.exists():
         cached = _read_cache(path)
-        if cached and cached[0]["ts"] <= start_ms:
+        cadence_ms = {"5min": 300_000, "15min": 900_000, "30min": 1_800_000,
+                      "1h": 3_600_000, "4h": 14_400_000, "1d": 86_400_000}[interval]
+        if _event_cache_covers(cached, start_ms, end_ms, cadence_ms):
             return [o for o in cached if start_ms <= o["ts"] <= end_ms]
 
     out: list[dict] = []
     cursor: str | None = None
-    cur_end = end_ms
+    cur_end = end_ms + 1  # Keep event lookup inclusive at the as-of boundary.
 
     # Bybit OI API не поддерживает start/end совместно с cursor одинаково;
     # пагинируем через startTime + ограниченное окно
@@ -581,7 +613,7 @@ def fetch_open_interest(
         params = {
             "category": category, "symbol": symbol,
             "intervalTime": interval, "limit": OI_MAX_LIMIT,
-            "startTime": start_ms, "endTime": cur_end,
+            "startTime": start_ms, "endTime": min(cur_end, end_ms),
         }
         if cursor:
             params["cursor"] = cursor

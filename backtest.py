@@ -70,7 +70,7 @@ class BacktestTrade:
     close_ts:     int | None  = None
     status:       str         = "open"
     hit_level:    str | None  = None
-    r_multiple:   float       = 0.0
+    r_multiple:   float | None = 0.0
     # Диагностические атрибуты (для breakdown-анализа)
     killzone:     str | None  = None      # "Asia" | "London" | "New York AM" | "London Close" | None
     htf_strength: str | None  = None      # "strong"|"moderate"|"weak"|"neutral"|None
@@ -79,7 +79,12 @@ class BacktestTrade:
     rr_planned:   float | None = None     # planned RR на TP1
     bars_held:    int | None  = None      # close_idx - open_idx
     fee_r:        float       = 0.0       # комиссия в R-эквиваленте
-    r_net:        float       = 0.0       # r_multiple - fee_r
+    r_net:        float | None = 0.0       # r_multiple - fee_r
+    as_of_ts:     int | None = None         # decision becomes knowable (bar close)
+    filled:       bool = False
+    fill_idx:     int | None = None
+    fill_ts:      int | None = None         # fill BAR OPEN, not exact intrabar time
+    exit_policy:  str = "full_tp1"
 
 
 @dataclass
@@ -179,65 +184,9 @@ def _detect_all_signals(klines_5m_so_far: list) -> list[str]:
 # ─── TP/SL outcome simulation ─────────────────────────────────────────────
 
 
-def _simulate_outcome(
-    klines_5m: list,
-    open_idx:  int,
-    verdict:   str,
-    sl:        float | None,
-    tp1:       float | None,
-    tp2:       float | None,
-    tp3:       float | None,
-    rr1:       float | None,
-    rr2:       float | None,
-    rr3:       float | None,
-    expiry_bars: int,
-) -> tuple[int, str, str | None, float] | None:
-    """
-    Walk klines после open_idx до first hit SL/TP или expiry.
-    Уважает tracking.SAME_BAR_TIE_BREAK (default 'fair' → 0R tie).
-
-    Returns (close_idx, status, hit_level, r_multiple) или None при невалидных
-    уровнях.
-    """
-    if sl is None or tp1 is None:
-        return None
-
-    tps = []
-    if tp1 is not None:
-        tps.append(("TP1", tp1, rr1 or 1.5))
-    if tp2 is not None:
-        tps.append(("TP2", tp2, rr2 or 2.5))
-    if tp3 is not None:
-        tps.append(("TP3", tp3, rr3 or 4.0))
-
-    end = min(len(klines_5m), open_idx + 1 + expiry_bars)
-
-    for j in range(open_idx + 1, end):
-        bar = klines_5m[j]
-        low, high = bar["l"], bar["h"]
-
-        if verdict == "LONG":
-            sl_hit = low <= sl
-            tp_cands = [(lvl, p, r) for (lvl, p, r) in tps if high >= p]
-        elif verdict == "SHORT":
-            sl_hit = high >= sl
-            tp_cands = [(lvl, p, r) for (lvl, p, r) in tps if low <= p]
-        else:
-            return None
-
-        # Same-bar tie: respect tracking.SAME_BAR_TIE_BREAK
-        if sl_hit and tp_cands:
-            if tracking.SAME_BAR_TIE_BREAK == "conservative":
-                return (j, "sl_hit", "SL", -1.0)
-            return (j, "tie_hit", "TIE", 0.0)
-        if sl_hit:
-            return (j, "sl_hit", "SL", -1.0)
-        if tp_cands:
-            tp_cands.sort(key=lambda x: x[2], reverse=True)
-            level, _, rr = tp_cands[0]
-            return (j, f"{level.lower()}_hit", level, float(rr))
-
-    return (end - 1, "expired", None, 0.0)
+def _simulate_outcome(*args, **kwargs):
+    """Compatibility wrapper around the shared paper-execution kernel."""
+    return tracking._simulate_execution(*args, **kwargs)
 
 
 # ─── Config overrides (monkeypatch decision constants) ────────────────────
@@ -340,7 +289,7 @@ def _build_breakdown(trades: list) -> dict:
     """Breakdown по killzone / HTF / regime / signal_type / RR-bucket."""
     by_kz, by_htf, by_regime, by_rr, by_sig = {}, {}, {}, {}, {}
     for tr in trades:
-        if tr.status == "open":
+        if tr.status not in tracking.REALIZED_STATUSES or tr.r_multiple is None:
             continue
         r = tr.r_multiple if tr.r_multiple is not None else 0.0
         rn = tr.r_net if tr.r_net is not None else r
@@ -399,7 +348,7 @@ def _aggregate_stats(trades: list, days: int) -> dict:
 
     for tr in trades:
         by_status[tr.status] += 1
-        if tr.status == "open":
+        if tr.status not in tracking.REALIZED_STATUSES or tr.r_multiple is None:
             continue
         r = tr.r_multiple if tr.r_multiple is not None else 0.0
         rn = tr.r_net if tr.r_net is not None else r
@@ -479,18 +428,19 @@ def _aggregate_stats(trades: list, days: int) -> dict:
 # ─── Commission ───────────────────────────────────────────────────────────
 
 
-def _fee_r(entry: float, sl: float, taker_fee_pct: float) -> float:
+def _fee_r(entry: float, sl: float, taker_fee_pct: float,
+           exit_price: float | None = None) -> float:
     """
-    Round-trip taker fee, выраженный в R-эквиваленте.
-    fee_per_leg = entry * taker_fee_pct (notional)
-    round_trip  = 2 * fee_per_leg
-    R_unit      = |entry - sl|
-    fee_R       = round_trip / R_unit
+    Modeled taker fees in R units, using entry and exit notionals.
+    The legacy 3-argument API estimates exit notional from entry; replay
+    passes the actual modeled exit. Funding is deliberately not estimated.
+    fee_R = taker_fee_pct * (entry + exit_price) / abs(entry - sl)
     """
     risk = abs(entry - sl)
     if risk <= 0 or taker_fee_pct <= 0:
         return 0.0
-    return (2.0 * entry * taker_fee_pct) / risk
+    return ((entry + (exit_price if exit_price is not None else entry))
+            * taker_fee_pct) / risk
 
 
 # ─── Главный entry point ──────────────────────────────────────────────────
@@ -631,11 +581,14 @@ def run_backtest(
                     if d.get("entry") else price
                 )
 
+                execution = {}
+                as_of_ts = bar_ts + tf_min * 60_000
                 outcome = _simulate_outcome(
                     klines_primary, idx, d["verdict"],
                     d["sl"], d["tp1"], d["tp2"], d["tp3"],
                     d.get("rr1"), d.get("rr2"), d.get("rr3"),
-                    expiry_bars,
+                    expiry_bars, entry=entry, as_of=as_of_ts,
+                    bar_ms=tf_min * 60_000, details=execution,
                 )
                 if outcome is None:
                     skipped += 1
@@ -643,11 +596,15 @@ def run_backtest(
                 close_idx, status, hit_level, r_mult = outcome
                 close_ts = klines_primary[close_idx]["ts"] if close_idx < len(klines_primary) else klines_primary[-1]["ts"]
 
-                fee_r = _fee_r(float(entry), float(d["sl"]), taker_fee_pct)
-                r_net = r_mult - fee_r
+                exit_price = (entry + r_mult * abs(entry - d["sl"])
+                              * (1 if d["verdict"] == "LONG" else -1)
+                              if r_mult is not None else None)
+                fee_r = (_fee_r(float(entry), float(d["sl"]), taker_fee_pct, exit_price)
+                         if r_mult is not None else 0.0)
+                r_net = r_mult - fee_r if r_mult is not None else None
 
                 if sig_record is not None:
-                    sig_record.became_trade = True
+                    sig_record.became_trade = execution.get("filled", False)
 
                 trades.append(BacktestTrade(
                     signal_type=sig_type,
@@ -660,8 +617,8 @@ def run_backtest(
                     tp2=float(d["tp2"]),
                     tp3=float(d["tp3"]),
                     confidence=int(d.get("confidence", 0)),
-                    close_idx=close_idx,
-                    close_ts=close_ts,
+                    close_idx=None if status == "censored" else close_idx,
+                    close_ts=None if status == "censored" else close_ts,
                     status=status,
                     hit_level=hit_level,
                     r_multiple=r_mult,
@@ -673,6 +630,7 @@ def run_backtest(
                     bars_held=close_idx - idx if close_idx is not None else None,
                     fee_r=fee_r,
                     r_net=r_net,
+                    as_of_ts=as_of_ts, **execution,
                 ))
 
             if progress_each and idx % progress_each == 0:
@@ -717,7 +675,8 @@ def _expectancy_summary(stats: dict, trades: list) -> dict:
 
     Возвращает {} если меньше 1 closed trade.
     """
-    closed = [t for t in trades if t.status not in ("open",)]
+    closed = [t for t in trades if t.status in tracking.REALIZED_STATUSES
+              and t.r_multiple is not None]
     closed_winners = [t for t in closed if (t.r_multiple or 0) > 0]
     closed_losers  = [t for t in closed if (t.r_multiple or 0) <= 0]
 
@@ -772,7 +731,7 @@ def _expectancy_by_signal_type(trades: list) -> list[tuple]:
     from collections import defaultdict
     groups: dict[str, list] = defaultdict(list)
     for t in trades:
-        if t.status == "open":
+        if t.status not in tracking.REALIZED_STATUSES or t.r_multiple is None:
             continue
         groups[t.signal_type].append(t)
 

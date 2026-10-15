@@ -10,10 +10,10 @@ liquidity.py / regime.py / killzones (P3 gate). То есть бэктест м�
   • indicators (ATR Wilder, RSI, MACD trend) из klines
   • CVD-proxy (cumulative volume × sign(close-open)) → trend/divergence
   • EMA biases per TF (EMA9 vs EMA21)
-  • change_24h (по 288 5m-барам)
+  • change_24h (timestamp-based 24h as-of lookup, any fixed TF)
   • pivots PDH/PDL/P/R1/S1 (нужен 'D' TF в data)
   • funding/oi из исторических endpoints
-  • ts — timestamp бара (для killzone-гейта)
+  • ts — primary bar CLOSE boundary (для killzone-гейта)
 
 Стабится в neutral/empty (нет надёжных историч. данных):
   • vp (volume profile) — нужны intraday tick data
@@ -29,6 +29,9 @@ from __future__ import annotations
 
 import bisect
 from datetime import datetime, timezone
+
+import bt_data
+from bt_data import tf_to_minutes
 
 __all__ = [
     "compute_atr",
@@ -203,14 +206,26 @@ def compute_ema_biases(klines: list) -> str:
 # ─── Change 24h ────────────────────────────────────────────────────────────
 
 
-def compute_change_24h(klines_5m: list, current_idx: int) -> float:
+def compute_change_24h(klines_5m: list, current_idx: int,
+                       ts_list: list[int] | None = None) -> float:
     """
-    % изменение цены за 24h (=288 5m-баров). 0.0 при недостаточной истории.
+    Price change from the last close at/before 24h ago, for any fixed TF.
+    Same-TF open timestamps have the same elapsed differences as closes.
+    Missing observations never shift the lookup to a more recent bar.
+    Pass a precomputed ts_list (e.g. from a walk-forward loop) to avoid
+    rebuilding it on every call; callers iterating many idx must reuse it,
+    or this degrades to O(n^2) over a backtest run.
     """
-    if current_idx < 288 or current_idx >= len(klines_5m):
+    if current_idx < 0 or current_idx >= len(klines_5m):
+        return 0.0
+    target = klines_5m[current_idx]["ts"] - 86_400_000
+    if ts_list is None:
+        ts_list = [b["ts"] for b in klines_5m]
+    past_idx = bisect.bisect_right(ts_list, target, hi=current_idx + 1) - 1
+    if past_idx < 0:
         return 0.0
     cur  = klines_5m[current_idx]["c"]
-    past = klines_5m[current_idx - 288]["c"]
+    past = klines_5m[past_idx]["c"]
     if past <= 0:
         return 0.0
     return (cur - past) / past * 100.0
@@ -219,16 +234,20 @@ def compute_change_24h(klines_5m: list, current_idx: int) -> float:
 # ─── Pivots ────────────────────────────────────────────────────────────────
 
 
-def compute_pivots(klines_daily: list, current_idx: int) -> dict:
+def compute_pivots(klines_daily: list, current_idx: int, *,
+                   latest_closed: bool = False) -> dict:
     """
     Pivots от ПРЕДЫДУЩЕЙ дневной свечи (классическая формула):
       P  = (H + L + C) / 3
       R1 = 2P - L,  S1 = 2P - H
     Плюс PDH/PDL (prior day high/low) для liquidity-карты.
+    latest_closed=True means current_idx already points to a CLOSED daily bar;
+    default preserves the standalone helper's previous-day indexing contract.
     """
-    if current_idx < 1 or current_idx >= len(klines_daily):
+    prev_idx = current_idx if latest_closed else current_idx - 1
+    if prev_idx < 0 or current_idx >= len(klines_daily):
         return {}
-    prev = klines_daily[current_idx - 1]
+    prev = klines_daily[prev_idx]
     high, low, close = prev["h"], prev["l"], prev["c"]
     p  = (high + low + close) / 3
     r1 = 2 * p - low
@@ -254,13 +273,15 @@ def funding_at(funding_history: list, ts_ms: int) -> float:
 def oi_change_at(oi_history: list, ts_ms: int, lookback_hours: int = 24) -> float:
     """
     % изменение OI за последние lookback_hours от ts_ms.
-    OI history — точки с интервалом 1h (default из bt_data).
+    Timestamp as-of lookup: supports arbitrary sampling intervals and holes.
     """
     relevant = [o for o in oi_history if o["ts"] <= ts_ms]
-    if len(relevant) < lookback_hours + 1:
+    past_rows = [o for o in relevant
+                 if o["ts"] <= ts_ms - lookback_hours * 3_600_000]
+    if not relevant or not past_rows:
         return 0.0
     cur  = relevant[-1]["oi"]
-    past = relevant[-(lookback_hours + 1)]["oi"]
+    past = past_rows[-1]["oi"]
     if past <= 0:
         return 0.0
     return (cur - past) / past * 100.0
@@ -323,7 +344,9 @@ def build_market_at(
     tf_primary: str = "5",
 ) -> dict:
     """
-    Собирает market-snapshot на момент 5m-бара под индексом idx.
+    Snapshot at the CLOSE of primary bar idx (exchange ts remains its OPEN).
+    Each admitted TF bar must close at/before that decision boundary.
+    A primary bar whose close is still in the future produces no snapshot.
 
     data — результат bt_data.fetch_all(symbol, days).
     Возвращает dict в shape, эквивалентном prod fetch_market — пригодный
@@ -332,17 +355,22 @@ def build_market_at(
     Стабленные поля (vp/ls_ratio/liquidations/turtle/rsi_div) — нейтральные,
     не блокируют движок.
     """
+    primary_interval_ms = tf_to_minutes(tf_primary) * 60_000
     klines_5m = data["klines"].get(tf_primary) or []
     if not klines_5m or idx < 0 or idx >= len(klines_5m):
         return {}
 
-    cur_ts = klines_5m[idx]["ts"]
+    # Exchange timestamps are bar OPENS. The primary close is the decision
+    # boundary; another TF is observable only after its own close.
+    cur_ts = klines_5m[idx]["ts"] + primary_interval_ms
+    if cur_ts > bt_data._now_ms():
+        return {}
 
     # O(log N) slice через bisect + кеш ts-списков на data dict.
     ts_cache = _get_ts_cache(data)
     sliced: dict[str, list] = {}
     for tf, kl in data["klines"].items():
-        sliced[tf] = _slice_klines_up_to(kl, cur_ts,
+        sliced[tf] = _slice_klines_up_to(kl, cur_ts - tf_to_minutes(tf) * 60_000,
                                          ts_list=ts_cache.get(tf))
 
     primary = sliced.get(tf_primary) or []
@@ -358,12 +386,13 @@ def build_market_at(
 
     ema_biases = {tf: compute_ema_biases(kl) for tf, kl in sliced.items() if kl}
 
-    chg_24h = compute_change_24h(primary, len(primary) - 1)
+    chg_24h = compute_change_24h(primary, len(primary) - 1,
+                                  ts_list=ts_cache.get(tf_primary))
 
     pivots = {}
     daily = sliced.get("D") or []
-    if daily and len(daily) > 1:
-        pivots = compute_pivots(daily, len(daily) - 1)
+    if daily:
+        pivots = compute_pivots(daily, len(daily) - 1, latest_closed=True)
 
     funding = funding_at(data.get("funding") or [], cur_ts)
     oi_chg  = oi_change_at(data.get("oi") or [], cur_ts)

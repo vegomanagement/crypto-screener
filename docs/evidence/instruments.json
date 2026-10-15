@@ -1,0 +1,111 @@
+[
+  {
+    "requested": "BTCUSDT",
+    "retCode": 0,
+    "instruments": [
+      {
+        "symbol": "BTCUSDT",
+        "status": "Trading",
+        "contractType": "LinearPerpetual",
+        "settleCoin": "USDT",
+        "fundingInterval": 480,
+        "priceFilter": {
+          "minPrice": "0.10",
+          "maxPrice": "1999999.80",
+          "tickSize": "0.10"
+        },
+        "lotSizeFilter": {
+          "maxOrderQty": "1500.000",
+          "minOrderQty": "0.001",
+          "qtyStep": "0.001",
+          "postOnlyMaxOrderQty": "1500.000",
+          "maxMktOrderQty": "150.000",
+          "minNotionalValue": "5"
+        }
+      }
+    ]
+  },
+  {
+    "requested": "ETHUSDT",
+    "retCode": 0,
+    "instruments": [
+      {
+        "symbol": "ETHUSDT",
+        "status": "Trading",
+        "contractType": "LinearPerpetual",
+        "settleCoin": "USDT",
+        "fundingInterval": 480,
+        "priceFilter": {
+          "minPrice": "0.01",
+          "maxPrice": "199999.98",
+          "tickSize": "0.01"
+        },
+        "lotSizeFilter": {
+          "maxOrderQty": "10000.00",
+          "minOrderQty": "0.01",
+          "qtyStep": "0.01",
+          "postOnlyMaxOrderQty": "10000.00",
+          "maxMktOrderQty": "2000.00",
+          "minNotionalValue": "5"
+        }
+      }
+    ]
+  },
+  {
+    "requested": "SOLUSDT",
+    "retCode": 0,
+    "instruments": [
+      {
+        "symbol": "SOLUSDT",
+        "status": "Trading",
+        "contractType": "LinearPerpetual",
+        "settleCoin": "USDT",
+        "fundingInterval": 480,
+        "priceFilter": {
+          "minPrice": "0.010",
+          "maxPrice": "199999.980",
+          "tickSize": "0.010"
+        },
+        "lotSizeFilter": {
+          "maxOrderQty": "96000.0",
+          "minOrderQty": "0.1",
+          "qtyStep": "0.1",
+          "postOnlyMaxOrderQty": "96000.0",
+          "maxMktOrderQty": "12000.0",
+          "minNotionalValue": "5"
+        }
+      }
+    ]
+  },
+  {
+    "requested": "BONKUSDT",
+    "retCode": 10001,
+    "instruments": []
+  },
+  {
+    "requested": "1000BONKUSDT",
+    "retCode": 0,
+    "instruments": [
+      {
+        "symbol": "1000BONKUSDT",
+        "status": "Trading",
+        "contractType": "LinearPerpetual",
+        "settleCoin": "USDT",
+        "fundingInterval": 240,
+        "priceFilter": {
+          "minPrice": "0.0000010",
+          "maxPrice": "19.9999980",
+          "tickSize": "0.0000010"
+        },
+        "lotSizeFilter": {
+          "maxOrderQty": "60000000",
+          "minOrderQty": "100",
+          "qtyStep": "100",
+          "postOnlyMaxOrderQty": "60000000",
+          "maxMktOrderQty": "12000000",
+          "minNotionalValue": "5"
+        }
+      }
+    ]
+  }
+]

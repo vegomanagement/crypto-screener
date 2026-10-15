@@ -20,6 +20,7 @@ import anthropic
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone, timedelta
 from flask import Flask, request, jsonify
+from market_candles import closed_candles, interval_ms
 
 from decision import make_decision, format_decision_header
 from llm_agents import (
@@ -405,19 +406,24 @@ _BNB_INTERVAL = {
 
 
 def _klines_binance(symbol: str, interval: str, limit: int = 100) -> list:
-    """Binance Futures klines as fallback. Oldest→newest."""
-    bnb_interval = _BNB_INTERVAL.get(interval, interval)
+    """Closed Binance Futures klines with explicit provenance."""
+    interval_ms(interval)
+    bnb_interval = _BNB_INTERVAL[interval]
+    as_of_ms = int(time.time() * 1000)
     try:
         r = requests.get(
             f"{BINANCE_FAPI}/fapi/v1/klines",
-            params={"symbol": symbol, "interval": bnb_interval, "limit": limit},
+            params={"symbol": symbol, "interval": bnb_interval, "limit": min(limit + 1, 1500)},
             timeout=8,
         )
         data = r.json()
         if not isinstance(data, list) or not data:
             return []
-        return [{"o": float(x[1]), "h": float(x[2]), "l": float(x[3]),
-                 "c": float(x[4]), "v": float(x[5])} for x in data]
+        parsed = [{"ts": int(x[0]), "o": float(x[1]), "h": float(x[2]),
+                   "l": float(x[3]), "c": float(x[4]), "v": float(x[5]),
+                   "amount": float(x[7]) if len(x) > 7 else None} for x in data]
+        return closed_candles(parsed, interval, source="binance", symbol=symbol,
+                              as_of_ms=as_of_ms)[-limit:]
     except Exception as e:
         log.warning(f"Binance klines {symbol} {interval}: {e}")
         return []
@@ -435,12 +441,15 @@ _HL_INTERVAL_MS = {
 
 
 def _klines_hl(symbol: str, interval: str, limit: int = 100) -> list:
-    """Hyperliquid candle snapshot as last-resort fallback. Oldest→newest."""
+    """Closed Hyperliquid candles; no implicit relabeling to hourly bars."""
+    interval_ms(interval)
     coin = symbol.replace("USDT", "")
-    hl_iv = _HL_INTERVAL.get(interval, "1h")
-    ms    = _HL_INTERVAL_MS.get(hl_iv, 3_600_000)
+    if interval not in _HL_INTERVAL:
+        raise ValueError(f"unsupported Hyperliquid interval: {interval}")
+    hl_iv = _HL_INTERVAL[interval]
+    ms    = _HL_INTERVAL_MS[hl_iv]
     end   = int(time.time() * 1000)
-    start = end - limit * ms
+    start = end - (limit + 1) * ms
     try:
         r = requests.post(
             HL,
@@ -452,28 +461,37 @@ def _klines_hl(symbol: str, interval: str, limit: int = 100) -> list:
         candles = r.json()
         if not isinstance(candles, list) or not candles:
             return []
-        return [{"o": float(c["o"]), "h": float(c["h"]), "l": float(c["l"]),
-                 "c": float(c["c"]), "v": float(c["v"])} for c in candles]
+        parsed = [{"ts": int(c["t"]), "o": float(c["o"]), "h": float(c["h"]),
+                   "l": float(c["l"]), "c": float(c["c"]),
+                   "v": float(c["v"])} for c in candles]
+        return closed_candles(parsed, interval, source="hl", symbol=symbol,
+                              as_of_ms=end)[-limit:]
     except Exception as e:
         log.warning(f"HL candles {symbol} {interval}: {e}")
         return []
 
 
 def _klines(symbol: str, interval: str, limit: int = 100) -> list:
-    """Candles oldest→newest. Chain: Bybit → Binance Futures → Hyperliquid."""
+    """Closed candles with exact exchange open/close times and provenance."""
+    interval_ms(interval)  # Validate before network access or fallback.
+    as_of_ms = int(time.time() * 1000)
     # 1. Bybit
     try:
         r = requests.get(
             f"{BYBIT}/v5/market/kline",
             params={"symbol": symbol, "interval": interval,
-                    "limit": limit, "category": "linear"}, timeout=8,
+                    "limit": min(limit + 1, 1000), "category": "linear"}, timeout=8,
         )
-        rows = r.json()["result"]["list"]   # newest first
-        rows.reverse()
-        result = [{"o": float(x[1]), "h": float(x[2]), "l": float(x[3]),
-                   "c": float(x[4]), "v": float(x[5])} for x in rows]
-        if result:
-            return result
+        payload = r.json()
+        if payload.get("retCode", 0) != 0:
+            raise ValueError(f"Bybit kline retCode={payload.get('retCode')}")
+        rows = payload["result"]["list"]
+        parsed = [{"ts": int(x[0]), "o": float(x[1]), "h": float(x[2]),
+                   "l": float(x[3]), "c": float(x[4]), "v": float(x[5]),
+                   "amount": float(x[6]) if len(x) > 6 else None} for x in rows]
+        if rows:
+            return closed_candles(parsed, interval, source="bybit", symbol=symbol,
+                                  as_of_ms=as_of_ms)[-limit:]
     except Exception as e:
         log.warning(f"Bybit klines {symbol} {interval}: {e}")
 
@@ -896,9 +914,9 @@ def compute_indicators(candles: list) -> dict:
 def compute_vwap(candles: list) -> dict:
     """
     Daily and Weekly VWAP with ±1σ / ±2σ bands from 1H candles (oldest→newest).
-    Uses current UTC time to slice the correct window — no timestamps needed.
+    Uses genuine candle timestamps for UTC resets; never infers time from count.
     """
-    if len(candles) < 2:
+    if not candles or any("ts" not in c for c in candles):
         return {}
 
     now   = datetime.now(timezone.utc)
@@ -931,19 +949,23 @@ def compute_vwap(candles: list) -> dict:
         if p < b["lower1"]: return "lower"
         return "discount"
 
-    hours_today = max(1, now.hour + 1)
-    hours_week  = max(1, now.weekday() * 24 + now.hour + 1)
+    day_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    week_start = day_start - timedelta(days=now.weekday())
+    as_of_ms = int(now.timestamp() * 1000)
+    day_start_ms = int(day_start.timestamp() * 1000)
+    week_start_ms = int(week_start.timestamp() * 1000)
+    closed = [c for c in candles if c.get("close_ts", c["ts"] + 3_600_000) <= as_of_ms]
 
     out = {}
 
-    d = _bands(candles[-min(hours_today, len(candles)):])
+    d = _bands([c for c in closed if c["ts"] >= day_start_ms])
     if d:
         pos = _position(price, d)
         out["daily"]     = d
         out["daily_pos"] = pos
         out["daily_pct"] = round((price - d["vwap"]) / d["vwap"] * 100, 2)
 
-    w = _bands(candles[-min(hours_week, len(candles)):])
+    w = _bands([c for c in closed if c["ts"] >= week_start_ms])
     if w:
         pos = _position(price, w)
         out["weekly"]     = w
@@ -4321,22 +4343,24 @@ def api_market():
                 "delta_5":    _safe_float(cvd.get("delta_5")),
             },
             "ema_bias": {
-                "1h": ema_biases.get("1h"),
-                "4h": ema_biases.get("4h"),
-                "1d": ema_biases.get("1d"),
+                "1h": ema_biases.get("1H", ema_biases.get("1h")),
+                "4h": ema_biases.get("4H", ema_biases.get("4h")),
+                "1d": ema_biases.get("1D", ema_biases.get("1d")),
             },
             "funding": {
                 "bybit": _safe_float(b.get("funding")),
                 "hl":    _safe_float(hl.get("funding")),
             },
             "vol_24h":   _safe_float(b.get("vol_24h")),
-            "open_int":  _safe_float(b.get("open_interest")),
+            "open_int":  _safe_float(b.get("oi", b.get("open_interest"))),
             "vp": {
                 "poc": _safe_float(vp.get("poc")),
                 "vah": _safe_float(vp.get("vah")),
                 "val": _safe_float(vp.get("val")),
             },
-            "vwap":       _safe_float(vwap),
+            "vwap":       _safe_float((vwap.get("daily") or {}).get("vwap"))
+                          if isinstance(vwap, dict) else _safe_float(vwap),
+            "vwap_bands": vwap if isinstance(vwap, dict) else {},
             "indicators": {
                 "rsi":    _safe_float(ind.get("rsi")),
                 "macd":   ind.get("macd"),
@@ -4365,6 +4389,10 @@ def api_zones():
     """
     symbol = (request.args.get("symbol") or "BTCUSDT").upper().strip()
     interval = (request.args.get("interval") or "60").strip()
+    try:
+        interval_ms(interval)
+    except ValueError:
+        return jsonify({"error": "unsupported interval"}), 400
     try:
         limit = int(request.args.get("limit") or "8")
     except ValueError:
@@ -4539,6 +4567,10 @@ def api_klines():
     symbol = (request.args.get("symbol") or "").upper().strip()
     interval = (request.args.get("interval") or "60").strip()
     try:
+        interval_ms(interval)
+    except ValueError:
+        return jsonify({"error": "unsupported interval"}), 400
+    try:
         limit = int(request.args.get("limit") or "300")
     except ValueError:
         limit = 300
@@ -4549,23 +4581,18 @@ def api_klines():
 
     try:
         rows = _klines(symbol, interval, limit)
-        # _klines() возвращает list[{o,h,l,c,v}] но без ts. Поскольку UI
-        # нужен ts, считаем его обратно от now() с шагом interval.
-        from datetime import datetime as _dt, timezone as _tz
-        mins = {"5": 5, "15": 15, "30": 30, "60": 60, "120": 120,
-                "240": 240, "D": 1440, "W": 10080}.get(interval, 60)
-        now_ms = int(_dt.now(_tz.utc).timestamp() * 1000)
-        step_ms = mins * 60_000
-        klines = []
-        for i, r in enumerate(rows):
-            ts = now_ms - (len(rows) - 1 - i) * step_ms
-            klines.append({
-                "ts": ts, "o": r["o"], "h": r["h"],
-                "l": r["l"], "c": r["c"], "v": r.get("v", 0),
-            })
+        # Never invent candle times from request time. The adapters preserve
+        # exchange timestamps and return only closed bars.
+        klines = [{
+            "ts": int(r["ts"]), "close_ts": int(r["close_ts"]),
+            "o": r["o"], "h": r["h"], "l": r["l"], "c": r["c"],
+            "v": r.get("v", 0), "source": r["source"],
+        } for r in rows]
+        sources = sorted({r["source"] for r in rows})
         return jsonify({
             "symbol": symbol, "interval": interval,
-            "klines": klines, "source": "auto-fallback",
+            "klines": klines, "source": sources[0] if len(sources) == 1 else "unavailable",
+            "sources": sources, "closed_only": True,
         }), 200
     except Exception as e:
         log.warning(f"/api/klines failed: {e}")

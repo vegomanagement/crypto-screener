@@ -93,6 +93,17 @@ def test_tf_to_minutes():
     assert bt_data.tf_to_minutes("D") == 1440
 
 
+@pytest.mark.parametrize("tf", ["garbage", "7", "0", "-5", "90"])
+def test_unknown_tf_rejected_before_fetch_or_cache(tf, tmp_cache):
+    with pytest.raises(ValueError, match="Unsupported timeframe"):
+        bt_data.tf_to_bybit_interval(tf)
+
+
+def test_monthly_tf_is_not_silently_approximated_as_30_days():
+    with pytest.raises(ValueError, match="calendar"):
+        bt_data.tf_to_minutes("M")
+
+
 # ─── Kline parsing ────────────────────────────────────────────────────────
 
 
@@ -100,7 +111,7 @@ def test_parse_kline_row():
     row = _kline_row(1700000000000, 100, 101, 99, 100.5, 12.3)
     parsed = bt_data._parse_kline_row(row)
     assert parsed == {"ts": 1700000000000, "o": 100.0, "h": 101.0,
-                      "l": 99.0, "c": 100.5, "v": 12.3}
+                      "l": 99.0, "c": 100.5, "v": 12.3, "source": "bybit"}
 
 
 def test_fetch_klines_single_page(tmp_cache):
@@ -141,13 +152,13 @@ def test_fetch_klines_uses_cache_when_covers_range(tmp_cache):
     cache_path = bt_data._cache_path("BTCUSDT", "klines", "5")
     cache_path.parent.mkdir(parents=True, exist_ok=True)
     # FAKE_NOW = 2026-06-02 00:00. days=1 → start ≥ 2026-06-01.
-    # Кешируем 30-дневное окно (5 мая → 2 июня) — покрывает 1-day запрос.
-    import datetime as _dt
-    base = _dt.datetime(2026, 5, 3, 0, 0, tzinfo=_dt.timezone.utc)
+    # A 5m cache must contain actual contiguous 5m bars. The old fixture
+    # used 12h samples and ended days before now: not valid coverage.
+    base = _ms(2026, 6, 1)
     fake = [
-        {"ts": int((base + _dt.timedelta(hours=12 * i)).timestamp() * 1000),
+        {"ts": base + i * 300_000,
          "o": 100, "h": 101, "l": 99, "c": 100, "v": 1}
-        for i in range(60)
+        for i in range(288)
     ]
     cache_path.write_text("\n".join(json.dumps(r) for r in fake))
 
@@ -205,6 +216,107 @@ def test_fetch_klines_empty_response(tmp_cache):
     result = bt_data.fetch_klines("BTCUSDT", "5", days=1,
                                   cache=False, session=sess)
     assert result == []
+
+
+@pytest.mark.parametrize("now_hour", [4, 6, 8])
+def test_fetch_klines_admits_only_closed_4h_bars(tmp_cache, monkeypatch, now_hour):
+    now_ms = _ms(2026, 6, 1, now_hour)
+    monkeypatch.setattr(bt_data, "_now_ms", lambda: now_ms)
+    rows = [_kline_row(_ms(2026, 6, 1, h), 100, 101, 99, 100, 1)
+            for h in (0, 4)]
+    sess = _mock_session([{"result": {"list": rows}}])
+    result = bt_data.fetch_klines("BTCUSDT", "240", 1, cache=False, session=sess)
+    assert [r["ts"] for r in result] == [
+        _ms(2026, 6, 1, h) for h in (0, 4) if h + 4 <= now_hour]
+
+
+@pytest.mark.parametrize("defect", ["stale_tail", "interior_hole", "duplicates"])
+def test_fetch_klines_refetches_incomplete_cache(tmp_cache, monkeypatch, defect):
+    start = _ms(2026, 6, 1)
+    complete = [{"ts": start + i * 300_000, "o": 100, "h": 101,
+                 "l": 99, "c": 100, "v": 1} for i in range(288)]
+    cached = complete[:-2] if defect == "stale_tail" else list(complete)
+    if defect == "interior_hole":
+        del cached[100]
+    if defect == "duplicates":
+        cached.insert(100, cached[100])
+    bt_data._write_cache(bt_data._cache_path("BTCUSDT", "klines", "5"), cached)
+    calls = []
+    def fetch(*args, **kwargs):
+        calls.append(args)
+        return complete
+    monkeypatch.setattr(bt_data, "_fetch_klines_bybit", fetch)
+    result = bt_data.fetch_klines("BTCUSDT", "5", 1)
+    assert calls, "cache head alone is not evidence of tail/gap coverage"
+    assert result == complete
+
+
+@pytest.mark.parametrize("parser,row,source", [
+    (bt_data._parse_kline_row, [123, "100", "101", "99", "100", "1"], "bybit"),
+    (bt_data._parse_binance_kline_row, [123, "100", "101", "99", "100", "1"], "binance"),
+    (bt_data._parse_hl_kline_row,
+     {"t": 123, "o": "100", "h": "101", "l": "99", "c": "100", "v": "1"},
+     "hyperliquid"),
+])
+def test_exchange_source_is_preserved_without_shifting_open_ts(parser, row, source):
+    bar = parser(row)
+    assert bar.get("source") == source
+    assert bar["ts"] == 123
+
+
+@pytest.mark.parametrize("kind", ["funding", "oi_1h"])
+@pytest.mark.parametrize("defect", ["stale_tail", "interior_hole"])
+def test_event_fetch_refetches_stale_or_gappy_cache(tmp_cache, monkeypatch, kind, defect):
+    step = 8 * 3_600_000 if kind == "funding" else 3_600_000
+    start = _ms(2026, 6, 1)
+    value_key = "funding" if kind == "funding" else "oi"
+    complete = [{"ts": ts, value_key: 0.001 if kind == "funding" else 1000}
+                for ts in range(start - step, _ms(2026, 6, 2) + 1, step)]
+    cached = complete[:-2] if defect == "stale_tail" else list(complete)
+    if defect == "interior_hole":
+        del cached[2]
+    bt_data._write_cache(bt_data._cache_path("BTCUSDT", kind), cached)
+    calls = []
+    def request(*args, **kwargs):
+        calls.append(args)
+        return {"result": {"list": []}}
+    monkeypatch.setattr(bt_data, "_request_with_retry", request)
+    fetch = bt_data.fetch_funding if kind == "funding" else bt_data.fetch_open_interest
+    fetch("BTCUSDT", 1)
+    assert calls, "Event caches also need fresh tails and cadence coverage"
+
+
+@pytest.mark.parametrize("kind", ["funding", "oi"])
+def test_event_fetch_includes_exact_now_but_not_future(tmp_cache, monkeypatch, kind):
+    now_ms = _ms(2026, 6, 2)
+    calls = []
+    def request(url, params, **kwargs):
+        calls.append(params)
+        rows = ([{"fundingRateTimestamp": str(ts), "fundingRate": "0.001"}
+                 for ts in (now_ms, now_ms + 1)] if kind == "funding" else
+                [{"timestamp": str(ts), "openInterest": "1000"}
+                 for ts in (now_ms, now_ms + 1)])
+        return {"result": {"list": rows}}
+    monkeypatch.setattr(bt_data, "_request_with_retry", request)
+    fetch = bt_data.fetch_funding if kind == "funding" else bt_data.fetch_open_interest
+    result = fetch("BTCUSDT", 1, cache=False)
+    assert [r["ts"] for r in result] == [now_ms]
+    assert calls[0]["endTime"] == now_ms
+
+
+@pytest.mark.parametrize("kind", ["funding", "oi"])
+def test_event_fetch_reuses_contiguous_fresh_cache(tmp_cache, monkeypatch, kind):
+    step = 8 * 3_600_000 if kind == "funding" else 3_600_000
+    start, end = _ms(2026, 6, 1), _ms(2026, 6, 2)
+    rows = [{"ts": ts, "funding" if kind == "funding" else "oi": 1}
+            for ts in range(start - step, end + 1, step)]
+    bt_data._write_cache(bt_data._cache_path("BTCUSDT", "funding" if kind == "funding"
+                                            else "oi_1h"), rows)
+    def forbidden(*args, **kwargs):
+        raise AssertionError("Fresh event cache must not request network data")
+    monkeypatch.setattr(bt_data, "_request_with_retry", forbidden)
+    fetch = bt_data.fetch_funding if kind == "funding" else bt_data.fetch_open_interest
+    assert fetch("BTCUSDT", 1) == [r for r in rows if start <= r["ts"] <= end]
 
 
 # ─── Funding ──────────────────────────────────────────────────────────────
@@ -359,7 +471,7 @@ def test_parse_binance_kline_row():
     row = _binance_kline_row(1700000000000, 100, 101, 99, 100.5, 12.3)
     parsed = bt_data._parse_binance_kline_row(row)
     assert parsed == {"ts": 1700000000000, "o": 100.0, "h": 101.0,
-                      "l": 99.0, "c": 100.5, "v": 12.3}
+                      "l": 99.0, "c": 100.5, "v": 12.3, "source": "binance"}
 
 
 def test_fetch_klines_binance_basic(tmp_cache):
@@ -476,7 +588,7 @@ def test_parse_hl_kline_row():
     row = _hl_kline_row(1700000000000, 100, 101, 99, 100.5, 12.3)
     parsed = bt_data._parse_hl_kline_row(row)
     assert parsed == {"ts": 1700000000000, "o": 100.0, "h": 101.0,
-                      "l": 99.0, "c": 100.5, "v": 12.3}
+                      "l": 99.0, "c": 100.5, "v": 12.3, "source": "hyperliquid"}
 
 
 def test_fetch_klines_hl_basic(tmp_cache):
@@ -526,7 +638,8 @@ def test_fetch_klines_hl_filters_outside_window(tmp_cache):
 
 
 def test_fetch_klines_hl_unknown_tf_raises():
-    with pytest.raises(RuntimeError, match="No Hyperliquid interval"):
+    # Invalid TF is a caller error, rejected before venue mapping/network.
+    with pytest.raises(ValueError, match="Unsupported timeframe"):
         bt_data._fetch_klines_hl("BTCUSDT", "garbage", 0, 1)
 
 
