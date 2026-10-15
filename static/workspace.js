@@ -1,12 +1,15 @@
 /* Research-only workspace. Pinned Lightweight Charts 4.1.3; no trading APIs. */
 (() => {
   'use strict';
-  const STORAGE_KEY = 'crypto-screener.workspace.v1';
-  const VERSION = 1;
+  const STORAGE_KEY = 'crypto-screener.workspace.v3';
+  const VERSION = 3;
+  const FAVORITES_KEY = 'crypto-screener.workspace.favorites.v1';
+  const EXCHANGES = { bybit: 'Bybit', binance: 'Binance', hyperliquid: 'Hyperliquid' };
   const LAYOUTS = { '1': 1, '2cols': 2, '2rows': 2, '3cols': 3, '4grid': 4, '6grid': 6 };
   const FAVORITES = [['30s', '30s'], ['1', '1m'], ['3', '3m'], ['5', '5m'], ['10', '10m'], ['12', '12m'], ['15', '15m'], ['30', '30m'], ['45', '45m'], ['60', '1h'], ['120', '2h'], ['180', '3h'], ['240', '4h'], ['480', '8h'], ['720', '12h'], ['D', 'D'], ['2D', '2D'], ['3D', '3D'], ['W', 'W'], ['M', 'M']];
-  const WATCHLIST = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', '1000BONKUSDT', 'BNBUSDT', 'XRPUSDT', 'DOGEUSDT', 'SUIUSDT', 'AVAXUSDT', 'LINKUSDT'];
+
   const EMA_COLORS = { 7: '#d4ac5c', 14: '#b593d2', 28: '#6b98cf', 200: '#c9d2df' };
+  const MA20_COLORS = { high: '#f0b429', low: '#26c6da' };
   const $ = (selector, root = document) => root.querySelector(selector);
   const grid = $('#chart-grid');
   const footer = $('#workspace-status');
@@ -17,6 +20,9 @@
   let pricesGeneration = 0;
   let pricesTimeout = null;
   let initialized = false;
+  const marketCache = new Map(); // Metadata only; snapshot freshness is owned by /api/markets.
+  let currentMarkets = [];
+  let catalogReady = false;
   const numberFormat = new Intl.NumberFormat('en-US', { maximumSignificantDigits: 8 });
   const timeFormat = new Intl.DateTimeFormat('en-GB', { timeZone: 'UTC', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
 
@@ -24,22 +30,28 @@
     { symbol: 'BTCUSDT', interval: '240' }, { symbol: 'ETHUSDT', interval: '240' },
     { symbol: 'SOLUSDT', interval: '240' }, { symbol: '1000BONKUSDT', interval: 'D' },
     { symbol: 'BNBUSDT', interval: '60' }, { symbol: 'XRPUSDT', interval: '60' }
-  ];
-  const normalizeSymbol = value => typeof value === 'string' ? value.trim().toUpperCase().replace(/^BYBIT:/, '').replace(/\.P$/, '').replace(/^([A-Z0-9]+)\/USDT$/, '$1USDT') : '';
-  const validSymbol = value => typeof value === 'string' && /^[A-Z0-9]{2,26}USDT$/.test(value);
+  ].map(pane => ({ ...pane, exchange: 'bybit' }));
+  const normalizeSymbol = (value, exchange = 'bybit') => typeof value !== 'string' ? '' : exchange === 'bybit' ? value.trim().toUpperCase().replace(/^BYBIT:/, '').replace(/\.P$/, '').replace(/^([A-Z0-9]+)\/(USDT|USDC)$/, '$1$2') : value.trim();
+  const validSymbol = (value, exchange = 'bybit') => typeof value === 'string' && (exchange === 'hyperliquid' ? /^(?:[a-z][a-z0-9_-]{0,31}:)?[A-Za-z0-9][A-Za-z0-9._-]{0,39}$/.test(value) && !/^(?:bybit|binance|hyperliquid):/i.test(value) : exchange === 'bybit' ? /^[A-Z0-9]{1,26}(?:USDT|USDC|PERP)$/.test(value) : exchange === 'binance' && /^[\p{L}\p{N}]{1,60}(?:USDT|USDC)$/u.test(value));
   const validInterval = value => typeof value === 'string' && /^(?:[1-9]\d{0,5}|[23]?D|W|M)$/.test(value);
   function readState() {
-    const fallback = { version: VERSION, layout: '4grid', active: 0, panes: defaultPanes(), fvg: true, ema: { 7: true, 14: true, 28: true, 200: false }, auto: false, sidebar: true };
+    const fallback = { version: VERSION, layout: '4grid', active: 0, panes: defaultPanes(), watchlistExchange: 'bybit', watchlistSearch: '', watchlistFavoritesOnly: false, watchlistSort: 'none', fvg: true, ema: { 7: true, 14: true, 28: true, 200: false }, ma20hl: { high: false, low: false }, auto: false, sidebar: true };
     try {
-      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-      if (!saved || saved.version !== VERSION || !Object.hasOwn(LAYOUTS, saved.layout)) return fallback;
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || localStorage.getItem('crypto-screener.workspace.v2') || localStorage.getItem('crypto-screener.workspace.v1'));
+      if (!saved || ![1, 2, VERSION].includes(saved.version) || !Object.hasOwn(LAYOUTS, saved.layout)) return fallback;
       fallback.layout = saved.layout;
       if (Array.isArray(saved.panes)) saved.panes.slice(0, 6).forEach((pane, index) => {
-        if (pane && validSymbol(pane.symbol) && validInterval(pane.interval)) fallback.panes[index] = { symbol: pane.symbol, interval: pane.interval };
+        const exchange = saved.version === 1 ? 'bybit' : pane?.exchange;
+        if (pane && Object.hasOwn(EXCHANGES, exchange) && validSymbol(pane.symbol, exchange) && validInterval(pane.interval)) fallback.panes[index] = { symbol: pane.symbol, interval: pane.interval, exchange };
       });
+      if (Object.hasOwn(EXCHANGES, saved.watchlistExchange)) fallback.watchlistExchange = saved.watchlistExchange;
+      if (typeof saved.watchlistSearch === 'string') fallback.watchlistSearch = saved.watchlistSearch.slice(0, 80);
+      if (typeof saved.watchlistFavoritesOnly === 'boolean') fallback.watchlistFavoritesOnly = saved.watchlistFavoritesOnly;
+      if (['none', 'asc', 'desc'].includes(saved.watchlistSort)) fallback.watchlistSort = saved.watchlistSort;
       fallback.active = Number.isInteger(saved.active) && saved.active >= 0 && saved.active < LAYOUTS[fallback.layout] ? saved.active : 0;
       ['fvg', 'auto', 'sidebar'].forEach(key => { if (typeof saved[key] === 'boolean') fallback[key] = saved[key]; });
       Object.keys(fallback.ema).forEach(period => { if (saved.ema && typeof saved.ema[period] === 'boolean') fallback.ema[period] = saved.ema[period]; });
+      Object.keys(fallback.ma20hl).forEach(key => { if (saved.ma20hl && typeof saved.ma20hl[key] === 'boolean') fallback.ma20hl[key] = saved.ma20hl[key]; });
     } catch (_) { /* Corrupt or unavailable browser storage must not break charts. */ }
     return fallback;
   }
@@ -47,6 +59,34 @@
   function saveState() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
     catch (_) { footer.textContent = 'Browser storage unavailable · settings last for this session'; }
+  }
+  // Favorites survive exchange switches and schema bumps: kept in a dedicated
+  // key, not the versioned workspace blob, keyed by "<exchange>:<symbol>".
+  function readFavorites() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(FAVORITES_KEY) || '[]');
+      return new Set(Array.isArray(raw) ? raw.filter(value => typeof value === 'string') : []);
+    } catch (_) { return new Set(); }
+  }
+  const favorites = readFavorites();
+  function saveFavorites() {
+    try { localStorage.setItem(FAVORITES_KEY, JSON.stringify([...favorites])); } catch (_) { /* best-effort */ }
+  }
+  const favoriteKey = (exchange, symbol) => `${exchange}:${symbol}`;
+  const isFavorite = (exchange, symbol) => favorites.has(favoriteKey(exchange, symbol));
+  function toggleFavorite(exchange, symbol) {
+    const key = favoriteKey(exchange, symbol);
+    if (favorites.has(key)) favorites.delete(key); else favorites.add(key);
+    saveFavorites();
+  }
+  // Nulls always sort last, independent of direction; never NaN-compare.
+  function compareChange(left, right, direction) {
+    const a = typeof left === 'number' && Number.isFinite(left) ? left : null;
+    const b = typeof right === 'number' && Number.isFinite(right) ? right : null;
+    if (a === null && b === null) return 0;
+    if (a === null) return 1;
+    if (b === null) return -1;
+    return direction === 'desc' ? b - a : a - b;
   }
   function statusText(message) { footer.textContent = message; }
   function formatPrice(value) { return Number.isFinite(Number(value)) ? numberFormat.format(Number(value)) : '—'; }
@@ -90,19 +130,20 @@
       button.title = metadata?.reason || `Set active chart to ${button.textContent}`;
     });
     document.querySelectorAll('.watchlist-row').forEach(button => {
-      const selected = button.dataset.symbol === active.symbol;
+      const selected = button.dataset.symbol === active.symbol && button.dataset.exchange === active.exchange;
       button.classList.toggle('is-selected', selected);
       button.setAttribute('aria-pressed', String(selected));
     });
     $('#watchlist-toggle').setAttribute('aria-expanded', String(state.sidebar));
     $('#workspace').classList.toggle('sidebar-collapsed', !state.sidebar);
+    syncSuggestions();
   }
   function setActive(id) {
     if (!panes.has(id)) return;
     state.active = id;
     panes.forEach((pane, key) => {
       pane.element.classList.toggle('is-active', key === id);
-      pane.element.setAttribute('aria-label', `Chart ${key + 1}: ${state.panes[key].symbol}, ${intervalLabel(state.panes[key].interval)}${key === id ? ', active' : ''}`);
+      pane.element.setAttribute('aria-label', `Chart ${key + 1}: ${state.panes[key].exchange} ${state.panes[key].symbol}, ${intervalLabel(state.panes[key].interval)}${key === id ? ', active' : ''}`);
     });
     syncControls();
     statusText(`${LAYOUTS[state.layout]} independent ${LAYOUTS[state.layout] === 1 ? 'chart' : 'charts'} · active chart ${id + 1}${intervalWarning ? ` · ${intervalWarning}` : ' · UTC'}`);
@@ -111,15 +152,20 @@
   function updatePaneConfig(id, patch) {
     if (!panes.has(id)) return;
     const next = { ...state.panes[id], ...patch };
-    if (!validSymbol(next.symbol) || !validInterval(next.interval)) return;
+    if (!Object.hasOwn(EXCHANGES, next.exchange) || !validSymbol(next.symbol, next.exchange) || !validInterval(next.interval)) return;
     state.panes[id] = next;
     setActive(id);
     panes.get(id).load(true);
   }
   function submitSymbol(input, id) {
-    const value = normalizeSymbol(input.value);
-    if (!validSymbol(value)) {
-      input.setCustomValidity('Use a market symbol, e.g. BTCUSDT, BTC/USDT or BYBIT:BTCUSDT.P.');
+    const exchange = state.panes[id].exchange;
+    const normalized = normalizeSymbol(input.value, exchange);
+    const metadata = marketCache.get(exchange) || [];
+    const exact = metadata.find(market => market.symbol === normalized);
+    const displayMatches = metadata.filter(market => market.display_symbol === input.value.trim());
+    const value = exact?.symbol || (displayMatches.length === 1 ? displayMatches[0].symbol : normalized);
+    if (!validSymbol(value, exchange)) {
+      input.setCustomValidity(`Use an exact ${EXCHANGES[exchange]} native market symbol.${exchange === 'bybit' ? ' Also accepts BTC/USDT or BYBIT:BTCUSDT.P.' : ' No foreign exchange prefixes or contract-unit conversion.'}`);
       input.reportValidity();
       return false;
     }
@@ -136,6 +182,19 @@
     for (let index = period; index < candles.length; index += 1) {
       value = alpha * candles[index].close + (1 - alpha) * value;
       result.push({ time: candles[index].time, value });
+    }
+    return result;
+  }
+  // Rolling SMA of a single OHLC component (no 0-padding warm-up: callers get
+  // nothing before `period` closed candles exist).
+  function smaData(candles, period, key) {
+    if (candles.length < period) return [];
+    let sum = 0;
+    for (let index = 0; index < period; index += 1) sum += candles[index][key];
+    const result = [{ time: candles[period - 1].time, value: sum / period }];
+    for (let index = period; index < candles.length; index += 1) {
+      sum += candles[index][key] - candles[index - period][key];
+      result.push({ time: candles[index].time, value: sum / period });
     }
     return result;
   }
@@ -175,6 +234,11 @@
       this.zones = [];
       this.emas = {};
       this.emaValues = {};
+      this.priceLine = null;
+      this.tickerKey = null;
+      this.tickerGeneration = 0;
+      this.tickerController = null;
+      this.tickerTimer = null;
       this.element = document.createElement('section');
       this.element.className = 'chart-pane';
       this.element.dataset.paneId = String(id);
@@ -188,7 +252,7 @@
             <form class="pane-symbol-popover">
               <label for="pane-symbol-${id}">Symbol · chart ${id + 1}</label>
               <div class="symbol-row"><input id="pane-symbol-${id}" class="pane-symbol-input" list="symbol-suggestions" maxlength="80" spellcheck="false" autocomplete="off" required><button type="submit">Apply</button></div>
-              <p>BTCUSDT · BTC/USDT · BYBIT:BTCUSDT.P<br>Changes this chart only. Provider availability varies.</p>
+              <p>Use this pane’s venue-native symbol. Bybit also accepts BTC/USDT and BYBIT:BTCUSDT.P.<br>Changes this chart only; no venue fallback.</p>
             </form>
           </details>
           <select class="pane-interval" aria-label="Interval for chart ${id + 1}"></select>
@@ -198,7 +262,7 @@
         </header>
         <div class="chart-stage">
           <div class="chart-host"></div><canvas class="fvg-overlay" aria-hidden="true"></canvas>
-          <div class="chart-legend"><span class="ohlc">Waiting for provider…</span><span class="legend-ema ema-7" data-ema="7"></span><span class="legend-ema ema-14" data-ema="14"></span><span class="legend-ema ema-28" data-ema="28"></span><span class="legend-ema ema-200" data-ema="200"></span></div>
+          <div class="chart-legend"><span class="ohlc">Waiting for provider…</span><span class="legend-ema ema-7" data-ema="7"></span><span class="legend-ema ema-14" data-ema="14"></span><span class="legend-ema ema-28" data-ema="28"></span><span class="legend-ema ema-200" data-ema="200"></span><span class="pane-live-price" data-state="hidden"></span></div>
           <div class="chart-message"><span>Loading closed candles…</span></div>
         </div>
         <div class="pane-statusbar"><span class="pane-status" role="status">Connecting to market data…</span><span class="pane-count"></span></div>`;
@@ -210,6 +274,7 @@
       this.status = $('.pane-status', this.element);
       this.count = $('.pane-count', this.element);
       this.symbolInput = $('.pane-symbol-input', this.element);
+      this.livePriceEl = $('.pane-live-price', this.element);
       this.chart = LightweightCharts.createChart(this.host, {
         width: Math.max(1, this.host.clientWidth), height: Math.max(1, this.host.clientHeight),
         layout: { background: { type: 'solid', color: '#10141c' }, textColor: '#76849b', fontSize: 10, fontFamily: 'SFMono-Regular, Consolas, monospace' },
@@ -227,6 +292,10 @@
       Object.entries(EMA_COLORS).forEach(([period, color]) => {
         this.emas[period] = this.chart.addLineSeries({ color, lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, visible: state.ema[period] });
       });
+      this.ma20 = {
+        high: this.chart.addLineSeries({ color: MA20_COLORS.high, lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, visible: state.ma20hl.high }),
+        low: this.chart.addLineSeries({ color: MA20_COLORS.low, lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, visible: state.ma20hl.low })
+      };
       this.logicalListener = () => this.scheduleDraw();
       this.crosshairListener = parameter => {
         const candle = parameter.seriesData?.get(this.series);
@@ -268,11 +337,12 @@
     }
     updateHeader() {
       const config = state.panes[this.id];
-      $('.pane-title', this.element).textContent = config.symbol;
+      $('.pane-title', this.element).textContent = `${EXCHANGES[config.exchange].toUpperCase()} · ${config.symbol}`;
       $('summary', this.element).title = `Change ${config.symbol} · chart ${this.id + 1}`;
       this.symbolInput.value = config.symbol;
       populateIntervals($('.pane-interval', this.element), config.interval);
       this.element.dataset.symbol = config.symbol;
+      this.element.dataset.exchange = config.exchange;
       this.element.dataset.interval = config.interval;
     }
     resize() {
@@ -373,6 +443,8 @@
     }
     applyIndicators() {
       Object.keys(EMA_COLORS).forEach(period => this.emas[period].applyOptions({ visible: state.ema[period] }));
+      this.ma20.high.applyOptions({ visible: state.ma20hl.high });
+      this.ma20.low.applyOptions({ visible: state.ma20hl.low });
       this.updateLegend(this.candles.at(-1));
       this.scheduleDraw();
     }
@@ -383,10 +455,60 @@
       this.series.setData([]);
       this.volume.setData([]);
       Object.values(this.emas).forEach(series => series.setData([]));
+      this.ma20.high.setData([]);
+      this.ma20.low.setData([]);
       this.count.textContent = '';
       $('.pane-source', this.element).textContent = '—';
       this.updateLegend();
       this.scheduleDraw();
+    }
+    // Live reference line: pane-scoped poll, independent of candle/FVG/EMA
+    // data which stay strictly closed-only. Updates in place, never recreated.
+    startTicker(exchange, symbol) {
+      const key = `${exchange}:${symbol}`;
+      if (key === this.tickerKey) return;
+      this.tickerKey = key;
+      this.stopTicker(false);
+      this.fetchTicker();
+      this.tickerTimer = setInterval(() => this.fetchTicker(), 15000);
+    }
+    stopTicker(removeLine = true) {
+      clearInterval(this.tickerTimer);
+      this.tickerTimer = null;
+      this.tickerController?.abort();
+      this.tickerController = null;
+      this.tickerGeneration += 1;
+      if (removeLine) { this.tickerKey = null; this.removeLivePrice(); }
+    }
+    setLivePrice(price) {
+      if (this.priceLine) this.priceLine.applyOptions({ price });
+      else this.priceLine = this.series.createPriceLine({ price, color: '#4fc3f7', lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dotted, axisLabelVisible: true, title: 'Live' });
+      this.livePriceEl.dataset.state = 'ready';
+      this.livePriceEl.textContent = `Live ${formatPrice(price)}`;
+    }
+    removeLivePrice() {
+      if (this.priceLine) { this.series.removePriceLine(this.priceLine); this.priceLine = null; }
+      if (this.livePriceEl) { this.livePriceEl.dataset.state = 'hidden'; this.livePriceEl.textContent = ''; }
+    }
+    async fetchTicker() {
+      if (this.disposed) return;
+      this.tickerController?.abort();
+      const generation = ++this.tickerGeneration;
+      const controller = new AbortController();
+      this.tickerController = controller;
+      const config = { ...state.panes[this.id] };
+      try {
+        const query = new URLSearchParams({ exchange: config.exchange, symbol: config.symbol });
+        const response = await fetch(`/api/ticker?${query}`, { signal: controller.signal, headers: { Accept: 'application/json' }, cache: 'no-store' });
+        const payload = await response.json().catch(() => null);
+        if (this.disposed || generation !== this.tickerGeneration || config.exchange !== state.panes[this.id].exchange || config.symbol !== state.panes[this.id].symbol) return;
+        // 404/502/malformed: hide honestly, never invent a price.
+        if (!response.ok || !payload || payload.symbol !== config.symbol || typeof payload.price !== 'number' || !Number.isFinite(payload.price) || payload.price <= 0) { this.removeLivePrice(); return; }
+        this.setLivePrice(payload.price);
+      } catch (_) {
+        if (this.disposed || generation !== this.tickerGeneration) return;
+        this.removeLivePrice();
+      }
     }
     async load(resetView = false) {
       if (this.disposed) return;
@@ -404,12 +526,14 @@
       this.status.textContent = this.candles.length ? 'Refreshing closed candles…' : 'Loading closed candles…';
       this.showMessage(this.candles.length ? '' : 'Loading closed candles…');
       const config = { ...state.panes[this.id] };
+      this.startTicker(config.exchange, config.symbol);
       try {
-        const query = new URLSearchParams({ symbol: config.symbol, interval: config.interval, limit: '300' });
+        const query = new URLSearchParams({ exchange: config.exchange, symbol: config.symbol, interval: config.interval, limit: '300' });
         const response = await fetch(`/api/chart?${query}`, { signal: request.signal, headers: { Accept: 'application/json' }, cache: 'no-store' });
         const payload = await response.json();
-        if (this.disposed || generation !== this.generation) return;
+        if (this.disposed || request.signal.aborted || generation !== this.generation || config.exchange !== state.panes[this.id].exchange || config.symbol !== state.panes[this.id].symbol) return;
         if (!response.ok) throw new Error(errorText(payload, `Chart request failed (HTTP ${response.status}).`));
+        if (payload.exchange !== config.exchange || payload.source !== config.exchange) throw new Error('Provider returned a different exchange; chart not shown.');
         if (payload.closed_only !== true) throw new Error('Provider did not confirm closed-only candles.');
         const candles = parseCandles(payload.candles);
         this.candles = candles;
@@ -427,12 +551,14 @@
           this.emaValues[period] = new Map(data.map(point => [point.time, point.value]));
           this.emas[period].setData(data);
         });
+        this.ma20.high.setData(smaData(candles, 20, 'high'));
+        this.ma20.low.setData(smaData(candles, 20, 'low'));
         if (resetView && candles.length) {
           // Keep enough density to read structure; all 300 bars remain pannable.
           this.chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, candles.length - 125), to: candles.length + 5 });
         }
         const provider = sourceLabel(payload.source);
-        $('.pane-source', this.element).textContent = provider.toUpperCase();
+        $('.pane-source', this.element).textContent = provider.toLowerCase() === config.exchange ? provider.toUpperCase() : `${EXCHANGES[config.exchange].toUpperCase()} · ${provider.toUpperCase()}`;
         $('.pane-source', this.element).title = `Candle data: ${provider}`;
         const warnings = Array.isArray(payload.warnings) ? payload.warnings.filter(value => typeof value === 'string').join(' · ') : '';
         const timestamp = timeFormat.format(new Date());
@@ -458,6 +584,7 @@
       this.generation += 1;
       this.request?.abort();
       clearTimeout(this.requestTimer);
+      this.stopTicker(false);
       this.lifetime.abort();
       this.resizeObserver.disconnect();
       if (this.raf !== null) cancelAnimationFrame(this.raf);
@@ -509,56 +636,131 @@
       statusText(intervalWarning);
     } finally { clearTimeout(timeout); }
   }
-  function createWatchlist() {
-    const rows = $('#watchlist-rows');
-    WATCHLIST.forEach(symbol => {
-      const button = document.createElement('button');
-      button.type = 'button'; button.className = 'watchlist-row'; button.dataset.symbol = symbol;
-      button.setAttribute('aria-label', `Show ${symbol} in active chart`);
-      const name = document.createElement('span'); name.className = 'watchlist-symbol'; name.textContent = symbol.replace(/USDT$/, '');
-      const quote = document.createElement('small'); quote.textContent = 'USDT'; name.append(quote);
-      const price = document.createElement('span'); price.className = 'watchlist-price'; price.textContent = '—';
-      const change = document.createElement('span'); change.className = 'watchlist-change'; change.textContent = '—';
-      button.append(name, price, change);
-      button.addEventListener('click', () => updatePaneConfig(state.active, { symbol }));
-      rows.append(button);
-    });
+  function syncSuggestions() {
+    const exchange = state.panes[state.active].exchange;
+    $('#symbol-input').setAttribute('aria-label', `Change active ${EXCHANGES[exchange]} chart symbol`);
+    $('#symbol-suggestions').replaceChildren(...(marketCache.get(exchange) || []).map(market => {
+      const option = document.createElement('option');
+      option.value = market.symbol;
+      option.label = market.display_symbol || market.symbol;
+      return option;
+    }));
   }
-  async function refreshPrices() {
+  // Applies the current Chg% sort order within one group of markets. Favorites
+  // are sorted independently from the rest so they stay pinned to the top
+  // (see renderWatchlist); 'none' restores catalog order untouched.
+  function sortMarkets(list) {
+    if (state.watchlistSort === 'none') return list;
+    return [...list].sort((left, right) => compareChange(left.change_24h, right.change_24h, state.watchlistSort));
+  }
+  function updateSortIndicator() {
+    const button = $('#watchlist-sort-change');
+    if (!button) return;
+    const arrow = $('.sort-arrow', button);
+    if (arrow) arrow.textContent = state.watchlistSort === 'asc' ? '▲' : state.watchlistSort === 'desc' ? '▼' : '';
+    button.classList.toggle('is-active', state.watchlistSort !== 'none');
+    button.setAttribute('aria-sort', state.watchlistSort === 'asc' ? 'ascending' : state.watchlistSort === 'desc' ? 'descending' : 'none');
+  }
+  function renderWatchlist() {
+    const rows = $('#watchlist-rows');
+    const exchange = state.watchlistExchange;
+    const search = state.watchlistSearch.trim().toLowerCase();
+    const filtered = currentMarkets.filter(market => [market.symbol, market.display_symbol, market.base, market.quote].some(value => typeof value === 'string' && value.toLowerCase().includes(search)));
+    // Favorites stay pinned to the top of the current sort order; each group
+    // (favorites, rest) is sorted independently so pinning survives sorting.
+    const favList = sortMarkets(filtered.filter(market => isFavorite(exchange, market.symbol)));
+    const restList = sortMarkets(filtered.filter(market => !isFavorite(exchange, market.symbol)));
+    const visible = state.watchlistFavoritesOnly ? favList : [...favList, ...restList];
+    const fragment = document.createDocumentFragment();
+    visible.forEach(market => {
+      const symbol = market.symbol;
+      const favorite = isFavorite(exchange, symbol);
+      const row = document.createElement('div');
+      row.className = 'watchlist-row'; row.dataset.symbol = symbol;
+      row.dataset.exchange = exchange;
+      row.tabIndex = 0;
+      row.setAttribute('role', 'button');
+      row.setAttribute('aria-label', `Show ${EXCHANGES[exchange]} ${symbol} in active chart`);
+      row.title = `${EXCHANGES[exchange]} · ${symbol} · ${market.display_symbol || symbol}`;
+      const star = document.createElement('button');
+      star.type = 'button'; star.className = 'watchlist-star';
+      star.setAttribute('aria-pressed', String(favorite));
+      star.setAttribute('aria-label', `${favorite ? 'Remove' : 'Add'} ${symbol} ${favorite ? 'from' : 'to'} favorites`);
+      star.textContent = favorite ? '★' : '☆';
+      star.classList.toggle('is-favorite', favorite);
+      star.addEventListener('click', event => {
+        event.stopPropagation();
+        toggleFavorite(exchange, symbol);
+        renderWatchlist();
+      });
+      const name = document.createElement('span'); name.className = 'watchlist-symbol'; name.textContent = market.base || symbol;
+      const quote = document.createElement('small'); quote.textContent = `${symbol} · ${market.quote || market.settle || 'PERP'}`; name.append(quote);
+      const price = document.createElement('span'); price.className = 'watchlist-price'; price.textContent = typeof market.price === 'number' && Number.isFinite(market.price) && market.price > 0 ? formatPrice(market.price) : '—';
+      const change = document.createElement('span'); change.className = 'watchlist-change';
+      const validChange = typeof market.change_24h === 'number' && Number.isFinite(market.change_24h);
+      change.textContent = validChange ? `${market.change_24h >= 0 ? '+' : ''}${market.change_24h.toFixed(2)}%` : '—';
+      change.classList.toggle('positive', validChange && market.change_24h >= 0);
+      change.classList.toggle('negative', validChange && market.change_24h < 0);
+      row.append(star, name, price, change);
+      row.addEventListener('click', () => updatePaneConfig(state.active, { exchange, symbol }));
+      row.addEventListener('keydown', event => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        updatePaneConfig(state.active, { exchange, symbol });
+      });
+      fragment.append(row);
+    });
+    rows.replaceChildren(fragment);
+    if (!visible.length) {
+      const empty = document.createElement('p'); empty.className = 'watchlist-empty';
+      empty.textContent = !filtered.length ? (currentMarkets.length ? 'No markets match your search.' : 'No perpetual markets returned by this venue.') : 'No favorite markets yet. Star a market to pin it here.';
+      rows.append(empty);
+    }
+    $('#watchlist-count').textContent = `${visible.length} / ${currentMarkets.length}`;
+    updateSortIndicator();
+    syncControls();
+  }
+  async function refreshPrices(force = false) {
     pricesController?.abort();
     clearTimeout(pricesTimeout);
     const generation = ++pricesGeneration;
+    const exchange = state.watchlistExchange;
     pricesController = new AbortController();
     const request = pricesController;
     pricesTimeout = setTimeout(() => request.abort(), 25000);
     const status = $('#prices-status');
-    status.textContent = 'Updating price snapshot…';
+    // Never retain quotes under a newly selected venue, including on failure.
+    currentMarkets = [];
+    catalogReady = false;
+    $('#watchlist-rows').replaceChildren();
+    $('#watchlist-count').textContent = '— / —';
+    $('#watchlist').setAttribute('aria-busy', 'true');
+    $('#watchlist-retry').hidden = true;
+    status.textContent = `Loading ${EXCHANGES[exchange]} perpetual markets…`;
     try {
-      const response = await fetch(`/api/prices?${new URLSearchParams({ symbols: WATCHLIST.join(',') })}`, { signal: request.signal, cache: 'no-store' });
+      const query = new URLSearchParams({ exchange });
+      if (force === true) query.set('force', 'true');
+      const response = await fetch(`/api/markets?${query}`, { signal: request.signal, cache: 'no-store', headers: { Accept: 'application/json' } });
       const data = await response.json();
-      if (generation !== pricesGeneration) return;
-      if (!response.ok || !Array.isArray(data.prices)) throw new Error('Prices unavailable');
-      const prices = new Map(data.prices.filter(item => item && typeof item.symbol === 'string').map(item => [item.symbol, item]));
-      let valid = 0;
-      document.querySelectorAll('.watchlist-row').forEach(row => {
-        const price = prices.get(row.dataset.symbol);
-        const priceElement = $('.watchlist-price', row);
-        const changeElement = $('.watchlist-change', row);
-        const last = price?.price;
-        const change = price?.change_24h;
-        const validLast = typeof last === 'number' && Number.isFinite(last) && last > 0;
-        const validChange = typeof change === 'number' && Number.isFinite(change);
-        priceElement.textContent = validLast ? formatPrice(last) : '—';
-        changeElement.textContent = validChange ? `${change >= 0 ? '+' : ''}${change.toFixed(2)}%` : '—';
-        changeElement.classList.toggle('positive', validChange && change >= 0);
-        changeElement.classList.toggle('negative', validChange && change < 0);
-        if (validLast) valid += 1;
-      });
-      status.textContent = valid ? `Snapshot ${timeFormat.format(new Date())} UTC · ${valid}/${WATCHLIST.length} markets` : 'No prices returned by market provider. Symbol selection still works.';
+      if (request.signal.aborted || generation !== pricesGeneration || exchange !== state.watchlistExchange) return;
+      if (!response.ok) throw new Error(errorText(data, `Markets unavailable (HTTP ${response.status}).`));
+      if (data.exchange !== exchange || !Array.isArray(data.markets)) throw new Error('Invalid venue market catalog; no prices shown.');
+      if (data.markets.some(market => !market || market.exchange !== exchange || !validSymbol(market.symbol, exchange))) throw new Error('Invalid native instrument in venue catalog; no prices shown.');
+      if (new Set(data.markets.map(market => market.symbol)).size !== data.markets.length) throw new Error('Duplicate instruments in venue catalog; no prices shown.');
+      currentMarkets = [...data.markets].sort((left, right) => String(left.base || left.symbol).localeCompare(String(right.base || right.symbol), 'en') || left.symbol.localeCompare(right.symbol, 'en'));
+      marketCache.set(exchange, currentMarkets);
+      catalogReady = true;
+      renderWatchlist();
+      const priced = currentMarkets.filter(market => typeof market.price === 'number' && Number.isFinite(market.price) && market.price > 0).length;
+      const timestamp = typeof data.as_of === 'number' && Number.isFinite(data.as_of) ? `${timeFormat.format(new Date(data.as_of))} UTC` : 'time unavailable';
+      const warnings = Array.isArray(data.warnings) ? data.warnings.filter(value => typeof value === 'string').join(' · ') : '';
+      status.textContent = `${EXCHANGES[exchange]} · snapshot ${timestamp}${data.cached ? ' · cached' : ''} · ${priced}/${currentMarkets.length} prices${warnings ? ` · ${warnings}` : ''}`;
     } catch (error) {
-      if (generation !== pricesGeneration) return;
-      status.textContent = error.name === 'AbortError' ? 'Price request timed out. Prior snapshot, if any, is stale.' : 'Prices unavailable · prior snapshot, if any, is stale. Select a symbol to load its chart.';
-    } finally { if (generation === pricesGeneration) { clearTimeout(pricesTimeout); pricesController = null; } }
+      if (generation !== pricesGeneration || exchange !== state.watchlistExchange) return;
+      status.textContent = `${EXCHANGES[exchange]} · ${error.name === 'AbortError' ? 'Market request timed out.' : error.message || 'Markets unavailable.'} Retry to load this venue.`;
+      $('#watchlist-count').textContent = '— / —';
+      $('#watchlist-retry').hidden = false;
+    } finally { if (generation === pricesGeneration) { clearTimeout(pricesTimeout); pricesController = null; $('#watchlist').setAttribute('aria-busy', 'false'); } }
   }
   function isVisible(pane) {
     const rect = pane.element.getBoundingClientRect();
@@ -578,13 +780,44 @@
       return;
     }
     initialized = true;
-    createFavorites(); createWatchlist();
+    createFavorites();
+    $('#exchange-select').value = state.watchlistExchange;
+    $('#watchlist-search').value = state.watchlistSearch;
+    $('#exchange-select').addEventListener('change', event => {
+      state.watchlistExchange = event.target.value;
+      state.watchlistSearch = '';
+      $('#watchlist-search').value = '';
+      saveState(); refreshPrices();
+    });
+    $('#watchlist-search').addEventListener('input', event => { state.watchlistSearch = event.target.value; saveState(); if (catalogReady && !pricesController) renderWatchlist(); });
     $('#fvg-toggle').checked = state.fvg;
     $('#auto-refresh').checked = state.auto;
     Object.keys(EMA_COLORS).forEach(period => {
       const control = $(`#ema${period}-toggle`);
       control.checked = state.ema[period];
       control.addEventListener('change', () => { state.ema[period] = control.checked; panes.forEach(pane => pane.applyIndicators()); saveState(); });
+    });
+    Object.keys(MA20_COLORS).forEach(key => {
+      const control = $(`#ma20-${key}-toggle`);
+      control.checked = state.ma20hl[key];
+      control.addEventListener('change', () => { state.ma20hl[key] = control.checked; panes.forEach(pane => pane.applyIndicators()); saveState(); });
+    });
+    $('#watchlist-favorites-toggle').setAttribute('aria-pressed', String(state.watchlistFavoritesOnly));
+    $('#watchlist-favorites-toggle').classList.toggle('is-active', state.watchlistFavoritesOnly);
+    $('#watchlist-favorites-toggle').addEventListener('click', () => {
+      state.watchlistFavoritesOnly = !state.watchlistFavoritesOnly;
+      $('#watchlist-favorites-toggle').setAttribute('aria-pressed', String(state.watchlistFavoritesOnly));
+      $('#watchlist-favorites-toggle').classList.toggle('is-active', state.watchlistFavoritesOnly);
+      saveState();
+      if (catalogReady) renderWatchlist();
+    });
+    updateSortIndicator();
+    $('#watchlist-sort-change').addEventListener('click', () => {
+      // Cycle: ascending -> descending -> default catalog order -> ascending.
+      state.watchlistSort = state.watchlistSort === 'none' ? 'asc' : state.watchlistSort === 'asc' ? 'desc' : 'none';
+      updateSortIndicator();
+      saveState();
+      if (catalogReady) renderWatchlist();
     });
     $('#symbol-form').addEventListener('submit', event => { event.preventDefault(); submitSymbol($('#symbol-input'), state.active); });
     $('#symbol-input').addEventListener('input', event => event.target.setCustomValidity(''));
@@ -594,7 +827,8 @@
     $('#auto-refresh').addEventListener('change', event => { state.auto = event.target.checked; saveState(); statusText(state.auto ? 'Auto refresh enabled · visible charts, every 60 seconds · closed candles only' : 'Auto refresh off · reload charts manually'); });
     $('#reload-active').addEventListener('click', () => panes.get(state.active)?.load(false));
     $('#watchlist-toggle').addEventListener('click', () => { state.sidebar = !state.sidebar; syncControls(); saveState(); });
-    $('#refresh-prices').addEventListener('click', refreshPrices);
+    $('#refresh-prices').addEventListener('click', () => refreshPrices(true));
+    $('#watchlist-retry').addEventListener('click', () => refreshPrices(true));
     document.addEventListener('click', event => document.querySelectorAll('.pane-symbol-menu[open]').forEach(menu => { if (!menu.contains(event.target)) menu.open = false; }));
     mountLayout(); loadIntervals(); refreshPrices();
   }

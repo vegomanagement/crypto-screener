@@ -4109,27 +4109,68 @@ def api_chart_intervals():
     return jsonify({"intervals": list_chart_intervals()})
 
 
+@app.route("/api/ticker", methods=["GET"])
+def api_ticker():
+    """One lightweight quote for an active chart pane's live price line."""
+    exchange = (request.args.get("exchange") or "").strip().lower()
+    symbol = (request.args.get("symbol") or "").strip()
+    if exchange not in {"bybit", "binance", "hyperliquid"} or not symbol:
+        return jsonify({"error": "unsupported exchange or missing symbol"}), 400
+    from exchange_markets import get_ticker
+    try:
+        ticker = get_ticker(exchange, symbol)
+        if ticker is None:
+            return jsonify({"error": "unknown symbol"}), 404
+        return jsonify(ticker), 200
+    except Exception as exc:
+        log.warning("Ticker unavailable for %s %s: %s", exchange, symbol, exc)
+        return jsonify({"error": "Exchange ticker unavailable", "exchange": exchange}), 502
+
+
+@app.route("/api/markets", methods=["GET"])
+def api_exchange_markets():
+    """Bulk public perpetual catalog and quotes from one explicitly selected venue."""
+    exchange = (request.args.get("exchange") or "bybit").strip().lower()
+    if exchange not in {"bybit", "binance", "hyperliquid"}:
+        return jsonify({"error": "unsupported exchange"}), 400
+    from exchange_markets import list_exchange_markets
+    try:
+        catalog = list_exchange_markets(exchange, force=request.args.get("force") == "true")
+        return jsonify(catalog), 200
+    except Exception as exc:
+        log.warning("Market catalog unavailable for %s: %s", exchange, exc)
+        return jsonify({"error": "Exchange market catalog unavailable", "exchange": exchange}), 502
+
+
 @app.route("/api/chart", methods=["GET"])
 def api_chart_snapshot():
-    """One read-only snapshot supplies both chart bars and timestamped zones."""
+    """One venue-pinned read-only snapshot supplies candles and timestamped zones."""
     from chart_data import build_chart_snapshot, list_chart_intervals
-    symbol = (request.args.get("symbol") or "BTCUSDT").upper().strip()
+    exchange = (request.args.get("exchange") or "bybit").strip().lower()
+    if exchange not in {"bybit", "binance", "hyperliquid"}:
+        return jsonify({"error": "unsupported exchange"}), 400
+    symbol = (request.args.get("symbol") or ("BTC" if exchange == "hyperliquid" else "BTCUSDT")).strip()
+    # Hyperliquid names can be case-sensitive (kBONK and builder dex:coin).
+    pattern = (r"[A-Za-z0-9_.:-]{1,80}" if exchange == "hyperliquid" else
+               r"[^\W_]\w{0,79}" if exchange == "binance" else r"[A-Z0-9_]{1,80}")
     interval = (request.args.get("interval") or "240").strip()
     supported = {i["value"] for i in list_chart_intervals() if i["available"]}
-    if (not re.fullmatch(r"[A-Z0-9]{2,26}USDT", symbol)
-            or interval not in supported):
+    if not re.fullmatch(pattern, symbol) or interval not in supported:
         return jsonify({"error": "unsupported symbol or interval"}), 400
     try:
         limit = max(10, min(500, int(request.args.get("limit", "300"))))
     except ValueError:
         return jsonify({"error": "invalid limit"}), 400
+    from exchange_markets import fetch_exchange_candles
     try:
-        snapshot = build_chart_snapshot(symbol, interval, limit, _klines)
+        def fetch_selected(native_symbol, base_interval, count):
+            return fetch_exchange_candles(exchange, native_symbol, base_interval, count)
+        snapshot = build_chart_snapshot(symbol, interval, limit, fetch_selected, exchange=exchange)
         return jsonify(snapshot), 200
     except Exception as exc:
-        log.warning("Chart snapshot unavailable for %s %s: %s", symbol, interval, exc)
-        return jsonify({"error": "Market data unavailable or incomplete", "symbol": symbol,
-                        "interval": interval}), 502
+        log.warning("Chart snapshot unavailable for %s %s %s: %s", exchange, symbol, interval, exc)
+        return jsonify({"error": "Selected exchange data unavailable or incomplete", "exchange": exchange,
+                        "symbol": symbol, "interval": interval}), 502
 
 
 @app.route("/api/symbols", methods=["GET"])

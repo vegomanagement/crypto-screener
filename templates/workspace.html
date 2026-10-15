@@ -35,24 +35,29 @@
     <label class="toggle-chip ema14"><input id="ema14-toggle" type="checkbox" checked><span>EMA 14</span></label>
     <label class="toggle-chip ema28"><input id="ema28-toggle" type="checkbox" checked><span>EMA 28</span></label>
     <label class="toggle-chip ema200"><input id="ema200-toggle" type="checkbox"><span>EMA 200</span></label>
+    <span class="toolbar-divider" aria-hidden="true"></span>
+    <label class="toggle-chip ma20-high"><input id="ma20-high-toggle" type="checkbox"><span>MA20 High</span></label>
+    <label class="toggle-chip ma20-low"><input id="ma20-low-toggle" type="checkbox"><span>MA20 Low</span></label>
     <span class="fill-policy" title="Fully filled gaps are removed using wick highs/lows on closed candles">Wick fill · closed candles</span>
     <label class="auto-refresh"><input id="auto-refresh" type="checkbox">Auto · 60s</label>
   </div>
   <div class="workspace-content">
     <main id="chart-grid" class="chart-grid" data-layout="4grid" aria-label="Independent research charts"></main>
     <aside id="watchlist" class="watchlist" aria-label="Market watchlist">
-      <div class="watchlist-heading"><h1>Watchlist</h1><button id="refresh-prices" type="button" aria-label="Refresh watchlist prices" title="Refresh watchlist prices">↻</button></div>
-      <div class="watchlist-tabs"><span>USDT PERPETUALS</span><span class="watchlist-live">24H</span></div>
-      <div class="watchlist-columns" aria-hidden="true"><span>Symbol</span><span>Last</span><span>Chg%</span></div>
+      <div class="watchlist-heading"><h1>Watchlist</h1><select id="exchange-select" aria-label="Watchlist exchange"><option value="bybit">Bybit</option><option value="binance">Binance</option><option value="hyperliquid">Hyperliquid</option></select><button id="refresh-prices" type="button" aria-label="Refresh watchlist markets and prices" title="Refresh watchlist markets and prices">↻</button></div>
+      <label class="watchlist-search-label"><span class="sr-only">Filter watchlist markets</span><input id="watchlist-search" type="search" placeholder="Filter markets…" maxlength="80" autocomplete="off" aria-controls="watchlist-rows"></label>
+      <div class="watchlist-tabs"><span>PERPETUALS · <span id="watchlist-count" aria-label="Shown / total markets" role="status">— / —</span></span><button id="watchlist-favorites-toggle" type="button" aria-pressed="false" title="Show only favorite markets">★ <span>Favorites</span></button><span class="watchlist-live">24H</span></div>
+      <div class="watchlist-columns"><span class="watchlist-col-star" aria-hidden="true"></span><span>Symbol</span><span>Last</span><button id="watchlist-sort-change" type="button" class="watchlist-sort" aria-label="Sort by 24h change" aria-sort="none">Chg% <span class="sort-arrow" aria-hidden="true"></span></button></div>
       <div id="watchlist-rows" class="watchlist-rows"></div>
       <p id="prices-status" class="prices-status" role="status">Loading market prices…</p>
+      <button id="watchlist-retry" type="button" hidden>Retry market catalog</button>
       <div class="watchlist-note"><span class="note-icon" aria-hidden="true">↖</span><div><strong>One pane. Your focus.</strong><p>Select a market to change only the blue-bordered chart. Charts keep independent intervals and zoom.</p></div></div>
       <div class="zone-key"><span><i class="bull-swatch"></i>Bullish FVG</span><span><i class="bear-swatch"></i>Bearish FVG</span><p>Unfilled price gaps · wick mitigation<br>Bounded zones, not trade signals.</p></div>
     </aside>
   </div>
   <footer class="workspace-footer"><span id="workspace-status" role="status">Independent charts · closed candles only</span><span class="chart-credit">Charts by <a href="https://www.tradingview.com/" target="_blank" rel="noopener noreferrer">TradingView Lightweight Charts™</a><span class="footer-utc"> · UTC</span></span></footer>
 </div>
-<datalist id="symbol-suggestions"><option value="BTCUSDT"><option value="ETHUSDT"><option value="SOLUSDT"><option value="1000BONKUSDT"><option value="BNBUSDT"><option value="XRPUSDT"><option value="DOGEUSDT"><option value="SUIUSDT"><option value="AVAXUSDT"><option value="LINKUSDT"></datalist>
+<datalist id="symbol-suggestions"></datalist>
 <noscript><p class="fatal-message">JavaScript is required to display this chart workspace. No market data is generated locally.</p></noscript>
 </body>
 </html>

@@ -132,10 +132,15 @@ def _fvg_zones(candles):
     return zones[-100:]
 
 
-def build_chart_snapshot(symbol, interval, limit, fetch_candles, as_of_ms=None):
+def build_chart_snapshot(symbol, interval, limit, fetch_candles, as_of_ms=None, *, exchange=None):
     """Fetch one source without trading, persistence, or provider relabeling."""
-    if not isinstance(symbol, str) or not re.fullmatch(r"[A-Z0-9]+USDT", symbol):
-        raise ValueError("invalid symbol: expected an exact uppercase USDT symbol")
+    if exchange is not None and exchange not in {"bybit", "binance", "hyperliquid"}:
+        raise ValueError("unsupported exchange")
+    pattern = (r"[A-Za-z0-9_.:-]{1,80}" if exchange == "hyperliquid" else
+               r"[^\W_]\w{0,79}" if exchange == "binance" else
+               r"[A-Z0-9_]{1,80}" if exchange else r"[A-Z0-9]+USDT")
+    if not isinstance(symbol, str) or not re.fullmatch(pattern, symbol):
+        raise ValueError("invalid native symbol for selected exchange")
     if interval not in _BASE:
         raise ValueError(f"unsupported chart interval: {interval}")
     if type(limit) is not int or limit <= 0:
@@ -148,8 +153,10 @@ def build_chart_snapshot(symbol, interval, limit, fetch_candles, as_of_ms=None):
     request_limit = min(1000, limit if base == interval else (limit + 1) * ratio)
     rows = fetch_candles(symbol, base, request_limit)
     validated = _validated(rows, symbol, base, now)
+    if exchange is not None and any(row['source'] != exchange for row in validated):
+        raise ValueError("candle provider does not match selected exchange")
     candles = _aggregate(validated, interval, base)[-min(limit, 1000):]
-    return {"symbol": symbol, "interval": interval,
+    return {"symbol": symbol, "interval": interval, "exchange": exchange,
             "source": validated[0]["source"] if validated else None,
             "closed_only": True, "candles": candles, "zones": _fvg_zones(candles),
             "warnings": [] if len(candles) >= limit else [

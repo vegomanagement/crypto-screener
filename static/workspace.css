@@ -548,6 +548,19 @@ input[type="checkbox"] {
 .ema-200 {
   color: rgb(201, 210, 223);
 }
+.pane-live-price {
+  white-space: nowrap;
+  color: #4fc3f7;
+}
+.pane-live-price[data-state="hidden"] {
+  display: none;
+}
+.toggle-chip.ma20-high:has(input:checked) span {
+  color: #f0b429;
+}
+.toggle-chip.ma20-low:has(input:checked) span {
+  color: #26c6da;
+}
 .chart-watermark {
   position: absolute;
   left: 10px;
@@ -631,6 +644,17 @@ input[type="checkbox"] {
   font-weight: 650;
   margin: 0px;
 }
+.watchlist-heading { gap: 7px; }
+#exchange-select { min-width: 0; flex: 1; font-size: 10px; padding: 5px 0 5px 5px; }
+.watchlist-search-label { display: block; padding: 0 12px 10px; }
+#watchlist-search { width: 100%; font-size: 11px; padding: 6px 8px; }
+.watchlist-rows { min-height: 0; overflow-y: auto; flex: 1 1 auto; }
+.watchlist > :not(.watchlist-rows) { flex-shrink: 0; }
+.watchlist-empty { padding: 12px; color: var(--muted); font-size: 11px; }
+#watchlist-retry { margin: 0 12px 8px; border-color: var(--line); color: #aac0ff; }
+#watchlist-retry[hidden] { display: none; }
+.watchlist-symbol { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.watchlist-symbol small { overflow: hidden; text-overflow: ellipsis; }
 .watchlist-heading button {
   font-size: 17px;
   color: rgb(126, 140, 164);
@@ -651,7 +675,7 @@ input[type="checkbox"] {
 }
 .watchlist-columns {
   display: grid;
-  grid-template-columns: 1fr 78px 55px;
+  grid-template-columns: 18px 1fr 78px 55px;
   padding: 9px 12px 7px;
   color: rgb(103, 118, 142);
   font-size: 9px;
@@ -659,17 +683,69 @@ input[type="checkbox"] {
 .watchlist-columns span:not(:first-child) {
   text-align: right;
 }
+.watchlist-sort {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-align: right;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+}
+.watchlist-sort:hover {
+  color: rgb(190, 202, 224);
+  background: none;
+}
+.watchlist-sort.is-active {
+  color: var(--blue);
+}
+.sort-arrow {
+  font-size: 8px;
+}
 .watchlist-row {
   width: 100%;
   display: grid;
-  grid-template-columns: 1fr 78px 55px;
+  grid-template-columns: 18px 1fr 78px 55px;
   text-align: left;
   padding: 10px 12px;
   border-radius: 0px;
   border-bottom: 1px solid rgb(29, 37, 51);
   align-items: center;
   min-height: 40px;
+  cursor: pointer;
 }
+.watchlist-star {
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: 12px;
+  line-height: 1;
+  color: rgb(90, 103, 126);
+}
+.watchlist-star:hover {
+  background: none;
+  color: rgb(190, 202, 224);
+}
+.watchlist-star.is-favorite {
+  color: #f0b429;
+}
+#watchlist-favorites-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  font-size: 9px;
+  color: rgb(113, 129, 158);
+  border: 1px solid transparent;
+}
+#watchlist-favorites-toggle.is-active {
+  color: #f0b429;
+  border-color: rgba(240, 180, 41, 0.4);
+}
+
 .watchlist-row.is-selected {
   background: rgb(28, 42, 69);
   box-shadow: rgb(101, 139, 255) 2px 0px inset;

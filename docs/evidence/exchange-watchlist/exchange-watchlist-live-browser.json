@@ -1,0 +1,47 @@
+{
+  "fixture_only": false,
+  "catalogs": [
+    {
+      "exchange": "bybit",
+      "all_rows_rendered": 866,
+      "prices": 866
+    },
+    {
+      "exchange": "binance",
+      "all_rows_rendered": 563,
+      "prices": 563
+    },
+    {
+      "exchange": "hyperliquid",
+      "all_rows_rendered": 340,
+      "prices": 340
+    }
+  ],
+  "mixed_pane_state": [
+    {
+      "exchange": "bybit",
+      "symbol": "1000BONKPERP",
+      "interval": "240"
+    },
+    {
+      "exchange": "binance",
+      "symbol": "ETHUSDT",
+      "interval": "240"
+    },
+    {
+      "exchange": "hyperliquid",
+      "symbol": "kBONK",
+      "interval": "240"
+    },
+    {
+      "exchange": "bybit",
+      "symbol": "1000BONKUSDT",
+      "interval": "D"
+    }
+  ],
+  "persistence": true,
+  "native_HL_and_USDC_selection": true,
+  "hip3_search": true,
+  "mobile_no_overflow": true,
+  "javascript_errors": []
+}
