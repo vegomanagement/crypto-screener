@@ -1,0 +1,13 @@
+{
+  "candleRange": {
+    "leftCss": 806,
+    "rightCss": 817
+  },
+  "overlayRange": {
+    "leftCss": 803,
+    "rightCss": 1073
+  },
+  "barSpacing": 15,
+  "expectedLeftEdge": 803,
+  "expectedRightEdge": 1073
+}

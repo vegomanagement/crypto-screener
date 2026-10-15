@@ -1065,3 +1065,88 @@ input[type="checkbox"] {
     transition: background 0.14s cubic-bezier(0.22, 0.61, 0.36, 1), color 0.14s cubic-bezier(0.22, 0.61, 0.36, 1);
   }
 }
+.indicator-settings-btn {
+  padding: 2px 5px;
+  min-width: 20px;
+  font-size: 11px;
+  line-height: 1;
+  color: rgb(103, 116, 139);
+  margin-left: -4px;
+}
+.indicator-settings-btn:hover, .indicator-settings-btn[aria-expanded="true"] {
+  color: rgb(190, 202, 224);
+  background: rgb(32, 40, 56);
+}
+.indicator-settings-popover {
+  position: fixed;
+  z-index: 50;
+  width: 240px;
+  background: var(--raised);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+  padding: 10px 12px 12px;
+  font-size: 11px;
+}
+.indicator-settings-popover[hidden] {
+  display: none;
+}
+.indicator-settings-popover header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.indicator-settings-title {
+  font-weight: 600;
+  color: var(--text);
+}
+.indicator-settings-close {
+  padding: 2px 6px;
+}
+.indicator-settings-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.indicator-settings-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.indicator-settings-field span {
+  color: var(--muted);
+  flex: 1 1 auto;
+}
+.indicator-settings-input {
+  width: 100px;
+  padding: 4px 6px;
+}
+.indicator-settings-input[type="color"] {
+  width: 36px;
+  padding: 2px;
+}
+.indicator-settings-popover footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 10px;
+}
+#extra-indicator-controls { display: contents; }
+.indicator-toolbar { flex-wrap: wrap; height: auto; min-height: 34px; gap: 5px; padding-top: 5px; padding-bottom: 5px; }
+.pane-closed[data-stream="live"] { color: #00c087; }
+.pane-closed[data-stream="offline"] { color: #ba9665; }
+.pane-context { flex-shrink: 0; border-top: 1px solid #283145; font-size: 10px; color: #8d9cb3; padding: 4px 9px; max-height: 120px; overflow: auto; }
+.pane-context summary, .local-alerts summary { cursor: pointer; }
+.pane-context-body { line-height: 1.7; padding-top: 4px; overflow-wrap: anywhere; }
+.pane-context-body small { color: #71809a; }
+.context-bias { display: flex; flex-wrap: wrap; gap: 5px; }
+.context-bias span { border: 1px solid #33415a; border-radius: 3px; padding: 0 5px; }
+.context-bias [data-bias="bullish"] { color: #00c087; }
+.context-bias [data-bias="bearish"] { color: #ef6670; }
+.local-alerts { padding: 10px 12px; border-top: 1px solid #283145; font-size: 10px; color: #8d9cb3; }
+.local-alerts p { font-size: 10px; color: #71809a; }
+#local-alerts-feed { padding-left: 16px; max-height: 180px; overflow: auto; line-height: 1.5; }
+#local-alerts-feed li { margin-bottom: 7px; }
+.pane-plugin-warnings { font-size: 10px; color: #ba9665; padding: 3px 8px; max-height: 42px; overflow: auto; overflow-wrap: anywhere; }

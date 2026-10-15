@@ -1,0 +1,33 @@
+{
+  "fixture_only": false,
+  "live_labels_1m": [
+    "WS 82,321.6",
+    "WS 82,321.7",
+    "WS 82,324.1",
+    "WS 82,324.2",
+    "WS 82,324.2",
+    "WS 82,324.2",
+    "WS 82,324.2",
+    "WS 82,324.2"
+  ],
+  "distinct_labels": 4,
+  "ws_frame_count": 26,
+  "ws_urls": [
+    "wss://stream.bybit.com/v5/public/linear"
+  ],
+  "plugin_ids": [
+    "turtle-upper",
+    "turtle-lower",
+    "vwap-daily",
+    "vwap-weekly",
+    "prev-day-high",
+    "prev-day-low",
+    "prev-week-high",
+    "prev-week-low",
+    "session-asia",
+    "session-london",
+    "session-ny"
+  ],
+  "context": "Funding 0.007107% / 8h \u00b7 OI 58,173.295 base_asset \u00b7 Mark 82,325.85 \u00b7 Index 82,358.18\n1h mixed\n4h bearish\n1D mixed\nBybit \u00b7 BTCUSDT \u00b7 snapshot 20:17:29 UTC",
+  "javascript_errors": []
+}

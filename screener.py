@@ -4109,6 +4109,41 @@ def api_chart_intervals():
     return jsonify({"intervals": list_chart_intervals()})
 
 
+@app.route("/api/chart/context", methods=["GET"])
+def api_chart_context():
+    """Read-only venue-native funding/OI and closed-bar EMA context."""
+    exchange = (request.args.get("exchange") or "").strip().lower()
+    symbol = (request.args.get("symbol") or "").strip()
+    if exchange not in {"bybit", "binance", "hyperliquid"} or not symbol:
+        return jsonify({"error": "unsupported exchange or missing symbol"}), 400
+    from exchange_markets import get_exchange_context
+    try:
+        return jsonify(get_exchange_context(exchange, symbol)), 200
+    except ValueError:
+        return jsonify({"error": "invalid native symbol", "exchange": exchange}), 400
+    except Exception as exc:
+        log.warning("Chart context unavailable for %s %s: %s", exchange, symbol, exc)
+        return jsonify({"error": "Selected exchange context unavailable", "exchange": exchange}), 502
+
+
+@app.route("/api/chart/live", methods=["GET"])
+def api_chart_live():
+    """Real in-progress bar for one pane; honestly null where not supported."""
+    exchange = (request.args.get("exchange") or "").strip().lower()
+    symbol = (request.args.get("symbol") or "").strip()
+    interval = (request.args.get("interval") or "").strip()
+    if exchange not in {"bybit", "binance", "hyperliquid"} or not symbol or not interval:
+        return jsonify({"error": "unsupported exchange or missing symbol/interval"}), 400
+    from exchange_markets import fetch_forming_candle
+    try:
+        candle = fetch_forming_candle(exchange, symbol, interval)
+        return jsonify({"exchange": exchange, "symbol": symbol, "interval": interval,
+                        "candle": candle, "as_of": int(time.time() * 1000)}), 200
+    except Exception as exc:
+        log.warning("Forming candle unavailable for %s %s %s: %s", exchange, symbol, interval, exc)
+        return jsonify({"error": "Forming candle unavailable", "exchange": exchange}), 502
+
+
 @app.route("/api/ticker", methods=["GET"])
 def api_ticker():
     """One lightweight quote for an active chart pane's live price line."""

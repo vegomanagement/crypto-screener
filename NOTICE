@@ -1,0 +1,27 @@
+Indicator extras — third-party source notices
+============================================
+
+static/indicator-extras.js includes a JavaScript port of Turtle Zone and the
+2-pole smoother from Ehlers_Super_Smoother, with project-specific validation,
+warmup, numerical safety, calendar indicators, and session helpers.
+
+Original Turtle Zone notice:
+// This Pine Script™ code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © declarative
+
+Original Ehlers_Super_Smoother/2 notice:
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © KevanoTrades
+
+The original library credits the filters to John Ehlers, Chapter 13 of
+Cybernetic Analysis for Stocks and Futures, and thanks Alex Orekhov (everget)
+for open-source two- and three-pole code. Only the two-pole algorithm is ported.
+
+The module is distributed as MPL-2.0-covered Source Code; its original source
+and notices must remain available when distributing it. A copy of the license
+is available at https://mozilla.org/MPL/2.0/. This notice does not relicense
+unrelated repository files. The JavaScript source is static/indicator-extras.js.
+
+Source provenance and limitations, including versioned official TradingView
+source endpoints, are recorded in docs/INDICATOR_EXTRAS.md. Verification of the
+algorithm source is not a claim of bit-exact TradingView output equivalence.

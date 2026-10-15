@@ -1,8 +1,13 @@
 /* Research-only workspace. Pinned Lightweight Charts 4.1.3; no trading APIs. */
 (() => {
   'use strict';
-  const STORAGE_KEY = 'crypto-screener.workspace.v3';
-  const VERSION = 3;
+  // v3 -> v4: added per-indicator settings (indicatorSettings), schema-driven
+  // via INDICATOR_DEFS. Migration chain below falls through v4 -> v3 -> v2 -> v1,
+  // each older shape simply lacks indicatorSettings/new FVG fields and gets
+  // the documented defaults (see INDICATOR_DEFS settingsSchema `default`s).
+  const STORAGE_KEY = 'crypto-screener.workspace.v4';
+  const VERSION = 4;
+  const PREVIOUS_KEYS = ['crypto-screener.workspace.v3', 'crypto-screener.workspace.v2', 'crypto-screener.workspace.v1'];
   const FAVORITES_KEY = 'crypto-screener.workspace.favorites.v1';
   const EXCHANGES = { bybit: 'Bybit', binance: 'Binance', hyperliquid: 'Hyperliquid' };
   const LAYOUTS = { '1': 1, '2cols': 2, '2rows': 2, '3cols': 3, '4grid': 4, '6grid': 6 };
@@ -10,7 +15,179 @@
 
   const EMA_COLORS = { 7: '#d4ac5c', 14: '#b593d2', 28: '#6b98cf', 200: '#c9d2df' };
   const MA20_COLORS = { high: '#f0b429', low: '#26c6da' };
+
+  // ─── Part A: generic indicator plugin registry (see docs/INDICATOR_PLUGIN_PLAN.md) ───
+  // Each entry: { id, label, kind: 'line'|'band'|'boxes', defaultEnabled,
+  // settingsSchema: [{key,label,type,min,max,step,options,default}], compute(candles, settings) }.
+  // 'line' renders via native Lightweight Charts line series (EMA/MA20 today).
+  // 'boxes' renders via the canvas overlay (FVG, bug-fixed below).
+  // 'band' renders via the same canvas overlay machinery as boxes; no shipped
+  // indicator uses it yet (Turtle Zone is a follow-up task) but the renderer
+  // is implemented and regression-tested now so that task only has to add a
+  // registry entry.
+  const PRICE_SOURCE = { open: c => c.open, high: c => c.high, low: c => c.low, close: c => c.close };
+  function emaData(candles, period) {
+    if (!Number.isInteger(period) || period < 1 || candles.length < period) return [];
+    // Seed with an SMA, not the first close. Do not invent the missing warm-up.
+    let value = candles.slice(0, period).reduce((sum, candle) => sum + candle.close, 0) / period;
+    const result = [{ time: candles[period - 1].time, value }];
+    const alpha = 2 / (period + 1);
+    for (let index = period; index < candles.length; index += 1) {
+      value = alpha * candles[index].close + (1 - alpha) * value;
+      result.push({ time: candles[index].time, value });
+    }
+    return result;
+  }
+  // Rolling SMA of a single OHLC component (no 0-padding warm-up: callers get
+  // nothing before `period` closed candles exist).
+  function smaData(candles, period, source) {
+    const key = PRICE_SOURCE[source] ? source : 'close';
+    const read = PRICE_SOURCE[key];
+    if (!Number.isInteger(period) || period < 1 || candles.length < period) return [];
+    let sum = 0;
+    for (let index = 0; index < period; index += 1) sum += read(candles[index]);
+    const result = [{ time: candles[period - 1].time, value: sum / period }];
+    for (let index = period; index < candles.length; index += 1) {
+      sum += read(candles[index]) - read(candles[index - period]);
+      result.push({ time: candles[index].time, value: sum / period });
+    }
+    return result;
+  }
+  // Independent client-side reimplementation of the backend's 3-candle FVG
+  // detection (chart_data.py:_fvg_zones), so the registry's compute() stays
+  // purely client-side per the plan. 'wick' policy mirrors backend behaviour
+  // exactly (progressive mitigation shrinks the zone using later wick
+  // extremes); 'close' is the alternate documented policy (mitigate using
+  // candle closes instead of wicks) exposed as a settings choice.
+  function fvgZones(candles, settings) {
+    const policy = settings.fillPolicy === 'close' ? 'close' : 'wick';
+    const minGapPct = Math.max(0, Number(settings.minGapPct) || 0);
+    const zones = [];
+    for (let idx = 2; idx < candles.length; idx += 1) {
+      const first = candles[idx - 2];
+      const third = candles[idx];
+      let direction;
+      let top;
+      let bottom;
+      if (third.low > first.high) { direction = 'bull'; bottom = first.high; top = third.low; }
+      else if (third.high < first.low) { direction = 'bear'; top = first.low; bottom = third.high; }
+      else continue;
+      for (let later = idx + 1; later < candles.length; later += 1) {
+        const bound = policy === 'close' ? candles[later].close : (direction === 'bull' ? candles[later].low : candles[later].high);
+        if (direction === 'bull') top = Math.min(top, bound); else bottom = Math.max(bottom, bound);
+      }
+      if (top <= bottom) continue; // fully mitigated, same rule as the backend
+      const midPrice = (top + bottom) / 2;
+      if (midPrice > 0 && ((top - bottom) / midPrice) * 100 < minGapPct) continue;
+      zones.push({ direction, top, bottom, startTime: third.time });
+    }
+    return zones.slice(-100);
+  }
+  const INDICATOR_DEFS = [
+    { id: 'ema7', label: 'EMA 7', kind: 'line', defaultEnabled: true,
+      settingsSchema: [
+        { key: 'period', label: 'Period', type: 'number', min: 2, max: 500, step: 1, default: 7 },
+        { key: 'color', label: 'Color', type: 'color', default: EMA_COLORS[7] }],
+      compute: (candles, settings) => emaData(candles, settings.period) },
+    { id: 'ema14', label: 'EMA 14', kind: 'line', defaultEnabled: true,
+      settingsSchema: [
+        { key: 'period', label: 'Period', type: 'number', min: 2, max: 500, step: 1, default: 14 },
+        { key: 'color', label: 'Color', type: 'color', default: EMA_COLORS[14] }],
+      compute: (candles, settings) => emaData(candles, settings.period) },
+    { id: 'ema28', label: 'EMA 28', kind: 'line', defaultEnabled: true,
+      settingsSchema: [
+        { key: 'period', label: 'Period', type: 'number', min: 2, max: 500, step: 1, default: 28 },
+        { key: 'color', label: 'Color', type: 'color', default: EMA_COLORS[28] }],
+      compute: (candles, settings) => emaData(candles, settings.period) },
+    { id: 'ema200', label: 'EMA 200', kind: 'line', defaultEnabled: false,
+      settingsSchema: [
+        { key: 'period', label: 'Period', type: 'number', min: 2, max: 500, step: 1, default: 200 },
+        { key: 'color', label: 'Color', type: 'color', default: EMA_COLORS[200] }],
+      compute: (candles, settings) => emaData(candles, settings.period) },
+    { id: 'ma20high', label: 'MA20 High', kind: 'line', defaultEnabled: false,
+      settingsSchema: [
+        { key: 'period', label: 'Period', type: 'number', min: 2, max: 500, step: 1, default: 20 },
+        { key: 'source', label: 'Price source', type: 'select', options: ['open', 'high', 'low', 'close'], default: 'high' },
+        { key: 'color', label: 'Color', type: 'color', default: MA20_COLORS.high }],
+      compute: (candles, settings) => smaData(candles, settings.period, settings.source) },
+    { id: 'ma20low', label: 'MA20 Low', kind: 'line', defaultEnabled: false,
+      settingsSchema: [
+        { key: 'period', label: 'Period', type: 'number', min: 2, max: 500, step: 1, default: 20 },
+        { key: 'source', label: 'Price source', type: 'select', options: ['open', 'high', 'low', 'close'], default: 'low' },
+        { key: 'color', label: 'Color', type: 'color', default: MA20_COLORS.low }],
+      compute: (candles, settings) => smaData(candles, settings.period, settings.source) },
+    { id: 'fvg', label: 'FVG', kind: 'boxes', defaultEnabled: true,
+      settingsSchema: [
+        { key: 'minGapPct', label: 'Min gap size (% of price)', type: 'number', min: 0, max: 50, step: 0.01, default: 0 },
+        // Default 'wick' matches the project's shipped behaviour (toolbar
+        // label "Wick fill · closed candles"): a gap is mitigated as soon as
+        // a later candle's wick (high/low) touches it. 'close' is the
+        // alternate documented policy: mitigate only on candle closes.
+        { key: 'fillPolicy', label: 'Fill policy', type: 'select', options: ['wick', 'close'], default: 'wick' },
+        { key: 'bullColor', label: 'Bullish color', type: 'color', default: '#00c087' },
+        { key: 'bearColor', label: 'Bearish color', type: 'color', default: '#f5a623' },
+        { key: 'opacity', label: 'Box opacity', type: 'number', min: 0.2, max: 2, step: 0.1, default: 1 }],
+      compute: fvgZones },
+    // Synthetic 'band' indicator, not surfaced as a toolbar toggle: it exists
+    // to prove the generic band renderer is pixel-correct (see tests) before
+    // Turtle Zone plugs into it. A constant +/-offsetPct band around close.
+    { id: 'demo-band', label: 'Demo band (internal)', kind: 'band', defaultEnabled: false, hidden: true,
+      settingsSchema: [
+        { key: 'offsetPct', label: 'Offset (% of price)', type: 'number', min: 0.1, max: 50, step: 0.1, default: 1 },
+        { key: 'color', label: 'Fill color', type: 'color', default: 'rgba(130,170,255,0.18)' }],
+      compute: (candles, settings) => {
+        const offset = Math.max(0, Number(settings.offsetPct) || 0) / 100;
+        return {
+          upper: candles.map(c => ({ time: c.time, value: c.close * (1 + offset) })),
+          lower: candles.map(c => ({ time: c.time, value: c.close * (1 - offset) }))
+        };
+      } }
+  ];
+  INDICATOR_DEFS.push(...(window.WorkspaceIndicatorExtras?.definitions || []).map(def => def.kind !== 'band' ? def : ({ ...def, settingsSchema: [...def.settingsSchema,
+    { key: 'innerBoundary', label: 'Visible inner boundary', type: 'select', default: def.innerBoundary || 'lower', options: ['upper', 'lower'] },
+    { key: 'showOuter', label: 'Show outer boundary', type: 'boolean', default: false }
+  ].filter((field, index, fields) => fields.findIndex(other => other.key === field.key) === index) })));
+  const INDICATOR_BY_ID = new Map(INDICATOR_DEFS.map(def => [def.id, def]));
+  function defaultIndicatorSettings() {
+    const defaults = {};
+    INDICATOR_DEFS.forEach(def => {
+      defaults[def.id] = {};
+      def.settingsSchema.forEach(field => { defaults[def.id][field.key] = field.default; });
+    });
+    return defaults;
+  }
+  function sanitizeFieldValue(field, value) {
+    if (field.type === 'number') {
+      const num = Number(value);
+      // Integer-only schemas recover corrupt persisted fractions to their
+      // documented default; fractional-step fields retain their precision.
+      if (!Number.isFinite(num) || (field.step === 1 && !Number.isInteger(num))) return field.default;
+      const min = typeof field.min === 'number' ? field.min : -Infinity;
+      const max = typeof field.max === 'number' ? field.max : Infinity;
+      return Math.min(max, Math.max(min, num));
+    }
+    if (field.type === 'select') return field.options.includes(value) ? value : field.default;
+    if (field.type === 'boolean') return typeof value === 'boolean' ? value : field.default;
+    if (field.type === 'color') return typeof value === 'string' && /^#[0-9a-fA-F]{6}$/.test(value) ? value : field.default;
+    return field.default;
+  }
+  // Merge saved (possibly stale/missing/corrupt) indicator settings onto the
+  // documented defaults, field by field, so unknown/invalid values never
+  // reach compute() and new fields silently pick up their default.
+  function sanitizeIndicatorSettings(saved) {
+    const result = defaultIndicatorSettings();
+    if (!saved || typeof saved !== 'object') return result;
+    INDICATOR_DEFS.forEach(def => {
+      const savedEntry = saved[def.id];
+      if (!savedEntry || typeof savedEntry !== 'object') return;
+      def.settingsSchema.forEach(field => {
+        if (Object.hasOwn(savedEntry, field.key)) result[def.id][field.key] = sanitizeFieldValue(field, savedEntry[field.key]);
+      });
+    });
+    return result;
+  }
   const $ = (selector, root = document) => root.querySelector(selector);
+  const $all = (selector, root = document) => Array.from(root.querySelectorAll(selector));
   const grid = $('#chart-grid');
   const footer = $('#workspace-status');
   const panes = new Map();
@@ -35,10 +212,17 @@
   const validSymbol = (value, exchange = 'bybit') => typeof value === 'string' && (exchange === 'hyperliquid' ? /^(?:[a-z][a-z0-9_-]{0,31}:)?[A-Za-z0-9][A-Za-z0-9._-]{0,39}$/.test(value) && !/^(?:bybit|binance|hyperliquid):/i.test(value) : exchange === 'bybit' ? /^[A-Z0-9]{1,26}(?:USDT|USDC|PERP)$/.test(value) : exchange === 'binance' && /^[\p{L}\p{N}]{1,60}(?:USDT|USDC)$/u.test(value));
   const validInterval = value => typeof value === 'string' && /^(?:[1-9]\d{0,5}|[23]?D|W|M)$/.test(value);
   function readState() {
-    const fallback = { version: VERSION, layout: '4grid', active: 0, panes: defaultPanes(), watchlistExchange: 'bybit', watchlistSearch: '', watchlistFavoritesOnly: false, watchlistSort: 'none', fvg: true, ema: { 7: true, 14: true, 28: true, 200: false }, ma20hl: { high: false, low: false }, auto: false, sidebar: true };
+    const fallback = { version: VERSION, layout: '4grid', active: 0, panes: defaultPanes(), watchlistExchange: 'bybit', watchlistSearch: '', watchlistFavoritesOnly: false, watchlistSort: 'none', fvg: true, ema: { 7: true, 14: true, 28: true, 200: false }, ma20hl: { high: false, low: false }, auto: false, sidebar: true, localAlerts: false, indicatorEnabled: Object.fromEntries(INDICATOR_DEFS.map(d => [d.id, Boolean(d.defaultEnabled)])), indicatorSettings: defaultIndicatorSettings() };
     try {
-      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || localStorage.getItem('crypto-screener.workspace.v2') || localStorage.getItem('crypto-screener.workspace.v1'));
-      if (!saved || ![1, 2, VERSION].includes(saved.version) || !Object.hasOwn(LAYOUTS, saved.layout)) return fallback;
+      // v4 -> v3 -> v2 -> v1 fallback chain: read whichever key exists, newest
+      // first. Every older shape is a strict subset of the v4 fields below, so
+      // the same per-field merge handles all of them uniformly.
+      let saved = null;
+      for (const key of [STORAGE_KEY, ...PREVIOUS_KEYS]) {
+        const raw = localStorage.getItem(key);
+        if (raw) { saved = JSON.parse(raw); break; }
+      }
+      if (!saved || ![1, 2, 3, VERSION].includes(saved.version) || !Object.hasOwn(LAYOUTS, saved.layout)) return fallback;
       fallback.layout = saved.layout;
       if (Array.isArray(saved.panes)) saved.panes.slice(0, 6).forEach((pane, index) => {
         const exchange = saved.version === 1 ? 'bybit' : pane?.exchange;
@@ -52,6 +236,12 @@
       ['fvg', 'auto', 'sidebar'].forEach(key => { if (typeof saved[key] === 'boolean') fallback[key] = saved[key]; });
       Object.keys(fallback.ema).forEach(period => { if (saved.ema && typeof saved.ema[period] === 'boolean') fallback.ema[period] = saved.ema[period]; });
       Object.keys(fallback.ma20hl).forEach(key => { if (saved.ma20hl && typeof saved.ma20hl[key] === 'boolean') fallback.ma20hl[key] = saved.ma20hl[key]; });
+      // New in v4; absent in v1-v3 saves, which fall through to documented defaults.
+      fallback.indicatorSettings = sanitizeIndicatorSettings(saved.indicatorSettings);
+      INDICATOR_DEFS.forEach(def => {
+        if (typeof saved.indicatorEnabled?.[def.id] === 'boolean') fallback.indicatorEnabled[def.id] = saved.indicatorEnabled[def.id];
+      });
+      if (typeof saved.localAlerts === 'boolean') fallback.localAlerts = saved.localAlerts;
     } catch (_) { /* Corrupt or unavailable browser storage must not break charts. */ }
     return fallback;
   }
@@ -60,8 +250,52 @@
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
     catch (_) { footer.textContent = 'Browser storage unavailable · settings last for this session'; }
   }
-  // Favorites survive exchange switches and schema bumps: kept in a dedicated
-  // key, not the versioned workspace blob, keyed by "<exchange>:<symbol>".
+  function getIndicatorSettings(id) {
+    return state.indicatorSettings[id] || defaultIndicatorSettings()[id];
+  }
+  function setIndicatorSettings(id, patch) {
+    const def = INDICATOR_BY_ID.get(id);
+    if (!def) return;
+    const current = { ...getIndicatorSettings(id) };
+    def.settingsSchema.forEach(field => {
+      if (Object.hasOwn(patch, field.key)) current[field.key] = sanitizeFieldValue(field, patch[field.key]);
+    });
+    state.indicatorSettings[id] = current;
+    saveState();
+  }
+  function resetIndicatorSettings(id) {
+    const def = INDICATOR_BY_ID.get(id);
+    if (!def) return;
+    const defaults = {};
+    def.settingsSchema.forEach(field => { defaults[field.key] = field.default; });
+    state.indicatorSettings[id] = defaults;
+    saveState();
+  }
+  function scaleAlpha(color, baseAlpha, multiplier) {
+    const alpha = Math.max(0, Math.min(1, baseAlpha * (Number.isFinite(multiplier) ? multiplier : 1)));
+    const hex = /^#([0-9a-f]{6})$/i.exec(color || '');
+    if (!hex) return color || `rgba(0,0,0,${alpha})`;
+    const r = parseInt(hex[1].slice(0, 2), 16);
+    const g = parseInt(hex[1].slice(2, 4), 16);
+    const b = parseInt(hex[1].slice(4, 6), 16);
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
+  // Band-kind indicators (e.g. the internal demo-band, and the follow-up
+  // Turtle Zone) have no dedicated toolbar chip; track enablement here
+  // instead of inventing a checkbox for a hidden/test-only entry.
+
+  function isIndicatorEnabled(id) {
+    if (id === 'fvg') return state.fvg;
+    if (['ema7','ema14','ema28','ema200'].includes(id)) return Boolean(state.ema[id.slice(3)]);
+    if (id === 'ma20high') return state.ma20hl.high;
+    if (id === 'ma20low') return state.ma20hl.low;
+    return state.indicatorEnabled[id] ?? false;
+  }
+  function setIndicatorEnabled(id, value) {
+    if (!INDICATOR_BY_ID.has(id)) return;
+    state.indicatorEnabled[id] = Boolean(value);
+    saveState();
+  }
   function readFavorites() {
     try {
       const raw = JSON.parse(localStorage.getItem(FAVORITES_KEY) || '[]');
@@ -173,31 +407,6 @@
     updatePaneConfig(id, { symbol: value });
     return true;
   }
-  function emaData(candles, period) {
-    if (candles.length < period) return [];
-    // Seed with an SMA, not the first close. Do not invent the missing warm-up.
-    let value = candles.slice(0, period).reduce((sum, candle) => sum + candle.close, 0) / period;
-    const result = [{ time: candles[period - 1].time, value }];
-    const alpha = 2 / (period + 1);
-    for (let index = period; index < candles.length; index += 1) {
-      value = alpha * candles[index].close + (1 - alpha) * value;
-      result.push({ time: candles[index].time, value });
-    }
-    return result;
-  }
-  // Rolling SMA of a single OHLC component (no 0-padding warm-up: callers get
-  // nothing before `period` closed candles exist).
-  function smaData(candles, period, key) {
-    if (candles.length < period) return [];
-    let sum = 0;
-    for (let index = 0; index < period; index += 1) sum += candles[index][key];
-    const result = [{ time: candles[period - 1].time, value: sum / period }];
-    for (let index = period; index < candles.length; index += 1) {
-      sum += candles[index][key] - candles[index - period][key];
-      result.push({ time: candles[index].time, value: sum / period });
-    }
-    return result;
-  }
   function intervalSeconds(interval, anchor) {
     if (interval === 'M') {
       const date = new Date(anchor * 1000);
@@ -219,6 +428,53 @@
     return Array.from(seen.values()).sort((left, right) => left.time - right.time);
   }
 
+  function localFvgEvents(previous, candles, settings) {
+    if (!previous.length || !candles.length) return [];
+    const last = previous.at(-1).time;
+    const events = [];
+    let zones = fvgZones(previous, settings);
+    for (let i = 0; i < candles.length; i += 1) {
+      const bar = candles[i]; if (bar.time <= last) continue;
+      zones.forEach(zone => {
+        const bound = settings.fillPolicy === 'close' ? bar.close : zone.direction === 'bull' ? bar.low : bar.high;
+        if (zone.direction === 'bull' ? bound <= zone.bottom : bound >= zone.top) events.push({ type: 'fully filled', time: bar.time, startTime: zone.startTime, direction: zone.direction });
+      });
+      zones = fvgZones(candles.slice(0, i + 1), settings);
+      zones.filter(z => z.startTime === bar.time).forEach(zone => events.push({ type: 'created', time: bar.time, startTime: zone.startTime, direction: zone.direction }));
+    }
+    return events;
+  }
+  const localAlertJournal = new Map();
+  const localAlertFeed = [];
+  try {
+    const saved = JSON.parse(localStorage.getItem('crypto-screener.local-fvg.v1') || '{}');
+    if (Array.isArray(saved.journal)) saved.journal.slice(-100).forEach(([key, time]) => { if (typeof key === 'string' && Number.isFinite(time)) localAlertJournal.set(key, time); });
+    if (Array.isArray(saved.feed)) saved.feed.slice(0, 50).forEach(event => { if (typeof event?.message === 'string' && typeof event?.key === 'string') localAlertFeed.push(event); });
+  } catch (_) { /* Storage optional; no external notification API. */ }
+  function renderLocalAlerts() {
+    const feed = $('#local-alerts-feed'); if (!feed) return;
+    $('#local-alerts-count').textContent = String(localAlertFeed.length);
+    feed.replaceChildren();
+    localAlertFeed.forEach(event => { const item = document.createElement('li'); item.textContent = event.message; feed.append(item); });
+    if (!localAlertFeed.length) { const item = document.createElement('li'); item.textContent = 'No local FVG events. Historical load is silent.'; feed.append(item); }
+  }
+  function observeLocalFvg(config, previous, candles) {
+    if (!candles.length) return;
+    const scope = JSON.stringify([config.exchange, config.symbol, config.interval]);
+    const since = localAlertJournal.get(scope) ?? candles.at(-1).time;
+    if (state.localAlerts) localFvgEvents(previous, candles, getIndicatorSettings('fvg')).filter(e => e.time > since).forEach(event => {
+      const key = `${scope}:${event.type}:${event.startTime}`;
+      if (localAlertFeed.some(item => item.key === key)) return;
+      localAlertFeed.unshift({ key, message: `${EXCHANGES[config.exchange]} ${config.symbol} ${intervalLabel(config.interval)} · ${event.direction} FVG ${event.type} · ${timeFormat.format(new Date(event.time * 1000))} UTC` });
+    });
+    localAlertJournal.delete(scope); localAlertJournal.set(scope, Math.max(since, candles.at(-1).time));
+    while (localAlertJournal.size > 100) localAlertJournal.delete(localAlertJournal.keys().next().value);
+    localAlertFeed.splice(50);
+    try { localStorage.setItem('crypto-screener.local-fvg.v1', JSON.stringify({ journal: [...localAlertJournal], feed: localAlertFeed })); } catch (_) { /* best effort */ }
+    renderLocalAlerts();
+  }
+  const streamHub = window.WorkspaceMarketStream?.createHub();
+
   class Pane {
     constructor(id) {
       this.id = id;
@@ -231,7 +487,7 @@
       this.interactionUntil = 0;
       this.dragging = false;
       this.candles = [];
-      this.zones = [];
+      this.rawZones = [];
       this.emas = {};
       this.emaValues = {};
       this.priceLine = null;
@@ -239,6 +495,9 @@
       this.tickerGeneration = 0;
       this.tickerController = null;
       this.tickerTimer = null;
+      this.pluginLines = new Map();
+      this.contextGeneration = 0;
+      this.contextController = null;
       this.element = document.createElement('section');
       this.element.className = 'chart-pane';
       this.element.dataset.paneId = String(id);
@@ -265,6 +524,7 @@
           <div class="chart-legend"><span class="ohlc">Waiting for provider…</span><span class="legend-ema ema-7" data-ema="7"></span><span class="legend-ema ema-14" data-ema="14"></span><span class="legend-ema ema-28" data-ema="28"></span><span class="legend-ema ema-200" data-ema="200"></span><span class="pane-live-price" data-state="hidden"></span></div>
           <div class="chart-message"><span>Loading closed candles…</span></div>
         </div>
+        <details class="pane-context"><summary>Market context · funding / OI / EMA bias</summary><div class="pane-context-body">—</div></details><div class="pane-plugin-warnings" hidden></div>
         <div class="pane-statusbar"><span class="pane-status" role="status">Connecting to market data…</span><span class="pane-count"></span></div>`;
       grid.append(this.element);
       this.host = $('.chart-host', this.element);
@@ -289,12 +549,13 @@
       this.series = this.chart.addCandlestickSeries({ upColor: '#00c087', downColor: '#ef6670', borderVisible: false, wickUpColor: '#00c087', wickDownColor: '#ef6670', priceLineVisible: true, lastValueVisible: true });
       this.volume = this.chart.addHistogramSeries({ priceFormat: { type: 'volume' }, priceScaleId: 'volume', lastValueVisible: false, priceLineVisible: false });
       this.chart.priceScale('volume').applyOptions({ scaleMargins: { top: 0.84, bottom: 0 }, visible: false });
-      Object.entries(EMA_COLORS).forEach(([period, color]) => {
-        this.emas[period] = this.chart.addLineSeries({ color, lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, visible: state.ema[period] });
+      Object.keys(EMA_COLORS).forEach(period => {
+        const settings = getIndicatorSettings(`ema${period}`);
+        this.emas[period] = this.chart.addLineSeries({ color: settings.color, lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, visible: state.ema[period] });
       });
       this.ma20 = {
-        high: this.chart.addLineSeries({ color: MA20_COLORS.high, lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, visible: state.ma20hl.high }),
-        low: this.chart.addLineSeries({ color: MA20_COLORS.low, lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, visible: state.ma20hl.low })
+        high: this.chart.addLineSeries({ color: getIndicatorSettings('ma20high').color, lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, visible: state.ma20hl.high }),
+        low: this.chart.addLineSeries({ color: getIndicatorSettings('ma20low').color, lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, visible: state.ma20hl.low })
       };
       this.logicalListener = () => this.scheduleDraw();
       this.crosshairListener = parameter => {
@@ -322,6 +583,8 @@
       });
       listen($('.pane-interval', this.element), 'change', event => updatePaneConfig(id, { interval: event.target.value }));
       listen($('.pane-reload', this.element), 'click', () => { setActive(id); this.load(false); });
+      listen($('.pane-context', this.element), 'toggle', () => this.refreshContext());
+      this.contextTimer = setInterval(() => this.refreshContext(), 60000);
       // Logical-range subscriptions cover time navigation. Price-axis drags do not
       // emit those events in 4.1, so repaint through gestures and their inertia.
       listen(this.host, 'pointerdown', () => { this.dragging = true; this.animateInteraction(); });
@@ -364,18 +627,17 @@
       this.raf = requestAnimationFrame(() => {
         this.raf = null;
         if (this.disposed) return;
-        this.drawZones();
+        this.drawOverlays();
         if (this.dragging || performance.now() < this.interactionUntil) this.scheduleDraw();
       });
     }
-    coordinateForTime(seconds) {
-      const scale = this.chart.timeScale();
-      const exact = scale.timeToCoordinate(seconds);
-      if (exact !== null) return exact;
+    // Fractional logical bar index for an arbitrary absolute time (seconds),
+    // anchored so candle i's OWN time maps to logical index i exactly (same
+    // interpolation Lightweight Charts itself uses internally). Works both
+    // inside and outside the loaded candle range.
+    logicalForTime(seconds) {
       const data = this.candles;
       if (!data.length) return null;
-      // timeToCoordinate can return null outside loaded bars. Interpolate logical
-      // indices rather than anchoring zones to a viewport edge or infinite ray.
       let low = 0;
       let high = data.length;
       while (low < high) {
@@ -383,14 +645,51 @@
         if (data[middle].time < seconds) low = middle + 1;
         else high = middle;
       }
-      let logical;
       const step = intervalSeconds(state.panes[this.id].interval, low === 0 ? data[0].time : data.at(-1).time);
-      if (low === 0) logical = (seconds - data[0].time) / step;
-      else if (low === data.length) logical = data.length - 1 + (seconds - data.at(-1).time) / step;
-      else logical = low - 1 + (seconds - data[low - 1].time) / (data[low].time - data[low - 1].time);
-      return scale.logicalToCoordinate(logical);
+      if (low === 0) return (seconds - data[0].time) / step;
+      if (low === data.length) return data.length - 1 + (seconds - data.at(-1).time) / step;
+      return low - 1 + (seconds - data[low - 1].time) / (data[low].time - data[low - 1].time);
     }
-    drawZones() {
+    // Pixel X of a bar BOUNDARY (not a bar's center). Lightweight Charts'
+    // logicalToCoordinate(i) returns the CENTER of candle i, and (confirmed
+    // empirically) only accepts INTEGER logical indices — fractional ones
+    // silently return 0, not an interpolated pixel. So: round to the nearest
+    // integer logical (always exact or ~exact for our callers, which only
+    // ever pass a candle's own open time or the close-time boundary of the
+    // last candle), get that bar's real center pixel from the library, then
+    // fold in the needed -0.5 bar (left edge) using the chart's own live
+    // barSpacing (itself a legitimate per-pixel affine value, confirmed by
+    // comparing consecutive integer logicalToCoordinate calls). A candle's
+    // own left edge sits half a bar to the left of its center. This is the
+    // fix for the FVG box-vs-candle misalignment: callers always pass either
+    // a candle's own open time (-> left edge, used for the FVG start
+    // boundary) or the close time of the last candle, i.e. the open-time
+    // boundary of a hypothetical next candle (-> left edge of that slot ==
+    // right edge of the actual last candle, used for the FVG end boundary).
+    edgeCoordinate(seconds) {
+      const logical = this.logicalForTime(seconds);
+      if (logical === null) return null;
+      const scale = this.chart.timeScale();
+      const anchor = Math.round(logical);
+      const centerPx = scale.logicalToCoordinate(anchor);
+      if (centerPx === null || !Number.isFinite(centerPx)) return null;
+      const barSpacing = scale.options().barSpacing;
+      const fraction = logical - anchor; // ~0 in every real caller today
+      return centerPx + (fraction - 0.5) * barSpacing;
+    }
+    // Effective FVG zones for current settings: default 'wick' policy reuses
+    // the already-mitigated zones the backend computed (unchanged zone math,
+    // per plan); 'close' policy is recomputed client-side (registry contract
+    // requires compute() to work purely from already-fetched candles).
+    effectiveFvgZones(settings) {
+      if (settings.fillPolicy === 'close') return fvgZones(this.candles, settings);
+      const minGapPct = Math.max(0, Number(settings.minGapPct) || 0);
+      return this.rawZones.filter(zone => {
+        const midPrice = (zone.top + zone.bottom) / 2;
+        return !(midPrice > 0 && ((zone.top - zone.bottom) / midPrice) * 100 < minGapPct);
+      });
+    }
+    drawOverlays() {
       const context = this.context;
       if (!context) return;
       const ratio = window.devicePixelRatio || 1;
@@ -398,15 +697,27 @@
       const height = this.canvas.height / ratio;
       context.setTransform(ratio, 0, 0, ratio, 0, 0);
       context.clearRect(0, 0, width, height);
-      if (!state.fvg || !this.candles.length || !width || !height) return;
+      if (!this.candles.length || !width || !height) return;
       const plotWidth = Math.max(0, width - this.chart.priceScale('right').width());
       const plotHeight = Math.max(0, height - this.chart.timeScale().height());
       context.save();
       context.beginPath(); context.rect(0, 0, plotWidth, plotHeight); context.clip();
       context.font = '9px SFMono-Regular, Consolas, monospace';
-      this.zones.forEach(zone => {
-        const x1 = this.coordinateForTime(Number(zone.start_ts) / 1000);
-        const x2 = this.coordinateForTime(Number(zone.end_ts) / 1000);
+      if (state.fvg) this.drawZones(context, plotWidth, plotHeight);
+      this.drawBands(context, plotWidth, plotHeight);
+      context.restore();
+    }
+    drawZones(context, plotWidth, plotHeight) {
+      const settings = getIndicatorSettings('fvg');
+      const lastCandle = this.candles.at(-1);
+      const step = intervalSeconds(state.panes[this.id].interval, lastCandle.time);
+      const rightBoundaryTime = lastCandle.time + step; // == close time of the last closed bar
+      const rightEdge = this.edgeCoordinate(rightBoundaryTime);
+      if (rightEdge === null) return;
+      const opacity = settings.opacity;
+      this.effectiveFvgZones(settings).forEach(zone => {
+        const x1 = this.edgeCoordinate(zone.startTime);
+        const x2 = rightEdge;
         const y1 = this.series.priceToCoordinate(Number(zone.top));
         const y2 = this.series.priceToCoordinate(Number(zone.bottom));
         if ([x1, x2, y1, y2].some(value => value === null || !Number.isFinite(value))) return;
@@ -416,17 +727,58 @@
         const bottom = Math.min(plotHeight, Math.max(y1, y2));
         if (right - left < 1 || bottom - top < 1) return;
         const bull = zone.direction === 'bull';
-        context.fillStyle = bull ? 'rgba(0,192,135,0.13)' : 'rgba(245,166,35,0.14)';
-        context.strokeStyle = bull ? 'rgba(0,192,135,0.42)' : 'rgba(245,166,35,0.45)';
+        context.fillStyle = scaleAlpha(bull ? settings.bullColor : settings.bearColor, bull ? 0.13 : 0.14, opacity);
+        context.strokeStyle = scaleAlpha(bull ? settings.bullColor : settings.bearColor, bull ? 0.42 : 0.45, opacity);
         context.fillRect(left, top, right - left, bottom - top);
         context.lineWidth = 0.75;
         context.strokeRect(left + 0.5, top + 0.5, Math.max(0, right - left - 1), Math.max(0, bottom - top - 1));
         if (right - left >= 42 && bottom - top >= 15) {
-          context.fillStyle = bull ? 'rgba(73,204,167,0.7)' : 'rgba(245,185,79,0.75)';
+          context.fillStyle = scaleAlpha(bull ? settings.bullColor : settings.bearColor, bull ? 0.7 : 0.75, opacity);
           context.fillText('FVG', left + 5, top + 11);
         }
       });
-      context.restore();
+    }
+    // Generic 'band' kind renderer (see docs/INDICATOR_PLUGIN_PLAN.md #1):
+    // fills the polygon between an upper and lower curve across their shared
+    // time range, using the same edge-accurate coordinate conversion as
+    // drawZones. No shipped indicator uses this yet; it exists so Turtle
+    // Zone (a follow-up task) only has to add a registry entry.
+    drawBands(context, plotWidth, plotHeight) {
+      INDICATOR_DEFS.filter(def => def.kind === 'band' && isIndicatorEnabled(def.id)).forEach(def => {
+        const settings = getIndicatorSettings(def.id);
+        let output;
+        try { output = def.compute(this.candles, { ...settings, intervalSeconds: intervalSeconds(state.panes[this.id].interval, this.candles.at(-1)?.time || 0) }) || {}; }
+        catch (error) { if (this.status) this.status.textContent = `${def.label}: ${error.message}`; return; }
+        const segments = Array.isArray(output.segments) ? output.segments : [output];
+        const coordinate = time => output.timeCoordinates === 'edges' ? this.edgeCoordinate(time) : this.edgeCoordinateCenter(time);
+        const convert = points => Array.isArray(points) ? points.map(point => ({ x: coordinate(point.time), y: this.series.priceToCoordinate(point.value) }))
+          .filter(point => point.x !== null && point.y !== null && Number.isFinite(point.x) && Number.isFinite(point.y)) : [];
+        segments.forEach(segment => {
+          const upper = convert(segment.upper), lower = convert(segment.lower);
+          if (upper.length < 2 || lower.length < 2) return;
+          context.save();
+          context.beginPath(); context.rect(0, 0, plotWidth, plotHeight); context.clip();
+          context.beginPath(); context.moveTo(upper[0].x, upper[0].y);
+          upper.slice(1).forEach(p => context.lineTo(p.x, p.y));
+          [...lower].reverse().forEach(p => context.lineTo(p.x, p.y));
+          context.closePath();
+          context.fillStyle = settings.opacity === undefined ? settings.color || 'rgba(130,170,255,0.18)' : scaleAlpha(settings.color, settings.opacity, 1);
+          context.fill();
+          context.lineWidth = 1; context.strokeStyle = settings.color || '#82aaff';
+          const inner = settings.innerBoundary || def.innerBoundary || 'lower';
+          const stroke = points => { context.beginPath(); context.moveTo(points[0].x, points[0].y); points.slice(1).forEach(p => context.lineTo(p.x, p.y)); context.stroke(); };
+          stroke(inner === 'upper' ? upper : lower);
+          if (settings.showOuter) stroke(inner === 'upper' ? lower : upper);
+          context.restore();
+        });
+      });
+    }
+    // Bar-center coordinate (unlike edgeCoordinate, line/band series are
+    // sampled at the candle's own time, not its boundary).
+    edgeCoordinateCenter(seconds) {
+      const logical = this.logicalForTime(seconds);
+      if (logical === null) return null;
+      return this.chart.timeScale().logicalToCoordinate(logical);
     }
     showMessage(text) {
       this.message.hidden = !text;
@@ -437,78 +789,257 @@
       Object.keys(EMA_COLORS).forEach(period => {
         const element = $(`[data-ema="${period}"]`, this.element);
         element.hidden = !state.ema[period];
+        const effectivePeriod = getIndicatorSettings(`ema${period}`).period;
         const value = candle ? this.emaValues[period]?.get(candle.time) : undefined;
-        element.textContent = `EMA ${period} ${value === undefined ? '· warming up' : formatPrice(value)}`;
+        element.textContent = `EMA ${effectivePeriod} ${value === undefined ? '· warming up' : formatPrice(value)}`;
       });
     }
     applyIndicators() {
-      Object.keys(EMA_COLORS).forEach(period => this.emas[period].applyOptions({ visible: state.ema[period] }));
-      this.ma20.high.applyOptions({ visible: state.ma20hl.high });
-      this.ma20.low.applyOptions({ visible: state.ma20hl.low });
+      Object.keys(EMA_COLORS).forEach(period => {
+        const settings = getIndicatorSettings(`ema${period}`);
+        const data = INDICATOR_BY_ID.get(`ema${period}`).compute(this.candles, settings);
+        this.emaValues[period] = new Map(data.map(point => [point.time, point.value]));
+        this.emas[period].applyOptions({ visible: state.ema[period], color: settings.color });
+        this.emas[period].setData(data);
+      });
+      ['high', 'low'].forEach(key => {
+        const id = `ma20${key}`;
+        const settings = getIndicatorSettings(id);
+        this.ma20[key].applyOptions({ visible: state.ma20hl[key], color: settings.color });
+        this.ma20[key].setData(INDICATOR_BY_ID.get(id).compute(this.candles, settings));
+      });
+      INDICATOR_DEFS.filter(def => def.kind === 'line' && !['ema7','ema14','ema28','ema200','ma20high','ma20low'].includes(def.id)).forEach(def => {
+        const settings = getIndicatorSettings(def.id);
+        let series = this.pluginLines.get(def.id);
+        if (!series) {
+          series = this.chart.addLineSeries({ lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+          this.pluginLines.set(def.id, series);
+        }
+        series.applyOptions({ visible: isIndicatorEnabled(def.id), color: settings.color || '#9ab4e6', lineWidth: settings.width || 1, lineType: def.stepLine ? LightweightCharts.LineType.WithSteps : LightweightCharts.LineType.Simple });
+        try { series.setData(isIndicatorEnabled(def.id) ? def.compute(this.candles, { ...settings, intervalSeconds: intervalSeconds(state.panes[this.id].interval, this.candles.at(-1)?.time || 0) }) : []); }
+        catch (error) { series.setData([]); this.status.textContent = `${def.label}: ${error.message}`; }
+      });
+      syncIndicatorLabels();
+      const warningEl = $('.pane-plugin-warnings', this.element);
+      const warnings = INDICATOR_DEFS.filter(def => isIndicatorEnabled(def.id) && typeof def.warnings === 'function').flatMap(def => {
+        try { return def.warnings(this.candles, { ...getIndicatorSettings(def.id), intervalSeconds: intervalSeconds(state.panes[this.id].interval, this.candles.at(-1)?.time || 0) }).map(message => `${def.label}: ${message}`); }
+        catch (error) { return [`${def.label}: ${error.message}`]; }
+      });
+      warningEl.textContent = warnings.join(' · '); warningEl.hidden = !warnings.length;
       this.updateLegend(this.candles.at(-1));
       this.scheduleDraw();
     }
     clearData() {
       this.candles = [];
-      this.zones = [];
+      this.rawZones = [];
       this.emaValues = {};
       this.series.setData([]);
       this.volume.setData([]);
       Object.values(this.emas).forEach(series => series.setData([]));
       this.ma20.high.setData([]);
       this.ma20.low.setData([]);
+      this.pluginLines.forEach(series => series.setData([]));
       this.count.textContent = '';
       $('.pane-source', this.element).textContent = '—';
       this.updateLegend();
       this.scheduleDraw();
     }
-    // Live reference line: pane-scoped poll, independent of candle/FVG/EMA
-    // data which stay strictly closed-only. Updates in place, never recreated.
+    resetContext() {
+      this.contextGeneration += 1; this.contextController?.abort(); this.contextController = null;
+      this.contextLastFetch = 0;
+      const body = $('.pane-context-body', this.element); if (body) body.textContent = '—';
+    }
+    async refreshContext() {
+      if (this.disposed || !$('.pane-context', this.element).open || document.visibilityState !== 'visible' || !isVisible(this) || this.contextController || Date.now() - (this.contextLastFetch || 0) < 60000) return;
+      const config = { ...state.panes[this.id] };
+      const generation = ++this.contextGeneration;
+      const controller = new AbortController(); this.contextController = controller;
+      this.contextLastFetch = Date.now();
+      const body = $('.pane-context-body', this.element);
+      const timeout = setTimeout(() => controller.abort(), 20000);
+      try {
+        const query = new URLSearchParams({ exchange: config.exchange, symbol: config.symbol });
+        const response = await fetch(`/api/chart/context?${query}`, { signal: controller.signal, cache: 'no-store', headers: { Accept: 'application/json' } });
+        const data = await response.json();
+        if (this.disposed || controller.signal.aborted || generation !== this.contextGeneration || config.exchange !== state.panes[this.id].exchange || config.symbol !== state.panes[this.id].symbol) return;
+        if (!response.ok || data.exchange !== config.exchange || data.symbol !== config.symbol) throw new Error('Context unavailable');
+        const numeric = v => typeof v === 'number' && Number.isFinite(v);
+        const funding = numeric(data.funding_rate) ? `${formatPrice(data.funding_rate * 100)}%` : '—';
+        const hours = numeric(data.funding_interval_hours) ? ` / ${data.funding_interval_hours}h` : '';
+        const oi = numeric(data.open_interest) ? `${formatPrice(data.open_interest)}${typeof data.open_interest_unit === 'string' ? ` ${data.open_interest_unit}` : ' · unit unknown'}` : '—';
+        body.replaceChildren();
+        const values = document.createElement('div');
+        values.textContent = `Funding ${funding}${hours} · OI ${oi} · Mark ${numeric(data.mark_price) ? formatPrice(data.mark_price) : '—'} · Index ${numeric(data.index_price) ? formatPrice(data.index_price) : '—'}`;
+        body.append(values);
+        const badges = document.createElement('div'); badges.className = 'context-bias';
+        [['60','1h'], ['240','4h'], ['D','1D']].forEach(([iv, label]) => {
+          const bias = ['bullish','bearish','mixed','insufficient','unavailable'].includes(data.ema_bias?.[iv]) ? data.ema_bias[iv] : 'unavailable';
+          const badge = document.createElement('span'); badge.dataset.bias = bias; badge.textContent = `${label} ${bias}`; badges.append(badge);
+        });
+        body.append(badges);
+        const source = document.createElement('small');
+        source.textContent = `${EXCHANGES[config.exchange]} · ${config.symbol} · snapshot ${numeric(data.as_of) ? timeFormat.format(new Date(data.as_of)) + ' UTC' : 'time unavailable'}${data.cached ? ' · cached' : ''}${Array.isArray(data.warnings) && data.warnings.length ? ` · ${data.warnings.join(' · ')}` : ''}`;
+        body.append(source);
+      } catch (_) {
+        if (!this.disposed && generation === this.contextGeneration) body.textContent = `${EXCHANGES[config.exchange]} · context unavailable · —`;
+      } finally { clearTimeout(timeout); if (generation === this.contextGeneration) this.contextController = null; }
+    }
+    // A forming candle is presentation-only. Never feed it to closed-candle
+    // indicators, FVG, alerts or the backend decision pipeline.
     startTicker(exchange, symbol) {
-      const key = `${exchange}:${symbol}`;
+      const config = { ...state.panes[this.id] };
+      const key = JSON.stringify([exchange, symbol, config.interval]);
       if (key === this.tickerKey) return;
+      this.stopTicker();
       this.tickerKey = key;
-      this.stopTicker(false);
-      this.fetchTicker();
-      this.tickerTimer = setInterval(() => this.fetchTicker(), 15000);
+      const generation = this.tickerGeneration;
+      this.streamStatus = 'connecting';
+      this.streamOff = streamHub?.subscribe({ venue: exchange, symbol, interval: config.interval }, event => {
+        if (this.disposed || this.tickerGeneration !== generation || this.tickerKey !== key) return;
+        if (event.type === 'status') { this.streamStatus = event.status; this.renderStreamStatus(); return; }
+        if (event.venue !== exchange || event.symbol !== symbol || event.interval !== config.interval) return;
+        this.lastStreamAt = event.receivedAt;
+        if (event.type === 'trade') {
+          if (event.timestamp < (this.lastTradeStamp || 0)) return;
+          this.lastTradeStamp = event.timestamp;
+          this.lastTrade = event;
+          this.setLivePrice(event.price, 'WS trade');
+          // Open and volume remain from real OHLCV. Trades refine only known
+          // same-bar C/H/L; no invented open and no double-counted volume.
+          if (this.forming && event.timestamp >= this.forming.time * 1000 && event.timestamp < this.forming.closeTime) {
+            this.forming = { ...this.forming, close: event.price, high: Math.max(this.forming.high, event.price), low: Math.min(this.forming.low, event.price) };
+            this.renderForming();
+          }
+          return;
+        }
+        this.lastCandleAt = event.receivedAt;
+        let candle = event.candle;
+        if (this.forming?.time === candle.time && this.lastTrade?.timestamp > event.timestamp) candle = { ...candle, close: this.forming.close, high: Math.max(candle.high, this.forming.high), low: Math.min(candle.low, this.forming.low) };
+        this.acceptForming(candle, 'WS', event.closed);
+      });
+      this.fetchTicker(); // genuine forming OHLCV bootstrap, not cached ticker
+      this.tickerTimer = setInterval(() => this.renderStreamStatus(), 1000);
     }
     stopTicker(removeLine = true) {
-      clearInterval(this.tickerTimer);
-      this.tickerTimer = null;
-      this.tickerController?.abort();
-      this.tickerController = null;
+      clearInterval(this.tickerTimer); this.tickerTimer = null;
+      this.streamOff?.(); this.streamOff = null;
+      this.tickerController?.abort(); this.tickerController = null;
       this.tickerGeneration += 1;
-      if (removeLine) { this.tickerKey = null; this.removeLivePrice(); }
+      this.resetResync();
+      this.forming = null; this.lastStreamAt = 0; this.lastCandleAt = 0; this.lastTradeStamp = 0; this.lastTrade = null;
+      this.streamStatus = 'disconnected';
+      this.tickerKey = null;
+      if (removeLine) this.removeLivePrice();
     }
-    setLivePrice(price) {
+    renderStreamStatus() {
+      if (this.disposed) return;
+      const age = this.lastStreamAt ? Math.max(0, Math.floor((Date.now() - this.lastStreamAt) / 1000)) : null;
+      const mode = this.streamStatus === 'live' && age !== null && age < 30 ? 'WS LIVE' : this.streamStatus === 'unsupported' ? 'WS UNSUPPORTED' : this.streamStatus === 'live' ? 'WS STALE' : `WS ${String(this.streamStatus || 'disconnected').toUpperCase()}`;
+      const label = $('.pane-closed', this.element);
+      label.textContent = `${mode}${age === null ? '' : ` · ${age}s`}`;
+      label.title = 'Current candle is display-only. Indicators and local FVG alerts use closed candles. No simulated ticks.';
+      label.dataset.stream = mode === 'WS LIVE' ? 'live' : 'offline';
+      if (this.livePriceEl.dataset.state === 'ready' && mode !== 'WS LIVE') this.livePriceEl.textContent = `${mode} · last ${formatPrice(this.lastDisplayPrice)}`;
+    }
+    setLivePrice(price, source = 'WS') {
+      this.lastDisplayPrice = price;
       if (this.priceLine) this.priceLine.applyOptions({ price });
-      else this.priceLine = this.series.createPriceLine({ price, color: '#4fc3f7', lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dotted, axisLabelVisible: true, title: 'Live' });
+      else this.priceLine = this.series.createPriceLine({ price, color: '#4fc3f7', lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dotted, axisLabelVisible: true, title: 'Current' });
       this.livePriceEl.dataset.state = 'ready';
-      this.livePriceEl.textContent = `Live ${formatPrice(price)}`;
+      this.livePriceEl.textContent = `${source} ${formatPrice(price)}`;
     }
     removeLivePrice() {
       if (this.priceLine) { this.series.removePriceLine(this.priceLine); this.priceLine = null; }
       if (this.livePriceEl) { this.livePriceEl.dataset.state = 'hidden'; this.livePriceEl.textContent = ''; }
     }
+    requestResync(bar) {
+      if (this.disposed) return;
+      this.lastResyncBar = Math.max(this.lastResyncBar || 0, bar);
+      const last = this.candles.at(-1);
+      if (last && last.time + intervalSeconds(state.panes[this.id].interval, last.time) >= this.lastResyncBar) {
+        this.resetResync(); return;
+      }
+      const attempts = this.resyncAttempts || 0;
+      this.status.textContent = 'STALE · Closed history gap · retrying closed candles…';
+      this.status.title = this.status.textContent;
+      if (this.resyncTimer || this.resyncInFlight) return;
+      // One budget per unresolved gap (not per WS update). Even a silent
+      // socket gets retries, but a broken/stale provider cannot poll forever.
+      if (attempts >= 6) {
+        this.status.textContent = 'STALE · Closed history gap remains after 6 retries. Use Reload to retry.';
+        this.status.title = this.status.textContent;
+        return;
+      }
+      const generation = this.tickerGeneration;
+      this.resyncTimer = setTimeout(async () => {
+        this.resyncTimer = null;
+        if (this.disposed || generation !== this.tickerGeneration) return;
+        // Let an already active history request finish; never abort it just
+        // because multiple forming updates arrived during its flight.
+        if (this.request) { this.requestResync(this.lastResyncBar); return; }
+        const flight = {};
+        this.resyncInFlight = flight;
+        this.resyncAttempts = attempts + 1;
+        try { await this.load(false); }
+        catch (_) { /* load normally reports errors; still retry a rejection. */ }
+        finally {
+          if (!this.disposed && generation === this.tickerGeneration && this.resyncInFlight === flight) {
+            this.resyncInFlight = null;
+            this.requestResync(this.lastResyncBar);
+          }
+        }
+      }, Math.min(30000, 700 * 2 ** attempts));
+    }
+    resetResync() {
+      clearTimeout(this.resyncTimer); this.resyncTimer = null;
+      this.lastResyncBar = null; this.resyncAttempts = 0; this.resyncInFlight = null;
+    }
+    acceptForming(candle, source, closed = false) {
+      if (!candle || !this.candles.length) return;
+      const last = this.candles.at(-1);
+      if (candle.time <= last.time || (this.forming && candle.time < this.forming.time)) return;
+      if (this.forming && candle.time > this.forming.time) this.requestResync(candle.time);
+      const expected = last.time + intervalSeconds(state.panes[this.id].interval, last.time);
+      if (candle.time > expected) {
+        // Retain the real new bar, but don't connect it across missing history.
+        this.forming = candle; this.formingSource = source;
+        this.requestResync(candle.time); return;
+      }
+      this.forming = candle; this.formingSource = source;
+      this.renderForming();
+      if (closed) this.requestResync(candle.time + intervalSeconds(state.panes[this.id].interval, candle.time));
+    }
+    renderForming() {
+      if (!this.forming || !this.candles.length) return;
+      const last = this.candles.at(-1);
+      if (this.forming.time <= last.time || this.forming.time > last.time + intervalSeconds(state.panes[this.id].interval, last.time)) return;
+      const { time, open, high, low, close, volume } = this.forming;
+      this.series.update({ time, open, high, low, close });
+      this.volume.update({ time, value: volume, color: close >= open ? '#00c08755' : '#ef667055' });
+      this.setLivePrice(close, this.formingSource || 'WS');
+      this.updateLegend(this.forming);
+      this.scheduleDraw();
+    }
     async fetchTicker() {
       if (this.disposed) return;
       this.tickerController?.abort();
-      const generation = ++this.tickerGeneration;
-      const controller = new AbortController();
-      this.tickerController = controller;
+      const generation = this.tickerGeneration;
+      const controller = new AbortController(); this.tickerController = controller;
       const config = { ...state.panes[this.id] };
+      const key = this.tickerKey;
+      const timeout = setTimeout(() => controller.abort(), 15000);
       try {
-        const query = new URLSearchParams({ exchange: config.exchange, symbol: config.symbol });
-        const response = await fetch(`/api/ticker?${query}`, { signal: controller.signal, headers: { Accept: 'application/json' }, cache: 'no-store' });
+        const query = new URLSearchParams({ exchange: config.exchange, symbol: config.symbol, interval: config.interval });
+        const response = await fetch(`/api/chart/live?${query}`, { signal: controller.signal, headers: { Accept: 'application/json' }, cache: 'no-store' });
         const payload = await response.json().catch(() => null);
-        if (this.disposed || generation !== this.tickerGeneration || config.exchange !== state.panes[this.id].exchange || config.symbol !== state.panes[this.id].symbol) return;
-        // 404/502/malformed: hide honestly, never invent a price.
-        if (!response.ok || !payload || payload.symbol !== config.symbol || typeof payload.price !== 'number' || !Number.isFinite(payload.price) || payload.price <= 0) { this.removeLivePrice(); return; }
-        this.setLivePrice(payload.price);
-      } catch (_) {
-        if (this.disposed || generation !== this.tickerGeneration) return;
-        this.removeLivePrice();
-      }
+        if (this.disposed || generation !== this.tickerGeneration || key !== this.tickerKey || controller.signal.aborted || this.lastCandleAt) return;
+        if (!response.ok || payload?.exchange !== config.exchange || payload.symbol !== config.symbol || payload.interval !== config.interval) return;
+        const c = payload.candle;
+        if (!c || c.is_forming !== true || c.source !== config.exchange || c.symbol !== config.symbol || c.interval !== config.interval || !Number.isFinite(c.close_ts) || c.close_ts <= c.ts) return;
+        const candle = parseCandles([c])[0]; if (!candle) return; candle.closeTime = c.close_ts;
+        this.acceptForming(candle, 'REST bootstrap');
+      } catch (_) { /* No fake candles on network failure. WS can still recover. */ }
+      finally { clearTimeout(timeout); }
     }
     async load(resetView = false) {
       if (this.disposed) return;
@@ -526,33 +1057,35 @@
       this.status.textContent = this.candles.length ? 'Refreshing closed candles…' : 'Loading closed candles…';
       this.showMessage(this.candles.length ? '' : 'Loading closed candles…');
       const config = { ...state.panes[this.id] };
-      this.startTicker(config.exchange, config.symbol);
+      if (this.tickerKey && this.tickerKey !== JSON.stringify([config.exchange, config.symbol, config.interval])) this.stopTicker();
+      if (resetView) this.resetContext();
       try {
         const query = new URLSearchParams({ exchange: config.exchange, symbol: config.symbol, interval: config.interval, limit: '300' });
         const response = await fetch(`/api/chart?${query}`, { signal: request.signal, headers: { Accept: 'application/json' }, cache: 'no-store' });
         const payload = await response.json();
-        if (this.disposed || request.signal.aborted || generation !== this.generation || config.exchange !== state.panes[this.id].exchange || config.symbol !== state.panes[this.id].symbol) return;
+        if (this.disposed || request.signal.aborted || generation !== this.generation || config.exchange !== state.panes[this.id].exchange || config.symbol !== state.panes[this.id].symbol || config.interval !== state.panes[this.id].interval) return;
         if (!response.ok) throw new Error(errorText(payload, `Chart request failed (HTTP ${response.status}).`));
         if (payload.exchange !== config.exchange || payload.source !== config.exchange) throw new Error('Provider returned a different exchange; chart not shown.');
         if (payload.closed_only !== true) throw new Error('Provider did not confirm closed-only candles.');
         const candles = parseCandles(payload.candles);
+        const previous = this.candles;
         this.candles = candles;
-        this.zones = (candles.length && Array.isArray(payload.zones) ? payload.zones : []).filter(zone =>
+        observeLocalFvg(config, previous, candles);
+        this.rawZones = (candles.length && Array.isArray(payload.zones) ? payload.zones : []).filter(zone =>
           zone?.type === 'fvg' && zone.mitigated !== true && ['bull', 'bear'].includes(zone.direction) &&
           ['start_ts', 'end_ts', 'top', 'bottom'].every(key => zone[key] != null && Number.isFinite(Number(zone[key]))) &&
-          Number(zone.top) > Number(zone.bottom) && Number(zone.end_ts) > Number(zone.start_ts));
+          Number(zone.top) > Number(zone.bottom) && Number(zone.end_ts) > Number(zone.start_ts))
+          // Normalize to the registry's zone shape (seconds, startTime). The
+          // backend's end_ts is ignored: the right edge is always recomputed
+          // from the actual last closed candle (see drawZones), so it can
+          // never drift past the current candle set even if a stale backend
+          // end_ts lags behind.
+          .map(zone => ({ direction: zone.direction, top: Number(zone.top), bottom: Number(zone.bottom), startTime: Number(zone.start_ts) / 1000 }));
         this.series.setData(candles.map(({ time, open, high, low, close }) => ({ time, open, high, low, close })));
         const minPrice = candles.length ? Math.min(...candles.map(candle => candle.low)) : 1;
         const precision = Math.min(10, Math.max(2, 3 - Math.floor(Math.log10(minPrice))));
         this.series.applyOptions({ priceFormat: { type: 'price', precision, minMove: 10 ** -precision } });
         this.volume.setData(candles.map(candle => ({ time: candle.time, value: candle.volume, color: candle.close >= candle.open ? '#00c08726' : '#ef66702b' })));
-        Object.keys(EMA_COLORS).forEach(period => {
-          const data = emaData(candles, Number(period));
-          this.emaValues[period] = new Map(data.map(point => [point.time, point.value]));
-          this.emas[period].setData(data);
-        });
-        this.ma20.high.setData(smaData(candles, 20, 'high'));
-        this.ma20.low.setData(smaData(candles, 20, 'low'));
         if (resetView && candles.length) {
           // Keep enough density to read structure; all 300 bars remain pannable.
           this.chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, candles.length - 125), to: candles.length + 5 });
@@ -565,9 +1098,14 @@
         this.element.dataset.state = candles.length ? 'ready' : 'empty';
         this.status.textContent = candles.length ? `${timestamp} UTC · ${provider}${warnings ? ` · ${warnings}` : ''}` : `No closed candles returned · ${provider}${warnings ? ` · ${warnings}` : ''}`;
         this.status.title = this.status.textContent;
-        this.count.textContent = `${candles.length} bars · ${this.zones.length} FVG`;
+        this.count.textContent = `${candles.length} bars · ${this.effectiveFvgZones(getIndicatorSettings('fvg')).length} FVG`;
         this.showMessage(candles.length ? '' : 'No closed candles available for this market and interval. Try another symbol or timeframe.');
         this.applyIndicators();
+        if (this.forming?.time <= candles.at(-1)?.time) { this.forming = null; this.removeLivePrice(); }
+        this.startTicker(config.exchange, config.symbol);
+        if (this.lastResyncBar !== null && this.lastResyncBar !== undefined) this.requestResync(this.lastResyncBar);
+        this.renderForming();
+        this.refreshContext();
       } catch (error) {
         if (this.disposed || generation !== this.generation || (error.name === 'AbortError' && !timedOut)) return;
         const message = timedOut ? 'Market data request timed out. Use Reload to retry.' : error.message || 'Market data unavailable.';
@@ -585,6 +1123,7 @@
       this.request?.abort();
       clearTimeout(this.requestTimer);
       this.stopTicker(false);
+      this.resetContext(); clearInterval(this.contextTimer);
       this.lifetime.abort();
       this.resizeObserver.disconnect();
       if (this.raf !== null) cancelAnimationFrame(this.raf);
@@ -772,6 +1311,162 @@
     panes.forEach(pane => { if (isVisible(pane) && !pane.request) pane.load(false); });
     if (state.sidebar && matchMedia('(min-width:1001px)').matches && !pricesController) refreshPrices();
   }
+  // ─── Part A: generic settings popover, schema-driven per docs/INDICATOR_PLUGIN_PLAN.md #2 ───
+  // One shared popover element, anchored near whichever ⚙ button opened it.
+  // Apply recomputes immediately; Reset restores the indicator's documented
+  // defaults; Escape/outside-click closes it. Design choice (documented here
+  // since the plan text left it open): typed-but-not-yet-applied edits are
+  // simply discarded on close, same as any standard settings dialog — they
+  // are never silently committed, and reopening shows the last *applied*
+  // values, not a stale draft.
+  function buildSettingsPopover() {
+    const popover = document.createElement('div');
+    popover.className = 'indicator-settings-popover';
+    popover.hidden = true;
+    popover.setAttribute('role', 'dialog');
+    popover.setAttribute('aria-modal', 'false');
+    popover.innerHTML = '<header><span class="indicator-settings-title"></span><button type="button" class="indicator-settings-close" aria-label="Close settings">×</button></header><div class="indicator-settings-fields"></div><footer><button type="button" class="indicator-settings-reset">Reset</button><button type="button" class="indicator-settings-apply">Apply</button></footer>';
+    document.body.append(popover);
+    return popover;
+  }
+  const settingsPopover = buildSettingsPopover();
+  let settingsPopoverId = null;
+  function renderSettingsFields(id) {
+    const def = INDICATOR_BY_ID.get(id);
+    const settings = getIndicatorSettings(id);
+    const fields = $('.indicator-settings-fields', settingsPopover);
+    fields.innerHTML = '';
+    def.settingsSchema.forEach(field => {
+      const row = document.createElement('label');
+      row.className = 'indicator-settings-field';
+      const labelSpan = document.createElement('span');
+      labelSpan.textContent = field.label;
+      row.append(labelSpan);
+      let input;
+      if (field.type === 'select') {
+        input = document.createElement('select');
+        field.options.forEach(option => {
+          const optionEl = document.createElement('option');
+          optionEl.value = option; optionEl.textContent = option;
+          input.append(optionEl);
+        });
+        input.value = settings[field.key];
+      } else if (field.type === 'boolean') {
+        input = document.createElement('input');
+        input.type = 'checkbox';
+        input.checked = Boolean(settings[field.key]);
+      } else if (field.type === 'color') {
+        input = document.createElement('input');
+        input.type = 'color';
+        input.value = settings[field.key];
+      } else {
+        input = document.createElement('input');
+        input.type = 'number';
+        if (typeof field.min === 'number') input.min = String(field.min);
+        if (typeof field.max === 'number') input.max = String(field.max);
+        if (typeof field.step === 'number') input.step = String(field.step);
+        input.value = settings[field.key];
+      }
+      input.className = 'indicator-settings-input';
+      input.dataset.key = field.key;
+      input.dataset.type = field.type;
+      row.append(input);
+      fields.append(row);
+    });
+  }
+  function openSettingsPopover(id, anchor) {
+    settingsPopoverId = id;
+    $('.indicator-settings-title', settingsPopover).textContent = `${INDICATOR_BY_ID.get(id).label} settings`;
+    renderSettingsFields(id);
+    settingsPopover.hidden = false;
+    $all('.indicator-settings-btn').forEach(button => button.setAttribute('aria-expanded', String(button === anchor)));
+    const rect = anchor.getBoundingClientRect();
+    settingsPopover.style.top = `${Math.round(rect.bottom + 6)}px`;
+    settingsPopover.style.left = `${Math.round(rect.left)}px`;
+    requestAnimationFrame(() => {
+      if (settingsPopover.hidden) return;
+      const popRect = settingsPopover.getBoundingClientRect();
+      if (popRect.right > window.innerWidth - 8) settingsPopover.style.left = `${Math.max(8, window.innerWidth - popRect.width - 8)}px`;
+      if (popRect.bottom > window.innerHeight - 8) settingsPopover.style.top = `${Math.max(8, rect.top - popRect.height - 6)}px`;
+    });
+  }
+  function closeSettingsPopover() {
+    if (settingsPopover.hidden) return;
+    settingsPopover.hidden = true;
+    settingsPopoverId = null;
+    $all('.indicator-settings-btn').forEach(button => button.setAttribute('aria-expanded', 'false'));
+  }
+  function applySettingsPopover() {
+    if (!settingsPopoverId) return;
+    const def = INDICATOR_BY_ID.get(settingsPopoverId);
+    const patch = {};
+    const inputs = $all('.indicator-settings-input', settingsPopover);
+    const invalid = inputs.find(input => !input.checkValidity());
+    if (invalid) { invalid.reportValidity(); return; }
+    inputs.forEach(input => {
+      const field = def.settingsSchema.find(entry => entry.key === input.dataset.key);
+      if (!field) return;
+      patch[field.key] = field.type === 'boolean' ? input.checked : input.value;
+    });
+    setIndicatorSettings(settingsPopoverId, patch);
+    panes.forEach(pane => pane.applyIndicators());
+  }
+  function resetSettingsPopover() {
+    if (!settingsPopoverId) return;
+    resetIndicatorSettings(settingsPopoverId);
+    renderSettingsFields(settingsPopoverId);
+    panes.forEach(pane => pane.applyIndicators());
+  }
+  function indicatorLabel(def) {
+    const settings = getIndicatorSettings(def.id);
+    if (['ema7','ema14','ema28','ema200'].includes(def.id)) return `EMA ${settings.period}`;
+    if (def.id.startsWith('ma20')) return `MA ${settings.period} ${settings.source}`;
+    return typeof def.labelForSettings === 'function' ? def.labelForSettings(settings) : `${def.label}${settings.period !== undefined ? ` ${settings.period}` : settings.length !== undefined ? ` ${settings.length}` : ''}`;
+  }
+  function syncIndicatorLabels() {
+    INDICATOR_DEFS.forEach(def => {
+      const button = $(`.indicator-settings-btn[data-indicator="${def.id}"]`);
+      if (!button) return;
+      const label = indicatorLabel(def);
+      button.title = `${label} settings`; button.setAttribute('aria-label', button.title);
+      const chip = button.previousElementSibling;
+      if (chip?.matches('label.toggle-chip')) $('span', chip).textContent = label;
+    });
+  }
+  function initGenericIndicators() {
+    const group = $('#extra-indicator-controls');
+    INDICATOR_DEFS.filter(def => !def.hidden && !$(`.indicator-settings-btn[data-indicator="${def.id}"]`)).forEach(def => {
+      const label = document.createElement('label'); label.className = 'toggle-chip';
+      const input = document.createElement('input'); input.type = 'checkbox'; input.dataset.indicatorToggle = def.id;
+      input.checked = isIndicatorEnabled(def.id);
+      const span = document.createElement('span'); span.textContent = indicatorLabel(def); label.append(input, span);
+      const button = document.createElement('button'); button.type = 'button'; button.className = 'indicator-settings-btn'; button.dataset.indicator = def.id;
+      button.textContent = '⚙'; button.setAttribute('aria-expanded', 'false'); button.setAttribute('aria-label', `${def.label} settings`);
+      input.addEventListener('change', () => { setIndicatorEnabled(def.id, input.checked); panes.forEach(pane => pane.applyIndicators()); });
+      group.append(label, button);
+    });
+    syncIndicatorLabels();
+  }
+  function initSettingsPopovers() {
+    $all('.indicator-settings-btn').forEach(button => {
+      button.addEventListener('click', event => {
+        event.preventDefault();
+        event.stopPropagation();
+        const id = button.dataset.indicator;
+        if (settingsPopoverId === id) { closeSettingsPopover(); return; }
+        openSettingsPopover(id, button);
+      });
+    });
+    $('.indicator-settings-close', settingsPopover).addEventListener('click', closeSettingsPopover);
+    $('.indicator-settings-apply', settingsPopover).addEventListener('click', applySettingsPopover);
+    $('.indicator-settings-reset', settingsPopover).addEventListener('click', resetSettingsPopover);
+    document.addEventListener('keydown', event => { if (event.key === 'Escape') closeSettingsPopover(); });
+    document.addEventListener('click', event => {
+      if (settingsPopover.hidden) return;
+      if (settingsPopover.contains(event.target) || event.target.closest?.('.indicator-settings-btn')) return;
+      closeSettingsPopover();
+    });
+  }
   function init() {
     if (!window.LightweightCharts) {
       $('#workspace').classList.add('is-unavailable');
@@ -780,6 +1475,9 @@
       return;
     }
     initialized = true;
+    initGenericIndicators(); renderLocalAlerts();
+    $('#local-alerts-toggle').checked = state.localAlerts;
+    $('#local-alerts-toggle').addEventListener('change', event => { state.localAlerts = event.target.checked; saveState(); });
     createFavorites();
     $('#exchange-select').value = state.watchlistExchange;
     $('#watchlist-search').value = state.watchlistSearch;
@@ -830,6 +1528,7 @@
     $('#refresh-prices').addEventListener('click', () => refreshPrices(true));
     $('#watchlist-retry').addEventListener('click', () => refreshPrices(true));
     document.addEventListener('click', event => document.querySelectorAll('.pane-symbol-menu[open]').forEach(menu => { if (!menu.contains(event.target)) menu.open = false; }));
+    initSettingsPopovers();
     mountLayout(); loadIntervals(); refreshPrices();
   }
   const refreshTimer = setInterval(autoRefresh, 60000);
@@ -841,5 +1540,9 @@
     panes.forEach(pane => pane.destroy()); panes.clear();
   });
   window.addEventListener('pageshow', event => { if (event.persisted && initialized) location.reload(); });
+  // Debug/test surface only (no prod secrets, read/write of already-exposed
+  // state): lets the Playwright pixel regressions drive settings and read
+  // Pane internals precisely instead of poking at private closures.
+  window.__workspaceDebug = { state, panes, INDICATOR_DEFS, INDICATOR_BY_ID, getIndicatorSettings, setIndicatorSettings, resetIndicatorSettings, setIndicatorEnabled, fvgZones, defaultIndicatorSettings };
   init();
 })();
