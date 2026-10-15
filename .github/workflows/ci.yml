@@ -31,10 +31,16 @@ jobs:
 
       - name: Lint (ruff)
         # screener.py — legacy 4k-line file; игнорим стилистические
-        # one-line if/else (E701/E702), оставляем только реальные баги
+        # one-line if/else (E701/E702), оставляем только реальные баги.
+        # --select закреплён явно: ruff>=0.6 расширяет набор правил по
+        # умолчанию между релизами (подтверждено на main 2026-10-15:
+        # неявный default-select вырос с E4/E7/E9/F до ~15 категорий,
+        # включая YTT/ASYNC/S/B и т.д., без единого изменения кода).
+        # Без явного --select CI начинает красниться от одного bump
+        # ruff, а не от реальных регрессий в правках.
         run: |
-          ruff check decision.py llm_agents.py chart.py tracking.py tests/
-          ruff check screener.py --ignore E701,E702 webhook_server.py
+          ruff check --select E4,E7,E9,F decision.py llm_agents.py chart.py tracking.py tests/
+          ruff check --select E4,E7,E9,F screener.py --ignore E701,E702 webhook_server.py
 
       - name: Unit tests (pytest)
         run: pytest -v
