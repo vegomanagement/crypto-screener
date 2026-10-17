@@ -14,12 +14,12 @@ Reference: Vataga.terminal 7.10.3 (macOS, installed locally at
 - REA `inspect-managed-artifact` identified the PE/CLI arm64 assembly, but whole-assembly
   and per-type member inspection stopped at REA's 64 MiB representation budget:
   `Vataga.terminal.dll` is 68 MB, 57 MB of it resources. The evidence for this is in
-  `docs/evidence/scalping/vataga-terminal-metadata/rea-*.json`.
+  REA evidence (kept locally by the maintainer, not committed: third-party material).
 - Fallback: we read **metadata only** (type/property names and enum constants) with
   System.Reflection.Metadata (`metadata-dump-Program.cs`; outputs `types.tsv`,
   `config_props.txt`). No IL was decompiled. No code, assets or text are copied. Private
   members are obfuscated, but public property names and enums are readable. Public wiki
-  pages are in `docs/evidence/scalping/vataga-public-docs/`.
+  pages are in local research notes (kept locally by the maintainer, not committed: third-party material).
 - Use only as a feature inventory. Do not use the Vataga name or wording in the product.
 
 ### What Vataga has (from metadata + docs)
