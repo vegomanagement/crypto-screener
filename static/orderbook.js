@@ -59,23 +59,54 @@
 
   // ── book ───────────────────────────────────────────────────────────────────
   class Book {
+    /**
+     * `bids`/`asks` hold the total resting size per tick index. Venues can publish levels off their own
+     * tick grid (observed live: Binance SOLUSDT, tickSize 0.0100, level at 105.0020). Such a level is kept
+     * at its exact price in `off` and counted in the tick that contains it ([idx·tick, (idx+1)·tick)), so
+     * a later qty 0 for that exact price removes exactly that size and nothing is merged or dropped.
+     */
     constructor(tick) {
       if (!(tick > 0)) throw new Error('tick must be positive');
       this.tick = tick; this.bids = new Map(); this.asks = new Map(); this.version = 0;
+      this.on = { bid: new Map(), ask: new Map() }; this.off = { bid: new Map(), ask: new Map() };
       this._best = null; this.coverage = { bidFloor: null, askCeil: null };
     }
-    clear() { this.bids.clear(); this.asks.clear(); this._best = null; this.version += 1; this.coverage = { bidFloor: null, askCeil: null }; }
+    clear() {
+      this.bids.clear(); this.asks.clear(); for (const m of [this.on.bid, this.on.ask, this.off.bid, this.off.ask]) m.clear();
+      this._best = null; this.version += 1; this.coverage = { bidFloor: null, askCeil: null };
+    }
+    get offGridLevels() { let n = 0; for (const m of [this.off.bid, this.off.ask]) for (const cell of m.values()) n += cell.size; return n; }
+    _put(side, price, q) {
+      const p = num(price);
+      if (!(p > 0)) throw new Error('invalid price');
+      const raw = p / this.tick, near = Math.round(raw);
+      const onGrid = Math.abs(raw - near) <= Math.min(1e-3, 1e-9 * Math.max(1, Math.abs(raw)));
+      const idx = onGrid ? near : Math.floor(raw);
+      if (onGrid) { if (q === 0) this.on[side].delete(idx); else this.on[side].set(idx, q); }
+      else {
+        const cells = this.off[side]; let cell = cells.get(idx);
+        if (q === 0) { if (cell) { cell.delete(p); if (!cell.size) cells.delete(idx); } }
+        else { if (!cell) { cell = new Map(); cells.set(idx, cell); } cell.set(p, q); }
+      }
+      let total = this.on[side].get(idx) || 0;
+      const cell = this.off[side].get(idx);
+      if (cell) for (const v of cell.values()) total += v;
+      const map = side === 'bid' ? this.bids : this.asks;
+      if (total > 0) map.set(idx, total); else map.delete(idx);
+    }
     set(side, price, qty) {
       const q = num(qty);
       if (!(q >= 0)) throw new Error('invalid quantity');
-      const map = side === 'bid' ? this.bids : this.asks, idx = priceIndex(price, this.tick);
-      if (q === 0) map.delete(idx); else map.set(idx, q);
+      this._put(side, price, q);
       this._best = null; this.version += 1;
     }
     load(bids, asks) {
-      this.bids.clear(); this.asks.clear();
-      for (const [p, q] of bids) if (num(q) > 0) this.bids.set(priceIndex(p, this.tick), num(q));
-      for (const [p, q] of asks) if (num(q) > 0) this.asks.set(priceIndex(p, this.tick), num(q));
+      this.bids.clear(); this.asks.clear(); for (const m of [this.on.bid, this.on.ask, this.off.bid, this.off.ask]) m.clear();
+      for (const [side, rows] of [['bid', bids], ['ask', asks]]) for (const [p, q] of rows) {
+        const n = num(q);
+        if (!(n >= 0)) throw new Error('invalid quantity');
+        if (n > 0) this._put(side, p, n);
+      }
       this._best = null; this.version += 1;
     }
     best() {
@@ -87,13 +118,29 @@
         deepestBid: Number.isFinite(bidMin) ? bidMin : null, deepestAsk: Number.isFinite(askMax) ? askMax : null };
       return this._best;
     }
-    crossed() { const b = this.best(); return b.bid !== null && b.ask !== null && b.bid >= b.ask; }
+    crossed() {
+      const b = this.best();
+      if (b.bid === null || b.ask === null || b.bid < b.ask) return false;
+      if (b.bid > b.ask) return true;
+      // Same tick index: only off-grid levels can share it, so compare their exact prices.
+      const exact = (side, pick) => {
+        const out = []; if (this.on[side].has(b.bid)) out.push(b.bid * this.tick);
+        for (const p of this.off[side].get(b.bid)?.keys() || []) out.push(p);
+        return pick(...out);
+      };
+      return exact('bid', Math.max) >= exact('ask', Math.min) - this.tick * 1e-9;
+    }
     qty(side, idx) { return (side === 'bid' ? this.bids : this.asks).get(idx) || 0; }
-    /** Top N levels per side as [price, qty] (prices rounded to the tick's decimals). */
+    /** Top N venue levels per side as [exact price, qty]; off-grid levels keep their own price. */
     top(n) {
       const d = decimalsOf(this.tick), px = i => Number((i * this.tick).toFixed(d));
-      const bids = [...this.bids].sort((a, b) => b[0] - a[0]).slice(0, n).map(([i, q]) => [px(i), q]);
-      const asks = [...this.asks].sort((a, b) => a[0] - b[0]).slice(0, n).map(([i, q]) => [px(i), q]);
+      const levels = side => {
+        const out = [...this.on[side]].map(([i, q]) => [px(i), q]);
+        for (const cell of this.off[side].values()) for (const [p, q] of cell) out.push([p, q]);
+        return out;
+      };
+      const bids = levels('bid').sort((a, b) => b[0] - a[0]).slice(0, n);
+      const asks = levels('ask').sort((a, b) => a[0] - b[0]).slice(0, n);
       return { bids, asks };
     }
     /** Is this tick index inside the depth window the venue actually gave us? */

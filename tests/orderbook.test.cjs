@@ -102,11 +102,24 @@ test('binance: coverage is the snapshot window; far diff levels are kept but fla
   assert.equal(ob.rowLevel(s.book, 50, 10).covered, false);
 });
 
-test('binance: off-grid level in a diff resyncs instead of merging it into a neighbour', () => {
+test('binance: off-grid venue level is kept at its exact price, counted in its tick, removable by qty 0', () => {
+  // Observed live 2026-10-17: Binance SOLUSDT (tickSize 0.0100) published a resting level at 105.0020.
   const s = new ob.BinanceSync(SYM, 0.1);
-  s.onSnapshot(snap(100, SNAP_BIDS, SNAP_ASKS));
+  s.onSnapshot(snap(100, [...SNAP_BIDS, ['99.85', '3']], SNAP_ASKS));
+  assert.equal(s.book.qty('bid', 998), 3, '99.85 lives in the 99.8 tick');
   s.onEvent(depth(100, 101, 99));
-  assert.deepEqual(s.onEvent(depth(102, 103, 101, [['99.95', '1']])), { resync: 'invalid-level' });
+  assert.deepEqual(s.onEvent(depth(102, 103, 101, [['99.95', '1'], ['99.9', '2']])), { applied: true });
+  assert.equal(s.book.qty('bid', 999), 3, 'on-grid 2 + off-grid 1 in the 99.9 tick');
+  assert.equal(s.book.offGridLevels, 2);
+  assert.deepEqual(s.book.top(4).bids, [[100, 1], [99.95, 1], [99.9, 2], [99.85, 3]], 'top() keeps exact venue prices');
+  s.onEvent(depth(104, 105, 103, [['99.95', '0']]));
+  assert.equal(s.book.qty('bid', 999), 2, 'qty 0 removes exactly the off-grid size');
+  assert.equal(s.book.offGridLevels, 1);
+  const book = new ob.Book(0.1);
+  book.load([['100.0', '1']], [['100.05', '1']]);
+  assert.equal(book.crossed(), false, 'bid 100.0 < ask 100.05 although both sit in tick 1000');
+  book.set('bid', '100.06', '1');
+  assert.equal(book.crossed(), true);
 });
 
 const bybit = (type, u, b = [], a = [], extra = {}) => ({ topic: 'orderbook.200.BTCUSDT', type, ts: 1, cts: 1, data: { s: SYM, b, a, u, seq: u * 10 }, ...extra });
