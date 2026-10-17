@@ -307,7 +307,7 @@
       ctx.globalAlpha = level.dragPrice ? 0.6 : 1;
       ctx.beginPath(); ctx.moveTo(0, yy); ctx.lineTo(x1, yy); ctx.stroke();
       ctx.setLineDash?.([]); ctx.globalAlpha = 1;
-      const tag = `${signal ? (fired ? '◇' : '◆') : '—'} ${level.note ? level.note.slice(0, 24) : signal ? (fired ? 'fired' : level.repeat ? 'signal ↻' : 'signal') : ''}`.trim();
+      const tag = `${signal ? (fired ? '◇' : '◆') : '—'} ${level.note ? level.note.slice(0, 24) : signal ? (fired ? 'fired' : level.repeat ? 'signal ↻' : 'signal') : 'level'}`.trim();
       const w = tag.length * 6.6 + 8, tx = Math.max(0, L.price.x - w - 2);
       ctx.fillStyle = level.color; ctx.fillRect(tx, yy - 7, w, 14);
       ctx.fillStyle = '#0c0f15'; ctx.textAlign = 'left'; ctx.fillText(tag, tx + 4, yy);

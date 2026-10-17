@@ -53,6 +53,7 @@
   // ── volume alerts ─────────────────────────────────────────────────────────
   const DEFAULT_CONFIG = { appear: false, appearUsd: 1000000, withinPct: 0.5, decrease: false, decreasePct: 50,
     print: false, printUsd: 500000, printAggMs: 0, sound: true };
+  const OBabbr = v => (v >= 1e9 ? `${+(v / 1e9).toFixed(2)}B` : v >= 1e6 ? `${+(v / 1e6).toFixed(2)}M` : v >= 1e3 ? `${+(v / 1e3).toFixed(1)}K` : String(v));
   function tickIndex(price, tick) {
     const raw = price / tick, near = Math.round(raw);
     return Math.abs(raw - near) <= Math.min(1e-3, 1e-9 * Math.max(1, Math.abs(raw))) ? near : Math.floor(raw);
@@ -73,7 +74,7 @@
     constructor({ tick, tickStr, rateMs = 3000, graceMs = 400, tradeWindowMs = 3000 } = {}) {
       this.tick = tick; this.tickStr = tickStr ?? String(tick); this.cfg = { ...DEFAULT_CONFIG };
       this.limiter = new RateLimiter(rateMs); this.graceMs = graceMs; this.tradeWindowMs = tradeWindowMs;
-      this.tracked = new Map(); this.traded = new Map(); this.pending = []; this.seeded = false; this.group = null;
+      this.tracked = new Map(); this.known = new Set(); this.traded = new Map(); this.pending = []; this.seeded = false; this.group = null;
       this.stats = { seeds: 0, resets: 0, suppressed: 0, emitted: 0 };
     }
     configure(cfg = {}) {
@@ -81,7 +82,7 @@
       if (was.appearUsd !== this.cfg.appearUsd || was.withinPct !== this.cfg.withinPct || (!was.appear && !was.decrease)) this.reset();
     }
     /** Book resynced / restarted: forget tracked levels; the next synced book seeds silently. */
-    reset() { this.tracked.clear(); this.pending = []; this.seeded = false; this.stats.resets += 1; }
+    reset() { this.tracked.clear(); this.known = new Set(); this.pending = []; this.seeded = false; this.stats.resets += 1; }
     priceOf(idx) { return levels.fromTicks(idx, this.tickStr) ?? (idx * this.tick).toString(); }
     emit(out, alert) {
       if (!this.limiter.allow(alert.type, alert.price, alert.at)) { this.stats.suppressed += 1; return; }
@@ -134,12 +135,18 @@
       if (!best || best.bid === null || best.ask === null) return out;
       const mid = (best.bid + best.ask) / 2 * this.tick, lo = mid * (1 - cfg.withinPct / 100), hi = mid * (1 + cfg.withinPct / 100);
       const inRange = idx => { const p = idx * this.tick; return p >= lo && p <= hi && book.covered(idx); };
+      // `known`: every large level in the whole covered book, so a level that only *enters* the Y % window because
+      // the price moved is not reported as "appeared". Kept until it falls below half the threshold (no flapping).
+      const known = new Set();
       for (const [side, map] of [['bid', book.bids], ['ask', book.asks]]) for (const [idx, qty] of map) {
         const usd = qty * idx * this.tick, key = `${side}:${idx}`;
+        if (usd < (this.known.has(key) ? cfg.appearUsd / 2 : cfg.appearUsd) || !book.covered(idx)) continue;
+        known.add(key);
         if (usd < cfg.appearUsd || this.tracked.has(key) || !inRange(idx)) continue;
         this.tracked.set(key, { side, idx, peakQty: qty, lastQty: qty, lastAt: now, traded: 0, pulled: 0, since: now });
-        if (this.seeded && cfg.appear) this.emit(out, { type: 'appear', side, price: this.priceOf(idx), usd, qty, at: now, detail: `${side} ≥ $${cfg.appearUsd}` });
+        if (this.seeded && cfg.appear && !this.known.has(key)) this.emit(out, { type: 'appear', side, price: this.priceOf(idx), usd, qty, at: now, detail: `${side} ≥ $${OBabbr(cfg.appearUsd)}` });
       }
+      this.known = known;
       if (!this.seeded) { this.seeded = true; this.stats.seeds += 1; }
       for (const [key, t] of this.tracked) {
         if (!inRange(t.idx)) { this.tracked.delete(key); continue; } // left the watched window: not a decrease
@@ -150,12 +157,13 @@
         }
         if (qty > t.peakQty) { t.peakQty = qty; t.traded = 0; t.pulled = 0; }
         t.lastQty = qty; t.lastAt = now;
-        if (!cfg.decrease) { if (qty * t.idx * this.tick < cfg.appearUsd / 2) this.tracked.delete(key); continue; } // hysteresis: no appear flapping
+        if (!cfg.decrease) { if (qty * t.idx * this.tick < cfg.appearUsd) this.tracked.delete(key); continue; }
         const gone = qty === 0, drop = (t.peakQty - qty) / t.peakQty * 100;
         if (gone || drop >= cfg.decreasePct) {
           this.pending.push({ key, dueAt: now + this.graceMs, type: gone ? 'gone' : 'decrease', side: t.side, idx: t.idx, peakQty: t.peakQty, qty,
             traded: t.traded, pulled: t.pulled, at: now });
-          if (gone) this.tracked.delete(key); else { t.peakQty = qty; t.traded = 0; t.pulled = 0; }
+          // still large → keep watching from the new size; below the threshold → it is no longer a large level
+          if (gone || qty * t.idx * this.tick < cfg.appearUsd) this.tracked.delete(key); else { t.peakQty = qty; t.traded = 0; t.pulled = 0; }
         }
       }
       this.flush(out, now); this.prune(now);
@@ -202,8 +210,17 @@
       if (!raw || raw.version !== LOG_VERSION || !Array.isArray(raw.entries)) return [];
       return raw.entries.map(sanitizeEntry).filter(Boolean).slice(0, this.cap);
     }
+    /** Cap at 200: drop the oldest volume alerts first so a flood of book alerts cannot push out signal hits. */
+    capped(entries) {
+      if (entries.length <= this.cap) return entries;
+      let excess = entries.length - this.cap;
+      const drop = new Set();
+      for (let k = entries.length - 1; k >= 0 && excess > 0; k -= 1) if (entries[k].type !== 'signal') { drop.add(k); excess -= 1; }
+      const kept = entries.filter((_, k) => !drop.has(k));
+      return kept.slice(0, this.cap);
+    }
     save(entries) {
-      const list = entries.slice(0, this.cap);
+      const list = this.capped(entries);
       try { this.storage.setItem(LOG_KEY, JSON.stringify({ version: LOG_VERSION, entries: list })); this.memory = null; return true; }
       catch (_) { this.memory = list; return false; }
     }

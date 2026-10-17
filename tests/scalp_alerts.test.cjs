@@ -51,6 +51,17 @@ test('appear: first synced book only seeds; a new large level inside Y % alerts 
   assert.deepEqual(out, [], 'still there: no repeat alert');
   va.reset();
   assert.deepEqual(va.onBook(book([['99.0', '900']], [['100.1', '1']]), 300), [], 'after a resync the next book seeds again');
+  // a large level that was already resting outside the window is not "new" when the price moves towards it
+  const vb = new A.VolumeAlerts({ tick: 0.1, tickStr: '0.1' });
+  vb.configure({ appear: true, appearUsd: 50000, withinPct: 1 });
+  vb.onBook(book([['100.0', '1'], ['97.0', '1000']], [['100.1', '1']]), 0);
+  assert.deepEqual(vb.onBook(book([['97.5', '1'], ['97.0', '1000']], [['97.6', '1']]), 100), [], 'window moved onto an old level');
+  assert.equal(vb.tracked.size, 1, 'but it is tracked now (for decrease)');
+  // flapping just around the threshold does not re-alert; a real disappearance and return does
+  assert.deepEqual(vb.onBook(book([['97.5', '1'], ['97.0', '400']], [['97.6', '1']]), 200), [], '$38.8k: still known (≥ half the threshold)');
+  assert.deepEqual(vb.onBook(book([['97.5', '1'], ['97.0', '1000']], [['97.6', '1']]), 300), []);
+  vb.onBook(book([['97.5', '1']], [['97.6', '1']]), 400);
+  assert.equal(vb.onBook(book([['97.5', '1'], ['97.0', '1000']], [['97.6', '1']]), 5000).length, 1, 'gone then back: appears again');
 });
 
 test('decrease: drop explained by trades at that price is "traded", unexplained drop is "pulled", partial is "partly traded"', () => {
@@ -80,6 +91,14 @@ test('decrease: drop explained by trades at that price is "traded", unexplained 
   va.onBook(book([['100.0', '1000']], [['100.1', '1']]), 0);
   assert.deepEqual(va.onBook(book([['100.0', '700']], [['100.1', '1']]), 100), []);
   assert.equal(va.onBook(book([['100.0', '450']], [['100.1', '1']]), 200)[0].type, 'decrease');
+  assert.equal(va.tracked.size, 0, '$45k left is below the $50k threshold: no longer tracked');
+  assert.deepEqual(va.onBook(book([['100.0', '10']], [['100.1', '1']]), 5000), [], 'so the remainder never re-alerts');
+  // a level that stays large after a decrease keeps being watched from its new size
+  va = mk();
+  va.onBook(book([['100.0', '3000']], [['100.1', '1']]), 0);
+  assert.equal(va.onBook(book([['100.0', '1000']], [['100.1', '1']]), 100).length, 1);
+  assert.equal(va.tracked.get('bid:1000').peakQty, 1000);
+  assert.equal(va.onBook(book([['100.0', '400']], [['100.1', '1']]), 5000)[0].type, 'decrease');
 });
 
 test('decrease: a trade that arrives after the depth update (separate sockets) is credited within the grace period', () => {
@@ -132,6 +151,12 @@ test('alert log: newest first, capped at 200, delete single/all, junk ignored', 
   log.clear(); assert.deepEqual(log.list(), []);
   storage.setItem(A.LOG_KEY, JSON.stringify({ version: 1, entries: [{ id: 'z', at: 1, exchange: 'bybit', symbol: 'ETHUSDT', source: 'book', price: '1.5', type: 'gone', detail: 'x', evil: '<img>' }, { id: 1 }] }));
   assert.deepEqual(log.list(), [{ id: 'z', at: 1, exchange: 'bybit', symbol: 'ETHUSDT', source: 'book', price: '1.5', type: 'gone', detail: 'x' }]);
+  // signals survive a flood of volume alerts: the oldest volume entries go first
+  const flood = new A.AlertLog(L.memoryStorage(), { now: () => ++t });
+  flood.add({ exchange: 'binance', symbol: 'BTCUSDT', source: 'dom', price: '1', type: 'signal' });
+  for (let k = 0; k < 250; k += 1) flood.add({ exchange: 'binance', symbol: 'BTCUSDT', source: 'book', price: String(2 + k), type: 'appear' });
+  const fl = flood.list();
+  assert.equal(fl.length, 200); assert.equal(fl.at(-1).type, 'signal'); assert.equal(fl[0].price, '251');
   const broken = new A.AlertLog({ getItem: () => null, setItem: () => { throw new Error('quota'); } });
   broken.add({ exchange: 'binance', symbol: 'BTCUSDT', source: 'trades', price: '1', type: 'print' });
   assert.equal(broken.list().length, 1, 'kept in memory when storage fails');
