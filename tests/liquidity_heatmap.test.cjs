@@ -153,7 +153,7 @@ test('browser: local depth primitive behind native candles, opt-in leases, gaps,
     await page.locator('.indicator-settings-btn[data-indicator="liquidity"]').click();
     await page.locator('[data-key="minQty"]').fill('999');await page.locator('.indicator-settings-apply').click();
     await page.waitForFunction(()=>window.__workspaceDebug.panes.get(0).liquidityModel.cells.length===0);
-    assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('crypto-screener.workspace.v4')).indicatorSettings.liquidity.minQty),999);
+    assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('crypto-screener.workspace.v5')).indicatorSettings.liquidity.minQty),999);
     await page.locator('.indicator-settings-reset').click();await page.keyboard.press('Escape');
     empty=true;await page.evaluate(()=>{const p=window.__workspaceDebug.panes.get(0);p.liquiditySession.invalidate();return p.liquiditySession.tick();});
     await page.waitForFunction(()=>window.__workspaceDebug.panes.get(0).liquidityModel.cells.length===0);

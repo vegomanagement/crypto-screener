@@ -163,7 +163,7 @@ test('browser: complete venue catalogs, native pane selection, persistence and s
       await page.locator('#layout-select').selectOption(layout);
       assert.equal(await page.locator('.chart-pane').count(), { '1': 1, '2cols': 2, '2rows': 2, '3cols': 3, '4grid': 4, '6grid': 6 }[layout]);
     }
-    await page.locator('#ema200-toggle').check();
+    await page.locator('[data-indicator-toggle="ema200"]').check();
     await page.locator('#fvg-toggle').uncheck();
     await page.setViewportSize({ width: 390, height: 844 });
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
@@ -171,9 +171,9 @@ test('browser: complete venue catalogs, native pane selection, persistence and s
     assert.equal(requests.some(url => url.includes('exchange=hyperliquid') && url.includes('symbol=kBONK')), true);
     assert.deepEqual(errors, []);
     await page.evaluate(() => {
-      const saved = JSON.parse(localStorage.getItem('crypto-screener.workspace.v4'));
-      if (saved.version !== 4 || saved.panes[0].exchange !== 'hyperliquid') throw new Error('v4 pane venue was not persisted');
-      localStorage.removeItem('crypto-screener.workspace.v4');
+      const saved = JSON.parse(localStorage.getItem('crypto-screener.workspace.v5'));
+      if (saved.version !== 5 || saved.panes[0].exchange !== 'hyperliquid') throw new Error('v5 pane venue was not persisted');
+      localStorage.removeItem('crypto-screener.workspace.v5');
       localStorage.setItem('crypto-screener.workspace.v1', JSON.stringify({ version: 1, layout: '2cols', active: 1, panes: [{ symbol: 'SOLUSDT', interval: '240' }, { symbol: 'ETHUSDT', interval: 'D' }], fvg: false }));
     });
     await page.reload();
@@ -579,15 +579,14 @@ test('browser: no cached ticker relabelled live, MA20 H/L overlay, favorites and
     assert.equal(tickerRequests.length, 0);
     assert.equal(await page.locator('.chart-pane[data-pane-id="0"] .pane-live-price').innerText(), '', 'no manufactured price from the cached ticker fixture');
 
-    // 2) Dual MA20 H/L overlay: off by default, togglable independently.
-    assert.equal(await page.locator('#ma20-high-toggle').isChecked(), false);
-    assert.equal(await page.locator('#ma20-low-toggle').isChecked(), false);
-    await page.locator('#ma20-high-toggle').check();
-    assert.equal(await page.evaluate(() => document.querySelector('#ma20-high-toggle').checked), true);
+    // 2) MA 20 H/L channel: ONE toggle (off by default); its lines are settings of that indicator.
+    const channel = page.locator('[data-indicator-toggle="ma-channel"]');
+    assert.equal(await channel.isChecked(), false);
+    await channel.check();
     await page.reload();
     await page.waitForFunction(() => document.querySelectorAll('.watchlist-row').length === 4);
-    assert.equal(await page.locator('#ma20-high-toggle').isChecked(), true, 'ma20hl toggle persists across reload (v4 schema)');
-    assert.equal(await page.locator('#ma20-low-toggle').isChecked(), false);
+    assert.equal(await page.locator('[data-indicator-toggle="ma-channel"]').isChecked(), true, 'channel toggle persists across reload (v5 schema)');
+    assert.deepEqual(await page.evaluate(() => { const s = window.__workspaceDebug.getIndicatorSettings('ma-channel'); return [s.showHigh, s.showLow]; }), [true, true]);
 
     // 3) Favorites: star toggles without selecting the row; persists; pins to top.
     const ethRow = page.locator('.watchlist-row[data-symbol="ETHUSDT"]');
@@ -641,7 +640,7 @@ test('browser: real forming REST bootstrap + shared WS intrabar, rollover separa
         close() { this.readyState = 3; this.onclose?.(); }
         message(data) { this.onmessage?.({ data: JSON.stringify(data) }); }
       };
-      localStorage.setItem('crypto-screener.workspace.v4', JSON.stringify({ version: 4, layout: '2cols', panes: [{ exchange: 'bybit', symbol: 'BTCUSDT', interval: '1' }, { exchange: 'bybit', symbol: 'BTCUSDT', interval: '1' }] }));
+      localStorage.setItem('crypto-screener.workspace.v5', JSON.stringify({ version: 5, layout: '2cols', panes: [{ exchange: 'bybit', symbol: 'BTCUSDT', interval: '1' }, { exchange: 'bybit', symbol: 'BTCUSDT', interval: '1' }] }));
     });
     await page.route('http://workspace.test/**', route => {
       const url = new URL(route.request().url());
@@ -672,20 +671,20 @@ test('browser: real forming REST bootstrap + shared WS intrabar, rollover separa
     await page.waitForFunction(() => window.__workspaceDebug.panes.get(0).candles.length === 4);
     assert.equal(await page.evaluate(() => window.__workspaceDebug.panes.get(0).forming.time), (start + 60000) / 1000);
     assert.equal(requests, 4, 'once per pane snapshot on rollover, no ticker polling');
-    const generic = await page.evaluate(() => window.__workspaceDebug.INDICATOR_DEFS.find(d => !d.hidden && !['fvg','ema7','ema14','ema28','ema200','ma20high','ma20low'].includes(d.id))?.id);
+    const generic = await page.evaluate(() => window.__workspaceDebug.INDICATOR_DEFS.find(d => !d.hidden && !['fvg','ema-ribbon','ema200','ma-channel'].includes(d.id))?.id);
     assert.ok(generic, 'real extras module appended to registry');
     const control = page.locator(`input[data-indicator-toggle="${generic}"]`);
     assert.equal(await control.isChecked(), false); await control.check();
-    assert.equal(await page.evaluate(id => JSON.parse(localStorage.getItem('crypto-screener.workspace.v4')).indicatorEnabled[id], generic), true);
-    await page.locator('.indicator-settings-btn[data-indicator="ema7"]').click();
-    const savedBeforeInvalid = await page.evaluate(() => localStorage.getItem('crypto-screener.workspace.v4'));
-    await page.locator('input[data-key="period"]').fill('7.5');
-    assert.equal(await page.locator('input[data-key="period"]').evaluate(input => input.validity.stepMismatch), true);
+    assert.equal(await page.evaluate(id => JSON.parse(localStorage.getItem('crypto-screener.workspace.v5')).indicatorEnabled[id], generic), true);
+    await page.locator('.indicator-settings-btn[data-indicator="ema-ribbon"]').click();
+    const savedBeforeInvalid = await page.evaluate(() => localStorage.getItem('crypto-screener.workspace.v5'));
+    await page.locator('input[data-key="period1"]').fill('7.5');
+    assert.equal(await page.locator('input[data-key="period1"]').evaluate(input => input.validity.stepMismatch), true);
     await page.locator('.indicator-settings-apply').click();
-    assert.equal(await page.evaluate(() => localStorage.getItem('crypto-screener.workspace.v4')), savedBeforeInvalid, 'invalid Apply never persists the draft');
-    assert.equal(await page.evaluate(() => window.__workspaceDebug.getIndicatorSettings('ema7').period), 7);
-    await page.locator('input[data-key="period"]').fill('10'); await page.locator('.indicator-settings-apply').click(); await page.keyboard.press('Escape');
-    assert.equal(await page.locator('label:has(#ema7-toggle) span').innerText(), 'EMA 10');
+    assert.equal(await page.evaluate(() => localStorage.getItem('crypto-screener.workspace.v5')), savedBeforeInvalid, 'invalid Apply never persists the draft');
+    assert.equal(await page.evaluate(() => window.__workspaceDebug.getIndicatorSettings('ema-ribbon').period1), 7);
+    await page.locator('input[data-key="period1"]').fill('10'); await page.locator('.indicator-settings-apply').click(); await page.keyboard.press('Escape');
+    assert.equal(await page.locator('label[data-indicator-chip="ema-ribbon"] span').innerText(), 'EMA 10/14/21');
     assert.equal(await page.locator('#local-alerts-toggle').isChecked(), false); await page.locator('#local-alerts-toggle').check();
     assert.equal(await page.locator('#local-alerts-count').innerText(), '0');
     closedExtra.push({ ts: start + 60000, o: 122, h: 125, l: 120, c: 122, v: 5 });
@@ -742,7 +741,7 @@ test('browser: failed and stale gap history retries autonomously until the actua
     await page.goto('http://workspace.test/');
     await page.waitForSelector('.chart-pane[data-state="ready"]', {timeout:5000}).catch(async error => { throw new Error(`${error.message}\n${JSON.stringify(await page.locator('.chart-pane').allTextContents())}\n${JSON.stringify(errors)}`); });
     assert.deepEqual(await page.evaluate(() => {
-      const d=window.__workspaceDebug; return [d.getIndicatorSettings('ema7').period,d.getIndicatorSettings('fvg').minGapPct,d.getIndicatorSettings('turtle-upper').inner];
+      const d=window.__workspaceDebug; return [d.getIndicatorSettings('ema-ribbon').period1,d.getIndicatorSettings('fvg').minGapPct,d.getIndicatorSettings('turtle-zone').inner];
     }), [7,0.01,5.6], 'real page migrates fractions without damaging decimal schemas');
     await page.clock.install();
     await page.evaluate(() => window.__workspaceDebug.panes.get(0).acceptForming({time:43200,open:105,high:110,low:100,close:108,volume:2},'WS'));
@@ -935,7 +934,7 @@ test('browser: FVG box touches the real candle (pixel scan), band renderer, sett
     assert.equal(await page.locator('.indicator-settings-btn[data-indicator="fvg"]').getAttribute('aria-expanded'), 'false');
 
     // Outside click also closes it.
-    await page.locator('.indicator-settings-btn[data-indicator="ema7"]').click();
+    await page.locator('.indicator-settings-btn[data-indicator="ema-ribbon"]').click();
     await page.waitForSelector('.indicator-settings-popover:not([hidden])');
     await page.locator('.topbar').click();
     await page.waitForSelector('.indicator-settings-popover[hidden]', { state: 'attached' });
@@ -954,8 +953,9 @@ test('browser: FVG box touches the real candle (pixel scan), band renderer, sett
     await page.waitForSelector('.chart-pane[data-pane-id="0"][data-state="ready"]');
     const migrated = await page.evaluate(() => window.__workspaceDebug.getIndicatorSettings('fvg'));
     assert.deepEqual(migrated, { minGapPct: 0, fillPolicy: 'wick', bullColor: '#00c087', bearColor: '#f5a623', opacity: 1 }, 'v3 blob (no indicatorSettings) must migrate to documented v4 defaults');
-    const versionAfterSave = await page.evaluate(() => JSON.parse(localStorage.getItem('crypto-screener.workspace.v4')).version);
-    assert.equal(versionAfterSave, 4, 'subsequent saves upgrade storage to the v4 key');
+    const versionAfterSave = await page.evaluate(() => JSON.parse(localStorage.getItem('crypto-screener.workspace.v5')).version);
+    assert.equal(versionAfterSave, 5, 'subsequent saves upgrade storage to the v5 key');
+    assert.deepEqual(await page.evaluate(() => [window.__workspaceDebug.state.indicatorEnabled['ema-ribbon'], 'ema' in window.__workspaceDebug.state]), [true, false], 'v3 EMA flags migrate to the ribbon');
 
     // Corrupt/out-of-range saved indicatorSettings must be sanitized per field, not crash.
     await page.evaluate(() => {
@@ -969,7 +969,7 @@ test('browser: FVG box touches the real candle (pixel scan), band renderer, sett
     });
     await page.reload();
     await page.waitForSelector('.chart-pane[data-pane-id="0"][data-state="ready"]');
-    const sanitized = await page.evaluate(() => ({ fvg: window.__workspaceDebug.getIndicatorSettings('fvg'), ema7: window.__workspaceDebug.getIndicatorSettings('ema7') }));
+    const sanitized = await page.evaluate(() => ({ fvg: window.__workspaceDebug.getIndicatorSettings('fvg'), ema7: { period: window.__workspaceDebug.getIndicatorSettings('ema-ribbon').period1 } }));
     assert.equal(sanitized.fvg.minGapPct, 50, 'out-of-range number clamps to the schema max, does not crash');
     assert.equal(sanitized.fvg.fillPolicy, 'wick', 'invalid select value falls back to the documented default');
     assert.equal(sanitized.fvg.bullColor, '#00c087', 'invalid color falls back to the documented default');
