@@ -251,7 +251,8 @@
       for (const json of payload.bars || []) {
         const existing = this.bars.get(json.open_time);
         if (existing && COVERAGE_RANK[existing.coverage] > COVERAGE_RANK[json.coverage]) continue;
-        this.bars.set(json.open_time, { bar: barFromServer(json, this.intervalMs, step), coverage: json.coverage, forming: false, origin: 'server' });
+        this.bars.set(json.open_time, { bar: barFromServer(json, this.intervalMs, step), coverage: json.coverage, forming: false, origin: 'server',
+          klineCheck: json.kline_check?.status || 'unchecked' });
         rebuild.add(json.open_time);
       }
       const forming = this.bars.get(formingOpen);
@@ -356,7 +357,8 @@
     summary() {
       const list = this.list();
       return { bars: list.length, complete: list.filter(e => e.coverage === 'complete').length,
-        partial: list.filter(e => e.coverage === 'partial').length, live: list.filter(e => e.origin === 'live').length, gaps: this.gaps };
+        partial: list.filter(e => e.coverage === 'partial').length, live: list.filter(e => e.origin === 'live').length, gaps: this.gaps,
+        klineExact: list.filter(e => e.klineCheck === 'exact').length, klineMismatch: list.filter(e => e.klineCheck === 'mismatch').length };
     }
   }
 
@@ -529,12 +531,14 @@
         ctx.fillStyle = rgba(z.side === 'buy' ? COLORS.ask : COLORS.bid, 0.85);
         ctx.fillRect(z.side === 'buy' ? left + width - 3 : left + 2, c.top, 2, a.bottom - c.top);
       }
-      if (entry.coverage === 'partial') {
+      const flag = entry.coverage === 'partial' ? 'partial' : entry.klineCheck === 'mismatch' ? 'kline Δ' : null;
+      if (flag) { // incomplete window, or venue kline attributes a boundary-straddling aggregate differently
         const hi = span(levels.at(-1).price), lo = span(levels[0].price);
         if (hi && lo) {
-          ctx.save(); ctx.setLineDash([2, 3]); ctx.strokeStyle = 'rgba(186,150,101,0.9)'; ctx.lineWidth = 1;
+          const color = flag === 'partial' ? '#ba9665' : '#d4ac5c';
+          ctx.save(); ctx.setLineDash([2, 3]); ctx.strokeStyle = rgba(color, 0.9); ctx.lineWidth = 1;
           ctx.strokeRect(left + 0.5, hi.top - 2.5, width - 1, lo.bottom - hi.top + 5); ctx.restore();
-          if (view.barSpacing >= 14) { ctx.fillStyle = '#ba9665'; ctx.textAlign = 'center'; ctx.fillText('partial', x, hi.top - 8); }
+          if (view.barSpacing >= 14) { ctx.fillStyle = color; ctx.textAlign = 'center'; ctx.fillText(flag, x, hi.top - 8); }
         }
       }
       if (footerH) {
@@ -631,6 +635,7 @@
       const source = p.exchange === 'binance' ? 'Binance aggTrades' : p.exchange === 'bybit' ? 'Bybit recent trades + WS' : 'Hyperliquid recent trades + WS';
       parts.push(`Footprint · ${source} · ${sum.complete} complete / ${sum.partial} partial bars · ${p.coverage.missing} of ${p.coverage.requested} requested bars missing (blank)`);
       parts.push(`group ${p.group_ticks}×${p.tick_size}`);
+      if (sum.klineExact || sum.klineMismatch) parts.push(`venue kline check: ${sum.klineExact} exact / ${sum.klineMismatch} differ`);
       if (sum.gaps) parts.push(`${sum.gaps} live id gap(s) seen → affected bar marked partial, then re-fetched`);
       if (p.truncated) parts.push('budget-truncated history (refresh extends)');
       (p.warnings || []).filter(w => typeof w === 'string').forEach(w => parts.push(w));

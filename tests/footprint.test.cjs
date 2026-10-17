@@ -131,6 +131,11 @@ test('renderer draws cells, POC border, partial outline and footer inside the gi
   const texts = calls.filter(c => c[0] === 'fillText').map(c => c[1]);
   assert.ok(texts.includes('5.00') && texts.includes('partial'));
   assert.ok(calls.some(c => c[0] === 'strokeRect'), 'POC border');
+  const mismatch = new fp.LiveFootprint({ venue: 'binance', interval: '1' });
+  mismatch.loadSnapshot(snapshot([{ ...serverBar(T0, trades), kline_check: { status: 'mismatch', volume_diff: '0.172' } }, serverBar(T0 + MIN, trades, { forming: true })]));
+  assert.equal(mismatch.summary().klineMismatch, 1);
+  const marked = mockContext(); fp.draw(marked.ctx, mismatch, view, ui);
+  assert.ok(marked.calls.some(c => c[0] === 'fillText' && c[1] === 'kline Δ'), 'kline mismatch is visibly marked');
   const zoomedOut = fp.draw(mockContext().ctx, store, { ...view, barSpacing: 4 }, ui);
   assert.equal(zoomedOut.mode, 'marks'); assert.equal(zoomedOut.cells, 0);
 });

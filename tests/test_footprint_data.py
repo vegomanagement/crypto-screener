@@ -12,9 +12,10 @@ T0 = 1_700_000_040_000  # minute-aligned
 class FakeBinance:
     """aggTrades semantics: latest page, startTime/endTime window, fromId paging."""
 
-    def __init__(self, trades, tick="0.10"):
+    def __init__(self, trades, tick="0.10", kline_override=None):
         self.trades = trades  # list of dict rows in id order
         self.tick = tick
+        self.kline_override = kline_override or {}
         self.calls = []
 
     def __call__(self, exchange, path, *, params=None, payload=None):
@@ -24,6 +25,14 @@ class FakeBinance:
             return {"symbols": [{"symbol": "BTCUSDT", "filters": [
                 {"filterType": "LOT_SIZE", "stepSize": "0.001"},
                 {"filterType": "PRICE_FILTER", "tickSize": self.tick}]}]}
+        if path == "/fapi/v1/klines":
+            assert params["interval"] == "1m" and params["limit"] <= 1000
+            rows = []
+            for o, (vol, buy) in sorted(expected_totals(self.trades).items()):
+                if params["startTime"] <= o <= params["endTime"]:
+                    vol, buy = self.kline_override.get(o, (vol, buy))
+                    rows.append([o, "1", "1", "1", "1", str(vol), o + MIN - 1, "0", 0, str(buy), "0", "0"])
+            return rows
         assert path == "/fapi/v1/aggTrades"
         limit = params["limit"]
         if "fromId" in params:
@@ -81,6 +90,29 @@ def test_binance_reconciles_every_complete_bar_exactly_and_marks_forming():
     assert out["last_trade_id"] == rows_until_now[-1]["a"]
     assert out["coverage"]["missing"] == 0 and out["coverage"]["requested"] == 11
     assert any("Forming bar" in w for w in out["warnings"])
+    checks = [b["kline_check"]["status"] for b in out["bars"]]
+    assert checks == ["exact"] * 10 + ["unchecked"]  # the forming bar has no closed kline
+
+
+def test_kline_cross_check_flags_boundary_straddle_without_redistributing():
+    rows = make_trades(100, 4, start=T0 - MIN)
+    want = expected_totals(rows)
+    # Venue attributes 0.005 of bar 1's taker-buy volume to bar 2 (aggregate across the boundary).
+    shifted = {T0 + MIN: (want[T0 + MIN][0] - Decimal("0.005"), want[T0 + MIN][1] - Decimal("0.005")),
+               T0 + 2 * MIN: (want[T0 + 2 * MIN][0] + Decimal("0.005"), want[T0 + 2 * MIN][1] + Decimal("0.005"))}
+    svc, _ = service(FakeBinance(rows, kline_override=shifted), T0 + 3 * MIN + 1)
+    out = svc.footprint("binance", "BTCUSDT", "1", limit=3, include_forming=False)
+    by_open = {b["open_time"]: b for b in out["bars"]}
+    assert by_open[T0]["kline_check"]["status"] == "exact"
+    assert by_open[T0 + MIN]["kline_check"] == {
+        "status": "mismatch", "kline_volume": str(shifted[T0 + MIN][0].normalize()),
+        "kline_taker_buy": str(shifted[T0 + MIN][1].normalize()),
+        "volume_diff": "0.005", "taker_buy_diff": "0.005"}
+    assert by_open[T0 + 2 * MIN]["kline_check"]["volume_diff"] == "-0.005"
+    # Trades stay where the venue timestamped them; nothing is moved or invented.
+    assert Decimal(by_open[T0 + MIN]["total"]) == want[T0 + MIN][0]
+    assert by_open[T0 + MIN]["coverage"] == "complete"
+    assert any("straddling" in w for w in out["warnings"])
 
 
 def test_budget_truncates_oldest_history_newest_first_never_interpolates():
@@ -165,6 +197,8 @@ def test_invalid_queries_raise_value_error(kwargs):
 
 def bybit_fake(rows):
     def request(exchange, path, *, params=None, payload=None):
+        if path == "/v5/market/kline":
+            return {"retCode": 0, "result": {"list": [[str(T0 + MIN), "1", "1", "1", "1", "3", "0"]]}}
         if path == "/v5/market/instruments-info":
             return {"retCode": 0, "result": {"list": [{"symbol": "BTCUSDT",
                                                        "priceFilter": {"tickSize": "0.10"}}]}}
@@ -184,6 +218,9 @@ def test_bybit_recent_trades_bar_containing_oldest_trade_is_partial():
     assert cov[T0 + MIN][0] == "complete" and cov[T0 + 2 * MIN][0] == "complete"
     assert T0 - MIN not in cov and out["coverage"]["missing"] == 2  # two older bars: blank
     assert cov[T0 + 3 * MIN] == ("complete", "1") and out["bars"][-1]["forming"] is True
+    checks = {b["open_time"]: b["kline_check"]["status"] for b in out["bars"]}
+    assert checks == {T0: "unchecked", T0 + MIN: "exact", T0 + 2 * MIN: "unchecked",
+                      T0 + 3 * MIN: "unchecked"}  # partial/forming never checked; missing kline row
     assert out["bars"][1]["buy_vol"] == "1" and out["bars"][1]["sell_vol"] == "2"  # 70s S, 90s B, 110s S
     assert any("≤1000" in w for w in out["warnings"])
     # ids of snapshot trades within 5s of as_of let the browser dedupe live trades exactly

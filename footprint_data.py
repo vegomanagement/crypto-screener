@@ -74,6 +74,7 @@ class FootprintService:
         self._rate = _RateWindow(*binance_rate, self._clock)
         self._cache: OrderedDict = OrderedDict()
         self._meta: dict = {}
+        self._checks: dict = {}
         self._lock = threading.Lock()
         self.stats = {"requests": 0}
 
@@ -150,6 +151,8 @@ class FootprintService:
             group = fp.auto_group_ticks(ranges, TARGET_LEVELS)
         else:
             group = group_ticks
+        checks, check_warning = self._kline_checks(exchange, symbol, interval, duration, bars,
+                                                   forming_open, tick)
         out_bars = []
         for open_ms in opens:
             if open_ms not in bars:
@@ -157,9 +160,17 @@ class FootprintService:
             acc, coverage = bars[open_ms]
             bar = fp.bar_payload(acc, group, coverage=coverage, source=exchange, settings=settings)
             bar["forming"] = open_ms == forming_open
+            bar["kline_check"] = checks.get(open_ms, {"status": "unchecked"})
             out_bars.append(bar)
         counts = {k: sum(1 for b in out_bars if b["coverage"] == k) for k in ("complete", "partial")}
         warnings = list(meta.get("warnings", []))
+        if check_warning:
+            warnings.append(check_warning)
+        mismatched = sum(1 for b in out_bars if b["kline_check"]["status"] == "mismatch")
+        if mismatched:
+            warnings.append(f"{mismatched} complete bar(s) differ from the venue kline: an aggregated "
+                            "trade straddling a bar boundary is attributed to its first fill's time; "
+                            "marked, not redistributed.")
         if meta.get("truncated"):
             warnings.append("Request budget reached: older bars are missing, not interpolated.")
         return {
@@ -177,6 +188,62 @@ class FootprintService:
             "convention": "ask = buyer-initiated (taker buy); bid = seller-initiated (taker sell)",
             "warnings": warnings,
         }
+
+    # ── venue kline cross-check of complete closed bars ─────────────────────
+
+    def _kline_checks(self, exchange, symbol, interval, duration, bars, forming_open, tick):
+        """Compare complete closed bars with the venue's own kline volume (and Binance taker buy)."""
+        if exchange == "hyperliquid":
+            return {}, None
+        todo = sorted(o for o, (_, cov) in bars.items() if cov == "complete" and o != forming_open)
+        out, missing = {}, []
+        for o in todo:
+            hit = self._checks.get((exchange, symbol, duration, o, str(tick)))
+            if hit is not None:
+                out[o] = hit
+            else:
+                missing.append(o)
+        if not missing:
+            return out, None
+        mapped = {"1": "1m", "3": "3m", "5": "5m", "15": "15m", "30": "30m", "60": "1h"}[interval]
+        try:
+            if exchange == "binance":
+                rows = self._call("binance", "/fapi/v1/klines", params={
+                    "symbol": symbol, "interval": mapped, "startTime": missing[0],
+                    "endTime": missing[-1], "limit": 1000})
+                klines = {int(r[0]): (fp.dec(r[5]), fp.dec(r[9])) for r in rows}
+            else:
+                data = self._call("bybit", "/v5/market/kline", params={
+                    "category": "linear", "symbol": symbol, "interval": interval,
+                    "start": missing[0], "end": missing[-1], "limit": 1000})
+                if data.get("retCode") != 0:
+                    raise ValueError("rejected")
+                klines = {int(r[0]): (fp.dec(r[5]), None) for r in data["result"]["list"]}
+        except FootprintError:
+            return out, "Venue kline cross-check unavailable for this response."
+        except (KeyError, TypeError, ValueError, IndexError, AttributeError):
+            return out, "Venue kline cross-check returned malformed data."
+        for o in missing:
+            if o not in klines:
+                continue
+            bid, ask = bars[o][0].volumes()
+            volume, taker_buy = klines[o]
+            diff_v = bid + ask - volume
+            diff_b = None if taker_buy is None else ask - taker_buy
+            exact = diff_v == 0 and (diff_b is None or diff_b == 0)
+            check = {"status": "exact" if exact else "mismatch", "kline_volume": fp.fmt(volume)}
+            if taker_buy is not None:
+                check["kline_taker_buy"] = fp.fmt(taker_buy)
+            if not exact:
+                check["volume_diff"] = format(diff_v.normalize(), "f")
+                if diff_b is not None:
+                    check["taker_buy_diff"] = format(diff_b.normalize(), "f")
+            out[o] = check
+            with self._lock:
+                if len(self._checks) > CACHE_BARS:
+                    self._checks.clear()
+                self._checks[(exchange, symbol, duration, o, str(tick))] = check
+        return out, None
 
     # ── binance: contiguous aggTrade ids, newest-first ──────────────────────
 
