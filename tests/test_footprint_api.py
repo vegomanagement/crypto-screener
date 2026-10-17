@@ -27,6 +27,13 @@ def test_production_app_registers_footprint_route_and_rejects_bad_identity():
     assert client.get('/api/footprint?exchange=binance&symbol=BTC%20USDT').status_code == 400
 
 
+def test_workspace_loads_footprint_module_before_workspace_script():
+    html = screener.app.test_client().get('/ui').get_data(as_text=True)
+    assert '/static/footprint.js' in html
+    assert html.index('/static/footprint.js') < html.index('/static/workspace.js')
+    assert screener.app.test_client().get('/static/footprint.js').status_code == 200
+
+
 def test_route_returns_exact_string_bars_with_coverage_and_no_store():
     response = client_for(fake_service()).get('/api/footprint', query_string={
         'exchange': 'binance', 'symbol': 'BTCUSDT', 'interval': '1', 'limit': '5',

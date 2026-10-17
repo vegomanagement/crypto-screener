@@ -1154,3 +1154,10 @@ input[type="checkbox"] {
 .pane-liquidity-status[hidden], .liquidity-tooltip[hidden] { display: none; }
 .liquidity-tooltip { position: absolute; z-index: 5; pointer-events: none; max-width: 280px; padding: 6px 8px; border: 1px solid #7a5a91; border-radius: 4px; background: rgba(15,18,27,0.95); color: #e2d9ed; font: 10px/1.5 SFMono-Regular, Consolas, monospace; overflow-wrap: anywhere; }
 
+
+/* Footprint (per pane) */
+.pane-footprint-toggle, .pane-footprint-settings { flex-shrink: 0; height: 20px; padding: 0 6px; border: 1px solid #283145; border-radius: 3px; background: transparent; color: #76849b; font: 600 10px/1 SFMono-Regular, Consolas, monospace; cursor: pointer; }
+.pane-footprint-toggle.is-active { color: #ffd166; border-color: #6d5a2a; background: #2a2414; }
+.pane-footprint-settings[hidden] { display: none; }
+.pane-footprint-status { flex-shrink: 0; font-size: 10px; color: #d8c08a; padding: 4px 8px; border-top: 1px solid #3a3322; line-height: 1.5; max-height: 49px; overflow: auto; overflow-wrap: anywhere; }
+.pane-footprint-status[hidden] { display: none; }
