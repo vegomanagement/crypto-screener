@@ -11,6 +11,9 @@ from positioning import NormaliseError, fmt
 
 HL_INFO = "https://api.hyperliquid.xyz/info"
 LABEL = "Hyperliquid top-{n} accounts by account value (public leaderboard), not all whales"
+ERROR_BACKOFF_S = 10
+MAX_BACKOFF_S = 600
+LEADERBOARD_RETRY_S = 600   # a failed hourly refresh is retried at most this often
 
 
 def _open_leaderboard():
@@ -39,22 +42,41 @@ class WhaleTracker:
         self.polls = 0
         self.changes = deque(maxlen=max_changes)
         self.error = None
+        self._failures = 0
+        self._retry_at_ms = 0
 
     def _now_ms(self):
         return int(self._clock() * 1000)
 
     # ----- leaderboard -----
     def load_leaderboard(self, force=False):
+        """Top-N rows, refreshed after ``leaderboard_ttl_s``.
+
+        When a refresh fails and an older leaderboard exists, the old address list keeps being
+        polled (``refresh_error`` says why) and the ~38 MB download is retried at most every
+        ``LEADERBOARD_RETRY_S`` instead of on every poll.
+        """
         with self._lock:
             lb = self.leaderboard
-            if lb and not force and self._clock() - lb["fetched_at"] < self.leaderboard_ttl_s:
+            now = self._clock()
+            if lb and not force and now - lb["fetched_at"] < self.leaderboard_ttl_s:
+                return lb
+            if lb and not force and now - lb.get("refresh_failed_at", float("-inf")) < LEADERBOARD_RETRY_S:
                 return lb
         t0 = self._clock()
-        stream = self._open_leaderboard()
         try:
-            rows, total = parse_leaderboard_stream(stream, self.top_n)
-        finally:
-            stream.close()
+            stream = self._open_leaderboard()
+            try:
+                rows, total = parse_leaderboard_stream(stream, self.top_n)
+            finally:
+                stream.close()
+        except Exception as exc:  # noqa: BLE001 - fall back to the previous list when there is one
+            with self._lock:
+                if self.leaderboard is None:
+                    raise
+                self.leaderboard = {**self.leaderboard, "refresh_failed_at": self._clock(),
+                                    "refresh_error": f"{type(exc).__name__}: {str(exc)[:160]}"}
+                return self.leaderboard
         lb = {"rows": rows, "total_rows": total, "fetched_at": self._clock(),
               "duration_s": round(self._clock() - t0, 2)}
         with self._lock:
@@ -124,11 +146,19 @@ class WhaleTracker:
     def _run(self):
         while self.wanted():
             last = self.last_poll
-            due = not last or self._now_ms() - last["started_at"] >= self.poll_interval_s * 1000
+            now = self._now_ms()
+            due = (not last or now - last["started_at"] >= self.poll_interval_s * 1000) \
+                and now >= self._retry_at_ms
             if due:
                 self.poll_once()
                 if self.error:
-                    self._sleep(10)
+                    # Exponential backoff (10 s → 10 min): a failing poll usually means the
+                    # leaderboard download failed, and retrying it every 10 s re-fetches ~38 MB.
+                    self._failures += 1
+                    delay_s = min(ERROR_BACKOFF_S * 2 ** (self._failures - 1), MAX_BACKOFF_S)
+                    self._retry_at_ms = self._now_ms() + int(delay_s * 1000)
+                else:
+                    self._failures = 0
             else:
                 self._sleep(1)
 
@@ -146,7 +176,7 @@ class WhaleTracker:
                           "clearinghouseState",
                 "top_n": self.top_n, "timestamp": last["finished_at"] if last else None,
                 "leaderboard": ({"fetched_at": int(lb["fetched_at"] * 1000), "total_rows": lb["total_rows"],
-                                 "duration_s": lb["duration_s"],
+                                 "duration_s": lb["duration_s"], "refresh_error": lb.get("refresh_error"),
                                  "min_account_value": fmt(lb["rows"][-1]["account_value"]) if lb["rows"] else None}
                                 if lb else None),
                 "last_poll": last, "polls": self.polls, "aggregate": agg, "changes": changes,

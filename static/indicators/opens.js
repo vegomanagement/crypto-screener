@@ -261,6 +261,9 @@
       return candles;
     }
     function ensure(exchange, symbol, tfs) {
+      // Expired entries would be refetched anyway; dropping them keeps the cache to the
+      // markets of the last ttlMs instead of every market this pane ever showed.
+      for (const [key, hit] of cache) if (!hit.pending && now() - hit.at >= ttlMs) cache.delete(key);
       return Promise.all(tfs.map(tf => {
         const key = `${exchange}:${symbol}:${tf}`, hit = cache.get(key);
         if (hit && (hit.pending || now() - hit.at < ttlMs)) return (hit.pending || Promise.resolve(hit)).then(h => [tf, h]);

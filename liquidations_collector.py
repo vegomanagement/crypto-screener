@@ -18,6 +18,7 @@ URLS = {"binance": "wss://fstream.binance.com/market/ws/!forceOrder@arr",
         "bybit": "wss://stream.bybit.com/v5/public/linear"}
 MAX_SYMBOLS_PER_VENUE = 10
 MAX_OWNERS = 40
+STABLE_CONNECTION_MS = 60_000   # a connection must survive this long before the backoff resets
 
 
 class LiquidationCapacityError(ValueError):
@@ -128,13 +129,13 @@ class LiquidationCollector:
     def run_venue(self, venue, max_loops=None):
         attempt, loops = 0, 0
         while self.wanted(venue):
-            ws, covered = None, set()
+            ws, covered, connected_at = None, set(), None
             try:
                 ws = self.connect(URLS[venue])
                 st = self._state[venue]
                 st.update(connected=True, error=None)
                 st["connects"] += 1
-                attempt = 0
+                connected_at = self._clock()
                 last_ping = time.monotonic()
                 while True:
                     loops += 1
@@ -163,6 +164,10 @@ class LiquidationCollector:
                     self.handle(venue, text, set(wanted))
             except Exception as exc:  # noqa: BLE001 - worker must survive any socket failure
                 self._state[venue]["error"] = f"{type(exc).__name__}: {str(exc)[:160]}"
+                # Reset only after a connection that actually held; a socket that drops right
+                # after the handshake keeps backing off instead of reconnecting every 2 s.
+                if connected_at is not None and self._clock() - connected_at >= STABLE_CONNECTION_MS:
+                    attempt = 0
                 delay = self.backoff[min(attempt, len(self.backoff) - 1)]
                 attempt += 1
             else:

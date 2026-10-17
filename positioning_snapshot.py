@@ -40,7 +40,7 @@ def _get(raw, key, fn, *args):
         return None, f"fetch failed: {str(payload)[:160]}"
     try:
         return fn(payload, *args), None
-    except (P.NormaliseError, KeyError, TypeError, IndexError) as exc:
+    except (P.NormaliseError, KeyError, TypeError, IndexError, AttributeError) as exc:
         return None, f"unexpected response: {str(exc)[:160]}"
 
 

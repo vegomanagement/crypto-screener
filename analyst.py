@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import time
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FutureTimeout
 from datetime import UTC
@@ -302,7 +303,6 @@ def default_providers(*, market=None, confluence=None, funding=None, positioning
     ``positioning(exchange, symbol, period)`` returns a positioning_api snapshot; it must not
     start the liquidation collector or the whale tracker (agent_api passes ``watch=False``).
     """
-    import time
 
     def chart(exchange, symbol, interval):
         from chart_data import build_chart_snapshot
@@ -372,9 +372,12 @@ def build_snapshot(exchange, symbol, interval, providers):
     pool = ThreadPoolExecutor(max_workers=len(jobs))
     try:
         futures = {k: pool.submit(fn, *args) for k, (fn, args) in jobs.items() if fn}
+        # One shared deadline: waiting PROVIDER_TIMEOUT_S per future would add up to
+        # N × timeout when several providers hang.
+        deadline = time.monotonic() + PROVIDER_TIMEOUT_S
         for key, fut in futures.items():
             try:
-                results[key] = fut.result(timeout=PROVIDER_TIMEOUT_S)
+                results[key] = fut.result(timeout=max(0.0, deadline - time.monotonic()))
             except FutureTimeout:
                 missing[key] = f"provider timed out after {PROVIDER_TIMEOUT_S}s"
             except Exception as exc:  # noqa: BLE001 — each provider failure is recorded, never invented
