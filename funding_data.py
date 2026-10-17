@@ -98,12 +98,16 @@ class FundingService:
         with ThreadPoolExecutor(max_workers=len(jobs)) as pool:
             futures = {k: pool.submit(self._try, fn, missing, k) for k, fn in jobs.items()}
             raw = {k: f.result() for k, f in futures.items()}
-        if exchange == "binance":
-            out = funding.binance(symbol, raw["premium"], raw["history"], raw["info"], now_ms)
-        elif exchange == "bybit":
-            out = funding.bybit(symbol, raw["tickers"], raw["history"], now_ms)
-        else:
-            out = funding.hyperliquid(symbol, raw["ctxs"], raw["history"], now_ms)
+        try:
+            if exchange == "binance":
+                out = funding.binance(symbol, raw["premium"], raw["history"], raw["info"], now_ms)
+            elif exchange == "bybit":
+                out = funding.bybit(symbol, raw["tickers"], raw["history"], now_ms)
+            else:
+                out = funding.hyperliquid(symbol, raw["ctxs"], raw["history"], now_ms)
+        except (AttributeError, KeyError, TypeError, IndexError) as exc:
+            # A venue answered 200 with an unexpected JSON shape: report it like a fetch failure.
+            raise FundingError(f"unexpected {exchange} response shape ({type(exc).__name__})") from None
         out["missing"].update({f"fetch_{k}": v for k, v in missing.items()})
         return out
 
