@@ -569,7 +569,8 @@
       store.resyncWanted = false;
       const open = store.currentOpen();
       if (resyncFor === open) return;
-      resyncFor = open; schedule(2000);
+      // Bybit/HL continuity needs the stream to predate the snapshot's dedupe window.
+      resyncFor = open; schedule(config.exchange === 'binance' ? 2000 : (store.snapshot?.dedupeMs || 5000) + 1500);
     }
     function schedule(delay) { cancel(timer); timer = later(() => { timer = null; refresh(); }, delay); }
     async function refresh() {

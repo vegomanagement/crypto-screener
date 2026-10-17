@@ -230,3 +230,23 @@ test('an id gap between snapshot and stream is healed by one early re-fetch, nev
   assert.equal(controller.store.list().at(-1).coverage, 'partial', 'still reported, never papered over');
   assert.equal(timers.length, before, 'at most one early re-fetch per bar');
 });
+
+test('Bybit/HL: late stream start schedules a re-fetch after the dedupe window, which proves continuity', async () => {
+  const timers = [];
+  let listener = null, clock = T0 + MIN + 30000;
+  const body = () => snapshot([serverBar(T0, [['100.0', '1', 'bid']]), serverBar(T0 + MIN, [['100.0', '1', 'bid']], { forming: true })],
+    { exchange: 'bybit', as_of: clock, last_trade_id: null });
+  const controller = fp.createController({
+    fetch: async () => { const b = body(); return { ok: true, status: 200, json: async () => b }; },
+    hub: { subscribeTrades: (config, fn) => { listener = fn; return () => {}; } }, now: () => clock,
+    setTimeout: (fn, delay) => { timers.push({ fn, delay }); return timers.length; }, clearTimeout: () => {}
+  });
+  controller.enable({ exchange: 'bybit', symbol: 'BTCUSDT', interval: '1' });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(controller.store.list().at(-1).coverage, 'partial', 'stream not yet up at snapshot time');
+  clock += 500; listener({ type: 'status', status: 'connected', connectedAt: clock });
+  assert.equal(timers.at(-1).delay, 6500);
+  clock += 6500; timers.at(-1).fn();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(controller.store.list().at(-1).coverage, 'complete');
+});
