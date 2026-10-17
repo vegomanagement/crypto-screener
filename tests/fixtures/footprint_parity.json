@@ -1,0 +1,410 @@
+{
+ "_note": "Hand-computed expectations shared by tests/test_footprint.py and tests/footprint.test.cjs (Python/JS parity).",
+ "cases": [
+  {
+   "name": "tick-level bar with out-of-window trade ignored",
+   "open_ms": 1700000040000,
+   "interval_ms": 60000,
+   "tick_size": "0.10",
+   "group_ticks": 1,
+   "trades": [
+    {
+     "time": 1700000040000,
+     "price": "100.0",
+     "qty": "0.5",
+     "side": "ask",
+     "count": 1
+    },
+    {
+     "time": 1700000040001,
+     "price": "100.0",
+     "qty": "0.2",
+     "side": "bid",
+     "count": 1
+    },
+    {
+     "time": 1700000040002,
+     "price": "100.1",
+     "qty": "1.5",
+     "side": "ask",
+     "count": 3
+    },
+    {
+     "time": 1700000040003,
+     "price": "100.1",
+     "qty": "0.5",
+     "side": "bid",
+     "count": 1
+    },
+    {
+     "time": 1700000040004,
+     "price": "100.2",
+     "qty": "0.3",
+     "side": "ask",
+     "count": 1
+    },
+    {
+     "time": 1700000040005,
+     "price": "100.2",
+     "qty": "0.1",
+     "side": "bid",
+     "count": 1
+    },
+    {
+     "time": 1700000040006,
+     "price": "99.9",
+     "qty": "0.4",
+     "side": "bid",
+     "count": 1
+    },
+    {
+     "time": 1700000100000,
+     "price": "100.5",
+     "qty": "9",
+     "side": "ask",
+     "count": 1
+    }
+   ],
+   "expected": {
+    "time": 1700000040,
+    "open": "100",
+    "high": "100.2",
+    "low": "99.9",
+    "close": "99.9",
+    "trade_count": 9,
+    "levels": [
+     {
+      "price": "99.9",
+      "bid": "0.4",
+      "ask": "0",
+      "trades": 1,
+      "bid_trades": 1,
+      "ask_trades": 0
+     },
+     {
+      "price": "100",
+      "bid": "0.2",
+      "ask": "0.5",
+      "trades": 2,
+      "bid_trades": 1,
+      "ask_trades": 1
+     },
+     {
+      "price": "100.1",
+      "bid": "0.5",
+      "ask": "1.5",
+      "trades": 4,
+      "bid_trades": 1,
+      "ask_trades": 3
+     },
+     {
+      "price": "100.2",
+      "bid": "0.1",
+      "ask": "0.3",
+      "trades": 2,
+      "bid_trades": 1,
+      "ask_trades": 1
+     }
+    ],
+    "total": "3.5",
+    "buy_vol": "2.3",
+    "sell_vol": "1.2",
+    "delta": "1.1",
+    "delta_pct": "31.43",
+    "poc": "100.1",
+    "delta_poc": "100.1",
+    "va_low": "100",
+    "va_high": "100.1",
+    "imbalances": [
+     {
+      "price": "100.1",
+      "side": "buy",
+      "ratio": "750"
+     }
+    ],
+    "stacked": []
+   }
+  },
+  {
+   "name": "group 5 ticks floors 99.9 into 99.5",
+   "open_ms": 1700000040000,
+   "interval_ms": 60000,
+   "tick_size": "0.10",
+   "group_ticks": 5,
+   "trades": [
+    {
+     "time": 1700000040000,
+     "price": "100.0",
+     "qty": "0.5",
+     "side": "ask",
+     "count": 1
+    },
+    {
+     "time": 1700000040001,
+     "price": "100.0",
+     "qty": "0.2",
+     "side": "bid",
+     "count": 1
+    },
+    {
+     "time": 1700000040002,
+     "price": "100.1",
+     "qty": "1.5",
+     "side": "ask",
+     "count": 3
+    },
+    {
+     "time": 1700000040003,
+     "price": "100.1",
+     "qty": "0.5",
+     "side": "bid",
+     "count": 1
+    },
+    {
+     "time": 1700000040004,
+     "price": "100.2",
+     "qty": "0.3",
+     "side": "ask",
+     "count": 1
+    },
+    {
+     "time": 1700000040005,
+     "price": "100.2",
+     "qty": "0.1",
+     "side": "bid",
+     "count": 1
+    },
+    {
+     "time": 1700000040006,
+     "price": "99.9",
+     "qty": "0.4",
+     "side": "bid",
+     "count": 1
+    },
+    {
+     "time": 1700000100000,
+     "price": "100.5",
+     "qty": "9",
+     "side": "ask",
+     "count": 1
+    }
+   ],
+   "expected": {
+    "levels": [
+     {
+      "price": "99.5",
+      "bid": "0.4",
+      "ask": "0",
+      "trades": 1,
+      "bid_trades": 1,
+      "ask_trades": 0
+     },
+     {
+      "price": "100",
+      "bid": "0.8",
+      "ask": "2.3",
+      "trades": 8,
+      "bid_trades": 3,
+      "ask_trades": 5
+     }
+    ],
+    "total": "3.5",
+    "delta": "1.1",
+    "poc": "100",
+    "delta_poc": "100",
+    "va_low": "100",
+    "va_high": "100",
+    "imbalances": [
+     {
+      "price": "100",
+      "side": "buy",
+      "ratio": "575"
+     }
+    ],
+    "stacked": []
+   }
+  },
+  {
+   "name": "include-zero, ratio 200, stacked 2, VA tie goes up, gap level counted",
+   "open_ms": 1700000040000,
+   "interval_ms": 300000,
+   "tick_size": "1",
+   "group_ticks": 1,
+   "settings": {
+    "include_zero": true,
+    "stacked_min": 2,
+    "imbalance_ratio": "200"
+   },
+   "trades": [
+    {
+     "time": 1700000040000,
+     "price": "10",
+     "qty": "1",
+     "side": "bid",
+     "count": 1
+    },
+    {
+     "time": 1700000040001,
+     "price": "10",
+     "qty": "1",
+     "side": "ask",
+     "count": 1
+    },
+    {
+     "time": 1700000040002,
+     "price": "11",
+     "qty": "1",
+     "side": "bid",
+     "count": 1
+    },
+    {
+     "time": 1700000040003,
+     "price": "11",
+     "qty": "3",
+     "side": "ask",
+     "count": 1
+    },
+    {
+     "time": 1700000040004,
+     "price": "12",
+     "qty": "2",
+     "side": "ask",
+     "count": 1
+    },
+    {
+     "time": 1700000040005,
+     "price": "13",
+     "qty": "2",
+     "side": "bid",
+     "count": 1
+    },
+    {
+     "time": 1700000040006,
+     "price": "15",
+     "qty": "1",
+     "side": "bid",
+     "count": 1
+    },
+    {
+     "time": 1700000040007,
+     "price": "15",
+     "qty": "1",
+     "side": "ask",
+     "count": 1
+    }
+   ],
+   "expected": {
+    "total": "12",
+    "buy_vol": "7",
+    "sell_vol": "5",
+    "delta": "2",
+    "delta_pct": "16.67",
+    "poc": "11",
+    "va_low": "10",
+    "va_high": "13",
+    "delta_poc": "11",
+    "imbalances": [
+     {
+      "price": "11",
+      "side": "buy",
+      "ratio": "300"
+     },
+     {
+      "price": "12",
+      "side": "buy",
+      "ratio": "200"
+     },
+     {
+      "price": "13",
+      "side": "sell",
+      "ratio": null
+     },
+     {
+      "price": "15",
+      "side": "buy",
+      "ratio": null
+     }
+    ],
+    "stacked": [
+     {
+      "side": "buy",
+      "from": "11",
+      "to": "12",
+      "count": 2
+     }
+    ]
+   }
+  },
+  {
+   "name": "number-of-trades input drives POC/VA/imbalances; volume totals stay volume",
+   "open_ms": 1700000040000,
+   "interval_ms": 60000,
+   "tick_size": "0.5",
+   "group_ticks": 2,
+   "settings": {
+    "input": "trades"
+   },
+   "trades": [
+    {
+     "time": 1700000040000,
+     "price": "50.0",
+     "qty": "10",
+     "side": "ask",
+     "count": 1
+    },
+    {
+     "time": 1700000040001,
+     "price": "50.5",
+     "qty": "1",
+     "side": "bid",
+     "count": 4
+    },
+    {
+     "time": 1700000040002,
+     "price": "51.0",
+     "qty": "1",
+     "side": "ask",
+     "count": 6
+    },
+    {
+     "time": 1700000040003,
+     "price": "51.5",
+     "qty": "0.5",
+     "side": "bid",
+     "count": 1
+    }
+   ],
+   "expected": {
+    "levels": [
+     {
+      "price": "50",
+      "bid": "1",
+      "ask": "10",
+      "trades": 5,
+      "bid_trades": 4,
+      "ask_trades": 1
+     },
+     {
+      "price": "51",
+      "bid": "0.5",
+      "ask": "1",
+      "trades": 7,
+      "bid_trades": 1,
+      "ask_trades": 6
+     }
+    ],
+    "trade_count": 12,
+    "total": "12.5",
+    "delta": "9.5",
+    "delta_pct": "76",
+    "input": "trades",
+    "poc": "51",
+    "va_low": "50",
+    "va_high": "51",
+    "delta_poc": "51",
+    "imbalances": [],
+    "stacked": []
+   }
+  }
+ ]
+}

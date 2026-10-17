@@ -84,6 +84,30 @@
     return zones.slice(-100);
   }
   const INDICATOR_DEFS = [
+    // Footprint is toggled per pane (pane header "FP"); this hidden entry only owns
+    // its persisted, schema-validated settings and the shared settings popover.
+    { id: 'footprint', label: 'Footprint', kind: 'footprint', defaultEnabled: false, hidden: true,
+      settingsSchema: [
+        { key: 'cellType', label: 'Cell type', type: 'select', options: ['bidask', 'volume', 'delta', 'deltavolume'], default: 'bidask' },
+        { key: 'mode', label: 'Display mode', type: 'select', options: ['box', 'profile'], default: 'box' },
+        { key: 'input', label: 'Input (traded volume or number of trades)', type: 'select', options: ['volume', 'trades'], default: 'volume' },
+        { key: 'grouping', label: 'Tick grouping', type: 'select', options: ['auto', 'manual'], default: 'auto' },
+        { key: 'groupTicks', label: 'Manual group (ticks per row)', type: 'number', min: 1, max: 100000, step: 1, default: 10 },
+        { key: 'minValue', label: 'Hide cells below (0 = off)', type: 'number', min: 0, max: 1000000000000, step: 0.00000001, default: 0 },
+        { key: 'maxValue', label: 'Hide cells above (0 = off)', type: 'number', min: 0, max: 1000000000000, step: 0.00000001, default: 0 },
+        { key: 'coloration', label: 'Coloration', type: 'select', options: ['none', 'fixed', 'volume', 'delta', 'imbalance'], default: 'delta' },
+        { key: 'dominantOnly', label: 'Highlight only dominant side', type: 'boolean', default: false },
+        { key: 'showPoc', label: 'Bar POC border', type: 'boolean', default: true },
+        { key: 'showDeltaPoc', label: 'Delta POC border', type: 'boolean', default: false },
+        { key: 'minDelta', label: 'Delta POC minimum |delta|', type: 'number', min: 0, max: 1000000000000, step: 0.00000001, default: 0 },
+        { key: 'showVA', label: 'Value area (dim outside)', type: 'boolean', default: true },
+        { key: 'vaPct', label: 'Value area %', type: 'number', min: 1, max: 100, step: 1, default: 70 },
+        { key: 'imbalanceRatio', label: 'Diagonal imbalance ratio %', type: 'number', min: 100, max: 100000, step: 1, default: 300 },
+        { key: 'imbalanceMinDiff', label: 'Imbalance minimum difference', type: 'number', min: 0, max: 1000000000000, step: 0.00000001, default: 0 },
+        { key: 'includeZero', label: 'Imbalance vs empty opposite level', type: 'boolean', default: false },
+        { key: 'stackedMin', label: 'Stacked imbalance levels', type: 'number', min: 2, max: 50, step: 1, default: 3 },
+        { key: 'showFooter', label: 'Bar delta footer', type: 'boolean', default: true },
+        { key: 'bars', label: 'History bars to backfill', type: 'number', min: 5, max: 300, step: 1, default: 60 }], compute: () => [] },
     { id: 'liquidity', label: 'Liquidity', kind: 'liquidity', defaultEnabled: false,
       settingsSchema: [
         { key: 'historyWindow', label: 'Recent history window (pan for older)', type: 'select', options: ['10m', '1h'], default: '10m' },
@@ -235,7 +259,7 @@
       fallback.layout = saved.layout;
       if (Array.isArray(saved.panes)) saved.panes.slice(0, 6).forEach((pane, index) => {
         const exchange = saved.version === 1 ? 'bybit' : pane?.exchange;
-        if (pane && Object.hasOwn(EXCHANGES, exchange) && validSymbol(pane.symbol, exchange) && validInterval(pane.interval)) fallback.panes[index] = { symbol: pane.symbol, interval: pane.interval, exchange };
+        if (pane && Object.hasOwn(EXCHANGES, exchange) && validSymbol(pane.symbol, exchange) && validInterval(pane.interval)) fallback.panes[index] = { symbol: pane.symbol, interval: pane.interval, exchange, ...(pane.footprint === true ? { footprint: true } : {}) };
       });
       if (Object.hasOwn(EXCHANGES, saved.watchlistExchange)) fallback.watchlistExchange = saved.watchlistExchange;
       if (typeof saved.watchlistSearch === 'string') fallback.watchlistSearch = saved.watchlistSearch.slice(0, 80);
@@ -533,6 +557,8 @@
           <select class="pane-interval" aria-label="Interval for chart ${id + 1}"></select>
           <span class="pane-source" title="Data provider from chart response">—</span>
           <span class="pane-closed" title="Only completed candles are requested">CLOSED ONLY</span>
+          <button type="button" class="pane-footprint-toggle" aria-pressed="false" aria-label="Footprint for chart ${id + 1}" title="Footprint (bid × ask order flow) for this chart">FP</button>
+          <button type="button" class="pane-footprint-settings" aria-label="Footprint settings" title="Footprint settings">⚙</button>
           <button type="button" class="pane-reload" aria-label="Reload chart ${id + 1}" title="Reload this chart">↻</button>
         </header>
         <div class="chart-stage">
@@ -540,7 +566,7 @@
           <div class="chart-legend"><span class="ohlc">Waiting for provider…</span><span class="legend-ema ema-7" data-ema="7"></span><span class="legend-ema ema-14" data-ema="14"></span><span class="legend-ema ema-28" data-ema="28"></span><span class="legend-ema ema-200" data-ema="200"></span><span class="pane-live-price" data-state="hidden"></span></div>
           <div class="chart-message"><span>Loading closed candles…</span></div>
         </div>
-        <div class="pane-liquidity-status" role="status" hidden></div>
+        <div class="pane-liquidity-status" role="status" hidden></div><div class="pane-footprint-status" role="status" hidden></div>
         <details class="pane-context"><summary>Market context · funding / OI / EMA bias</summary><div class="pane-context-body">—</div></details><div class="pane-plugin-warnings" hidden></div>
         <div class="pane-statusbar"><span class="pane-status" role="status">Connecting to market data…</span><span class="pane-count"></span></div>`;
       grid.append(this.element);
@@ -565,6 +591,7 @@
       });
       this.series = this.chart.addCandlestickSeries({ upColor: '#00c087', downColor: '#ef6670', borderVisible: false, wickUpColor: '#00c087', wickDownColor: '#ef6670', priceLineVisible: true, lastValueVisible: true });
       this.initLiquidity();
+      this.initFootprint();
       this.volume = this.chart.addHistogramSeries({ priceFormat: { type: 'volume' }, priceScaleId: 'volume', lastValueVisible: false, priceLineVisible: false });
       this.chart.priceScale('volume').applyOptions({ scaleMargins: { top: 0.84, bottom: 0 }, visible: false });
       Object.keys(EMA_COLORS).forEach(period => {
@@ -602,6 +629,15 @@
       });
       listen($('.pane-interval', this.element), 'change', event => updatePaneConfig(id, { interval: event.target.value }));
       listen($('.pane-reload', this.element), 'click', () => { setActive(id); this.load(false); });
+      listen($('.pane-footprint-toggle', this.element), 'click', () => {
+        state.panes[id] = { ...state.panes[id], footprint: !state.panes[id].footprint };
+        if (!state.panes[id].footprint) delete state.panes[id].footprint;
+        saveState(); this.syncFootprint(); this.scheduleDraw();
+      });
+      listen($('.pane-footprint-settings', this.element), 'click', event => {
+        event.preventDefault(); event.stopPropagation();
+        if (settingsPopoverId === 'footprint') closeSettingsPopover(); else openSettingsPopover('footprint', event.currentTarget);
+      });
       listen($('.pane-context', this.element), 'toggle', () => this.refreshContext());
       this.contextTimer = setInterval(() => this.refreshContext(), 60000);
       listen(document, 'visibilitychange', () => { this.syncLiquidity(); });
@@ -635,6 +671,57 @@
         onData: data => { this.liquidityData = data; this.renderLiquidityStatus(); this.liquidityPrimitive?.requestUpdate?.(); },
         onStatus: status => { this.liquidityState = status; this.renderLiquidityStatus(); }
       });
+    }
+    initFootprint() {
+      this.footprintStatus = $('.pane-footprint-status', this.element);
+      const api = window.WorkspaceFootprint;
+      if (!api) return;
+      this.footprint = api.createController({ fetch: (url, options) => fetch(url, options), hub: streamHub,
+        visible: () => !this.disposed && document.visibilityState === 'visible' && isVisible(this),
+        onChange: () => { this.renderFootprintStatus(); this.scheduleDraw(); } });
+    }
+    syncFootprint() {
+      if (this.disposed) return;
+      const config = state.panes[this.id], enabled = Boolean(config.footprint);
+      const button = $('.pane-footprint-toggle', this.element);
+      button.setAttribute('aria-pressed', String(enabled)); button.classList.toggle('is-active', enabled);
+      $('.pane-footprint-settings', this.element).hidden = !enabled;
+      if (!this.footprint) { this.footprintStatus.hidden = !enabled; this.footprintStatus.textContent = enabled ? 'Footprint unavailable: module did not load.' : ''; return; }
+      const ui = getIndicatorSettings('footprint');
+      if (enabled) this.footprint.enable({ exchange: config.exchange, symbol: config.symbol, interval: config.interval, bars: ui.bars, groupTicks: ui.grouping === 'manual' ? ui.groupTicks : null });
+      else this.footprint.disable();
+      // Hollow candles keep OHLC visible underneath the cells; restored when off.
+      if (this.footprintStyled !== enabled) {
+        this.footprintStyled = enabled;
+        this.series.applyOptions(enabled
+          ? { upColor: 'rgba(0,192,135,0.10)', downColor: 'rgba(239,102,112,0.10)', borderVisible: true, borderUpColor: '#00c087', borderDownColor: '#ef6670' }
+          : { upColor: '#00c087', downColor: '#ef6670', borderVisible: false });
+      }
+      this.renderFootprintStatus();
+    }
+    renderFootprintStatus() {
+      if (!this.footprintStatus || !this.footprint) return;
+      const enabled = Boolean(state.panes[this.id].footprint);
+      this.footprintStatus.hidden = !enabled;
+      if (!enabled) return;
+      const text = window.WorkspaceFootprint.statusText(this.footprint) + (this.footprintDraw?.mode ? ` · view: ${this.footprintDraw.mode === 'cells' ? 'cells' : this.footprintDraw.mode === 'marks' ? 'zoomed out: POC/imbalance marks + delta footer' : 'delta footer only'}${this.footprintDraw.group > 1 ? ` (×${this.footprintDraw.group} rows)` : ''}` : '');
+      if (text !== this.footprintStatus.textContent) { this.footprintStatus.textContent = text; this.footprintStatus.title = text; }
+    }
+    drawFootprint(context, plotWidth, plotHeight) {
+      const store = this.footprint?.store;
+      if (!store) return;
+      const scale = this.chart.timeScale();
+      const view = { plotWidth, plotHeight, barSpacing: scale.options().barSpacing,
+        priceToY: price => this.series.priceToCoordinate(price),
+        // Integer logical index only: fractional logicalToCoordinate() silently returns 0 in 4.1.
+        barCenter: seconds => {
+          const logical = this.logicalForTime(seconds);
+          if (logical === null) return null;
+          const anchor = Math.round(logical);
+          return Math.abs(logical - anchor) > 0.01 ? null : scale.logicalToCoordinate(anchor);
+        } };
+      try { this.footprintDraw = window.WorkspaceFootprint.draw(context, store, view, getIndicatorSettings('footprint')); }
+      catch (error) { this.footprintDraw = null; this.footprintStatus.textContent = `Footprint render error: ${error.message}`; }
     }
     syncLiquidity() {
       if (this.disposed || !this.liquidityStatus) return;
@@ -723,6 +810,7 @@
       this.element.dataset.exchange = config.exchange;
       this.element.dataset.interval = config.interval;
       this.syncLiquidity();
+      this.syncFootprint();
     }
     resize() {
       if (this.disposed) return;
@@ -822,6 +910,7 @@
       context.font = '9px SFMono-Regular, Consolas, monospace';
       if (state.fvg) this.drawZones(context, plotWidth, plotHeight);
       this.drawBands(context, plotWidth, plotHeight);
+      if (state.panes[this.id].footprint) this.drawFootprint(context, plotWidth, plotHeight);
       context.restore();
     }
     drawZones(context, plotWidth, plotHeight) {
@@ -913,6 +1002,7 @@
     }
     applyIndicators() {
       this.syncLiquidity();
+      this.syncFootprint();
       Object.keys(EMA_COLORS).forEach(period => {
         const settings = getIndicatorSettings(`ema${period}`);
         const data = INDICATOR_BY_ID.get(`ema${period}`).compute(this.candles, settings);
@@ -1236,6 +1326,7 @@
       }
     }
     destroy() {
+      this.footprint?.disable();
       this.liquiditySession?.dispose(); clearInterval(this.liquidityTimer); clearTimeout(this.liquidityRangeTimer);
       this.disposed = true;
       this.generation += 1;

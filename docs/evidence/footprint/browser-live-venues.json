@@ -1,0 +1,47 @@
+{
+ "bybit": {
+  "summary": {
+   "bars": 7,
+   "complete": 6,
+   "partial": 1,
+   "live": 0,
+   "gaps": 0,
+   "klineExact": 5,
+   "klineMismatch": 0
+  },
+  "formingTradesAtReady": 9,
+  "formingTradesAfter20s": 17,
+  "formingCoverage": "complete",
+  "draw": {
+   "drawn": 7,
+   "mode": "marks",
+   "group": 100,
+   "cells": 0
+  },
+  "status": "Footprint · Bybit recent trades + WS · 6 complete / 1 partial bars · 54 of 61 requested bars missing (blank) · group 1×0.1 · venue kline check: 5 exact / 0 differ · Bybit recent-trade (≤1000 latest) is the only public trade history; older bars are missing or partial. · view: zoomed out: POC/imbalance marks + delta footer (×100 rows)"
+ },
+ "hyperliquid": {
+  "summary": {
+   "bars": 1,
+   "complete": 0,
+   "partial": 1,
+   "live": 0,
+   "gaps": 0,
+   "klineExact": 0,
+   "klineMismatch": 0
+  },
+  "formingTradesAtReady": 10,
+  "formingTradesAfter20s": 13,
+  "formingCoverage": "partial",
+  "draw": {
+   "drawn": 1,
+   "mode": "marks",
+   "group": 10,
+   "cells": 0
+  },
+  "status": "Footprint · Hyperliquid recent trades + WS · 0 complete / 1 partial bars · 60 of 61 requested bars missing (blank) · group 1×1 · Hyperliquid recentTrades is the only public trade history; older bars are missing or partial. · view: zoomed out: POC/imbalance marks + delta footer (×10 rows)"
+ },
+ "errors": [
+  "Failed to load resource: the server responded with a status of 404 (NOT FOUND)"
+ ]
+}

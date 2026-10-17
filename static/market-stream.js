@@ -16,15 +16,15 @@
     const random = options.random || Math.random;
     const entries = new Map();
     function subscribe(config, listener) {
-      const key = JSON.stringify([config.venue, config.symbol, config.interval]);
+      const key = JSON.stringify([config.venue, config.symbol, config.interval, config.channel || 'candle']);
       let entry = entries.get(key);
       if (!entry) {
         entry = { config: { ...config }, listeners: new Set(), socket: null, retry: null, heartbeat: null,
-          generation: 0, attempt: 0, lastTime: -1, lastStamp: -1, receivedAt: 0, status: 'connecting', current: null };
+          generation: 0, attempt: 0, lastTime: -1, lastStamp: -1, receivedAt: 0, connectedAt: null, status: 'connecting', current: null };
         entries.set(key, entry);
       }
       entry.listeners.add(listener);
-      listener({ type: 'status', status: entry.status, receivedAt: entry.receivedAt });
+      listener({ type: 'status', status: entry.status, receivedAt: entry.receivedAt, connectedAt: entry.connectedAt });
       if (!entry.socket && !entry.retry) connect(entry);
       if (entry.current) listener(entry.current);
       let released = false;
@@ -40,11 +40,12 @@
     function emit(entry, event) { entry.listeners.forEach(fn => fn(event)); }
     function status(entry, value) {
       entry.status = value;
-      emit(entry, { type: 'status', status: value, receivedAt: entry.receivedAt });
+      emit(entry, { type: 'status', status: value, receivedAt: entry.receivedAt, connectedAt: entry.connectedAt });
     }
     function connect(entry) {
       const c = entry.config;
-      const iv = wireInterval(c.venue, c.interval);
+      const trades = c.channel === 'trades';
+      const iv = trades ? (['bybit', 'binance', 'hyperliquid'].includes(c.venue) ? 'trades' : null) : wireInterval(c.venue, c.interval);
       if (!iv || !WS) { status(entry, 'unsupported'); return; }
       const generation = ++entry.generation;
       const active = () => entry.generation === generation && entry.listeners.size > 0;
@@ -53,26 +54,29 @@
       const failed = () => {
         if (!active()) return;
         entry.generation += 1;
-        cancel(entry.heartbeat); entry.socket = null;
+        cancel(entry.heartbeat); entry.socket = null; entry.connectedAt = null;
         try { ws?.close(); } catch (_) { /* already closed */ }
         status(entry, 'disconnected');
         const delay = Math.min(30000, 1000 * 2 ** Math.min(entry.attempt++, 5)) * (0.75 + random() * 0.25);
         entry.retry = later(() => { entry.retry = null; if (entry.listeners.size) connect(entry); }, delay);
       };
       try {
-        const url = c.venue === 'bybit' ? 'wss://stream.bybit.com/v5/public/linear' : c.venue === 'hyperliquid' ? 'wss://api.hyperliquid.xyz/ws' : `wss://fstream.binance.com/market/ws/${encodeURIComponent(c.symbol.toLowerCase())}@kline_${iv}`;
+        const stream = trades ? 'aggTrade' : `kline_${iv}`;
+        const url = c.venue === 'bybit' ? 'wss://stream.bybit.com/v5/public/linear' : c.venue === 'hyperliquid' ? 'wss://api.hyperliquid.xyz/ws' : `wss://fstream.binance.com/market/ws/${encodeURIComponent(c.symbol.toLowerCase())}@${stream}`;
         ws = new WS(url); entry.socket = ws;
         entry.heartbeat = later(failed, 15000); // bound handshake even if no callbacks arrive
         ws.onopen = () => {
           if (!active()) return;
           cancel(entry.heartbeat);
-          entry.receivedAt = now();
-          if (c.venue === 'bybit') ws.send(JSON.stringify({ op: 'subscribe', args: [`kline.${iv}.${c.symbol}`, `publicTrade.${c.symbol}`] }));
-          if (c.venue === 'hyperliquid') ws.send(JSON.stringify({ method: 'subscribe', subscription: { type: 'candle', coin: c.symbol, interval: iv } }));
+          entry.receivedAt = now(); entry.connectedAt = entry.receivedAt;
+          if (c.venue === 'bybit') ws.send(JSON.stringify({ op: 'subscribe', args: trades ? [`publicTrade.${c.symbol}`] : [`kline.${iv}.${c.symbol}`, `publicTrade.${c.symbol}`] }));
+          if (c.venue === 'hyperliquid') ws.send(JSON.stringify({ method: 'subscribe', subscription: trades ? { type: 'trades', coin: c.symbol } : { type: 'candle', coin: c.symbol, interval: iv } }));
           status(entry, 'connected');
           const beat = () => {
             if (!active()) return;
-            if (now() - entry.receivedAt > 75000) { failed(); return; }
+            // Binance pushes no app-level pongs; quiet aggTrade streams get a longer silence budget
+            // (gaps are still detected exactly through aggregate trade id continuity).
+            if (now() - entry.receivedAt > (trades && c.venue === 'binance' ? 300000 : 75000)) { failed(); return; }
             try {
               if (c.venue === 'bybit') ws.send(JSON.stringify({ op: 'ping' }));
               if (c.venue === 'hyperliquid') ws.send(JSON.stringify({ method: 'ping' }));
@@ -101,7 +105,11 @@
         ws.onclose = failed; ws.onerror = failed;
       } catch (_) { failed(); }
     }
-    return { subscribe, dispose() { for (const entry of entries.values()) {
+    // Raw venue trade rows (exact decimal strings kept) for order-flow consumers.
+    function subscribeTrades(config, listener) {
+      return subscribe({ venue: config.venue, symbol: config.symbol, interval: null, channel: 'trades' }, listener);
+    }
+    return { subscribe, subscribeTrades, dispose() { for (const entry of entries.values()) {
       entry.listeners.clear(); entry.generation += 1; cancel(entry.retry); cancel(entry.heartbeat); entry.socket?.close();
     } entries.clear(); }, get size() { return entries.size; } };
   }
@@ -116,7 +124,15 @@
     return { type: 'candle', venue: c.venue, symbol: c.symbol, interval: c.interval, timestamp: Number(timestamp), closed: Boolean(closed),
       candle: { time: Math.floor(start / 1000), closeTime: end, open, high, low, close, volume } };
   }
+  function decodeTrades(c, message) {
+    let rows = [];
+    if (c.venue === 'bybit' && message.topic === `publicTrade.${c.symbol}` && Array.isArray(message.data)) rows = message.data.filter(t => t?.s === c.symbol);
+    else if (c.venue === 'binance' && message.e === 'aggTrade' && message.s === c.symbol) rows = [message];
+    else if (c.venue === 'hyperliquid' && message.channel === 'trades' && Array.isArray(message.data)) rows = message.data.filter(t => t?.coin === c.symbol);
+    return rows.length ? [{ type: 'trades', venue: c.venue, symbol: c.symbol, rows }] : [];
+  }
   function decode(c, iv, message) {
+    if (c.channel === 'trades') return decodeTrades(c, message);
     const events = [];
     if (c.venue === 'bybit') {
       if (message.topic === `kline.${iv}.${c.symbol}` && Array.isArray(message.data)) for (const k of message.data) {
