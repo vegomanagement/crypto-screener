@@ -1275,7 +1275,12 @@
         if (this.fundingKey === key && !this.disposed) this.fundingData = response.ok ? data : { error: data.error || `HTTP ${response.status}`, detail: data.detail };
       } catch (error) {
         if (this.fundingKey === key) this.fundingData = { error: 'request failed', detail: String(error && error.message || error) };
-      } finally { this.fundingBusy = false; this.renderFundingChip(); }
+      } finally {
+        this.fundingBusy = false; this.renderFundingChip();
+        // The pane switched market while this request was in flight (the new market's call
+        // was skipped as busy): fetch it now instead of leaving the chip blank for up to 30 s.
+        if (!this.disposed && this.fundingKey !== key) this.refreshFunding();
+      }
     }
     renderFundingChip(now = Date.now()) {
       const el = $('.pane-funding', this.element), api = window.WorkspaceFunding;
