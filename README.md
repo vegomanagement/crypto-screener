@@ -105,6 +105,8 @@ After deploy, open `https://your-bot.up.railway.app/ui` for a full TradingView-s
 | `GET /api/market?symbol=X` | Full market snapshot (CVD/MTF/funding/...) |
 | `GET /api/zones?symbol=X&interval=Y` | SMC zones (OB/FVG/MB/BB) |
 | `GET /api/analysis?symbol=X` | Confluence + market brief (5-min TTL cache) |
+| `POST /api/agent/analysis` `{exchange, symbol, interval}` | Hermes analyst for one chart: real-data snapshot → strict-JSON long/short %, levels, scenarios (60 s cache, 6/min); baseline if Hermes is down |
+| `GET /api/agent/stats` | Calibration log: hit rate of past analyses (±1 ATR rule) |
 
 ---
 
@@ -330,3 +332,6 @@ Total: **99 unit tests**. CI: `pytest` + `ruff` on every push.
 | `DIGEST_TIME` | `08:00` | Daily digest time (UTC) |
 | `DB_PATH` | `signals.db` | SQLite database path |
 | `MIN_QUALITY` | `0` | Min quality score to send (1-10, derived from `decision.confidence`) |
+| `HERMES_API_URL` | — (unset = analyst shows the deterministic baseline only) | OpenAI-compatible Hermes gateway base URL, e.g. `http://127.0.0.1:<port>/v1`; read server-side only |
+| `HERMES_API_KEY` | — | Bearer key for that gateway; never sent to the browser or logged |
+| `HERMES_MODEL` | `hermes-agent` | Model id sent to the gateway |

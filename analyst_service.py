@@ -113,7 +113,7 @@ class AnalystService:
         started = time.monotonic()
         try:
             snap = build_snapshot(exchange, symbol, interval, self.providers)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             raise SnapshotUnavailable(str(exc)[:200]) from None
         snapshot_ms = int((time.monotonic() - started) * 1000)
         warnings, hermes, status = [], None, "ok"

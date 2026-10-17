@@ -118,7 +118,7 @@ class AnalysisStore:
                 span = interval_ms_fn(r[3]) * (r[8] or 0)
             except ValueError:
                 continue
-            if r[6] and r[6] + span <= now_ms:
+            if r[6] is not None and r[6] + span <= now_ms:
                 due.append(r)
         return due[:limit]
 
@@ -157,7 +157,7 @@ def evaluate_pending(store, fetch_bars, now_ms, interval_ms_fn, limit=20):
             store.pending(now_ms, interval_ms_fn, limit):
         try:
             bars = fetch_bars(exchange, symbol, interval, close_ts, horizon)
-        except Exception:
+        except Exception:  # noqa: BLE001, S112 — row stays pending
             continue
         outcome = evaluate_outcome(bias, price, atr_v, bars, horizon)
         if outcome is not None:

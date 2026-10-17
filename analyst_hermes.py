@@ -121,7 +121,7 @@ def make_transport(config, timeout=TIMEOUT_S):
 def extract_json(text):
     """Parse a JSON object from model text (tolerates fences / leading prose)."""
     if not isinstance(text, str):
-        raise ValueError("no text")
+        raise ValueError("no text")  # noqa: TRY004 — callers handle ValueError
     stripped = re.sub(r"^```(?:json)?\s*|\s*```$", "", text.strip())
     try:
         value = json.loads(stripped)
@@ -131,7 +131,7 @@ def extract_json(text):
             raise ValueError("no JSON object in reply") from None
         value = json.loads(stripped[start:end + 1])
     if not isinstance(value, dict):
-        raise ValueError("reply JSON is not an object")
+        raise ValueError("reply JSON is not an object")  # noqa: TRY004
     return value
 
 

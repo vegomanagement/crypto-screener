@@ -123,7 +123,7 @@ def register_agent_routes(app, *, market=None, confluence=None, service_factory=
             try:
                 evaluated = evaluate_pending(store, fetch_bars or default_fetch_bars,
                                              int(time.time() * 1000), interval_duration_ms, limit=10)
-            except Exception as exc:  # stats must still be served
+            except Exception as exc:  # noqa: BLE001 — stats must still be served
                 log.warning("analyst evaluation failed: %s", exc)
         payload = store.stats(exchange, symbol, interval)
         payload.update(evaluated_now=evaluated, filters={'exchange': exchange, 'symbol': symbol,

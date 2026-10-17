@@ -9,7 +9,10 @@ from __future__ import annotations
 import hashlib
 import json
 import math
-from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FutureTimeout
+from datetime import UTC
+from itertools import pairwise
 
 SCHEMA = "hermes-analyst/1"
 CANDLE_LIMIT = 300
@@ -37,7 +40,7 @@ def atr(candles, period=14):
     if len(candles) < period + 1:
         return None
     trs = [max(c["h"] - c["l"], abs(c["h"] - p["c"]), abs(c["l"] - p["c"]))
-           for p, c in zip(candles, candles[1:])]
+           for p, c in pairwise(candles)]
     value = sum(trs[:period]) / period
     for tr in trs[period:]:
         value = (value * (period - 1) + tr) / period
@@ -49,7 +52,7 @@ def rsi(closes, period=14):
     if len(closes) < period + 1:
         return None
     gains, losses = [], []
-    for a, b in zip(closes, closes[1:]):
+    for a, b in pairwise(closes):
         gains.append(max(b - a, 0.0))
         losses.append(max(a - b, 0.0))
     avg_g = sum(gains[:period]) / period
@@ -229,9 +232,10 @@ def orderbook_section(book, top_n=20):
 
 
 def session_section(now_ms):
-    from datetime import datetime, timezone
+    from datetime import datetime
+
     from killzones import active_killzone, describe
-    ts = datetime.fromtimestamp(now_ms / 1000, tz=timezone.utc)
+    ts = datetime.fromtimestamp(now_ms / 1000, tz=UTC)
     zone = active_killzone(ts)
     return {"source": "killzones.py (UTC windows)", "ts": now_ms,
             "active_killzone": zone.name if zone else None, "describe": describe(ts)}
@@ -328,7 +332,7 @@ def build_snapshot(exchange, symbol, interval, providers):
                 results[key] = fut.result(timeout=PROVIDER_TIMEOUT_S)
             except FutureTimeout:
                 missing[key] = f"provider timed out after {PROVIDER_TIMEOUT_S}s"
-            except Exception as exc:  # each provider failure is recorded, never invented
+            except Exception as exc:  # noqa: BLE001 — each provider failure is recorded, never invented
                 missing[key] = _reason(exc)
     finally:
         pool.shutdown(wait=False, cancel_futures=True)
@@ -342,7 +346,7 @@ def build_snapshot(exchange, symbol, interval, providers):
     def section(name, fn, *args):
         try:
             snap[name] = fn(*args)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             snap[name] = None
             missing[name] = _reason(exc)
 
@@ -362,7 +366,7 @@ def build_snapshot(exchange, symbol, interval, providers):
     if market:
         try:
             snap.update(market_sections(market, now))
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             for n in names:
                 snap[n], missing[n] = None, _reason(exc)
     else:
