@@ -146,7 +146,8 @@
       let points = p.points;
       if (p.free) {
         const simplified = C.simplify(p.pix, 1.5).slice(0, C.MAX_POINTS);
-        points = simplified.map(q => ({ time: v.mapper.slotTime(q.x), price: C.priceString(v.mapper.price(q.y), v.precision) })).filter(q => q.price);
+        // sub-bar time precision (interpolated between bars) so strokes are not quantised to bar slots
+        points = simplified.map(q => ({ time: Math.max(0, v.mapper.timeForLogical(v.mapper.logicalAt(q.x))), price: C.priceString(v.mapper.price(q.y), v.precision) })).filter(q => q.price);
       }
       const [min] = C.pointRange(def);
       const distinct = new Set(points.map(q => `${q.time}|${q.price}`)).size;

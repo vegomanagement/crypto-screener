@@ -30,7 +30,8 @@ const { open, stored, EV } = require('./live-common.cjs');
   const vbpBtn = await center('.dw-more[data-group="measure"]'); await c.click(vbpBtn.x, vbpBtn.y); await c.sleep(150);
   const item = await center('.dw-flyout-tool[data-tool="vbp"]'); await c.click(item.x, item.y);
   await c.click(range.x0, range.y0); await c.click(range.x1, range.y1); await key('Escape', 'Escape'); await c.sleep(500);
-  out.vbp = { range, label: await c.eval(`(() => { const ctl = ${CTL}, d = ctl.state.items.at(-1); return (ctl.state.frame.prims.get(ctl.state.items.find(x => x.id === d.id)) || []).find(p => p.t === 'text')?.text; })()`) };
+  out.vbp = { range, klineVolumeSum: await c.eval(`(() => { const v = ${CTL}.view(); let s = 0; for (let i = ${range.from}; i <= ${range.to}; i += 1) s += v.candles[i].volume; return s; })()`),
+    footprintVolumeSum: await c.eval(`(() => { const v = ${CTL}.view(), st = ${CTL}.context().footprint; let s = 0; for (let i = ${range.from}; i <= ${range.to}; i += 1) { const e = st.bars.get(v.candles[i].time * 1000); for (const cell of e.bar.levels.values()) s += Number((cell.bid + cell.ask) / 10n ** 10n) / 1e8; } return s; })()`), label: await c.eval(`(() => { const ctl = ${CTL}, d = ctl.state.items.at(-1); return (ctl.state.frame.prims.get(ctl.state.items.find(x => x.id === d.id)) || []).find(p => p.t === 'text')?.text; })()`) };
   console.log('vbp', JSON.stringify(out.vbp));
   await c.shot(`${EV}/vbp_footprint.png`);
   fs.writeFileSync(`${EV}/live_magnet_vbp.json`, JSON.stringify(out, null, 1));

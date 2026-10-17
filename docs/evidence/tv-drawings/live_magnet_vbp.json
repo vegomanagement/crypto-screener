@@ -1,5 +1,5 @@
 {
- "when": "2026-10-17T18:23:18.443Z",
+ "when": "2026-10-17T18:32:06.634Z",
  "magnet": {
   "modes": [
    "weak",
@@ -7,18 +7,18 @@
   ],
   "target": {
    "x": 841.236641221374,
-   "y": 501.7110087243585,
-   "high": "81636.4",
-   "time": 1792233900000
+   "y": 492.5723028237585,
+   "high": "81659.5",
+   "time": 1792234800000
   },
   "stored": {
-   "time": 1792233900000,
-   "price": "81636.4"
+   "time": 1792234800000,
+   "price": "81659.5"
   },
   "exact": true
  },
  "footprint": {
-  "bars": 7,
+  "bars": 6,
   "complete": 6
  },
  "vbp": {
@@ -31,6 +31,8 @@
    "y0": 353,
    "y1": 553
   },
-  "label": "VbP 4 bars · Σ 1.60K · POC 81250.08 · exact from footprint trades"
+  "klineVolumeSum": 2715.63,
+  "footprintVolumeSum": 2715.989999999999,
+  "label": "VbP 4 bars · Σ 2.72K · POC 81482.04 · exact from footprint trades"
  }
 }
