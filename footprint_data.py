@@ -84,14 +84,32 @@ class FootprintService:
         self.stats["requests"] += 1
         return self._request(exchange, path, params=params, payload=payload)
 
-    def tick_size(self, exchange, symbol, reference_price=None) -> Decimal:
+    def _meta_for(self, exchange, symbol):
         key = (exchange, symbol)
         cached = self._meta.get(key)
         now = self._clock()
         if cached is None or now - cached[0] > 3_600_000:
             cached = (now, self._load_meta(exchange, symbol))
             self._meta[key] = cached
-        meta = cached[1]
+        return cached[1]
+
+    def instrument(self, exchange, symbol) -> dict:
+        """Venue price-grid metadata for live consumers (the /scalp DOM), cached like tick_size.
+
+        Binance/Bybit return the exchange tick size; Hyperliquid returns szDecimals because its
+        tick depends on the price (5 significant figures), which only the live book knows.
+        """
+        if exchange not in fp.NORMALIZERS:
+            raise ValueError("unsupported exchange")
+        meta = self._meta_for(exchange, symbol)
+        if exchange == "hyperliquid":
+            return {"exchange": exchange, "symbol": symbol, "tick_size": None, "sz_decimals": meta,
+                    "tick_rule": "min(1, max(10^(floor(log10(price))-4), 10^-(6-szDecimals)))"}
+        return {"exchange": exchange, "symbol": symbol, "tick_size": fp.fmt(meta), "sz_decimals": None,
+                "tick_rule": "fixed"}
+
+    def tick_size(self, exchange, symbol, reference_price=None) -> Decimal:
+        meta = self._meta_for(exchange, symbol)
         if exchange == "hyperliquid":
             if reference_price is None:
                 raise FootprintError("hyperliquid: no trade price to derive tick size")

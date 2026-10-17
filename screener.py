@@ -23,6 +23,7 @@ from flask import Flask, request, jsonify, render_template
 from market_candles import closed_candles, interval_ms
 from liquidity_api import register_liquidity_routes
 from footprint_api import register_footprint_routes
+from scalp_api import register_scalp_routes
 
 from decision import make_decision, format_decision_header
 from llm_agents import (
@@ -73,6 +74,7 @@ log = logging.getLogger(__name__)
 app = Flask(__name__)
 register_liquidity_routes(app)
 register_footprint_routes(app)
+register_scalp_routes(app)
 ai  = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
 # ─── SIGNAL LABELS ────────────────────────────────────────────────────────────
