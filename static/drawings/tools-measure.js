@@ -84,13 +84,14 @@
         prims.push(box(l, Math.min(e.y, sy), r, Math.max(e.y, sy), { fill: C.rgba(DOWN, 0.2), stroke: false, hitFill: true }));
         prims.push(seg({ x: l, y: e.y }, { x: r, y: e.y }, { color: '#9aa4b6' }));
         const pnl = v => (o.showPnl ? ` · P&L ${C.signed(v, 2)}` : '');
-        prims.push(text(cx, ty + (ty < e.y ? -4 : 4), `Target ${points[1].price} (${C.signed(st.targetPct, 2)}%, ${st.targetTicks} ticks)${pnl(st.targetPnl)}`,
-          { align: 'center', base: ty < e.y ? 'bottom' : 'top', bg: UP, textColor: '#0b0f16' }));
-        prims.push(text(cx, sy + (sy < e.y ? -4 : 4), `Stop ${points[2].price} (${C.signed(st.stopPct, 2)}%, ${st.stopTicks} ticks)${pnl(st.stopPnl)}`,
-          { align: 'center', base: sy < e.y ? 'bottom' : 'top', bg: DOWN, textColor: '#0b0f16' }));
+        const small = { size: 10, align: 'center', textColor: '#0b0f16' };
+        prims.push(text(cx, ty + (ty < e.y ? -3 : 3), `Target ${points[1].price} (${C.signed(st.targetPct, 2)}%)\n${st.targetTicks} ticks${pnl(st.targetPnl)}`,
+          { ...small, base: ty < e.y ? 'bottom' : 'top', bg: UP }));
+        prims.push(text(cx, sy + (sy < e.y ? -3 : 3), `Stop ${points[2].price} (${C.signed(st.stopPct, 2)}%)\n${st.stopTicks} ticks${pnl(st.stopPnl)}`,
+          { ...small, base: sy < e.y ? 'bottom' : 'top', bg: DOWN }));
         const rr = st.rr === null ? '—' : C.fmt(st.rr, 2);
-        prims.push(text(cx, e.y, `${side === 'long' ? 'Long' : 'Short'} ${points[0].price} · qty ${C.compact(st.qty)} · risk ${C.fmt(st.riskAmount, 2)} (${o.riskPct}%) · R:R ${rr}${st.valid ? '' : ' · invalid'}`,
-          { align: 'center', bg: st.valid ? '#2a3346' : '#6b2b2b', textColor: '#e6ebf5' }));
+        prims.push(text(cx, e.y, `${side === 'long' ? 'Long' : 'Short'} ${points[0].price} · R:R ${rr}${st.valid ? '' : ' · invalid'}\nqty ${C.compact(st.qty)} · risk ${C.fmt(st.riskAmount, 2)} (${o.riskPct}%)`,
+          { ...small, bg: st.valid ? '#2a3346' : '#6b2b2b', textColor: '#e6ebf5' }));
         return prims;
       },
       handles(d, view) {

@@ -320,7 +320,7 @@
     function dispose() { lifetime.abort(); unsubscribe?.(); listeners.clear(); }
     reload();
     return {
-      draw, reload, dispose, setTool, select, view, handleKey, subscribe: fn => { listeners.add(fn); return () => listeners.delete(fn); },
+      draw, reload, dispose, setTool, select, view, handleKey, context: () => getContext(), subscribe: fn => { listeners.add(fn); return () => listeners.delete(fn); },
       get state() { return self; }, history, templates, store,
       setPrefs(patch) { self.prefs = { ...self.prefs, ...patch }; savePrefs(); requestDraw(); },
       actions: { addDrawing, updateItem, removeItem, cloneItem, duplicate: cloneItem, undo, redo, clearAll, setHiddenAll, setLockedAll, reorder, applyTemplate, find }

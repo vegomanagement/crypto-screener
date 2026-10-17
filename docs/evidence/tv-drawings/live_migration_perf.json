@@ -1,0 +1,75 @@
+{
+ "when": "2026-10-17T18:21:50.477Z",
+ "migration": {
+  "v1Kept": true,
+  "items": [
+   {
+    "id": "v1-line",
+    "type": "trend",
+    "points": [
+     {
+      "time": 1792216800000,
+      "price": "81000.5"
+     },
+     {
+      "time": 1792222200000,
+      "price": "81700.25"
+     }
+    ],
+    "color": "#e5534b",
+    "width": 2,
+    "locked": true
+   },
+   {
+    "id": "v1-rect",
+    "type": "rect",
+    "points": [
+     {
+      "time": 1792198800000,
+      "price": "81200"
+     },
+     {
+      "time": 1792207800000,
+      "price": "81900.1"
+     }
+    ],
+    "color": "#4fae6a",
+    "width": 1,
+    "locked": false
+   },
+   {
+    "id": "v1-hray",
+    "type": "hray",
+    "points": [
+     {
+      "time": 1792189800000,
+      "price": "80950.7"
+     }
+    ],
+    "color": "#4f8cff",
+    "width": 3,
+    "locked": false
+   }
+  ],
+  "rendered": 3,
+  "lossless": true
+ },
+ "perf": {
+  "objects": 200,
+  "rendered": 200,
+  "frames": 239,
+  "drawCalls": 121,
+  "rafMeanMs": 16.666108786610877,
+  "rafP50Ms": 16.699999999999818,
+  "rafP95Ms": 16.799999999999272,
+  "rafMaxMs": 16.800000000000182,
+  "drawMeanMs": 2.5396694309455303,
+  "drawP95Ms": 3.299999952316284,
+  "drawMaxMs": 3.9000000953674316,
+  "dpr": 2,
+  "plot": [
+   1162,
+   598
+  ]
+ }
+}

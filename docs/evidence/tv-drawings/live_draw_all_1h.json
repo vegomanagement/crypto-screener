@@ -1,0 +1,518 @@
+{
+ "when": "2026-10-17T18:21:21.424Z",
+ "start": "60",
+ "geometry": {
+  "host": {
+   "left": 4,
+   "top": 203,
+   "width": 1230,
+   "height": 624
+  },
+  "stage": {
+   "left": 4,
+   "top": 203,
+   "width": 1230,
+   "height": 624
+  }
+ },
+ "results": [
+  {
+   "type": "trend",
+   "group": "lines",
+   "viaShortcut": true,
+   "activeTool": "trend",
+   "stored": true,
+   "points": 2,
+   "textOk": null
+  },
+  {
+   "type": "ray",
+   "group": "lines",
+   "viaShortcut": false,
+   "activeTool": "ray",
+   "stored": true,
+   "points": 2,
+   "textOk": null
+  },
+  {
+   "type": "info",
+   "group": "lines",
+   "viaShortcut": false,
+   "activeTool": "info",
+   "stored": true,
+   "points": 2,
+   "textOk": null
+  },
+  {
+   "type": "extended",
+   "group": "lines",
+   "viaShortcut": false,
+   "activeTool": "extended",
+   "stored": true,
+   "points": 2,
+   "textOk": null
+  },
+  {
+   "type": "angle",
+   "group": "lines",
+   "viaShortcut": false,
+   "activeTool": "angle",
+   "stored": true,
+   "points": 2,
+   "textOk": null
+  },
+  {
+   "type": "hline",
+   "group": "lines",
+   "viaShortcut": true,
+   "activeTool": "hline",
+   "stored": true,
+   "points": 1,
+   "textOk": null
+  },
+  {
+   "type": "hray",
+   "group": "lines",
+   "viaShortcut": false,
+   "activeTool": "hray",
+   "stored": true,
+   "points": 1,
+   "textOk": null
+  },
+  {
+   "type": "vline",
+   "group": "lines",
+   "viaShortcut": true,
+   "activeTool": "vline",
+   "stored": true,
+   "points": 1,
+   "textOk": null
+  },
+  {
+   "type": "cross",
+   "group": "lines",
+   "viaShortcut": true,
+   "activeTool": "cross",
+   "stored": true,
+   "points": 1,
+   "textOk": null
+  },
+  {
+   "type": "channel",
+   "group": "channels",
+   "viaShortcut": false,
+   "activeTool": "channel",
+   "stored": true,
+   "points": 3,
+   "textOk": null
+  },
+  {
+   "type": "regression",
+   "group": "channels",
+   "viaShortcut": false,
+   "activeTool": "regression",
+   "stored": true,
+   "points": 2,
+   "textOk": null
+  },
+  {
+   "type": "flattop",
+   "group": "channels",
+   "viaShortcut": false,
+   "activeTool": "flattop",
+   "stored": true,
+   "points": 3,
+   "textOk": null
+  },
+  {
+   "type": "disjoint",
+   "group": "channels",
+   "viaShortcut": false,
+   "activeTool": "disjoint",
+   "stored": true,
+   "points": 3,
+   "textOk": null
+  },
+  {
+   "type": "fib",
+   "group": "fib",
+   "viaShortcut": true,
+   "activeTool": "fib",
+   "stored": true,
+   "points": 2,
+   "textOk": null
+  },
+  {
+   "type": "fibext",
+   "group": "fib",
+   "viaShortcut": false,
+   "activeTool": "fibext",
+   "stored": true,
+   "points": 3,
+   "textOk": null
+  },
+  {
+   "type": "fibtime",
+   "group": "fib",
+   "viaShortcut": false,
+   "activeTool": "fibtime",
+   "stored": true,
+   "points": 2,
+   "textOk": null
+  },
+  {
+   "type": "fibchannel",
+   "group": "fib",
+   "viaShortcut": false,
+   "activeTool": "fibchannel",
+   "stored": true,
+   "points": 3,
+   "textOk": null
+  },
+  {
+   "type": "pricerange",
+   "group": "measure",
+   "viaShortcut": false,
+   "activeTool": "pricerange",
+   "stored": true,
+   "points": 2,
+   "textOk": null
+  },
+  {
+   "type": "daterange",
+   "group": "measure",
+   "viaShortcut": false,
+   "activeTool": "daterange",
+   "stored": true,
+   "points": 2,
+   "textOk": null
+  },
+  {
+   "type": "datepricerange",
+   "group": "measure",
+   "viaShortcut": false,
+   "activeTool": "datepricerange",
+   "stored": true,
+   "points": 2,
+   "textOk": null
+  },
+  {
+   "type": "ruler",
+   "group": "measure",
+   "viaShortcut": false,
+   "activeTool": "ruler",
+   "stored": "temporary",
+   "points": null,
+   "textOk": null
+  },
+  {
+   "type": "long",
+   "group": "measure",
+   "viaShortcut": false,
+   "activeTool": "long",
+   "stored": true,
+   "points": 3,
+   "textOk": null
+  },
+  {
+   "type": "short",
+   "group": "measure",
+   "viaShortcut": false,
+   "activeTool": "short",
+   "stored": true,
+   "points": 3,
+   "textOk": null
+  },
+  {
+   "type": "avwap",
+   "group": "measure",
+   "viaShortcut": false,
+   "activeTool": "avwap",
+   "stored": true,
+   "points": 1,
+   "textOk": null
+  },
+  {
+   "type": "vbp",
+   "group": "measure",
+   "viaShortcut": false,
+   "activeTool": "vbp",
+   "stored": true,
+   "points": 2,
+   "textOk": null
+  },
+  {
+   "type": "rect",
+   "group": "shapes",
+   "viaShortcut": true,
+   "activeTool": "rect",
+   "stored": true,
+   "points": 2,
+   "textOk": null
+  },
+  {
+   "type": "rotrect",
+   "group": "shapes",
+   "viaShortcut": false,
+   "activeTool": "rotrect",
+   "stored": true,
+   "points": 3,
+   "textOk": null
+  },
+  {
+   "type": "circle",
+   "group": "shapes",
+   "viaShortcut": false,
+   "activeTool": "circle",
+   "stored": true,
+   "points": 2,
+   "textOk": null
+  },
+  {
+   "type": "ellipse",
+   "group": "shapes",
+   "viaShortcut": false,
+   "activeTool": "ellipse",
+   "stored": true,
+   "points": 2,
+   "textOk": null
+  },
+  {
+   "type": "triangle",
+   "group": "shapes",
+   "viaShortcut": false,
+   "activeTool": "triangle",
+   "stored": true,
+   "points": 3,
+   "textOk": null
+  },
+  {
+   "type": "path",
+   "group": "shapes",
+   "viaShortcut": false,
+   "activeTool": "path",
+   "stored": true,
+   "points": 4,
+   "textOk": null
+  },
+  {
+   "type": "polyline",
+   "group": "shapes",
+   "viaShortcut": false,
+   "activeTool": "polyline",
+   "stored": true,
+   "points": 4,
+   "textOk": null
+  },
+  {
+   "type": "arc",
+   "group": "shapes",
+   "viaShortcut": false,
+   "activeTool": "arc",
+   "stored": true,
+   "points": 3,
+   "textOk": null
+  },
+  {
+   "type": "brush",
+   "group": "shapes",
+   "viaShortcut": false,
+   "activeTool": "brush",
+   "stored": true,
+   "points": 2,
+   "textOk": null
+  },
+  {
+   "type": "highlighter",
+   "group": "shapes",
+   "viaShortcut": false,
+   "activeTool": "highlighter",
+   "stored": true,
+   "points": 2,
+   "textOk": null
+  },
+  {
+   "type": "arrow",
+   "group": "shapes",
+   "viaShortcut": false,
+   "activeTool": "arrow",
+   "stored": true,
+   "points": 2,
+   "textOk": null
+  },
+  {
+   "type": "arrowup",
+   "group": "shapes",
+   "viaShortcut": false,
+   "activeTool": "arrowup",
+   "stored": true,
+   "points": 1,
+   "textOk": null
+  },
+  {
+   "type": "arrowdown",
+   "group": "shapes",
+   "viaShortcut": false,
+   "activeTool": "arrowdown",
+   "stored": true,
+   "points": 1,
+   "textOk": null
+  },
+  {
+   "type": "text",
+   "group": "annotation",
+   "viaShortcut": false,
+   "activeTool": "text",
+   "stored": true,
+   "points": 1,
+   "textOk": true
+  },
+  {
+   "type": "note",
+   "group": "annotation",
+   "viaShortcut": false,
+   "activeTool": "note",
+   "stored": true,
+   "points": 1,
+   "textOk": true
+  },
+  {
+   "type": "pricelabel",
+   "group": "annotation",
+   "viaShortcut": false,
+   "activeTool": "pricelabel",
+   "stored": true,
+   "points": 1,
+   "textOk": null
+  },
+  {
+   "type": "callout",
+   "group": "annotation",
+   "viaShortcut": false,
+   "activeTool": "callout",
+   "stored": true,
+   "points": 2,
+   "textOk": true
+  },
+  {
+   "type": "flag",
+   "group": "annotation",
+   "viaShortcut": false,
+   "activeTool": "flag",
+   "stored": true,
+   "points": 1,
+   "textOk": null
+  },
+  {
+   "type": "xabcd",
+   "group": "patterns",
+   "viaShortcut": false,
+   "activeTool": "xabcd",
+   "stored": true,
+   "points": 5,
+   "textOk": null
+  },
+  {
+   "type": "cypher",
+   "group": "patterns",
+   "viaShortcut": false,
+   "activeTool": "cypher",
+   "stored": true,
+   "points": 5,
+   "textOk": null
+  },
+  {
+   "type": "abcd",
+   "group": "patterns",
+   "viaShortcut": false,
+   "activeTool": "abcd",
+   "stored": true,
+   "points": 4,
+   "textOk": null
+  },
+  {
+   "type": "headshoulders",
+   "group": "patterns",
+   "viaShortcut": false,
+   "activeTool": "headshoulders",
+   "stored": true,
+   "points": 7,
+   "textOk": null
+  },
+  {
+   "type": "trianglepattern",
+   "group": "patterns",
+   "viaShortcut": false,
+   "activeTool": "trianglepattern",
+   "stored": true,
+   "points": 4,
+   "textOk": null
+  },
+  {
+   "type": "threedrives",
+   "group": "patterns",
+   "viaShortcut": false,
+   "activeTool": "threedrives",
+   "stored": true,
+   "points": 7,
+   "textOk": null
+  },
+  {
+   "type": "elliottimpulse",
+   "group": "patterns",
+   "viaShortcut": false,
+   "activeTool": "elliottimpulse",
+   "stored": true,
+   "points": 6,
+   "textOk": null
+  },
+  {
+   "type": "elliottcorrection",
+   "group": "patterns",
+   "viaShortcut": false,
+   "activeTool": "elliottcorrection",
+   "stored": true,
+   "points": 4,
+   "textOk": null
+  },
+  {
+   "type": "elliotttriangle",
+   "group": "patterns",
+   "viaShortcut": false,
+   "activeTool": "elliotttriangle",
+   "stored": true,
+   "points": 6,
+   "textOk": null
+  },
+  {
+   "type": "elliottdouble",
+   "group": "patterns",
+   "viaShortcut": false,
+   "activeTool": "elliottdouble",
+   "stored": true,
+   "points": 4,
+   "textOk": null
+  },
+  {
+   "type": "elliotttriple",
+   "group": "patterns",
+   "viaShortcut": false,
+   "activeTool": "elliotttriple",
+   "stored": true,
+   "points": 6,
+   "textOk": null
+  }
+ ],
+ "frameStart": 53,
+ "switched": {
+  "interval": "15",
+  "same": true,
+  "rendered": 53
+ },
+ "reloaded": {
+  "interval": "15",
+  "same": true,
+  "count": 53,
+  "rendered": 53
+ }
+}
