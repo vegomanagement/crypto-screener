@@ -1,0 +1,13 @@
+{
+  "fixture_mode": false,
+  "source": "live public exchange via local read-only API",
+  "checks": [
+    "complete TV-style interval strip/dropdown, disabled honest 30s, compact labels",
+    "all six layout choices render real chart instances",
+    "watchlist and timeframe affect only active pane",
+    "FVG rectangles paint actual bounded overlays; toggle clears/repaints",
+    "layout/pane symbol/2D timeframe persistence across reload",
+    "390px mobile layout has no horizontal page overflow"
+  ],
+  "javascript_errors": []
+}

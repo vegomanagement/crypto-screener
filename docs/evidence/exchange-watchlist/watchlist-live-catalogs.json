@@ -1,0 +1,41 @@
+[
+  {
+    "exchange": "bybit",
+    "total": 866,
+    "quoted": 866,
+    "hip3": 0,
+    "warnings": [],
+    "examples": [
+      "0GUSDT",
+      "1000000BABYDOGEUSDT",
+      "1000000MOGUSDT",
+      "10000NEXUSDT"
+    ]
+  },
+  {
+    "exchange": "binance",
+    "total": 563,
+    "quoted": 563,
+    "hip3": 0,
+    "warnings": [],
+    "examples": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "BCHUSDT",
+      "XRPUSDT"
+    ]
+  },
+  {
+    "exchange": "hyperliquid",
+    "total": 340,
+    "quoted": 340,
+    "hip3": 162,
+    "warnings": [],
+    "examples": [
+      "BTC",
+      "ETH",
+      "ATOM",
+      "DYDX"
+    ]
+  }
+]

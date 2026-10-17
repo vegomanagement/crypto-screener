@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Research workspace · Crypto Screener</title>
+  <link rel="stylesheet" href="/static/workspace.css">
+  <script defer src="/static/vendor/lightweight-charts.standalone.production.js"></script>
+  <script defer src="/static/indicator-extras.js"></script>
+  <script defer src="/static/market-stream.js"></script>
+  <script defer src="/static/liquidity-heatmap.js"></script>
+  <script defer src="/static/workspace.js"></script>
+</head>
+<body>
+<div id="workspace" class="workspace">
+  <header class="topbar">
+    <a class="wordmark" href="/ui" aria-label="Research workspace home"><span class="brand-mark" aria-hidden="true">◫</span><span>SCREENER<span class="brand-sub"> / RESEARCH</span></span></a>
+    <form id="symbol-form" class="symbol-search" role="search">
+      <label class="sr-only" for="symbol-input">Change active chart symbol</label>
+      <span aria-hidden="true" class="search-icon">⌕</span>
+      <input id="symbol-input" name="symbol" list="symbol-suggestions" autocomplete="off" spellcheck="false" maxlength="80" placeholder="Search symbol" value="BTCUSDT">
+      <button type="submit" title="Apply symbol to active chart" aria-label="Apply symbol to active chart">↵</button>
+    </form>
+    <div class="topbar-end"><span class="research-badge"><span class="status-dot"></span>RESEARCH ONLY</span><button id="watchlist-toggle" type="button" aria-controls="watchlist" aria-expanded="true" title="Toggle watchlist">☷ <span>Watchlist</span></button></div>
+  </header>
+  <nav class="chart-toolbar" aria-label="Chart controls">
+    <div id="favorite-intervals" class="favorite-intervals" role="group" aria-label="Favorite intervals"></div>
+    <label class="interval-control"><span class="sr-only">All intervals for active chart</span><select id="interval-select" aria-label="All intervals for active chart"><option value="240">4 hours</option></select></label>
+    <span class="toolbar-divider" aria-hidden="true"></span>
+    <label class="layout-control"><span class="layout-icon" aria-hidden="true">▦</span><select id="layout-select" aria-label="Chart layout"><option value="1">1 chart</option><option value="2cols">2 columns</option><option value="2rows">2 rows</option><option value="3cols">3 columns</option><option value="4grid" selected>4 charts · 2 × 2</option><option value="6grid">6 charts · 3 × 2</option></select></label>
+    <button id="reload-active" type="button" title="Reload active chart">↻ <span>Reload</span></button>
+  </nav>
+  <div class="indicator-toolbar" role="group" aria-label="Overlays and refresh settings">
+    <span class="toolbar-caption">OVERLAYS</span>
+    <label class="toggle-chip fvg-chip"><input id="fvg-toggle" type="checkbox" checked><span><i class="zone-icon" aria-hidden="true"></i>FVG</span></label>
+    <button type="button" class="indicator-settings-btn" data-indicator="fvg" aria-label="FVG settings" aria-expanded="false" title="FVG settings">⚙</button>
+    <label class="toggle-chip ema7"><input id="ema7-toggle" type="checkbox" checked><span>EMA 7</span></label>
+    <button type="button" class="indicator-settings-btn" data-indicator="ema7" aria-label="EMA 7 settings" aria-expanded="false" title="EMA 7 settings">⚙</button>
+    <label class="toggle-chip ema14"><input id="ema14-toggle" type="checkbox" checked><span>EMA 14</span></label>
+    <button type="button" class="indicator-settings-btn" data-indicator="ema14" aria-label="EMA 14 settings" aria-expanded="false" title="EMA 14 settings">⚙</button>
+    <label class="toggle-chip ema28"><input id="ema28-toggle" type="checkbox" checked><span>EMA 28</span></label>
+    <button type="button" class="indicator-settings-btn" data-indicator="ema28" aria-label="EMA 28 settings" aria-expanded="false" title="EMA 28 settings">⚙</button>
+    <label class="toggle-chip ema200"><input id="ema200-toggle" type="checkbox"><span>EMA 200</span></label>
+    <button type="button" class="indicator-settings-btn" data-indicator="ema200" aria-label="EMA 200 settings" aria-expanded="false" title="EMA 200 settings">⚙</button>
+    <span class="toolbar-divider" aria-hidden="true"></span>
+    <label class="toggle-chip ma20-high"><input id="ma20-high-toggle" type="checkbox"><span>MA20 High</span></label>
+    <button type="button" class="indicator-settings-btn" data-indicator="ma20high" aria-label="MA20 High settings" aria-expanded="false" title="MA20 High settings">⚙</button>
+    <label class="toggle-chip ma20-low"><input id="ma20-low-toggle" type="checkbox"><span>MA20 Low</span></label>
+    <button type="button" class="indicator-settings-btn" data-indicator="ma20low" aria-label="MA20 Low settings" aria-expanded="false" title="MA20 Low settings">⚙</button>
+    <span id="extra-indicator-controls"></span>
+    <span class="fill-policy" title="Fully filled gaps are removed using wick highs/lows on closed candles">Wick fill · closed candles</span>
+    <label class="toggle-chip"><input id="local-alerts-toggle" type="checkbox"><span>LOCAL FVG alerts</span></label>
+    <label class="auto-refresh"><input id="auto-refresh" type="checkbox">Auto · 60s</label>
+  </div>
+  <div class="workspace-content">
+    <main id="chart-grid" class="chart-grid" data-layout="4grid" aria-label="Independent research charts"></main>
+    <aside id="watchlist" class="watchlist" aria-label="Market watchlist">
+      <div class="watchlist-heading"><h1>Watchlist</h1><select id="exchange-select" aria-label="Watchlist exchange"><option value="bybit">Bybit</option><option value="binance">Binance</option><option value="hyperliquid">Hyperliquid</option></select><button id="refresh-prices" type="button" aria-label="Refresh watchlist markets and prices" title="Refresh watchlist markets and prices">↻</button></div>
+      <label class="watchlist-search-label"><span class="sr-only">Filter watchlist markets</span><input id="watchlist-search" type="search" placeholder="Filter markets…" maxlength="80" autocomplete="off" aria-controls="watchlist-rows"></label>
+      <div class="watchlist-tabs"><span>PERPETUALS · <span id="watchlist-count" aria-label="Shown / total markets" role="status">— / —</span></span><button id="watchlist-favorites-toggle" type="button" aria-pressed="false" title="Show only favorite markets">★ <span>Favorites</span></button><span class="watchlist-live">24H</span></div>
+      <div class="watchlist-columns"><span class="watchlist-col-star" aria-hidden="true"></span><span>Symbol</span><span>Last</span><button id="watchlist-sort-change" type="button" class="watchlist-sort" aria-label="Sort by 24h change" aria-sort="none">Chg% <span class="sort-arrow" aria-hidden="true"></span></button></div>
+      <div id="watchlist-rows" class="watchlist-rows"></div>
+      <p id="prices-status" class="prices-status" role="status">Loading market prices…</p>
+      <button id="watchlist-retry" type="button" hidden>Retry market catalog</button>
+      <div class="watchlist-note"><span class="note-icon" aria-hidden="true">↖</span><div><strong>One pane. Your focus.</strong><p>Select a market to change only the blue-bordered chart. Charts keep independent intervals and zoom.</p></div></div>
+      <div class="zone-key"><span><i class="bull-swatch"></i>Bullish FVG</span><span><i class="bear-swatch"></i>Bearish FVG</span><p>Unfilled price gaps · wick mitigation<br>Bounded zones, not trade signals.</p></div>
+      <details class="local-alerts"><summary>LOCAL notifications · <span id="local-alerts-count">0</span></summary><p>Opt-in browser-only feed. Closed bars only. No Telegram, push, or payment.</p><ol id="local-alerts-feed" aria-live="polite"></ol></details>
+    </aside>
+  </div>
+  <footer class="workspace-footer"><span id="workspace-status" role="status">Independent charts · closed candles only</span><span class="chart-credit">Charts by <a href="https://www.tradingview.com/" target="_blank" rel="noopener noreferrer">TradingView Lightweight Charts™</a><span class="footer-utc"> · UTC</span></span></footer>
+</div>
+<datalist id="symbol-suggestions"></datalist>
+<noscript><p class="fatal-message">JavaScript is required to display this chart workspace. No market data is generated locally.</p></noscript>
+</body>
+</html>

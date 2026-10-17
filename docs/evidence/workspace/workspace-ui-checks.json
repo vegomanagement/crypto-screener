@@ -1,0 +1,426 @@
+{
+  "fixture_only": true,
+  "checks": [
+    {
+      "name": "default_panes_and_active",
+      "result": {
+        "count": 4,
+        "active": "0"
+      }
+    },
+    {
+      "name": "watchlist_changes_only_active",
+      "result": [
+        {
+          "id": "0",
+          "symbol": "BTCUSDT",
+          "interval": "240",
+          "state": "ready"
+        },
+        {
+          "id": "1",
+          "symbol": "ETHUSDT",
+          "interval": "240",
+          "state": "ready"
+        },
+        {
+          "id": "2",
+          "symbol": "DOGEUSDT",
+          "interval": "240",
+          "state": "ready"
+        },
+        {
+          "id": "3",
+          "symbol": "1000BONKUSDT",
+          "interval": "D",
+          "state": "ready"
+        }
+      ]
+    },
+    {
+      "name": "timeframe_only_active",
+      "result": [
+        "240",
+        "240",
+        "60",
+        "D"
+      ]
+    },
+    {
+      "name": "disabled_backend_interval",
+      "result": true
+    },
+    {
+      "name": "overlay_has_pixels",
+      "result": 29163
+    },
+    {
+      "name": "overlay_toggle_no_fetch_and_cleared",
+      "result": {
+        "extraRequests": 0,
+        "nonzeroAlpha": 0
+      }
+    },
+    {
+      "name": "six_panes",
+      "result": {
+        "count": 6,
+        "ready": 6,
+        "ema200": [
+          {
+            "hidden": false,
+            "text": "EMA 200 113.92820681"
+          },
+          {
+            "hidden": false,
+            "text": "EMA 200 113.92820681"
+          },
+          {
+            "hidden": false,
+            "text": "EMA 200 113.92820681"
+          },
+          {
+            "hidden": false,
+            "text": "EMA 200 113.92820681"
+          },
+          {
+            "hidden": false,
+            "text": "EMA 200 113.92820681"
+          },
+          {
+            "hidden": false,
+            "text": "EMA 200 113.92820681"
+          }
+        ],
+        "errors": []
+      }
+    },
+    {
+      "name": "hidden_pane_config_preserved",
+      "result": {
+        "last": "BYBIT:BTCUSDT.P",
+        "active": "0",
+        "storage": {
+          "symbol": "BYBIT:BTCUSDT.P",
+          "interval": "60"
+        }
+      }
+    },
+    {
+      "name": "out_of_order_ignored",
+      "result": {
+        "symbol": "FASTUSDT",
+        "state": "ready",
+        "status": "16:36:08 UTC \u00b7 TEST FIXTURE",
+        "errors": []
+      }
+    },
+    {
+      "name": "honest_error_empty_data",
+      "result": {
+        "state": "error",
+        "status": "Fixture provider unavailable",
+        "count": "",
+        "message": "Fixture provider unavailable"
+      }
+    },
+    {
+      "name": "honest_empty",
+      "result": {
+        "state": "empty",
+        "status": "No closed candles returned \u00b7 TEST FIXTURE",
+        "count": "0 bars \u00b7 2 FVG"
+      }
+    },
+    {
+      "name": "mobile_fit",
+      "result": {
+        "viewport": 390,
+        "documentWidth": 390,
+        "sidebar": "none",
+        "toolbar": {
+          "x": 0,
+          "y": 49,
+          "width": 390,
+          "height": 74,
+          "top": 49,
+          "right": 390,
+          "bottom": 123,
+          "left": 0
+        },
+        "indicators": {
+          "x": 0,
+          "y": 123,
+          "width": 390,
+          "height": 35,
+          "top": 123,
+          "right": 390,
+          "bottom": 158,
+          "left": 0
+        },
+        "grid": {
+          "x": 0,
+          "y": 158,
+          "width": 390,
+          "height": 660,
+          "top": 158,
+          "right": 390,
+          "bottom": 818,
+          "left": 0
+        },
+        "panes": [
+          {
+            "x": 3,
+            "y": 161,
+            "width": 384,
+            "height": 310
+          },
+          {
+            "x": 3,
+            "y": 474,
+            "width": 384,
+            "height": 310
+          },
+          {
+            "x": 3,
+            "y": 787,
+            "width": 384,
+            "height": 310
+          },
+          {
+            "x": 3,
+            "y": 1100,
+            "width": 384,
+            "height": 310
+          },
+          {
+            "x": 3,
+            "y": 1413,
+            "width": 384,
+            "height": 310
+          },
+          {
+            "x": 3,
+            "y": 1726,
+            "width": 384,
+            "height": 310
+          }
+        ],
+        "errors": []
+      }
+    },
+    {
+      "name": "invalid_storage_falls_back",
+      "result": {
+        "layout": "4grid",
+        "panes": 4,
+        "errors": [],
+        "delays": [
+          60000
+        ]
+      }
+    },
+    {
+      "name": "mobile_toolbar_rows",
+      "result": {
+        "favorites": {
+          "x": 8,
+          "y": 55,
+          "width": 259,
+          "height": 27,
+          "top": 55,
+          "right": 267,
+          "bottom": 82,
+          "left": 8
+        },
+        "interval": {
+          "x": 273,
+          "y": 54,
+          "width": 106,
+          "height": 29,
+          "top": 54,
+          "right": 379,
+          "bottom": 83,
+          "left": 273
+        },
+        "layout": {
+          "x": 28.5703125,
+          "y": 89,
+          "width": 145,
+          "height": 28,
+          "top": 89,
+          "right": 173.5703125,
+          "bottom": 117,
+          "left": 28.5703125
+        },
+        "reload": {
+          "x": 310.1640625,
+          "y": 89,
+          "width": 71.8359375,
+          "height": 28,
+          "top": 89,
+          "right": 382,
+          "bottom": 117,
+          "left": 310.1640625
+        },
+        "width": 390
+      }
+    },
+    {
+      "name": "auto_refresh_visible_only_mobile",
+      "result": [
+        "/api/chart?symbol=BTCUSDT&interval=240&limit=300",
+        "/api/chart?symbol=ETHUSDT&interval=240&limit=300",
+        "/api/chart?symbol=SOLUSDT&interval=240&limit=300"
+      ]
+    },
+    {
+      "name": "auto_refresh_hidden_document_none",
+      "result": 0
+    },
+    {
+      "name": "overlay_axes_clipped",
+      "result": {
+        "right": 0,
+        "bottom": 0
+      }
+    },
+    {
+      "name": "final_css_reload",
+      "result": {
+        "rules": 140,
+        "panes": 6,
+        "columns": "412.664px 412.664px 412.664px",
+        "errors": []
+      }
+    },
+    {
+      "name": "reload_active_only",
+      "result": [
+        "/api/chart?symbol=BTCUSDT&interval=240&limit=300"
+      ]
+    },
+    {
+      "name": "collapse_resizes_without_fetch",
+      "result": {
+        "sidebar": "none",
+        "requests": 0,
+        "canvases": [
+          {
+            "host": 498,
+            "canvas": 498
+          },
+          {
+            "host": 498,
+            "canvas": 498
+          },
+          {
+            "host": 498,
+            "canvas": 498
+          },
+          {
+            "host": 498,
+            "canvas": 498
+          },
+          {
+            "host": 498,
+            "canvas": 498
+          },
+          {
+            "host": 498,
+            "canvas": 498
+          }
+        ]
+      }
+    },
+    {
+      "name": "accessible_symbol_editor",
+      "result": {
+        "active": "0",
+        "focused": "pane-symbol-4",
+        "open": true,
+        "footer": "6 independent charts \u00b7 active chart 1 \u00b7 UTC"
+      }
+    },
+    {
+      "name": "short_history_warmup_and_warning",
+      "result": {
+        "count": "10 bars \u00b7 0 FVG",
+        "status": "16:39:07 UTC \u00b7 TEST FIXTURE \u00b7 Limited history test",
+        "ema7": "EMA 7 102.23235",
+        "ema14": "EMA 14 \u00b7 warming up",
+        "errors": []
+      }
+    },
+    {
+      "name": "symbol_editor_activates_own_pane_fixed",
+      "result": {
+        "active": "4",
+        "focus": "pane-symbol-4",
+        "errors": []
+      }
+    },
+    {
+      "name": "post_zoom_no_errors",
+      "result": []
+    }
+  ],
+  "layouts": [
+    {
+      "layout": "1",
+      "count": 1,
+      "ready": 1,
+      "width": 1512,
+      "errors": []
+    },
+    {
+      "layout": "2cols",
+      "count": 2,
+      "ready": 2,
+      "width": 1512,
+      "errors": []
+    },
+    {
+      "layout": "2rows",
+      "count": 2,
+      "ready": 2,
+      "width": 1512,
+      "errors": []
+    },
+    {
+      "layout": "3cols",
+      "count": 3,
+      "ready": 3,
+      "width": 1512,
+      "errors": []
+    },
+    {
+      "layout": "4grid",
+      "count": 4,
+      "ready": 4,
+      "width": 1512,
+      "errors": []
+    },
+    {
+      "layout": "6grid",
+      "count": 6,
+      "ready": 6,
+      "width": 1512,
+      "errors": []
+    }
+  ],
+  "overlay_before_zoom": {
+    "x0": 26,
+    "x1": 302,
+    "y0": 67,
+    "y1": 201,
+    "n": 18214
+  },
+  "overlay_after_zoom": {
+    "x0": 8,
+    "x1": 312,
+    "y0": 67,
+    "y1": 201,
+    "n": 20054
+  }
+}

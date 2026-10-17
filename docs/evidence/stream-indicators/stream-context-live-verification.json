@@ -1,0 +1,67 @@
+[
+  {
+    "exchange": "bybit",
+    "symbol": "BTCUSDT",
+    "funding_rate": 7.07e-05,
+    "funding_interval_hours": 8.0,
+    "open_interest": 58097.363,
+    "open_interest_unit": "base_asset",
+    "ema_bias": {
+      "60": "mixed",
+      "240": "bearish",
+      "D": "mixed"
+    },
+    "warnings": [],
+    "forming_candle_close": 82337.7
+  },
+  {
+    "exchange": "binance",
+    "symbol": "ETHUSDT",
+    "funding_rate": 0.0001,
+    "funding_interval_hours": null,
+    "open_interest": 2265140.342,
+    "open_interest_unit": null,
+    "ema_bias": {
+      "60": "mixed",
+      "240": "bearish",
+      "D": "bearish"
+    },
+    "warnings": [
+      "Funding interval unavailable; no default assumed",
+      "Open interest is native quantity; unit unavailable from this endpoint"
+    ],
+    "forming_candle_close": 2454.78
+  },
+  {
+    "exchange": "hyperliquid",
+    "symbol": "BTC",
+    "funding_rate": 1.25e-05,
+    "funding_interval_hours": 1,
+    "open_interest": 41732.94584,
+    "open_interest_unit": "base_asset",
+    "ema_bias": {
+      "60": "mixed",
+      "240": "bearish",
+      "D": "mixed"
+    },
+    "warnings": [],
+    "forming_candle_close": 82355.0
+  },
+  {
+    "exchange": "hyperliquid",
+    "symbol": "xyz:TSLA",
+    "funding_rate": 2.51781e-05,
+    "funding_interval_hours": 1,
+    "open_interest": 121040.982,
+    "open_interest_unit": null,
+    "ema_bias": {
+      "60": "bearish",
+      "240": "bearish",
+      "D": "bullish"
+    },
+    "warnings": [
+      "HIP-3 open interest unit unspecified; raw quantity retained"
+    ],
+    "forming_candle_close": 362.37
+  }
+]

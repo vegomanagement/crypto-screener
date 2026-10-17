@@ -1,0 +1,44 @@
+[
+  {
+    "exchange": "bybit",
+    "symbol": "BTCUSDT",
+    "source": "bybit",
+    "bars": 100,
+    "zones": 3
+  },
+  {
+    "exchange": "binance",
+    "symbol": "ETHUSDT",
+    "source": "binance",
+    "bars": 100,
+    "zones": 5
+  },
+  {
+    "exchange": "hyperliquid",
+    "symbol": "kBONK",
+    "source": "hyperliquid",
+    "bars": 100,
+    "zones": 8
+  },
+  {
+    "exchange": "hyperliquid",
+    "symbol": "xyz:XYZ100",
+    "source": "hyperliquid",
+    "bars": 100,
+    "zones": 5
+  },
+  {
+    "exchange": "bybit",
+    "symbol": "1000BONKPERP",
+    "source": "bybit",
+    "bars": 100,
+    "zones": 10
+  },
+  {
+    "exchange": "binance",
+    "symbol": "BTCUSDC",
+    "source": "binance",
+    "bars": 100,
+    "zones": 3
+  }
+]

@@ -1,0 +1,387 @@
+{
+  "bybit:BTCUSDT:1": {
+    "statuses": [
+      "connecting",
+      "connected",
+      "live"
+    ],
+    "candles": [
+      {
+        "type": "candle",
+        "venue": "bybit",
+        "symbol": "BTCUSDT",
+        "interval": "1",
+        "timestamp": 1792095158670,
+        "closed": false,
+        "candle": {
+          "time": 1792095120,
+          "closeTime": 1792095179999,
+          "open": 82297.5,
+          "high": 82297.5,
+          "low": 82237.8,
+          "close": 82237.8,
+          "volume": 26.558
+        },
+        "receivedAt": 1792095158800
+      },
+      {
+        "type": "candle",
+        "venue": "bybit",
+        "symbol": "BTCUSDT",
+        "interval": "1",
+        "timestamp": 1792095159671,
+        "closed": false,
+        "candle": {
+          "time": 1792095120,
+          "closeTime": 1792095179999,
+          "open": 82297.5,
+          "high": 82297.5,
+          "low": 82237.6,
+          "close": 82237.6,
+          "volume": 26.579
+        },
+        "receivedAt": 1792095159742
+      },
+      {
+        "type": "candle",
+        "venue": "bybit",
+        "symbol": "BTCUSDT",
+        "interval": "1",
+        "timestamp": 1792095160670,
+        "closed": false,
+        "candle": {
+          "time": 1792095120,
+          "closeTime": 1792095179999,
+          "open": 82297.5,
+          "high": 82297.5,
+          "low": 82237.6,
+          "close": 82237.6,
+          "volume": 26.58
+        },
+        "receivedAt": 1792095160742
+      }
+    ],
+    "trades": 113
+  },
+  "bybit:BTCUSDT:D": {
+    "statuses": [
+      "connecting",
+      "connected",
+      "live"
+    ],
+    "candles": [
+      {
+        "type": "candle",
+        "venue": "bybit",
+        "symbol": "BTCUSDT",
+        "interval": "D",
+        "timestamp": 1792095158671,
+        "closed": false,
+        "candle": {
+          "time": 1792022400,
+          "closeTime": 1792108799999,
+          "open": 81642.6,
+          "high": 82618,
+          "low": 79750,
+          "close": 82237.8,
+          "volume": 74584.612
+        },
+        "receivedAt": 1792095159106
+      },
+      {
+        "type": "candle",
+        "venue": "bybit",
+        "symbol": "BTCUSDT",
+        "interval": "D",
+        "timestamp": 1792095159671,
+        "closed": false,
+        "candle": {
+          "time": 1792022400,
+          "closeTime": 1792108799999,
+          "open": 81642.6,
+          "high": 82618,
+          "low": 79750,
+          "close": 82237.6,
+          "volume": 74584.633
+        },
+        "receivedAt": 1792095159742
+      },
+      {
+        "type": "candle",
+        "venue": "bybit",
+        "symbol": "BTCUSDT",
+        "interval": "D",
+        "timestamp": 1792095160670,
+        "closed": false,
+        "candle": {
+          "time": 1792022400,
+          "closeTime": 1792108799999,
+          "open": 81642.6,
+          "high": 82618,
+          "low": 79750,
+          "close": 82237.6,
+          "volume": 74584.634
+        },
+        "receivedAt": 1792095160741
+      }
+    ],
+    "trades": 111
+  },
+  "binance:BTCUSDC:1": {
+    "statuses": [
+      "connecting",
+      "connected",
+      "live"
+    ],
+    "candles": [
+      {
+        "type": "candle",
+        "venue": "binance",
+        "symbol": "BTCUSDC",
+        "interval": "1",
+        "timestamp": 1792095158865,
+        "closed": false,
+        "candle": {
+          "time": 1792095120,
+          "closeTime": 1792095179999,
+          "open": 82216.8,
+          "high": 82216.8,
+          "low": 82162.2,
+          "close": 82162.2,
+          "volume": 24.953
+        },
+        "receivedAt": 1792095158981
+      },
+      {
+        "type": "candle",
+        "venue": "binance",
+        "symbol": "BTCUSDC",
+        "interval": "1",
+        "timestamp": 1792095161416,
+        "closed": false,
+        "candle": {
+          "time": 1792095120,
+          "closeTime": 1792095179999,
+          "open": 82216.8,
+          "high": 82216.8,
+          "low": 82158.3,
+          "close": 82158.3,
+          "volume": 25.781
+        },
+        "receivedAt": 1792095161531
+      },
+      {
+        "type": "candle",
+        "venue": "binance",
+        "symbol": "BTCUSDC",
+        "interval": "1",
+        "timestamp": 1792095162544,
+        "closed": false,
+        "candle": {
+          "time": 1792095120,
+          "closeTime": 1792095179999,
+          "open": 82216.8,
+          "high": 82216.8,
+          "low": 82158.3,
+          "close": 82158.4,
+          "volume": 26.013
+        },
+        "receivedAt": 1792095162661
+      }
+    ],
+    "trades": 0
+  },
+  "binance:BTCUSDC:D": {
+    "statuses": [
+      "connecting",
+      "connected",
+      "live"
+    ],
+    "candles": [
+      {
+        "type": "candle",
+        "venue": "binance",
+        "symbol": "BTCUSDC",
+        "interval": "D",
+        "timestamp": 1792095161416,
+        "closed": false,
+        "candle": {
+          "time": 1792022400,
+          "closeTime": 1792108799999,
+          "open": 81552.9,
+          "high": 82530,
+          "low": 79620.5,
+          "close": 82158.3,
+          "volume": 57082.849
+        },
+        "receivedAt": 1792095161531
+      },
+      {
+        "type": "candle",
+        "venue": "binance",
+        "symbol": "BTCUSDC",
+        "interval": "D",
+        "timestamp": 1792095162544,
+        "closed": false,
+        "candle": {
+          "time": 1792022400,
+          "closeTime": 1792108799999,
+          "open": 81552.9,
+          "high": 82530,
+          "low": 79620.5,
+          "close": 82158.4,
+          "volume": 57083.081
+        },
+        "receivedAt": 1792095162661
+      },
+      {
+        "type": "candle",
+        "venue": "binance",
+        "symbol": "BTCUSDC",
+        "interval": "D",
+        "timestamp": 1792095166913,
+        "closed": false,
+        "candle": {
+          "time": 1792022400,
+          "closeTime": 1792108799999,
+          "open": 81552.9,
+          "high": 82530,
+          "low": 79620.5,
+          "close": 82158.3,
+          "volume": 57083.137
+        },
+        "receivedAt": 1792095167039
+      }
+    ],
+    "trades": 0
+  },
+  "hyperliquid:BTC:1": {
+    "statuses": [
+      "connecting",
+      "connected",
+      "live"
+    ],
+    "candles": [
+      {
+        "type": "candle",
+        "venue": "hyperliquid",
+        "symbol": "BTC",
+        "interval": "1",
+        "timestamp": 1792095179999,
+        "closed": false,
+        "candle": {
+          "time": 1792095120,
+          "closeTime": 1792095179999,
+          "open": 82319,
+          "high": 82320,
+          "low": 82257,
+          "close": 82257,
+          "volume": 13.79015
+        },
+        "receivedAt": 1792095159247
+      },
+      {
+        "type": "candle",
+        "venue": "hyperliquid",
+        "symbol": "BTC",
+        "interval": "1",
+        "timestamp": 1792095179999,
+        "closed": false,
+        "candle": {
+          "time": 1792095120,
+          "closeTime": 1792095179999,
+          "open": 82319,
+          "high": 82320,
+          "low": 82257,
+          "close": 82258,
+          "volume": 13.79499
+        },
+        "receivedAt": 1792095160238
+      },
+      {
+        "type": "candle",
+        "venue": "hyperliquid",
+        "symbol": "BTC",
+        "interval": "1",
+        "timestamp": 1792095179999,
+        "closed": false,
+        "candle": {
+          "time": 1792095120,
+          "closeTime": 1792095179999,
+          "open": 82319,
+          "high": 82320,
+          "low": 82257,
+          "close": 82257,
+          "volume": 14.48969
+        },
+        "receivedAt": 1792095160650
+      }
+    ],
+    "trades": 0
+  },
+  "hyperliquid:BTC:D": {
+    "statuses": [
+      "connecting",
+      "connected",
+      "live"
+    ],
+    "candles": [
+      {
+        "type": "candle",
+        "venue": "hyperliquid",
+        "symbol": "BTC",
+        "interval": "D",
+        "timestamp": 1792108799999,
+        "closed": false,
+        "candle": {
+          "time": 1792022400,
+          "closeTime": 1792108799999,
+          "open": 81651,
+          "high": 82613,
+          "low": 79732,
+          "close": 82258,
+          "volume": 50763.32446
+        },
+        "receivedAt": 1792095160254
+      },
+      {
+        "type": "candle",
+        "venue": "hyperliquid",
+        "symbol": "BTC",
+        "interval": "D",
+        "timestamp": 1792108799999,
+        "closed": false,
+        "candle": {
+          "time": 1792022400,
+          "closeTime": 1792108799999,
+          "open": 81651,
+          "high": 82613,
+          "low": 79732,
+          "close": 82257,
+          "volume": 50764.01916
+        },
+        "receivedAt": 1792095160679
+      },
+      {
+        "type": "candle",
+        "venue": "hyperliquid",
+        "symbol": "BTC",
+        "interval": "D",
+        "timestamp": 1792108799999,
+        "closed": false,
+        "candle": {
+          "time": 1792022400,
+          "closeTime": 1792108799999,
+          "open": 81651,
+          "high": 82613,
+          "low": 79732,
+          "close": 82257,
+          "volume": 50764.01931
+        },
+        "receivedAt": 1792095161075
+      }
+    ],
+    "trades": 0
+  },
+  "remaining": 0
+}

@@ -13,6 +13,10 @@ config.py          # keep local only — use env vars on server
 # Database — личные данные, не коммитить
 *.db
 *.sqlite
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
+.data/
 
 # Logs
 *.log

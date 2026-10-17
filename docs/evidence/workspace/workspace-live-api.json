@@ -1,0 +1,58 @@
+[
+  {
+    "symbol": "BTCUSDT",
+    "interval": "240",
+    "status": 200,
+    "bars": 100,
+    "zones": 3,
+    "source": "bybit",
+    "warnings": []
+  },
+  {
+    "symbol": "ETHUSDT",
+    "interval": "D",
+    "status": 200,
+    "bars": 100,
+    "zones": 2,
+    "source": "bybit",
+    "warnings": []
+  },
+  {
+    "symbol": "SOLUSDT",
+    "interval": "480",
+    "status": 200,
+    "bars": 100,
+    "zones": 7,
+    "source": "bybit",
+    "warnings": []
+  },
+  {
+    "symbol": "1000BONKUSDT",
+    "interval": "D",
+    "status": 200,
+    "bars": 100,
+    "zones": 6,
+    "source": "bybit",
+    "warnings": []
+  },
+  {
+    "symbol": "BTCUSDT",
+    "interval": "12",
+    "status": 200,
+    "bars": 100,
+    "zones": 4,
+    "source": "bybit",
+    "warnings": []
+  },
+  {
+    "symbol": "BTCUSDT",
+    "interval": "M",
+    "status": 200,
+    "bars": 32,
+    "zones": 2,
+    "source": "bybit",
+    "warnings": [
+      "Only 32 of 100 requested closed candles available"
+    ]
+  }
+]

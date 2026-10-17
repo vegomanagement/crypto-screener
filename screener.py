@@ -19,8 +19,9 @@ import requests
 import anthropic
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone, timedelta
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from market_candles import closed_candles, interval_ms
+from liquidity_api import register_liquidity_routes
 
 from decision import make_decision, format_decision_header
 from llm_agents import (
@@ -69,6 +70,7 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 app = Flask(__name__)
+register_liquidity_routes(app)
 ai  = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
 # ─── SIGNAL LABELS ────────────────────────────────────────────────────────────
@@ -4093,8 +4095,119 @@ document.addEventListener("keydown", (ev) => {
 
 @app.route("/ui", methods=["GET"])
 def ui_chart():
-    """Главная UI-страница: chart viewer с indicators."""
+    """Multi-chart research workspace; does not invoke notification workers."""
+    return render_template("workspace.html")
+
+
+@app.route("/ui/legacy", methods=["GET"])
+def ui_chart_legacy():
+    """Previous single-chart viewer retained for compatibility."""
     return UI_CHART_HTML, 200, {"Content-Type": "text/html; charset=utf-8"}
+
+
+@app.route("/api/chart/intervals", methods=["GET"])
+def api_chart_intervals():
+    from chart_data import list_chart_intervals
+    return jsonify({"intervals": list_chart_intervals()})
+
+
+@app.route("/api/chart/context", methods=["GET"])
+def api_chart_context():
+    """Read-only venue-native funding/OI and closed-bar EMA context."""
+    exchange = (request.args.get("exchange") or "").strip().lower()
+    symbol = (request.args.get("symbol") or "").strip()
+    if exchange not in {"bybit", "binance", "hyperliquid"} or not symbol:
+        return jsonify({"error": "unsupported exchange or missing symbol"}), 400
+    from exchange_markets import get_exchange_context
+    try:
+        return jsonify(get_exchange_context(exchange, symbol)), 200
+    except ValueError:
+        return jsonify({"error": "invalid native symbol", "exchange": exchange}), 400
+    except Exception as exc:
+        log.warning("Chart context unavailable for %s %s: %s", exchange, symbol, exc)
+        return jsonify({"error": "Selected exchange context unavailable", "exchange": exchange}), 502
+
+
+@app.route("/api/chart/live", methods=["GET"])
+def api_chart_live():
+    """Real in-progress bar for one pane; honestly null where not supported."""
+    exchange = (request.args.get("exchange") or "").strip().lower()
+    symbol = (request.args.get("symbol") or "").strip()
+    interval = (request.args.get("interval") or "").strip()
+    if exchange not in {"bybit", "binance", "hyperliquid"} or not symbol or not interval:
+        return jsonify({"error": "unsupported exchange or missing symbol/interval"}), 400
+    from exchange_markets import fetch_forming_candle
+    try:
+        candle = fetch_forming_candle(exchange, symbol, interval)
+        return jsonify({"exchange": exchange, "symbol": symbol, "interval": interval,
+                        "candle": candle, "as_of": int(time.time() * 1000)}), 200
+    except Exception as exc:
+        log.warning("Forming candle unavailable for %s %s %s: %s", exchange, symbol, interval, exc)
+        return jsonify({"error": "Forming candle unavailable", "exchange": exchange}), 502
+
+
+@app.route("/api/ticker", methods=["GET"])
+def api_ticker():
+    """One lightweight quote for an active chart pane's live price line."""
+    exchange = (request.args.get("exchange") or "").strip().lower()
+    symbol = (request.args.get("symbol") or "").strip()
+    if exchange not in {"bybit", "binance", "hyperliquid"} or not symbol:
+        return jsonify({"error": "unsupported exchange or missing symbol"}), 400
+    from exchange_markets import get_ticker
+    try:
+        ticker = get_ticker(exchange, symbol)
+        if ticker is None:
+            return jsonify({"error": "unknown symbol"}), 404
+        return jsonify(ticker), 200
+    except Exception as exc:
+        log.warning("Ticker unavailable for %s %s: %s", exchange, symbol, exc)
+        return jsonify({"error": "Exchange ticker unavailable", "exchange": exchange}), 502
+
+
+@app.route("/api/markets", methods=["GET"])
+def api_exchange_markets():
+    """Bulk public perpetual catalog and quotes from one explicitly selected venue."""
+    exchange = (request.args.get("exchange") or "bybit").strip().lower()
+    if exchange not in {"bybit", "binance", "hyperliquid"}:
+        return jsonify({"error": "unsupported exchange"}), 400
+    from exchange_markets import list_exchange_markets
+    try:
+        catalog = list_exchange_markets(exchange, force=request.args.get("force") == "true")
+        return jsonify(catalog), 200
+    except Exception as exc:
+        log.warning("Market catalog unavailable for %s: %s", exchange, exc)
+        return jsonify({"error": "Exchange market catalog unavailable", "exchange": exchange}), 502
+
+
+@app.route("/api/chart", methods=["GET"])
+def api_chart_snapshot():
+    """One venue-pinned read-only snapshot supplies candles and timestamped zones."""
+    from chart_data import build_chart_snapshot, list_chart_intervals
+    exchange = (request.args.get("exchange") or "bybit").strip().lower()
+    if exchange not in {"bybit", "binance", "hyperliquid"}:
+        return jsonify({"error": "unsupported exchange"}), 400
+    symbol = (request.args.get("symbol") or ("BTC" if exchange == "hyperliquid" else "BTCUSDT")).strip()
+    # Hyperliquid names can be case-sensitive (kBONK and builder dex:coin).
+    pattern = (r"[A-Za-z0-9_.:-]{1,80}" if exchange == "hyperliquid" else
+               r"[^\W_]\w{0,79}" if exchange == "binance" else r"[A-Z0-9_]{1,80}")
+    interval = (request.args.get("interval") or "240").strip()
+    supported = {i["value"] for i in list_chart_intervals() if i["available"]}
+    if not re.fullmatch(pattern, symbol) or interval not in supported:
+        return jsonify({"error": "unsupported symbol or interval"}), 400
+    try:
+        limit = max(10, min(500, int(request.args.get("limit", "300"))))
+    except ValueError:
+        return jsonify({"error": "invalid limit"}), 400
+    from exchange_markets import fetch_exchange_candles
+    try:
+        def fetch_selected(native_symbol, base_interval, count):
+            return fetch_exchange_candles(exchange, native_symbol, base_interval, count)
+        snapshot = build_chart_snapshot(symbol, interval, limit, fetch_selected, exchange=exchange)
+        return jsonify(snapshot), 200
+    except Exception as exc:
+        log.warning("Chart snapshot unavailable for %s %s %s: %s", exchange, symbol, interval, exc)
+        return jsonify({"error": "Selected exchange data unavailable or incomplete", "exchange": exchange,
+                        "symbol": symbol, "interval": interval}), 502
 
 
 @app.route("/api/symbols", methods=["GET"])

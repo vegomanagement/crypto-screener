@@ -20,7 +20,7 @@ def _client():
 
 def test_ui_route_returns_html():
     c = _client()
-    r = c.get("/ui")
+    r = c.get("/ui/legacy")
     assert r.status_code == 200
     assert r.content_type.startswith("text/html")
 
@@ -28,7 +28,7 @@ def test_ui_route_returns_html():
 def test_ui_html_contains_chart_lib_cdn():
     """HTML должен подключать Lightweight Charts через CDN."""
     c = _client()
-    r = c.get("/ui")
+    r = c.get("/ui/legacy")
     body = r.get_data(as_text=True)
     assert "lightweight-charts" in body
     assert "unpkg.com" in body or "cdn" in body.lower()
@@ -36,7 +36,7 @@ def test_ui_html_contains_chart_lib_cdn():
 
 def test_ui_html_has_symbol_dropdown():
     c = _client()
-    r = c.get("/ui")
+    r = c.get("/ui/legacy")
     body = r.get_data(as_text=True)
     assert 'id="symbol"' in body
     assert "BTCUSDT" in body
@@ -45,7 +45,7 @@ def test_ui_html_has_symbol_dropdown():
 
 def test_ui_html_has_indicators_panel():
     c = _client()
-    r = c.get("/ui")
+    r = c.get("/ui/legacy")
     body = r.get_data(as_text=True)
     for ind in ("EMA 20", "EMA 50", "RSI", "ATR", "Price"):
         assert ind in body, f"{ind} not in UI body"
@@ -53,7 +53,7 @@ def test_ui_html_has_indicators_panel():
 
 def test_ui_html_has_interval_dropdown():
     c = _client()
-    r = c.get("/ui")
+    r = c.get("/ui/legacy")
     body = r.get_data(as_text=True)
     assert 'id="interval"' in body
     for iv in ("5m", "15m", "1H", "4H", "1D"):
@@ -202,7 +202,7 @@ def test_api_zones_handles_klines_exception(monkeypatch):
 
 def test_ui_has_zones_toggle_and_count():
     c = _client()
-    r = c.get("/ui")
+    r = c.get("/ui/legacy")
     body = r.get_data(as_text=True)
     assert "SMC Zones" in body
     assert 'id="toggleZones"' in body
@@ -212,7 +212,7 @@ def test_ui_has_zones_toggle_and_count():
 
 def test_ui_has_loadZones_js():
     c = _client()
-    r = c.get("/ui")
+    r = c.get("/ui/legacy")
     body = r.get_data(as_text=True)
     assert "loadZones" in body
     assert "/api/zones" in body
@@ -301,7 +301,7 @@ def test_api_analysis_handles_exception():
 
 def test_ui_has_bottom_analysis_panel():
     c = _client()
-    r = c.get("/ui")
+    r = c.get("/ui/legacy")
     body = r.get_data(as_text=True)
     assert "Engine Analysis" in body
     assert 'id="bottomAnalysis"' in body
@@ -311,7 +311,7 @@ def test_ui_has_bottom_analysis_panel():
 
 def test_ui_has_loadAnalysis_js():
     c = _client()
-    r = c.get("/ui")
+    r = c.get("/ui/legacy")
     body = r.get_data(as_text=True)
     assert "loadAnalysis" in body
     assert "/api/analysis" in body
@@ -322,7 +322,7 @@ def test_ui_has_loadAnalysis_js():
 
 def test_ui_has_drawing_tool_buttons():
     c = _client()
-    r = c.get("/ui")
+    r = c.get("/ui/legacy")
     body = r.get_data(as_text=True)
     assert 'id="btnHLine"' in body
     assert 'id="btnClearDrawings"' in body
@@ -332,7 +332,7 @@ def test_ui_has_drawing_tool_buttons():
 
 def test_ui_has_drawing_js_functions():
     c = _client()
-    r = c.get("/ui")
+    r = c.get("/ui/legacy")
     body = r.get_data(as_text=True)
     # ключевые функции
     for fn in ("toggleTool", "addHLine", "clearDrawings",
@@ -346,7 +346,7 @@ def test_ui_has_drawing_js_functions():
 
 def test_ui_drawing_mode_css_class():
     c = _client()
-    r = c.get("/ui")
+    r = c.get("/ui/legacy")
     body = r.get_data(as_text=True)
     assert "drawing-mode" in body   # для cursor crosshair
     assert "tool-btn" in body
@@ -356,7 +356,7 @@ def test_ui_drawing_mode_css_class():
 def test_ui_drawings_state_key_pattern():
     """JS должен использовать ключ типа screener_drawings_BTCUSDT."""
     c = _client()
-    r = c.get("/ui")
+    r = c.get("/ui/legacy")
     body = r.get_data(as_text=True)
     assert "screener_drawings_" in body
 
@@ -365,7 +365,7 @@ def test_ui_drawings_state_key_pattern():
 
 def test_ui_has_favorites_js_helpers():
     c = _client()
-    r = c.get("/ui")
+    r = c.get("/ui/legacy")
     body = r.get_data(as_text=True)
     for fn in ("getFavorites", "saveFavorites",
                "isFavorite", "toggleFavorite"):
@@ -374,7 +374,7 @@ def test_ui_has_favorites_js_helpers():
 
 def test_ui_favorites_localStorage_key():
     c = _client()
-    r = c.get("/ui")
+    r = c.get("/ui/legacy")
     body = r.get_data(as_text=True)
     assert "FAVORITES_KEY" in body
     assert "screener_favorites" in body
@@ -382,7 +382,7 @@ def test_ui_favorites_localStorage_key():
 
 def test_ui_watchlist_has_star_column():
     c = _client()
-    r = c.get("/ui")
+    r = c.get("/ui/legacy")
     body = r.get_data(as_text=True)
     assert "watchlist-star" in body
     assert "data-fav-symbol" in body
@@ -394,7 +394,7 @@ def test_ui_watchlist_has_star_column():
 def test_ui_watchlist_sort_favorites_first():
     """В JS должна быть сортировка favorites first."""
     c = _client()
-    r = c.get("/ui")
+    r = c.get("/ui/legacy")
     body = r.get_data(as_text=True)
     # sort by favorite status
     assert "favs.has" in body
@@ -406,7 +406,7 @@ def test_ui_watchlist_sort_favorites_first():
 
 def test_ui_has_url_routing_helpers():
     c = _client()
-    r = c.get("/ui")
+    r = c.get("/ui/legacy")
     body = r.get_data(as_text=True)
     for fn in ("parseHash", "updateHash", "applyHashOnLoad",
                "_normalizeSymbol", "_normalizeInterval"):
@@ -415,7 +415,7 @@ def test_ui_has_url_routing_helpers():
 
 def test_ui_listens_to_hashchange():
     c = _client()
-    r = c.get("/ui")
+    r = c.get("/ui/legacy")
     body = r.get_data(as_text=True)
     assert 'addEventListener("hashchange"' in body
 
@@ -423,7 +423,7 @@ def test_ui_listens_to_hashchange():
 def test_ui_calls_updateHash_on_symbol_change():
     """При смене символа updateHash() должен вызываться."""
     c = _client()
-    r = c.get("/ui")
+    r = c.get("/ui/legacy")
     body = r.get_data(as_text=True)
     # Ищем что updateHash есть в обработчиках
     assert "updateHash()" in body
@@ -432,7 +432,7 @@ def test_ui_calls_updateHash_on_symbol_change():
 def test_ui_has_tf_aliases_for_routing():
     """TF_ALIASES + TF_REVERSE для нормализации hash'ов."""
     c = _client()
-    r = c.get("/ui")
+    r = c.get("/ui/legacy")
     body = r.get_data(as_text=True)
     assert "TF_ALIASES" in body
     assert "TF_REVERSE" in body
@@ -444,7 +444,7 @@ def test_ui_has_tf_aliases_for_routing():
 
 def test_ui_has_keyboard_listener():
     c = _client()
-    r = c.get("/ui")
+    r = c.get("/ui/legacy")
     body = r.get_data(as_text=True)
     assert 'addEventListener("keydown"' in body
     # Skip when typing in inputs
@@ -453,7 +453,7 @@ def test_ui_has_keyboard_listener():
 
 def test_ui_has_keyboard_helpers():
     c = _client()
-    r = c.get("/ui")
+    r = c.get("/ui/legacy")
     body = r.get_data(as_text=True)
     for fn in ("_kbNavigateSymbol", "_kbSetInterval",
                "_kbToggleFavorite", "_kbShowHelp"):
@@ -462,7 +462,7 @@ def test_ui_has_keyboard_helpers():
 
 def test_ui_handles_arrow_and_vim_keys():
     c = _client()
-    r = c.get("/ui")
+    r = c.get("/ui/legacy")
     body = r.get_data(as_text=True)
     # ArrowUp/ArrowDown + j/k vim-style
     assert "ArrowUp" in body
@@ -473,7 +473,7 @@ def test_ui_handles_arrow_and_vim_keys():
 
 def test_ui_handles_interval_number_keys():
     c = _client()
-    r = c.get("/ui")
+    r = c.get("/ui/legacy")
     body = r.get_data(as_text=True)
     assert 'KB_INTERVALS' in body
     assert '"1"' in body and '"5"' in body
@@ -481,7 +481,7 @@ def test_ui_handles_interval_number_keys():
 
 def test_ui_handles_other_shortcuts():
     c = _client()
-    r = c.get("/ui")
+    r = c.get("/ui/legacy")
     body = r.get_data(as_text=True)
     # f r h c Escape ?
     for k in ('"f"', '"r"', '"h"', '"c"', '"Escape"', '"?"'):
@@ -490,7 +490,7 @@ def test_ui_handles_other_shortcuts():
 
 def test_ui_has_kbd_styling():
     c = _client()
-    r = c.get("/ui")
+    r = c.get("/ui/legacy")
     body = r.get_data(as_text=True)
     assert "<kbd>" in body or "kbd {" in body
 
@@ -596,7 +596,7 @@ def test_api_market_does_not_include_klines():
 
 def test_ui_html_has_engine_market_panel():
     c = _client()
-    r = c.get("/ui")
+    r = c.get("/ui/legacy")
     body = r.get_data(as_text=True)
     assert "Engine Market" in body
     for ind_name in ("CVD trend", "MTF EMA bias", "Funding",
@@ -607,7 +607,7 @@ def test_ui_html_has_engine_market_panel():
 
 def test_ui_html_has_loadMarket_js():
     c = _client()
-    r = c.get("/ui")
+    r = c.get("/ui/legacy")
     body = r.get_data(as_text=True)
     assert "loadMarket" in body
     assert "/api/market" in body
@@ -706,7 +706,7 @@ def test_api_prices_empty_symbols_param_returns_200():
 
 def test_ui_html_has_watchlist_panel():
     c = _client()
-    r = c.get("/ui")
+    r = c.get("/ui/legacy")
     body = r.get_data(as_text=True)
     assert "Watchlist" in body
     assert 'id="watchlist"' in body
@@ -714,7 +714,7 @@ def test_ui_html_has_watchlist_panel():
 
 def test_ui_html_has_loadWatchlist_js():
     c = _client()
-    r = c.get("/ui")
+    r = c.get("/ui/legacy")
     body = r.get_data(as_text=True)
     assert "loadWatchlist" in body
     assert "/api/prices" in body
@@ -870,7 +870,7 @@ def test_api_signals_handles_missing_db(monkeypatch, tmp_path):
 def test_ui_has_signals_toggle():
     """UI содержит чекбокс toggleSignals и метку Signals."""
     c = _client()
-    r = c.get("/ui")
+    r = c.get("/ui/legacy")
     body = r.get_data(as_text=True)
     assert 'id="toggleSignals"' in body
     assert "Show entries / TP / SL markers" in body
@@ -879,7 +879,7 @@ def test_ui_has_signals_toggle():
 
 def test_ui_has_loadSignals_js():
     c = _client()
-    r = c.get("/ui")
+    r = c.get("/ui/legacy")
     body = r.get_data(as_text=True)
     assert "loadSignals" in body
     assert "/api/signals" in body
