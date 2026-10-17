@@ -6,6 +6,7 @@ ROOT = '/Users/maxbelov/Projects/wt/polish'
 sys.path.insert(0, ROOT)
 os.chdir(ROOT)
 os.environ.setdefault('PORT', '5096')
+os.environ.setdefault('LIQUIDATIONS_DB_PATH', '/Users/maxbelov/.hermes/cache/scratch/polish-liquidations.db')
 
 import screener  # noqa: E402
 

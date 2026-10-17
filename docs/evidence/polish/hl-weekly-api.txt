@@ -1,0 +1,2 @@
+['Hyperliquid 1w candles start Thursday 00:00 UTC; Monday-based weeks are aggregated from 7 complete daily candles']
+[('Mon 09-21', 81221.0, 87471.0, 80888.0), ('Mon 09-28', 84438.0, 87235.0, 82551.0), ('Mon 10-05', 86500.0, 86990.0, 80351.0)]

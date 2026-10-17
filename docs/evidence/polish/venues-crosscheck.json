@@ -1,0 +1,1251 @@
+{
+ "failures": 0,
+ "report": [
+  {
+   "case": "bybit BTCUSDT 15m",
+   "lastBar": 1792263600,
+   "levels": [
+    {
+     "level": "D",
+     "current": true,
+     "ui": 81581.2,
+     "venue": 81581.2,
+     "kline": "D 1792195200",
+     "kline_utc": "Sat 2026-10-17",
+     "match": true
+    },
+    {
+     "level": "W",
+     "current": true,
+     "ui": 83733.1,
+     "venue": 83733.1,
+     "kline": "W 1791763200",
+     "kline_utc": "Mon 2026-10-12",
+     "match": true
+    },
+    {
+     "level": "M",
+     "current": true,
+     "ui": 83573.8,
+     "venue": 83573.8,
+     "kline": "M 1790812800",
+     "kline_utc": "Thu 2026-10-01",
+     "match": true
+    },
+    {
+     "level": "3M",
+     "current": true,
+     "ui": 83573.8,
+     "venue": 83573.8,
+     "kline": "M 1790812800",
+     "kline_utc": "Thu 2026-10-01",
+     "match": true
+    },
+    {
+     "level": "Y",
+     "current": true,
+     "ui": 87594.9,
+     "venue": 87594.9,
+     "kline": "M 1767225600",
+     "kline_utc": "Thu 2026-01-01",
+     "match": true
+    },
+    {
+     "level": "PDH",
+     "current": true,
+     "ui": 82900,
+     "venue": 82900.0,
+     "kline": "D 1792108800",
+     "kline_utc": "Fri 2026-10-16",
+     "match": true
+    },
+    {
+     "level": "PDL",
+     "current": true,
+     "ui": 80755.9,
+     "venue": 80755.9,
+     "kline": "D 1792108800",
+     "kline_utc": "Fri 2026-10-16",
+     "match": true
+    },
+    {
+     "level": "PWH",
+     "current": true,
+     "ui": 86986.5,
+     "venue": 86986.5,
+     "kline": "W 1791158400",
+     "kline_utc": "Mon 2026-10-05",
+     "match": true
+    },
+    {
+     "level": "PWL",
+     "current": true,
+     "ui": 80350.1,
+     "venue": 80350.1,
+     "kline": "W 1791158400",
+     "kline_utc": "Mon 2026-10-05",
+     "match": true
+    },
+    {
+     "level": "PMH",
+     "current": true,
+     "ui": 87383.6,
+     "venue": 87383.6,
+     "kline": "M 1788220800",
+     "kline_utc": "Tue 2026-09-01",
+     "match": true
+    },
+    {
+     "level": "PML",
+     "current": true,
+     "ui": 74919.6,
+     "venue": 74919.6,
+     "kline": "M 1788220800",
+     "kline_utc": "Tue 2026-09-01",
+     "match": true
+    }
+   ],
+   "sessions": [
+    {
+     "session": "London",
+     "start_utc": "2026-10-14T08:00:00+00:00",
+     "bars": 3,
+     "ui_high": 81978.5,
+     "venue_high": 81978.5,
+     "ui_low": 81545,
+     "venue_low": 81545.0,
+     "match": true
+    },
+    {
+     "session": "New York",
+     "start_utc": "2026-10-14T13:00:00+00:00",
+     "bars": 23,
+     "ui_high": 82070,
+     "venue_high": 82070.0,
+     "ui_low": 81464.6,
+     "venue_low": 81464.6,
+     "match": true
+    },
+    {
+     "session": "Tokyo",
+     "start_utc": "2026-10-15T00:00:00+00:00",
+     "bars": 36,
+     "ui_high": 81897.1,
+     "venue_high": 81897.1,
+     "ui_low": 80167,
+     "venue_low": 80167.0,
+     "match": true
+    },
+    {
+     "session": "London",
+     "start_utc": "2026-10-15T08:00:00+00:00",
+     "bars": 36,
+     "ui_high": 82618,
+     "venue_high": 82618.0,
+     "ui_low": 79750,
+     "venue_low": 79750.0,
+     "match": true,
+     "opening_range": {
+      "bars": 2,
+      "venue_bars": 2,
+      "ui_top": 81548,
+      "venue_top": 81548.0,
+      "ui_btm": 81140,
+      "venue_btm": 81140.0,
+      "last_or_utc": "08:15"
+     }
+    },
+    {
+     "session": "New York",
+     "start_utc": "2026-10-15T13:00:00+00:00",
+     "bars": 36,
+     "ui_high": 82618,
+     "venue_high": 82618.0,
+     "ui_low": 79750,
+     "venue_low": 79750.0,
+     "match": true
+    },
+    {
+     "session": "Tokyo",
+     "start_utc": "2026-10-16T00:00:00+00:00",
+     "bars": 36,
+     "ui_high": 82503.7,
+     "venue_high": 82503.7,
+     "ui_low": 81640.9,
+     "venue_low": 81640.9,
+     "match": true
+    },
+    {
+     "session": "London",
+     "start_utc": "2026-10-16T08:00:00+00:00",
+     "bars": 36,
+     "ui_high": 82900,
+     "venue_high": 82900.0,
+     "ui_low": 81199.2,
+     "venue_low": 81199.2,
+     "match": true,
+     "opening_range": {
+      "bars": 2,
+      "venue_bars": 2,
+      "ui_top": 82328.3,
+      "venue_top": 82328.3,
+      "ui_btm": 82120,
+      "venue_btm": 82120.0,
+      "last_or_utc": "08:15"
+     }
+    },
+    {
+     "session": "New York",
+     "start_utc": "2026-10-16T13:00:00+00:00",
+     "bars": 36,
+     "ui_high": 82463.9,
+     "venue_high": 82463.9,
+     "ui_low": 80755.9,
+     "venue_low": 80755.9,
+     "match": true
+    },
+    {
+     "session": "Tokyo",
+     "start_utc": "2026-10-17T00:00:00+00:00",
+     "bars": 36,
+     "ui_high": 81735.7,
+     "venue_high": 81735.7,
+     "ui_low": 81359.8,
+     "venue_low": 81359.8,
+     "match": true
+    },
+    {
+     "session": "London",
+     "start_utc": "2026-10-17T08:00:00+00:00",
+     "bars": 36,
+     "ui_high": 81730,
+     "venue_high": 81730.0,
+     "ui_low": 81152,
+     "venue_low": 81152.0,
+     "match": true,
+     "opening_range": {
+      "bars": 2,
+      "venue_bars": 2,
+      "ui_top": 81730,
+      "venue_top": 81730.0,
+      "ui_btm": 81673.4,
+      "venue_btm": 81673.4,
+      "last_or_utc": "08:15"
+     }
+    },
+    {
+     "session": "New York",
+     "start_utc": "2026-10-17T13:00:00+00:00",
+     "bars": 25,
+     "ui_high": 81583.5,
+     "venue_high": 81583.5,
+     "ui_low": 81144.4,
+     "venue_low": 81144.4,
+     "match": true
+    }
+   ],
+   "warnings": "",
+   "htfErrors": []
+  },
+  {
+   "case": "bybit BTCUSDT 60m",
+   "lastBar": 1792260000,
+   "levels": [
+    {
+     "level": "D",
+     "current": true,
+     "ui": 81581.2,
+     "venue": 81581.2,
+     "kline": "D 1792195200",
+     "kline_utc": "Sat 2026-10-17",
+     "match": true
+    },
+    {
+     "level": "W",
+     "current": true,
+     "ui": 83733.1,
+     "venue": 83733.1,
+     "kline": "W 1791763200",
+     "kline_utc": "Mon 2026-10-12",
+     "match": true
+    },
+    {
+     "level": "M",
+     "current": true,
+     "ui": 83573.8,
+     "venue": 83573.8,
+     "kline": "M 1790812800",
+     "kline_utc": "Thu 2026-10-01",
+     "match": true
+    },
+    {
+     "level": "3M",
+     "current": true,
+     "ui": 83573.8,
+     "venue": 83573.8,
+     "kline": "M 1790812800",
+     "kline_utc": "Thu 2026-10-01",
+     "match": true
+    },
+    {
+     "level": "Y",
+     "current": true,
+     "ui": 87594.9,
+     "venue": 87594.9,
+     "kline": "M 1767225600",
+     "kline_utc": "Thu 2026-01-01",
+     "match": true
+    },
+    {
+     "level": "PDH",
+     "current": true,
+     "ui": 82900,
+     "venue": 82900.0,
+     "kline": "D 1792108800",
+     "kline_utc": "Fri 2026-10-16",
+     "match": true
+    },
+    {
+     "level": "PDL",
+     "current": true,
+     "ui": 80755.9,
+     "venue": 80755.9,
+     "kline": "D 1792108800",
+     "kline_utc": "Fri 2026-10-16",
+     "match": true
+    },
+    {
+     "level": "PWH",
+     "current": true,
+     "ui": 86986.5,
+     "venue": 86986.5,
+     "kline": "W 1791158400",
+     "kline_utc": "Mon 2026-10-05",
+     "match": true
+    },
+    {
+     "level": "PWL",
+     "current": true,
+     "ui": 80350.1,
+     "venue": 80350.1,
+     "kline": "W 1791158400",
+     "kline_utc": "Mon 2026-10-05",
+     "match": true
+    },
+    {
+     "level": "PMH",
+     "current": true,
+     "ui": 87383.6,
+     "venue": 87383.6,
+     "kline": "M 1788220800",
+     "kline_utc": "Tue 2026-09-01",
+     "match": true
+    },
+    {
+     "level": "PML",
+     "current": true,
+     "ui": 74919.6,
+     "venue": 74919.6,
+     "kline": "M 1788220800",
+     "kline_utc": "Tue 2026-09-01",
+     "match": true
+    }
+   ],
+   "sessions": [
+    {
+     "session": "Tokyo",
+     "start_utc": "2026-10-08T00:00:00+00:00",
+     "bars": 9,
+     "ui_high": 83482,
+     "venue_high": 83482.0,
+     "ui_low": 82152.1,
+     "venue_low": 82152.1,
+     "match": true
+    },
+    {
+     "session": "London",
+     "start_utc": "2026-10-08T08:00:00+00:00",
+     "bars": 9,
+     "ui_high": 83143.2,
+     "venue_high": 83143.2,
+     "ui_low": 80745.5,
+     "venue_low": 80745.5,
+     "match": true,
+     "opening_range": {
+      "bars": 2,
+      "venue_bars": 2,
+      "ui_top": 83143.2,
+      "venue_top": 83143.2,
+      "ui_btm": 82735.5,
+      "venue_btm": 82735.5,
+      "last_or_utc": "09:00"
+     }
+    },
+    {
+     "session": "New York",
+     "start_utc": "2026-10-08T13:00:00+00:00",
+     "bars": 9,
+     "ui_high": 82754.1,
+     "venue_high": 82754.1,
+     "ui_low": 80350.1,
+     "venue_low": 80350.1,
+     "match": true
+    },
+    {
+     "session": "Tokyo",
+     "start_utc": "2026-10-09T00:00:00+00:00",
+     "bars": 9,
+     "ui_high": 82721.6,
+     "venue_high": 82721.6,
+     "ui_low": 81569.5,
+     "venue_low": 81569.5,
+     "match": true
+    },
+    {
+     "session": "London",
+     "start_utc": "2026-10-09T08:00:00+00:00",
+     "bars": 9,
+     "ui_high": 83497,
+     "venue_high": 83497.0,
+     "ui_low": 82356.4,
+     "venue_low": 82356.4,
+     "match": true,
+     "opening_range": {
+      "bars": 2,
+      "venue_bars": 2,
+      "ui_top": 82721.6,
+      "venue_top": 82721.6,
+      "ui_btm": 82476.5,
+      "venue_btm": 82476.5,
+      "last_or_utc": "09:00"
+     }
+    },
+    {
+     "session": "New York",
+     "start_utc": "2026-10-09T13:00:00+00:00",
+     "bars": 9,
+     "ui_high": 83280.9,
+     "venue_high": 83280.9,
+     "ui_low": 82217.5,
+     "venue_low": 82217.5,
+     "match": true
+    },
+    {
+     "session": "Tokyo",
+     "start_utc": "2026-10-10T00:00:00+00:00",
+     "bars": 9,
+     "ui_high": 82860.4,
+     "venue_high": 82860.4,
+     "ui_low": 82500,
+     "venue_low": 82500.0,
+     "match": true
+    },
+    {
+     "session": "London",
+     "start_utc": "2026-10-10T08:00:00+00:00",
+     "bars": 9,
+     "ui_high": 83050.1,
+     "venue_high": 83050.1,
+     "ui_low": 82712.5,
+     "venue_low": 82712.5,
+     "match": true,
+     "opening_range": {
+      "bars": 2,
+      "venue_bars": 2,
+      "ui_top": 82910.8,
+      "venue_top": 82910.8,
+      "ui_btm": 82712.5,
+      "venue_btm": 82712.5,
+      "last_or_utc": "09:00"
+     }
+    },
+    {
+     "session": "New York",
+     "start_utc": "2026-10-10T13:00:00+00:00",
+     "bars": 9,
+     "ui_high": 83138.8,
+     "venue_high": 83138.8,
+     "ui_low": 82730.4,
+     "venue_low": 82730.4,
+     "match": true
+    },
+    {
+     "session": "Tokyo",
+     "start_utc": "2026-10-11T00:00:00+00:00",
+     "bars": 9,
+     "ui_high": 83205.5,
+     "venue_high": 83205.5,
+     "ui_low": 82751.8,
+     "venue_low": 82751.8,
+     "match": true
+    },
+    {
+     "session": "London",
+     "start_utc": "2026-10-11T08:00:00+00:00",
+     "bars": 9,
+     "ui_high": 84000,
+     "venue_high": 84000.0,
+     "ui_low": 82927.5,
+     "venue_low": 82927.5,
+     "match": true,
+     "opening_range": {
+      "bars": 2,
+      "venue_bars": 2,
+      "ui_top": 83085.1,
+      "venue_top": 83085.1,
+      "ui_btm": 82933,
+      "venue_btm": 82933.0,
+      "last_or_utc": "09:00"
+     }
+    },
+    {
+     "session": "New York",
+     "start_utc": "2026-10-11T13:00:00+00:00",
+     "bars": 9,
+     "ui_high": 84188.1,
+     "venue_high": 84188.1,
+     "ui_low": 82977.7,
+     "venue_low": 82977.7,
+     "match": true
+    },
+    {
+     "session": "Tokyo",
+     "start_utc": "2026-10-12T00:00:00+00:00",
+     "bars": 9,
+     "ui_high": 84332.5,
+     "venue_high": 84332.5,
+     "ui_low": 83426.9,
+     "venue_low": 83426.9,
+     "match": true
+    },
+    {
+     "session": "London",
+     "start_utc": "2026-10-12T08:00:00+00:00",
+     "bars": 9,
+     "ui_high": 83979,
+     "venue_high": 83979.0,
+     "ui_low": 82360.6,
+     "venue_low": 82360.6,
+     "match": true,
+     "opening_range": {
+      "bars": 2,
+      "venue_bars": 2,
+      "ui_top": 83979,
+      "venue_top": 83979.0,
+      "ui_btm": 83273.2,
+      "venue_btm": 83273.2,
+      "last_or_utc": "09:00"
+     }
+    },
+    {
+     "session": "New York",
+     "start_utc": "2026-10-12T13:00:00+00:00",
+     "bars": 9,
+     "ui_high": 83118.2,
+     "venue_high": 83118.2,
+     "ui_low": 82243.2,
+     "venue_low": 82243.2,
+     "match": true
+    },
+    {
+     "session": "Tokyo",
+     "start_utc": "2026-10-13T00:00:00+00:00",
+     "bars": 9,
+     "ui_high": 84138.6,
+     "venue_high": 84138.6,
+     "ui_low": 81000,
+     "venue_low": 81000.0,
+     "match": true
+    },
+    {
+     "session": "London",
+     "start_utc": "2026-10-13T08:00:00+00:00",
+     "bars": 9,
+     "ui_high": 84138.6,
+     "venue_high": 84138.6,
+     "ui_low": 83078.4,
+     "venue_low": 83078.4,
+     "match": true,
+     "opening_range": {
+      "bars": 2,
+      "venue_bars": 2,
+      "ui_top": 84138.6,
+      "venue_top": 84138.6,
+      "ui_btm": 83340,
+      "venue_btm": 83340.0,
+      "last_or_utc": "09:00"
+     }
+    },
+    {
+     "session": "New York",
+     "start_utc": "2026-10-13T13:00:00+00:00",
+     "bars": 9,
+     "ui_high": 83834.5,
+     "venue_high": 83834.5,
+     "ui_low": 82923.2,
+     "venue_low": 82923.2,
+     "match": true
+    },
+    {
+     "session": "Tokyo",
+     "start_utc": "2026-10-14T00:00:00+00:00",
+     "bars": 9,
+     "ui_high": 84119.6,
+     "venue_high": 84119.6,
+     "ui_low": 83117.6,
+     "venue_low": 83117.6,
+     "match": true
+    },
+    {
+     "session": "London",
+     "start_utc": "2026-10-14T08:00:00+00:00",
+     "bars": 9,
+     "ui_high": 84119.6,
+     "venue_high": 84119.6,
+     "ui_low": 81519.5,
+     "venue_low": 81519.5,
+     "match": true,
+     "opening_range": {
+      "bars": 2,
+      "venue_bars": 2,
+      "ui_top": 84119.6,
+      "venue_top": 84119.6,
+      "ui_btm": 83163.2,
+      "venue_btm": 83163.2,
+      "last_or_utc": "09:00"
+     }
+    },
+    {
+     "session": "New York",
+     "start_utc": "2026-10-14T13:00:00+00:00",
+     "bars": 9,
+     "ui_high": 83080,
+     "venue_high": 83080.0,
+     "ui_low": 81464.6,
+     "venue_low": 81464.6,
+     "match": true
+    },
+    {
+     "session": "Tokyo",
+     "start_utc": "2026-10-15T00:00:00+00:00",
+     "bars": 9,
+     "ui_high": 81897.1,
+     "venue_high": 81897.1,
+     "ui_low": 80167,
+     "venue_low": 80167.0,
+     "match": true
+    },
+    {
+     "session": "London",
+     "start_utc": "2026-10-15T08:00:00+00:00",
+     "bars": 9,
+     "ui_high": 82618,
+     "venue_high": 82618.0,
+     "ui_low": 79750,
+     "venue_low": 79750.0,
+     "match": true,
+     "opening_range": {
+      "bars": 2,
+      "venue_bars": 2,
+      "ui_top": 81548,
+      "venue_top": 81548.0,
+      "ui_btm": 81140,
+      "venue_btm": 81140.0,
+      "last_or_utc": "09:00"
+     }
+    },
+    {
+     "session": "New York",
+     "start_utc": "2026-10-15T13:00:00+00:00",
+     "bars": 9,
+     "ui_high": 82618,
+     "venue_high": 82618.0,
+     "ui_low": 79750,
+     "venue_low": 79750.0,
+     "match": true
+    },
+    {
+     "session": "Tokyo",
+     "start_utc": "2026-10-16T00:00:00+00:00",
+     "bars": 9,
+     "ui_high": 82503.7,
+     "venue_high": 82503.7,
+     "ui_low": 81640.9,
+     "venue_low": 81640.9,
+     "match": true
+    },
+    {
+     "session": "London",
+     "start_utc": "2026-10-16T08:00:00+00:00",
+     "bars": 9,
+     "ui_high": 82900,
+     "venue_high": 82900.0,
+     "ui_low": 81199.2,
+     "venue_low": 81199.2,
+     "match": true,
+     "opening_range": {
+      "bars": 2,
+      "venue_bars": 2,
+      "ui_top": 82353,
+      "venue_top": 82353.0,
+      "ui_btm": 81963.1,
+      "venue_btm": 81963.1,
+      "last_or_utc": "09:00"
+     }
+    },
+    {
+     "session": "New York",
+     "start_utc": "2026-10-16T13:00:00+00:00",
+     "bars": 9,
+     "ui_high": 82463.9,
+     "venue_high": 82463.9,
+     "ui_low": 80755.9,
+     "venue_low": 80755.9,
+     "match": true
+    },
+    {
+     "session": "Tokyo",
+     "start_utc": "2026-10-17T00:00:00+00:00",
+     "bars": 9,
+     "ui_high": 81735.7,
+     "venue_high": 81735.7,
+     "ui_low": 81359.8,
+     "venue_low": 81359.8,
+     "match": true
+    },
+    {
+     "session": "London",
+     "start_utc": "2026-10-17T08:00:00+00:00",
+     "bars": 9,
+     "ui_high": 81730,
+     "venue_high": 81730.0,
+     "ui_low": 81152,
+     "venue_low": 81152.0,
+     "match": true,
+     "opening_range": {
+      "bars": 2,
+      "venue_bars": 2,
+      "ui_top": 81730,
+      "venue_top": 81730.0,
+      "ui_btm": 81552.3,
+      "venue_btm": 81552.3,
+      "last_or_utc": "09:00"
+     }
+    },
+    {
+     "session": "New York",
+     "start_utc": "2026-10-17T13:00:00+00:00",
+     "bars": 6,
+     "ui_high": 81583.5,
+     "venue_high": 81583.5,
+     "ui_low": 81144.4,
+     "venue_low": 81144.4,
+     "match": true
+    }
+   ],
+   "warnings": "",
+   "htfErrors": []
+  },
+  {
+   "case": "hyperliquid BTC 15m",
+   "lastBar": 1792263600,
+   "levels": [
+    {
+     "level": "D",
+     "current": true,
+     "ui": 81589,
+     "venue": 81589.0,
+     "kline": "D 1792195200",
+     "kline_utc": "Sat 2026-10-17",
+     "match": true
+    },
+    {
+     "level": "W",
+     "current": true,
+     "ui": 83730,
+     "venue": 83730.0,
+     "kline": "W 1791763200",
+     "kline_utc": "Mon 2026-10-12",
+     "match": true
+    },
+    {
+     "level": "M",
+     "current": true,
+     "ui": 83607,
+     "venue": 83607.0,
+     "kline": "M 1790812800",
+     "kline_utc": "Thu 2026-10-01",
+     "match": true
+    },
+    {
+     "level": "3M",
+     "current": true,
+     "ui": 83607,
+     "venue": 83607.0,
+     "kline": "M 1790812800",
+     "kline_utc": "Thu 2026-10-01",
+     "match": true
+    },
+    {
+     "level": "Y",
+     "current": true,
+     "ui": 87631,
+     "venue": 87631.0,
+     "kline": "M 1767225600",
+     "kline_utc": "Thu 2026-01-01",
+     "match": true
+    },
+    {
+     "level": "PDH",
+     "current": true,
+     "ui": 82898,
+     "venue": 82898.0,
+     "kline": "D 1792108800",
+     "kline_utc": "Fri 2026-10-16",
+     "match": true
+    },
+    {
+     "level": "PDL",
+     "current": true,
+     "ui": 80772,
+     "venue": 80772.0,
+     "kline": "D 1792108800",
+     "kline_utc": "Fri 2026-10-16",
+     "match": true
+    },
+    {
+     "level": "PWH",
+     "current": true,
+     "ui": 86990,
+     "venue": 86990.0,
+     "kline": "W 1791158400",
+     "kline_utc": "Mon 2026-10-05",
+     "match": true
+    },
+    {
+     "level": "PWL",
+     "current": true,
+     "ui": 80351,
+     "venue": 80351.0,
+     "kline": "W 1791158400",
+     "kline_utc": "Mon 2026-10-05",
+     "match": true
+    },
+    {
+     "level": "PMH",
+     "current": true,
+     "ui": 87471,
+     "venue": 87471.0,
+     "kline": "M 1788220800",
+     "kline_utc": "Tue 2026-09-01",
+     "match": true
+    },
+    {
+     "level": "PML",
+     "current": true,
+     "ui": 74903,
+     "venue": 74903.0,
+     "kline": "M 1788220800",
+     "kline_utc": "Tue 2026-09-01",
+     "match": true
+    }
+   ],
+   "sessions": [
+    {
+     "session": "London",
+     "start_utc": "2026-10-14T08:00:00+00:00",
+     "bars": 3,
+     "ui_high": 81993,
+     "venue_high": 81993.0,
+     "ui_low": 81556,
+     "venue_low": 81556.0,
+     "match": true
+    },
+    {
+     "session": "New York",
+     "start_utc": "2026-10-14T13:00:00+00:00",
+     "bars": 23,
+     "ui_high": 82072,
+     "venue_high": 82072.0,
+     "ui_low": 81497,
+     "venue_low": 81497.0,
+     "match": true
+    },
+    {
+     "session": "Tokyo",
+     "start_utc": "2026-10-15T00:00:00+00:00",
+     "bars": 36,
+     "ui_high": 81900,
+     "venue_high": 81900.0,
+     "ui_low": 80193,
+     "venue_low": 80193.0,
+     "match": true
+    },
+    {
+     "session": "London",
+     "start_utc": "2026-10-15T08:00:00+00:00",
+     "bars": 36,
+     "ui_high": 82604,
+     "venue_high": 82604.0,
+     "ui_low": 79732,
+     "venue_low": 79732.0,
+     "match": true,
+     "opening_range": {
+      "bars": 2,
+      "venue_bars": 2,
+      "ui_top": 81544,
+      "venue_top": 81544.0,
+      "ui_btm": 81147,
+      "venue_btm": 81147.0,
+      "last_or_utc": "08:15"
+     }
+    },
+    {
+     "session": "New York",
+     "start_utc": "2026-10-15T13:00:00+00:00",
+     "bars": 36,
+     "ui_high": 82613,
+     "venue_high": 82613.0,
+     "ui_low": 79732,
+     "venue_low": 79732.0,
+     "match": true
+    },
+    {
+     "session": "Tokyo",
+     "start_utc": "2026-10-16T00:00:00+00:00",
+     "bars": 36,
+     "ui_high": 82505,
+     "venue_high": 82505.0,
+     "ui_low": 81657,
+     "venue_low": 81657.0,
+     "match": true
+    },
+    {
+     "session": "London",
+     "start_utc": "2026-10-16T08:00:00+00:00",
+     "bars": 36,
+     "ui_high": 82898,
+     "venue_high": 82898.0,
+     "ui_low": 81226,
+     "venue_low": 81226.0,
+     "match": true,
+     "opening_range": {
+      "bars": 2,
+      "venue_bars": 2,
+      "ui_top": 82336,
+      "venue_top": 82336.0,
+      "ui_btm": 82132,
+      "venue_btm": 82132.0,
+      "last_or_utc": "08:15"
+     }
+    },
+    {
+     "session": "New York",
+     "start_utc": "2026-10-16T13:00:00+00:00",
+     "bars": 36,
+     "ui_high": 82479,
+     "venue_high": 82479.0,
+     "ui_low": 80772,
+     "venue_low": 80772.0,
+     "match": true
+    },
+    {
+     "session": "Tokyo",
+     "start_utc": "2026-10-17T00:00:00+00:00",
+     "bars": 36,
+     "ui_high": 81737,
+     "venue_high": 81737.0,
+     "ui_low": 81387,
+     "venue_low": 81387.0,
+     "match": true
+    },
+    {
+     "session": "London",
+     "start_utc": "2026-10-17T08:00:00+00:00",
+     "bars": 36,
+     "ui_high": 81720,
+     "venue_high": 81720.0,
+     "ui_low": 81157,
+     "venue_low": 81157.0,
+     "match": true,
+     "opening_range": {
+      "bars": 2,
+      "venue_bars": 2,
+      "ui_top": 81720,
+      "venue_top": 81720.0,
+      "ui_btm": 81676,
+      "venue_btm": 81676.0,
+      "last_or_utc": "08:15"
+     }
+    },
+    {
+     "session": "New York",
+     "start_utc": "2026-10-17T13:00:00+00:00",
+     "bars": 25,
+     "ui_high": 81577,
+     "venue_high": 81577.0,
+     "ui_low": 81148,
+     "venue_low": 81148.0,
+     "match": true
+    }
+   ],
+   "warnings": "",
+   "htfErrors": [],
+   "native_1w_open_weekdays": [
+    "Thu"
+   ],
+   "native_1M_open_days": [
+    "2026-07-06",
+    "2026-08-05",
+    "2026-09-04",
+    "2026-10-04"
+   ]
+  },
+  {
+   "case": "binance BTCUSDT 15m",
+   "lastBar": 1792263600,
+   "levels": [
+    {
+     "level": "D",
+     "current": true,
+     "ui": 81578.3,
+     "venue": 81578.3,
+     "kline": "D 1792195200",
+     "kline_utc": "Sat 2026-10-17",
+     "match": true
+    },
+    {
+     "level": "W",
+     "current": true,
+     "ui": 83723.1,
+     "venue": 83723.1,
+     "kline": "W 1791763200",
+     "kline_utc": "Mon 2026-10-12",
+     "match": true
+    },
+    {
+     "level": "M",
+     "current": true,
+     "ui": 83576.8,
+     "venue": 83576.8,
+     "kline": "M 1790812800",
+     "kline_utc": "Thu 2026-10-01",
+     "match": true
+    },
+    {
+     "level": "3M",
+     "current": true,
+     "ui": 83576.8,
+     "venue": 83576.8,
+     "kline": "M 1790812800",
+     "kline_utc": "Thu 2026-10-01",
+     "match": true
+    },
+    {
+     "level": "Y",
+     "current": true,
+     "ui": 87608.3,
+     "venue": 87608.3,
+     "kline": "M 1767225600",
+     "kline_utc": "Thu 2026-01-01",
+     "match": true
+    },
+    {
+     "level": "PDH",
+     "current": true,
+     "ui": 82900.5,
+     "venue": 82900.5,
+     "kline": "D 1792108800",
+     "kline_utc": "Fri 2026-10-16",
+     "match": true
+    },
+    {
+     "level": "PDL",
+     "current": true,
+     "ui": 80780,
+     "venue": 80780.0,
+     "kline": "D 1792108800",
+     "kline_utc": "Fri 2026-10-16",
+     "match": true
+    },
+    {
+     "level": "PWH",
+     "current": true,
+     "ui": 86976.1,
+     "venue": 86976.1,
+     "kline": "W 1791158400",
+     "kline_utc": "Mon 2026-10-05",
+     "match": true
+    },
+    {
+     "level": "PWL",
+     "current": true,
+     "ui": 80344.8,
+     "venue": 80344.8,
+     "kline": "W 1791158400",
+     "kline_utc": "Mon 2026-10-05",
+     "match": true
+    },
+    {
+     "level": "PMH",
+     "current": true,
+     "ui": 87385.1,
+     "venue": 87385.1,
+     "kline": "M 1788220800",
+     "kline_utc": "Tue 2026-09-01",
+     "match": true
+    },
+    {
+     "level": "PML",
+     "current": true,
+     "ui": 74909.4,
+     "venue": 74909.4,
+     "kline": "M 1788220800",
+     "kline_utc": "Tue 2026-09-01",
+     "match": true
+    }
+   ],
+   "sessions": [
+    {
+     "session": "London",
+     "start_utc": "2026-10-14T08:00:00+00:00",
+     "bars": 3,
+     "ui_high": 81969.5,
+     "venue_high": 81969.5,
+     "ui_low": 81543.8,
+     "venue_low": 81543.8,
+     "match": true
+    },
+    {
+     "session": "New York",
+     "start_utc": "2026-10-14T13:00:00+00:00",
+     "bars": 23,
+     "ui_high": 82051.3,
+     "venue_high": 82051.3,
+     "ui_low": 81452.2,
+     "venue_low": 81452.2,
+     "match": true
+    },
+    {
+     "session": "Tokyo",
+     "start_utc": "2026-10-15T00:00:00+00:00",
+     "bars": 36,
+     "ui_high": 81893.8,
+     "venue_high": 81893.8,
+     "ui_low": 80188,
+     "venue_low": 80188.0,
+     "match": true
+    },
+    {
+     "session": "London",
+     "start_utc": "2026-10-15T08:00:00+00:00",
+     "bars": 36,
+     "ui_high": 82588.9,
+     "venue_high": 82588.9,
+     "ui_low": 79732.3,
+     "venue_low": 79732.3,
+     "match": true,
+     "opening_range": {
+      "bars": 2,
+      "venue_bars": 2,
+      "ui_top": 81540,
+      "venue_top": 81540.0,
+      "ui_btm": 81139,
+      "venue_btm": 81139.0,
+      "last_or_utc": "08:15"
+     }
+    },
+    {
+     "session": "New York",
+     "start_utc": "2026-10-15T13:00:00+00:00",
+     "bars": 36,
+     "ui_high": 82639.2,
+     "venue_high": 82639.2,
+     "ui_low": 79732.3,
+     "venue_low": 79732.3,
+     "match": true
+    },
+    {
+     "session": "Tokyo",
+     "start_utc": "2026-10-16T00:00:00+00:00",
+     "bars": 36,
+     "ui_high": 82500,
+     "venue_high": 82500.0,
+     "ui_low": 81637.7,
+     "venue_low": 81637.7,
+     "match": true
+    },
+    {
+     "session": "London",
+     "start_utc": "2026-10-16T08:00:00+00:00",
+     "bars": 36,
+     "ui_high": 82900.5,
+     "venue_high": 82900.5,
+     "ui_low": 81214.2,
+     "venue_low": 81214.2,
+     "match": true,
+     "opening_range": {
+      "bars": 2,
+      "venue_bars": 2,
+      "ui_top": 82328.5,
+      "venue_top": 82328.5,
+      "ui_btm": 82120.9,
+      "venue_btm": 82120.9,
+      "last_or_utc": "08:15"
+     }
+    },
+    {
+     "session": "New York",
+     "start_utc": "2026-10-16T13:00:00+00:00",
+     "bars": 36,
+     "ui_high": 82459.8,
+     "venue_high": 82459.8,
+     "ui_low": 80780,
+     "venue_low": 80780.0,
+     "match": true
+    },
+    {
+     "session": "Tokyo",
+     "start_utc": "2026-10-17T00:00:00+00:00",
+     "bars": 36,
+     "ui_high": 81733,
+     "venue_high": 81733.0,
+     "ui_low": 81373.3,
+     "venue_low": 81373.3,
+     "match": true
+    },
+    {
+     "session": "London",
+     "start_utc": "2026-10-17T08:00:00+00:00",
+     "bars": 36,
+     "ui_high": 81724.8,
+     "venue_high": 81724.8,
+     "ui_low": 81157.1,
+     "venue_low": 81157.1,
+     "match": true,
+     "opening_range": {
+      "bars": 2,
+      "venue_bars": 2,
+      "ui_top": 81724.8,
+      "venue_top": 81724.8,
+      "ui_btm": 81672.4,
+      "venue_btm": 81672.4,
+      "last_or_utc": "08:15"
+     }
+    },
+    {
+     "session": "New York",
+     "start_utc": "2026-10-17T13:00:00+00:00",
+     "bars": 25,
+     "ui_high": 81575.5,
+     "venue_high": 81575.5,
+     "ui_low": 81149.8,
+     "venue_low": 81149.8,
+     "match": true
+    }
+   ],
+   "warnings": "",
+   "htfErrors": []
+  }
+ ]
+}
