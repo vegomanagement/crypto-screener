@@ -186,6 +186,8 @@ def test_bybit_recent_trades_bar_containing_oldest_trade_is_partial():
     assert cov[T0 + 3 * MIN] == ("complete", "1") and out["bars"][-1]["forming"] is True
     assert out["bars"][1]["buy_vol"] == "1" and out["bars"][1]["sell_vol"] == "2"  # 70s S, 90s B, 110s S
     assert any("≤1000" in w for w in out["warnings"])
+    # ids of snapshot trades within 5s of as_of let the browser dedupe live trades exactly
+    assert out["recent_ids"] == ["8"] and out["dedupe_window_ms"] == 5000
 
 
 def test_hyperliquid_tick_from_sz_decimals_and_side_mapping():

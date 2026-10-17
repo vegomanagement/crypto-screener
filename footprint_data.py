@@ -31,6 +31,7 @@ BINANCE_RATE = (60, 60_000)  # ≤60 aggTrades requests per rolling minute (1200
 DEFAULT_MAX_TRADES = 200_000
 TARGET_LEVELS = 120
 CACHE_BARS = 4000
+DEDUPE_WINDOW_MS = 5000  # live merge: ids of snapshot trades this close to as_of are listed
 
 
 class FootprintError(RuntimeError):
@@ -171,6 +172,8 @@ class FootprintService:
             "truncated": bool(meta.get("truncated")),
             "requests": meta.get("requests", 0),
             "last_trade_id": meta.get("last_trade_id"),
+            "recent_ids": meta.get("recent_ids", []),
+            "dedupe_window_ms": DEDUPE_WINDOW_MS,
             "convention": "ask = buyer-initiated (taker buy); bid = seller-initiated (taker sell)",
             "warnings": warnings,
         }
@@ -333,6 +336,7 @@ class FootprintService:
                 continue
             # Only provable when the contiguous latest-trade window starts before the bar.
             bars[o] = (acc, "complete" if oldest < o else "partial")
+        recent = [str(t.ident) for t in trades if t.time_ms > as_of - DEDUPE_WINDOW_MS]
         return bars, {"tick_size": tick, "warnings": warnings, "requests": 1,
                       "trades_from": oldest, "trades_to": trades[-1].time_ms,
-                      "last_trade_id": None}
+                      "last_trade_id": None, "recent_ids": recent}
