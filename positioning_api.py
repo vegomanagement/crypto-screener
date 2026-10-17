@@ -30,11 +30,13 @@ class PositioningService:
         from coinglass_client import CoinGlassClient
         from hl_whale_tracker import WhaleTracker
         from liquidations_collector import LiquidationCollector
-        from liquidations_store import LiquidationStore
+        from liquidations_store import LiquidationStore, default_path
         from positioning_data import HttpClient
 
         self.http = http or HttpClient()
-        self.store = store or LiquidationStore()
+        # Persisted next to DB_PATH (or LIQUIDATIONS_DB_PATH) so the 24 h history and its
+        # coverage windows survive a restart.
+        self.store = store or LiquidationStore(path=default_path())
         self.collector = collector or LiquidationCollector(self.store)
         self.whales = whales or WhaleTracker(self.http)
         self.coinglass = coinglass or CoinGlassClient(self.http)

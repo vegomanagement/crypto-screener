@@ -156,6 +156,7 @@ class LiquidationCollector:
                             self.store.cover_end(venue, s, now)
                         covered = set(wanted)
                     st["subscribed"] = sorted(covered)
+                    self.store.heartbeat(venue, covered, self._clock())
                     try:
                         text = ws.recv()
                     except socket.timeout:
