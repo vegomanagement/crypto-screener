@@ -7,6 +7,7 @@ const EV = '/Users/maxbelov/Projects/wt/tv-drawings/docs/evidence/tv-drawings';
 async function open({ interval = '15', reset = false, seedV1 = null } = {}) {
   const c = await connect(9566);
   await c.send('Emulation.setDeviceMetricsOverride', { width: 1500, height: 900, deviceScaleFactor: 2, mobile: false });
+  await c.send('Network.enable'); await c.send('Network.setCacheDisabled', { cacheDisabled: true });
   await c.send('Page.navigate', { url: BASE }); await c.sleep(2500);
   await c.eval(`(() => {
     const s = JSON.parse(localStorage.getItem('crypto-screener.workspace.v4') || 'null') || { version: 4 };

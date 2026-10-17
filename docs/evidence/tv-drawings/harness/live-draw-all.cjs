@@ -19,7 +19,7 @@ const SHORTCUT = { trend: 't', hline: 'h', vline: 'v', cross: 'c', fib: 'f', rec
   const tools = await c.eval(`WorkspaceDrawings.toolList().map(t => ({ type: t.type, group: t.group, mode: t.mode, points: t.points, editText: Boolean(t.editText), temporary: Boolean(t.temporary) }))`);
   const results = [];
   // cell grid over the plot (right of the toolbar, below the legend)
-  const cols = 9, x0 = g.host.left + 70, y0 = g.host.top + 70, cw = (g.host.width - 140) / cols, ch = 85;
+  const cols = 10, x0 = g.host.left + 70, y0 = g.host.top + 60, cw = (g.host.width - 140) / cols, ch = Math.min(85, (g.host.height - 110) / Math.ceil(tools.length / cols));
   let n = 0;
   const shotGroups = new Set();
   for (const t of tools) {

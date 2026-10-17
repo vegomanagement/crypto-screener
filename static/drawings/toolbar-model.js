@@ -7,7 +7,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function (C) {
   'use strict';
   const GROUPS = [
-    { id: 'lines', label: 'Lines' }, { id: 'channels', label: 'Channels' }, { id: 'fib', label: 'Fibonacci' },
+    { id: 'lines', label: 'Lines' }, { id: 'channels', label: 'Channels' }, { id: 'fib', label: 'Fibonacci / Gann' },
     { id: 'measure', label: 'Measure / projection' }, { id: 'shapes', label: 'Shapes / brushes' },
     { id: 'annotation', label: 'Annotation / text' }, { id: 'patterns', label: 'Patterns' }];
   const PREFS_KEY = 'screener.drawings.prefs.v2';

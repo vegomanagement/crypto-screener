@@ -1,5 +1,5 @@
 {
- "when": "2026-10-17T18:21:21.424Z",
+ "when": "2026-10-17T18:29:34.450Z",
  "start": "60",
  "geometry": {
   "host": {
@@ -501,18 +501,216 @@
    "stored": true,
    "points": 6,
    "textOk": null
+  },
+  {
+   "type": "pitchfork",
+   "group": "channels",
+   "viaShortcut": false,
+   "activeTool": "pitchfork",
+   "stored": true,
+   "points": 3,
+   "textOk": null
+  },
+  {
+   "type": "schiff",
+   "group": "channels",
+   "viaShortcut": false,
+   "activeTool": "schiff",
+   "stored": true,
+   "points": 3,
+   "textOk": null
+  },
+  {
+   "type": "modschiff",
+   "group": "channels",
+   "viaShortcut": false,
+   "activeTool": "modschiff",
+   "stored": true,
+   "points": 3,
+   "textOk": null
+  },
+  {
+   "type": "insidepitchfork",
+   "group": "channels",
+   "viaShortcut": false,
+   "activeTool": "insidepitchfork",
+   "stored": true,
+   "points": 3,
+   "textOk": null
+  },
+  {
+   "type": "pitchfan",
+   "group": "channels",
+   "viaShortcut": false,
+   "activeTool": "pitchfan",
+   "stored": true,
+   "points": 3,
+   "textOk": null
+  },
+  {
+   "type": "gannfan",
+   "group": "fib",
+   "viaShortcut": false,
+   "activeTool": "gannfan",
+   "stored": true,
+   "points": 2,
+   "textOk": null
+  },
+  {
+   "type": "gannbox",
+   "group": "fib",
+   "viaShortcut": false,
+   "activeTool": "gannbox",
+   "stored": true,
+   "points": 2,
+   "textOk": null
+  },
+  {
+   "type": "gannsquare",
+   "group": "fib",
+   "viaShortcut": false,
+   "activeTool": "gannsquare",
+   "stored": true,
+   "points": 2,
+   "textOk": null
+  },
+  {
+   "type": "fibspeedfan",
+   "group": "fib",
+   "viaShortcut": false,
+   "activeTool": "fibspeedfan",
+   "stored": true,
+   "points": 2,
+   "textOk": null
+  },
+  {
+   "type": "fibarcs",
+   "group": "fib",
+   "viaShortcut": false,
+   "activeTool": "fibarcs",
+   "stored": true,
+   "points": 2,
+   "textOk": null
+  },
+  {
+   "type": "fibcircles",
+   "group": "fib",
+   "viaShortcut": false,
+   "activeTool": "fibcircles",
+   "stored": true,
+   "points": 2,
+   "textOk": null
+  },
+  {
+   "type": "fibspiral",
+   "group": "fib",
+   "viaShortcut": false,
+   "activeTool": "fibspiral",
+   "stored": true,
+   "points": 2,
+   "textOk": null
+  },
+  {
+   "type": "fibwedge",
+   "group": "fib",
+   "viaShortcut": false,
+   "activeTool": "fibwedge",
+   "stored": true,
+   "points": 3,
+   "textOk": null
+  },
+  {
+   "type": "fibtrendtime",
+   "group": "fib",
+   "viaShortcut": false,
+   "activeTool": "fibtrendtime",
+   "stored": true,
+   "points": 3,
+   "textOk": null
+  },
+  {
+   "type": "cyclic",
+   "group": "measure",
+   "viaShortcut": false,
+   "activeTool": "cyclic",
+   "stored": true,
+   "points": 2,
+   "textOk": null
+  },
+  {
+   "type": "timecycles",
+   "group": "measure",
+   "viaShortcut": false,
+   "activeTool": "timecycles",
+   "stored": true,
+   "points": 2,
+   "textOk": null
+  },
+  {
+   "type": "sine",
+   "group": "measure",
+   "viaShortcut": false,
+   "activeTool": "sine",
+   "stored": true,
+   "points": 2,
+   "textOk": null
+  },
+  {
+   "type": "projection",
+   "group": "measure",
+   "viaShortcut": false,
+   "activeTool": "projection",
+   "stored": true,
+   "points": 3,
+   "textOk": null
+  },
+  {
+   "type": "barspattern",
+   "group": "measure",
+   "viaShortcut": false,
+   "activeTool": "barspattern",
+   "stored": true,
+   "points": 3,
+   "textOk": null
+  },
+  {
+   "type": "ghostfeed",
+   "group": "measure",
+   "viaShortcut": false,
+   "activeTool": "ghostfeed",
+   "stored": true,
+   "points": 4,
+   "textOk": null
+  },
+  {
+   "type": "signpost",
+   "group": "annotation",
+   "viaShortcut": false,
+   "activeTool": "signpost",
+   "stored": true,
+   "points": 1,
+   "textOk": true
+  },
+  {
+   "type": "table",
+   "group": "annotation",
+   "viaShortcut": false,
+   "activeTool": "table",
+   "stored": true,
+   "points": 1,
+   "textOk": true
   }
  ],
- "frameStart": 53,
+ "frameStart": 75,
  "switched": {
   "interval": "15",
   "same": true,
-  "rendered": 53
+  "rendered": 75
  },
  "reloaded": {
   "interval": "15",
   "same": true,
-  "count": 53,
-  "rendered": 53
+  "count": 75,
+  "rendered": 75
  }
 }

@@ -9,7 +9,7 @@
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) {
     const core = require('./drawings/core.js');
-    ['lines', 'fib', 'measure', 'shapes', 'patterns'].forEach(name => require(`./drawings/tools-${name}.js`));
+    ['lines', 'fib', 'measure', 'shapes', 'patterns', 'advanced'].forEach(name => require(`./drawings/tools-${name}.js`));
     module.exports = factory(core, require('./drawings/toolbar-model.js'), require('./drawings/controller.js'), null, null);
   } else {
     root.WorkspaceDrawings = factory(root.WorkspaceDrawingsCore, root.WorkspaceDrawingsToolbar, root.WorkspaceDrawingsController, root.WorkspaceDrawingsUi, root.WorkspaceDrawingsPanels);
