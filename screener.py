@@ -25,6 +25,7 @@ from liquidity_api import register_liquidity_routes
 from footprint_api import register_footprint_routes
 from seconds_api import register_seconds_routes
 from scalp_api import register_scalp_routes
+from positioning_api import register_positioning_routes
 
 from decision import make_decision, format_decision_header
 from llm_agents import (
@@ -77,6 +78,7 @@ register_liquidity_routes(app)
 register_footprint_routes(app)
 register_seconds_routes(app)
 register_scalp_routes(app)
+register_positioning_routes(app)
 ai  = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
 # ─── SIGNAL LABELS ────────────────────────────────────────────────────────────
