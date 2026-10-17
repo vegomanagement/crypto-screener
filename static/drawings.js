@@ -392,7 +392,7 @@
     function stop(event) { event.stopPropagation(); event.preventDefault(); }
     function finishPending(b) {
       const p = self.pending; self.pending = null;
-      if (p.type === 'ruler') { self.ruler = { a: p.a, b }; requestDraw(); return; }
+      if (p.type === 'ruler') { self.ruler = { a: p.a, b }; self.tool = 'cursor'; syncToolbar(); requestDraw(); return; } // result stays until the next click/Esc
       if (p.a.time === b.time && p.a.price === b.price) { requestDraw(); return; }
       addDrawing(p.type, [p.a, b]); setTool('cursor');
     }

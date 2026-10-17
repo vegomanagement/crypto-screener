@@ -930,3 +930,17 @@ test('browser: FVG box touches the real candle (pixel scan), band renderer, sett
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });
+
+test('seconds intervals: intervalSeconds steps and pixel edges on a 5s pane with a gap', () => {
+  const fn = vm.runInNewContext(`${intervalFunction}\nintervalSeconds`);
+  assert.deepEqual(['1s', '5s', '15s', '30s'].map(v => fn(v, 0)), [1, 5, 15, 30]);
+  assert.equal(fn('1', 0), 60, 'minute intervals unchanged');
+  coordinates.state.panes[0].interval = '5s';
+  try {
+    // 5s bars with a 20 s gap (no trades → no candle); the next slot extrapolates by 5 s.
+    const candles = [0, 5, 10, 30, 35].map(t => ({ time: 1792195200 + t }));
+    const pane = makePane(candles, 100, 15);
+    assert.equal(pane.edgeCoordinate(1792195200 + 35), 100 + 4 * 15 - 7.5);
+    assert.equal(pane.edgeCoordinate(1792195200 + 40), 100 + 5 * 15 - 7.5, 'right edge of the last 5s bar');
+  } finally { coordinates.state.panes[0].interval = '2D'; }
+});
