@@ -238,23 +238,27 @@ test('sessions are hidden on daily and higher intervals', () => {
   assert.equal(m.hidden, true); assert.equal(m.instances.length, 0); assert.match(m.warnings[0], /intraday-only/);
 });
 
-test('opening range: first N minutes, targets from the average of previous session ranges, breakout flags', () => {
+test('opening range (Pine rule): N ≥ timeframe + 1 min, includes the bar opening at start + N; targets and breakout flags', () => {
   // 5m bars: first London session flat 100±3 (range 6), second one 100±1 then a breakout.
   const start = iso('2026-10-12T00:00:00Z'), step = 300, candles = [];
   for (let t = start; t < start + 2 * 86400; t += step) {
     const day2 = t >= start + 86400, inLondon2 = day2 && t >= start + 86400 + 8 * 3600;
     const k = (t - (start + 86400 + 8 * 3600)) / step; // bar index inside day-2 London
     let mid = 100;
-    if (inLondon2 && k >= 3) mid = 100 + (k - 2) * 0.5; // rallies after the opening range
+    if (inLondon2 && k >= 4) mid = 100 + (k - 3) * 0.5; // rallies after the opening range (bars 0..3)
     const w = day2 ? 1 : 3; // day-1 range 6 so that day-2 targets sit above the opening range
     candles.push({ time: t, open: mid, high: mid + w, low: mid - w, close: mid, volume: 1 });
   }
   const m = S.compute(candles, only(1, { s1Op: true, orMinutes: 15 }), step).instances;
   const [first, second] = m;
   assert.equal(first.or.targets, null, 'no previous session → no targets (avg range is na in Pine)');
-  assert.equal(first.or.top, 103); assert.equal(first.or.btm, 97); assert.equal(first.or.lastOrTime, iso('2026-10-12T08:10:00Z'), '15 min of 5m bars = 3 bars');
+  assert.equal(first.or.top, 103); assert.equal(first.or.btm, 97);
+  assert.equal(first.or.minutes, 15, '5m: max(15, 5 + 1) = 15');
+  assert.equal(first.or.lastOrTime, iso('2026-10-12T08:15:00Z'), 'the 08:15 bar (time <= start + 15m and > start + 10m) fixes the range');
+  assert.equal(first.or.bars, 4, '5m, N = 15 → 08:00, 08:05, 08:10, 08:15');
   assert.equal(second.avgRange, 6);
   const t = second.or.targets, mdl = 100;
+  assert.equal(second.or.top, 101); assert.equal(second.or.btm, 99);
   near(t.R1, (99 + mdl) / 2 + 6 * 0.786 * 0.5); near(t.R2, (99 + mdl) / 2 + 6 * 1.272 * 0.5);
   near(t.S1, (101 + mdl) / 2 - 6 * 0.786 * 0.5); near(t.S2, (101 + mdl) / 2 - 6 * 1.272 * 0.5);
   const r1 = second.or.breakouts.find(b => b.level === 'R1');
@@ -263,12 +267,79 @@ test('opening range: first N minutes, targets from the average of previous sessi
   assert.equal(second.or.breakouts.filter(b => b.level === 'R1').length, 1, 'flag once per level');
   assert.equal(second.or.breakouts.some(b => b.side === 'down'), false);
   assert.ok(second.or.breakouts.some(b => b.level === 'R2'));
-  // On a 1h chart the opening range is the first bar.
+  // 15m chart: N = max(15, 16) = 16 → fixing bar in (start + 1m, start + 16m] = 08:15 → 2 bars.
+  const q = bars(4 * 24, iso('2026-10-12T00:00:00Z'), 900, i => 100 + i);
+  const q15 = S.compute(q, only(1, { s1Op: true }), 900).instances[0].or;
+  assert.equal(q15.minutes, 16); assert.equal(q15.bars, 2); assert.equal(q15.lastOrTime, iso('2026-10-12T08:15:00Z'));
+  assert.equal(q15.top, 101 + 33); assert.equal(q15.btm, 99 + 32); assert.equal(q15.endTime, iso('2026-10-12T08:30:00Z'));
+  // A requested 30 minutes on 15m: fixing bar 08:30 → 3 bars.
+  assert.equal(S.compute(q, only(1, { s1Op: true, orMinutes: 30 }), 900).instances[0].or.bars, 3);
+  // 1h chart: N = max(15, 61) → fixing bar 09:00 → 2 bars.
   const hour = S.compute(hourly('2026-10-12T00:00:00Z', 30), only(1, { s1Op: true }), 3600).instances[0];
-  assert.equal(hour.or.lastOrTime, iso('2026-10-12T08:00:00Z'));
-  // Pending until the opening-range bars have closed.
-  const early = candles.filter(c => c.time <= iso('2026-10-13T08:05:00Z'));
+  assert.equal(hour.or.lastOrTime, iso('2026-10-12T09:00:00Z')); assert.equal(hour.or.bars, 2); assert.equal(hour.or.minutes, 61);
+  // Pending until the fixing bar has closed.
+  const early = candles.filter(c => c.time <= iso('2026-10-13T08:10:00Z'));
   assert.equal(S.compute(early, only(1, { s1Op: true }), step).instances.at(-1).or.pending, true);
+  const fixed = candles.filter(c => c.time <= iso('2026-10-13T08:15:00Z'));
+  assert.equal(S.compute(fixed, only(1, { s1Op: true }), step).instances.at(-1).or.bars, 4);
+  // No bar at start + N (data gap) → Pine never fixes the range → nothing drawn.
+  const gap = q.filter(c => c.time !== iso('2026-10-12T08:15:00Z'));
+  assert.equal(S.compute(gap, only(1, { s1Op: true }), 900).instances[0].or.missing, true);
+  // Seconds chart (5s): every bar with time ≤ start + 15m.
+  const sec = bars(200 * 2, iso('2026-10-12T07:59:00Z'), 5, i => 100 + i);
+  const secOr = S.compute(sec, only(1, { s1Op: true, s1Time: '0800-0830' }), 5).instances[0].or;
+  assert.equal(secOr.minutes, 15); assert.equal(secOr.lastOrTime, iso('2026-10-12T08:15:00Z')); assert.equal(secOr.bars, 15 * 12 + 1);
+});
+
+test('DST-aware zones: London, New York, Sydney transition days and a session crossing midnight (expected values from Python zoneinfo)', () => {
+  const zone = id => S.resolveZone(id), W = (y, mo, d, h, mi = 0) => Date.UTC(y, mo - 1, d, h, mi) / 1000;
+  // Offsets around the changes.
+  assert.equal(S.zoneOffset(zone('Europe/London'), iso('2026-03-29T00:59:59Z')), 0);
+  assert.equal(S.zoneOffset(zone('Europe/London'), iso('2026-03-29T01:00:00Z')), 3600);
+  assert.equal(S.zoneOffset(zone('America/New_York'), iso('2026-11-01T05:59:59Z')), -4 * 3600);
+  assert.equal(S.zoneOffset(zone('America/New_York'), iso('2026-11-01T06:00:00Z')), -5 * 3600);
+  // Ambiguous 01:30 on 1 Nov (NY) → earlier (EDT); skipped 02:30 on 8 Mar → 07:30 UTC.
+  assert.equal(S.localToUtc(zone('America/New_York'), W(2026, 11, 1, 1, 30)), iso('2026-11-01T05:30:00Z'));
+  assert.equal(S.localToUtc(zone('America/New_York'), W(2026, 3, 8, 2, 30)), iso('2026-03-08T07:30:00Z'));
+  assert.throws(() => S.resolveZone('Europe/Paris'), /timezone must be/);
+  const windows = (from, hoursN, n, extra) => S.compute(hourly(from, hoursN), only(n, extra), 3600).instances.map(i => [i.start, i.end, i.lastTime]);
+  const at = (list, startIso) => list.find(w => w[0] === iso(startIso));
+  // London 0000-0900 Europe/London: 29 Mar is 8 h long (00:00 GMT → 09:00 BST), 25 Oct is 10 h (00:00 BST → 09:00 GMT).
+  const ldn = windows('2026-03-26T00:00:00Z', 24 * 6, 1, { s1Time: '0000-0900', s1Tz: 'Europe/London' });
+  assert.deepEqual(at(ldn, '2026-03-29T00:00:00Z').slice(0, 2), [iso('2026-03-29T00:00:00Z'), iso('2026-03-29T08:00:00Z')]);
+  const ldnOct = windows('2026-10-22T00:00:00Z', 24 * 6, 1, { s1Time: '0000-0900', s1Tz: 'Europe/London' });
+  assert.deepEqual(at(ldnOct, '2026-10-24T23:00:00Z').slice(0, 2), [iso('2026-10-24T23:00:00Z'), iso('2026-10-25T09:00:00Z')]);
+  // Default 0800-1700 London local: 27 Mar 08:00 UTC, 30 Mar 07:00 UTC.
+  const ldn8 = windows('2026-03-26T00:00:00Z', 24 * 6, 1, { s1Tz: 'Europe/London' });
+  assert.ok(at(ldn8, '2026-03-27T08:00:00Z')); assert.ok(at(ldn8, '2026-03-30T07:00:00Z'));
+  // New York 0000-0900: 8 Mar 05:00 → 13:00 UTC (8 h); 1 Nov 04:00 → 14:00 UTC (10 h). 0800 local: 6 Mar 13:00, 9 Mar 12:00 UTC.
+  const ny = windows('2026-03-05T00:00:00Z', 24 * 6, 2, { s2Time: '0000-0900', s2Tz: 'America/New_York' });
+  assert.deepEqual(at(ny, '2026-03-08T05:00:00Z').slice(0, 2), [iso('2026-03-08T05:00:00Z'), iso('2026-03-08T13:00:00Z')]);
+  const nyNov = windows('2026-10-30T00:00:00Z', 24 * 5, 2, { s2Time: '0000-0900', s2Tz: 'America/New_York' });
+  assert.deepEqual(at(nyNov, '2026-11-01T04:00:00Z').slice(0, 2), [iso('2026-11-01T04:00:00Z'), iso('2026-11-01T14:00:00Z')]);
+  const ny8 = windows('2026-03-05T00:00:00Z', 24 * 6, 2, { s2Time: '0800-1700', s2Tz: 'America/New_York' });
+  assert.ok(at(ny8, '2026-03-06T13:00:00Z')); assert.ok(at(ny8, '2026-03-09T12:00:00Z'));
+  // Sydney 2000-0500 local crosses local midnight: 4→5 Apr 09:00 → 19:00 UTC (10 h), 3→4 Oct 10:00 → 18:00 UTC (8 h).
+  const syd = windows('2026-04-02T00:00:00Z', 24 * 5, 4, { s4Show: true, s4Tz: 'Australia/Sydney' });
+  const a = at(syd, '2026-04-04T09:00:00Z');
+  assert.deepEqual(a.slice(0, 2), [iso('2026-04-04T09:00:00Z'), iso('2026-04-04T19:00:00Z')]); assert.equal(a[2], iso('2026-04-04T18:00:00Z'));
+  const sydOct = windows('2026-10-01T00:00:00Z', 24 * 5, 4, { s4Show: true, s4Tz: 'Australia/Sydney' });
+  assert.deepEqual(at(sydOct, '2026-10-03T10:00:00Z').slice(0, 2), [iso('2026-10-03T10:00:00Z'), iso('2026-10-03T18:00:00Z')]);
+  // Tokyo has no DST: 0900 local = 00:00 UTC. Day label follows the local date.
+  const tky = S.compute(hourly('2026-10-12T00:00:00Z', 48), only(3, { s3Time: '0900-1500', s3Tz: 'Asia/Tokyo', labelDay: true }), 3600).instances;
+  assert.equal(tky[0].start, iso('2026-10-12T00:00:00Z')); assert.equal(tky[0].day, 'Mon'); assert.equal(tky[0].timezone, 'Asia/Tokyo');
+  // A session in Sydney local morning (0700-1600) starts on the previous UTC day: labelled with the local weekday.
+  const sydAm = S.compute(hourly('2026-10-12T00:00:00Z', 48), only(4, { s4Show: true, s4Time: '0700-1600', s4Tz: 'Australia/Sydney', labelDay: true }), 3600).instances;
+  const tue = sydAm.find(i => i.start === iso('2026-10-12T20:00:00Z'));
+  assert.equal(tue.day, 'Tue'); assert.equal(tue.end, iso('2026-10-13T05:00:00Z'));
+  // Default: per-session zone inherits the General GMT+0, i.e. the script's windows are unchanged.
+  assert.equal(S.settingsDefaults().s1Tz, 'inherit');
+  assert.deepEqual(windows('2026-03-26T00:00:00Z', 24 * 6, 1, {}).map(w => w[0]).filter(t => t === iso('2026-03-30T08:00:00Z')).length, 1);
+  // The General timezone can also be a city zone; a per-session fixed offset overrides it.
+  assert.ok(at(windows('2026-03-26T00:00:00Z', 24 * 6, 1, { timezone: 'Europe/London' }), '2026-03-30T07:00:00Z'));
+  assert.ok(at(windows('2026-03-26T00:00:00Z', 24 * 6, 1, { timezone: 'Europe/London', s1Tz: 'GMT+0' }), '2026-03-30T08:00:00Z'));
+  const schema = S.settingsSchema().find(f => f.key === 's1Tz');
+  assert.deepEqual(schema.options.slice(0, 5), ['inherit', 'Europe/London', 'America/New_York', 'Asia/Tokyo', 'Australia/Sydney']);
 });
 
 test('fibonacci levels and label text (name, day, price range, range %)', () => {

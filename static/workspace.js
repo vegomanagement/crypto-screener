@@ -1789,7 +1789,7 @@
         input = document.createElement('select');
         field.options.forEach(option => {
           const optionEl = document.createElement('option');
-          optionEl.value = option; optionEl.textContent = option;
+          optionEl.value = option; optionEl.textContent = field.optionLabels?.[option] ?? option;
           input.append(optionEl);
         });
         input.value = settings[field.key];
