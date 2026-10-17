@@ -231,8 +231,13 @@
     async function loadStats() {
       const active = deps.getActive();
       if (!active) return;
+      const key = keyOf(active);
       const q = new URLSearchParams({ exchange: active.exchange, symbol: active.symbol, interval: active.interval });
-      try { const resp = await deps.fetch(`/api/agent/stats?${q}`); if (resp.ok) st.stats = await resp.json(); } catch (_) { /* keep previous */ }
+      try {
+        const resp = await deps.fetch(`/api/agent/stats?${q}`);
+        // The pane may have switched market while this was in flight: drop stale stats.
+        if (resp.ok) { const data = await resp.json(); if (keyOf(deps.getActive()) !== key) return; st.stats = data; }
+      } catch (_) { /* keep previous */ }
       render();
     }
 
