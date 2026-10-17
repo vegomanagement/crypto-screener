@@ -53,6 +53,8 @@ def test_factor_validation_drops_bad_and_duplicate(snap):
         {**F("long", 2, "indicators.atr14"), "source_fields": []},
         "not an object",
         F("short", 1, "funding.predicted.rate"),
+        F("short", 2, "baseline.short_score"),                  # baseline is blended server-side
+        F("long", 1, "indicators.ema200", "baseline.long_verdict"),
     ]
     out = ah.validate_factors(items, snap, warnings)
     assert [(f["direction"], f["strength"], f["source_fields"]) for f in out] == [
@@ -62,6 +64,7 @@ def test_factor_validation_drops_bad_and_duplicate(snap):
     text = " ".join(warnings)
     assert text.count("duplicate") == 2 and text.count("unknown source_fields") == 2
     assert text.count("strength must be integer") == 3 and "not an object" in text
+    assert text.count("baseline that the server already blends") == 2
 
 
 def test_factor_validation_caps_at_twelve(snap):
@@ -82,6 +85,7 @@ def test_prompt_forbids_percentages_and_asks_both_sides_and_funding(snap):
     for field in ("funding.last_settled.rate", "funding.predicted.rate", "funding.annualized_predicted",
                   "funding.cross_venue"):
         assert field in text
+    assert "Do not cite baseline.*" in text
     assert "38" not in ah.SCHEMA_TEXT and "long_pct" not in ah.SCHEMA_TEXT.split("Rules:")[0]
 
 

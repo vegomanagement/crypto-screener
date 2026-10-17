@@ -39,6 +39,7 @@ CONFIDENCES = ("low", "medium", "high")
 LEVEL_TYPES = ("support", "resistance", "entry", "stop", "target", "liquidity", "poi")
 MAX_LEVELS, MAX_SCENARIOS, MAX_FACTORS, MAX_RISKS = 12, 4, 12, 6
 DIRECTIONS = ("long", "short")
+SERVER_BLENDED = ("baseline",)  # sections the split already uses; citing them would double-count
 STRENGTHS = (1, 2, 3)
 
 
@@ -74,10 +75,13 @@ Rules:
   funding.cross_venue / funding.cross_venue_annualized_spread. Positive funding = longs pay
   (crowded longs), negative = shorts pay. funding.predicted is a live estimate that changes until
   settlement; funding.last_settled is final.
+- Do not cite baseline.* in factor_scores: the server blends that deterministic baseline in
+  itself, so citing it would count it twice.
 - bias is your own reading and is used only as a cross-check against the computed split.
 - Every source_fields entry must be an existing dotted path in the snapshot, e.g.
   "indicators.rsi14", "structure.last_swing_high.price", "fvg.nearest.0.top",
-  "liquidity.pools.2.price", "orderbook.imbalance", "funding.predicted.rate".
+  "liquidity.pools.2.price", "orderbook.imbalance", "funding.predicted.rate". candles.recent
+  rows are arrays in candles.recent_fields order, so cite e.g. "candles.recent.23.3" (low).
 - Level prices must come from snapshot values or be derived from them (within the candle
   window +/- 3 ATR).
 Keep the whole reply under 3000 characters: at most 12 factor_scores, 8 levels, 3 scenarios,
@@ -217,7 +221,8 @@ def validate_factors(items, snapshot, warnings):
     """Keep factors with a known direction, integer strength 1-3 and resolvable source_fields.
 
     A factor whose source_fields set equals one already kept is a duplicate (the same
-    evidence counted twice) and is dropped, whatever its direction or wording.
+    evidence counted twice) and is dropped, whatever its direction or wording. Factors
+    citing ``baseline.*`` are dropped too: the server blends the baseline in itself.
     """
     if not isinstance(items, list):
         warnings.append("factor_scores missing or not a list")
@@ -238,6 +243,9 @@ def validate_factors(items, snapshot, warnings):
             continue
         sources = _sources(item, snapshot, where, warnings)
         if sources is None:
+            continue
+        if any(x.split(".")[0].split("[")[0] in SERVER_BLENDED for x in sources):
+            warnings.append(f"{where}: dropped, cites the baseline that the server already blends in")
             continue
         key = frozenset(sources)
         if key in seen:
