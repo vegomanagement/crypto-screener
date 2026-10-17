@@ -1,0 +1,485 @@
+{
+ "generated_at": "20261017T210909",
+ "rows": [
+  {
+   "market": "binance BTCUSDT",
+   "field": "top account L/S ratio",
+   "api": "1.8321",
+   "raw": "1.8321",
+   "api_ts": 1792260000000,
+   "raw_ts": 1792260000000,
+   "match": true,
+   "note": ""
+  },
+  {
+   "market": "binance BTCUSDT",
+   "field": "top account L/S long share",
+   "api": "0.6469",
+   "raw": "0.6469",
+   "api_ts": 1792260000000,
+   "raw_ts": 1792260000000,
+   "match": true,
+   "note": ""
+  },
+  {
+   "market": "binance BTCUSDT",
+   "field": "top position L/S ratio",
+   "api": "1.7295",
+   "raw": "1.7295",
+   "api_ts": 1792260000000,
+   "raw_ts": 1792260000000,
+   "match": true,
+   "note": ""
+  },
+  {
+   "market": "binance BTCUSDT",
+   "field": "top position L/S long share",
+   "api": "0.6336",
+   "raw": "0.6336",
+   "api_ts": 1792260000000,
+   "raw_ts": 1792260000000,
+   "match": true,
+   "note": ""
+  },
+  {
+   "market": "binance BTCUSDT",
+   "field": "global account L/S ratio",
+   "api": "1.7086",
+   "raw": "1.7086",
+   "api_ts": 1792260000000,
+   "raw_ts": 1792260000000,
+   "match": true,
+   "note": ""
+  },
+  {
+   "market": "binance BTCUSDT",
+   "field": "global account L/S long share",
+   "api": "0.6308",
+   "raw": "0.6308",
+   "api_ts": 1792260000000,
+   "raw_ts": 1792260000000,
+   "match": true,
+   "note": ""
+  },
+  {
+   "market": "binance BTCUSDT",
+   "field": "taker buySellRatio",
+   "api": "1.1518",
+   "raw": "1.1518",
+   "api_ts": 1792256400000,
+   "raw_ts": 1792256400000,
+   "match": true,
+   "note": ""
+  },
+  {
+   "market": "binance BTCUSDT",
+   "field": "taker buyVol",
+   "api": "856.971",
+   "raw": "856.9710",
+   "api_ts": 1792256400000,
+   "raw_ts": 1792256400000,
+   "match": true,
+   "note": ""
+  },
+  {
+   "market": "binance BTCUSDT",
+   "field": "OI now",
+   "api": "93699.503",
+   "raw": "93699.503",
+   "api_ts": 1792260537308,
+   "raw_ts": 1792260537308,
+   "match": true,
+   "note": ""
+  },
+  {
+   "market": "binance BTCUSDT",
+   "field": "OI change 1h %",
+   "api": "-0.13",
+   "raw": "-0.13",
+   "api_ts": 1792260000000,
+   "raw_ts": 1792260000000,
+   "match": true,
+   "note": ""
+  },
+  {
+   "market": "binance BTCUSDT",
+   "field": "OI change 4h %",
+   "api": "-0.32",
+   "raw": "-0.32",
+   "api_ts": 1792260000000,
+   "raw_ts": 1792260000000,
+   "match": true,
+   "note": ""
+  },
+  {
+   "market": "binance BTCUSDT",
+   "field": "OI change 24h %",
+   "api": "-0.14",
+   "raw": "-0.14",
+   "api_ts": 1792260000000,
+   "raw_ts": 1792260000000,
+   "match": true,
+   "note": ""
+  },
+  {
+   "market": "binance BTCUSDT",
+   "field": "basis",
+   "api": "-28.47717391",
+   "raw": "-28.47717391",
+   "api_ts": 1792256400000,
+   "raw_ts": 1792256400000,
+   "match": true,
+   "note": ""
+  },
+  {
+   "market": "binance BTCUSDT",
+   "field": "funding rate",
+   "api": "0.00002632",
+   "raw": "0.00002632",
+   "api_ts": 1792281600000,
+   "raw_ts": 1792281600000,
+   "match": true,
+   "note": ""
+  },
+  {
+   "market": "binance ETHUSDT",
+   "field": "top account L/S ratio",
+   "api": "2.2949",
+   "raw": "2.2949",
+   "api_ts": 1792260000000,
+   "raw_ts": 1792260000000,
+   "match": true,
+   "note": ""
+  },
+  {
+   "market": "binance ETHUSDT",
+   "field": "top account L/S long share",
+   "api": "0.6965",
+   "raw": "0.6965",
+   "api_ts": 1792260000000,
+   "raw_ts": 1792260000000,
+   "match": true,
+   "note": ""
+  },
+  {
+   "market": "binance ETHUSDT",
+   "field": "top position L/S ratio",
+   "api": "1.6903",
+   "raw": "1.6903",
+   "api_ts": 1792260000000,
+   "raw_ts": 1792260000000,
+   "match": true,
+   "note": ""
+  },
+  {
+   "market": "binance ETHUSDT",
+   "field": "top position L/S long share",
+   "api": "0.6283",
+   "raw": "0.6283",
+   "api_ts": 1792260000000,
+   "raw_ts": 1792260000000,
+   "match": true,
+   "note": ""
+  },
+  {
+   "market": "binance ETHUSDT",
+   "field": "global account L/S ratio",
+   "api": "2.879",
+   "raw": "2.8790",
+   "api_ts": 1792260000000,
+   "raw_ts": 1792260000000,
+   "match": true,
+   "note": ""
+  },
+  {
+   "market": "binance ETHUSDT",
+   "field": "global account L/S long share",
+   "api": "0.7422",
+   "raw": "0.7422",
+   "api_ts": 1792260000000,
+   "raw_ts": 1792260000000,
+   "match": true,
+   "note": ""
+  },
+  {
+   "market": "binance ETHUSDT",
+   "field": "taker buySellRatio",
+   "api": "1.2667",
+   "raw": "1.2667",
+   "api_ts": 1792256400000,
+   "raw_ts": 1792256400000,
+   "match": true,
+   "note": ""
+  },
+  {
+   "market": "binance ETHUSDT",
+   "field": "taker buyVol",
+   "api": "38874.948",
+   "raw": "38874.9480",
+   "api_ts": 1792256400000,
+   "raw_ts": 1792256400000,
+   "match": true,
+   "note": ""
+  },
+  {
+   "market": "binance ETHUSDT",
+   "field": "OI now",
+   "api": "2277946.85",
+   "raw": "2277946.715",
+   "api_ts": 1792260542458,
+   "raw_ts": 1792260537349,
+   "match": null,
+   "note": "different sample time (cache/new datapoint)"
+  },
+  {
+   "market": "binance ETHUSDT",
+   "field": "OI change 1h %",
+   "api": "-0.1",
+   "raw": "-0.10",
+   "api_ts": 1792260000000,
+   "raw_ts": 1792260000000,
+   "match": true,
+   "note": ""
+  },
+  {
+   "market": "binance ETHUSDT",
+   "field": "OI change 4h %",
+   "api": "0.05",
+   "raw": "0.05",
+   "api_ts": 1792260000000,
+   "raw_ts": 1792260000000,
+   "match": true,
+   "note": ""
+  },
+  {
+   "market": "binance ETHUSDT",
+   "field": "OI change 24h %",
+   "api": "1.78",
+   "raw": "1.78",
+   "api_ts": 1792260000000,
+   "raw_ts": 1792260000000,
+   "match": true,
+   "note": ""
+  },
+  {
+   "market": "binance ETHUSDT",
+   "field": "basis",
+   "api": "-0.98767442",
+   "raw": "-0.98767442",
+   "api_ts": 1792256400000,
+   "raw_ts": 1792256400000,
+   "match": true,
+   "note": ""
+  },
+  {
+   "market": "binance ETHUSDT",
+   "field": "funding rate",
+   "api": "0.00007903",
+   "raw": "0.00007903",
+   "api_ts": 1792281600000,
+   "raw_ts": 1792281600000,
+   "match": true,
+   "note": ""
+  },
+  {
+   "market": "bybit BTCUSDT",
+   "field": "account buyRatio (long share)",
+   "api": "0.63",
+   "raw": "0.63",
+   "api_ts": 1792260000000,
+   "raw_ts": 1792260000000,
+   "match": true,
+   "note": ""
+  },
+  {
+   "market": "bybit BTCUSDT",
+   "field": "OI now (single side)",
+   "api": "29582.103",
+   "raw": "29582.103",
+   "api_ts": 1792260547385,
+   "raw_ts": 1792260547191,
+   "match": true,
+   "note": "different sample time (cache/new datapoint)"
+  },
+  {
+   "market": "bybit BTCUSDT",
+   "field": "OI change 1h %",
+   "api": "-0.13",
+   "raw": "-0.13",
+   "api_ts": 1792260000000,
+   "raw_ts": 1792260000000,
+   "match": true,
+   "note": ""
+  },
+  {
+   "market": "bybit BTCUSDT",
+   "field": "OI change 4h %",
+   "api": "-0.01",
+   "raw": "-0.01",
+   "api_ts": 1792260000000,
+   "raw_ts": 1792260000000,
+   "match": true,
+   "note": ""
+  },
+  {
+   "market": "bybit BTCUSDT",
+   "field": "OI change 24h %",
+   "api": "-0.16",
+   "raw": "-0.16",
+   "api_ts": 1792260000000,
+   "raw_ts": 1792260000000,
+   "match": true,
+   "note": ""
+  },
+  {
+   "market": "bybit BTCUSDT",
+   "field": "basis mark-index",
+   "api": "-34.41",
+   "raw": "-34.41",
+   "api_ts": 1792260547385,
+   "raw_ts": 1792260547191,
+   "match": true,
+   "note": "different sample time (cache/new datapoint)"
+  },
+  {
+   "market": "bybit BTCUSDT",
+   "field": "funding rate",
+   "api": "0.00006347",
+   "raw": "0.00006347",
+   "api_ts": "1792281600000",
+   "raw_ts": "1792281600000",
+   "match": true,
+   "note": ""
+  },
+  {
+   "market": "bybit ETHUSDT",
+   "field": "account buyRatio (long share)",
+   "api": "0.7169",
+   "raw": "0.7169",
+   "api_ts": 1792260000000,
+   "raw_ts": 1792260000000,
+   "match": true,
+   "note": ""
+  },
+  {
+   "market": "bybit ETHUSDT",
+   "field": "OI now (single side)",
+   "api": "386411.13",
+   "raw": "386411.13",
+   "api_ts": 1792260547942,
+   "raw_ts": 1792260547735,
+   "match": true,
+   "note": "different sample time (cache/new datapoint)"
+  },
+  {
+   "market": "bybit ETHUSDT",
+   "field": "OI change 1h %",
+   "api": "-0.33",
+   "raw": "-0.33",
+   "api_ts": 1792260000000,
+   "raw_ts": 1792260000000,
+   "match": true,
+   "note": ""
+  },
+  {
+   "market": "bybit ETHUSDT",
+   "field": "OI change 4h %",
+   "api": "-1.71",
+   "raw": "-1.71",
+   "api_ts": 1792260000000,
+   "raw_ts": 1792260000000,
+   "match": true,
+   "note": ""
+  },
+  {
+   "market": "bybit ETHUSDT",
+   "field": "OI change 24h %",
+   "api": "-0.27",
+   "raw": "-0.27",
+   "api_ts": 1792260000000,
+   "raw_ts": 1792260000000,
+   "match": true,
+   "note": ""
+  },
+  {
+   "market": "bybit ETHUSDT",
+   "field": "basis mark-index",
+   "api": "-1.05",
+   "raw": "-1.05",
+   "api_ts": 1792260547942,
+   "raw_ts": 1792260547735,
+   "match": true,
+   "note": "different sample time (cache/new datapoint)"
+  },
+  {
+   "market": "bybit ETHUSDT",
+   "field": "funding rate",
+   "api": "0.00006771",
+   "raw": "0.00006771",
+   "api_ts": "1792281600000",
+   "raw_ts": "1792281600000",
+   "match": true,
+   "note": ""
+  },
+  {
+   "market": "hyperliquid BTC",
+   "field": "OI now",
+   "api": "41136.5718",
+   "raw": "41136.5718",
+   "api_ts": 1792260548392,
+   "raw_ts": 1792260548863,
+   "match": true,
+   "note": ""
+  },
+  {
+   "market": "hyperliquid BTC",
+   "field": "basis mark-oracle",
+   "api": "-35",
+   "raw": "-35.0",
+   "api_ts": 1792260548392,
+   "raw_ts": 1792260548863,
+   "match": true,
+   "note": ""
+  },
+  {
+   "market": "hyperliquid BTC",
+   "field": "funding rate (1h)",
+   "api": "0.0000125",
+   "raw": "0.0000125",
+   "api_ts": 1792260548392,
+   "raw_ts": 1792260548863,
+   "match": true,
+   "note": ""
+  },
+  {
+   "market": "hyperliquid ETH",
+   "field": "OI now",
+   "api": "1060789.7134",
+   "raw": "1060789.7134",
+   "api_ts": 1792260548392,
+   "raw_ts": 1792260549740,
+   "match": true,
+   "note": ""
+  },
+  {
+   "market": "hyperliquid ETH",
+   "field": "basis mark-oracle",
+   "api": "-1.01",
+   "raw": "-1.01",
+   "api_ts": 1792260548392,
+   "raw_ts": 1792260549740,
+   "match": true,
+   "note": ""
+  },
+  {
+   "market": "hyperliquid ETH",
+   "field": "funding rate (1h)",
+   "api": "0.0000086846",
+   "raw": "0.0000086846",
+   "api_ts": 1792260548392,
+   "raw_ts": 1792260549740,
+   "match": true,
+   "note": ""
+  }
+ ]
+}

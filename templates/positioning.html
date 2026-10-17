@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Positioning (demo) · Crypto Screener</title>
+  <link rel="icon" href="data:,">
+  <script defer src="/static/positioning-panel.js"></script>
+  <style>
+    body { margin: 0; background: #0c0f15; color: #d8dfeb; font: 12px ui-sans-serif, system-ui, sans-serif; }
+    header { display: flex; gap: 10px; align-items: center; padding: 8px 12px; border-bottom: 1px solid #242b3a; background: #10141c; }
+    header a { color: #d8dfeb; text-decoration: none; font-weight: 700; letter-spacing: .08em; }
+    select, input, button { background: #171d28; color: #d8dfeb; border: 1px solid #242b3a; border-radius: 4px; padding: 3px 6px; }
+    .note { color: #f5a623; font-size: 11px; }
+    #grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 12px; padding: 12px; }
+  </style>
+</head>
+<body>
+<header>
+  <a href="/ui">SCREENER / POSITIONING</a>
+  <label>Exchange <select id="pp-exchange"><option>binance</option><option>bybit</option><option>hyperliquid</option></select></label>
+  <label>Symbol <input id="pp-symbol" value="BTCUSDT" size="12"></label>
+  <label>Period <select id="pp-period"><option>5m</option><option>15m</option><option>30m</option><option selected>1h</option><option>4h</option><option>1d</option></select></label>
+  <button id="pp-add" type="button">Add card</button>
+  <span class="note">Temporary demo of the mountable PositioningPanel · public data · descriptive, not trade signals</span>
+</header>
+<div id="grid"></div>
+<script>
+  window.addEventListener('DOMContentLoaded', () => {
+    const grid = document.getElementById('grid');
+    const params = new URLSearchParams(location.search);
+    const cards = (params.get('cards') || 'binance:BTCUSDT,bybit:ETHUSDT,hyperliquid:BTC').split(',');
+    const add = (exchange, symbol, period) => {
+      const cell = document.createElement('div'); grid.appendChild(cell);
+      window.PositioningPanel.mount(cell, { exchange, symbol, period: period || params.get('period') || '1h', owner: `demo-${exchange}-${symbol}` });
+    };
+    cards.forEach(c => { const [ex, sym] = c.split(':'); if (ex && sym) add(ex, sym); });
+    document.getElementById('pp-add').addEventListener('click', () => add(
+      document.getElementById('pp-exchange').value, document.getElementById('pp-symbol').value.trim(), document.getElementById('pp-period').value));
+  });
+</script>
+</body>
+</html>

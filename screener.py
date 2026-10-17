@@ -27,6 +27,7 @@ from seconds_api import register_seconds_routes
 from scalp_api import register_scalp_routes
 from agent_api import register_agent_routes
 from funding_api import register_funding_routes
+from positioning_api import register_positioning_routes
 
 from decision import make_decision, format_decision_header
 from llm_agents import (
@@ -84,6 +85,7 @@ register_funding_routes(app)
 register_agent_routes(app, market=lambda symbol: fetch_market(symbol),
                       confluence=lambda *args: compute_confluence_score(*args),
                       funding=lambda exchange, symbol: app.extensions['funding']['get_service']().get(exchange, symbol))
+register_positioning_routes(app)
 ai  = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
 # ─── SIGNAL LABELS ────────────────────────────────────────────────────────────
