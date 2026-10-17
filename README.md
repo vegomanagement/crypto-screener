@@ -107,6 +107,7 @@ After deploy, open `https://your-bot.up.railway.app/ui` for a full TradingView-s
 | `GET /api/analysis?symbol=X` | Confluence + market brief (5-min TTL cache) |
 | `POST /api/agent/analysis` `{exchange, symbol, interval}` | Hermes analyst for one chart: real-data snapshot → strict-JSON long/short %, levels, scenarios (60 s cache, 6/min); baseline if Hermes is down |
 | `GET /api/agent/stats` | Calibration log: hit rate of past analyses (±1 ATR rule) |
+| `GET /api/funding?exchange=X&symbol=Y` | Last settled vs predicted (live estimate) funding, interval, cap/floor, annualised, history, cross-venue (30 s cache) |
 
 ---
 

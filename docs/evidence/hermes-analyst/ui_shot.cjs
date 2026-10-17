@@ -1,5 +1,5 @@
 'use strict';
-const { connect } = require(process.env.CDP_CLIENT || './cd-cdp.cjs');
+const { connect } = require(process.env.CDP_CLIENT || './cdp.cjs');
 const OUT = '/Users/maxbelov/Projects/wt/hermes-analyst/docs/evidence/hermes-analyst/';
 const [exchange, symbol, interval, name, layout = '1'] = process.argv.slice(2);
 (async () => {

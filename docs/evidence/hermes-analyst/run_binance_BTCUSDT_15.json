@@ -10,60 +10,46 @@
      "indicators.ema_stack_7_14_28",
      "indicators.ema200"
     ],
-    "text": "EMA-стек 7/14/28 медвежий, цена под EMA200"
+    "text": "EMA stack 7<14<28<200 bearish"
    },
    {
     "source_fields": [
      "structure.trend",
-     "structure.recent_events.4.level"
+     "structure.recent_events.4.kind"
     ],
-    "text": "Структура bear, последний CHOCH bear на 81520"
+    "text": "Structure bear, last CHOCH bear"
    },
    {
     "source_fields": [
      "orderbook.imbalance"
     ],
-    "text": "Стакан против покупателей, imbalance -0.56"
-   },
-   {
-    "source_fields": [
-     "footprint.bars.4.delta",
-     "footprint.bars.4.poc"
-    ],
-    "text": "Footprint delta отрицательная 4 из 5 бар, POC падает"
+    "text": "Orderbook ask-heavy -0.59"
    },
    {
     "source_fields": [
      "flow.cvd_1h.trend",
      "flow.cvd_1h.divergence"
     ],
-    "text": "CVD 1h вниз без дивергенции — продажи подтверждают"
+    "text": "CVD 1h down, no divergence"
+   },
+   {
+    "source_fields": [
+     "footprint.bars.3.delta",
+     "footprint.bars.4.delta"
+    ],
+    "text": "Footprint deltas mostly negative"
    },
    {
     "source_fields": [
      "indicators.rsi14"
     ],
-    "text": "RSI14 26.5 — перепроданность, риск отскока"
-   },
-   {
-    "source_fields": [
-     "htf_bias.direction",
-     "htf_bias.zones.240"
-    ],
-    "text": "HTF bias long (moderate), 4H/1H в discount — против шорта"
-   },
-   {
-    "source_fields": [
-     "fvg.total_unfilled",
-     "fvg.nearest.0.direction"
-    ],
-    "text": "Три незакрытых bear FVG сверху как магнит для ретеста"
+    "text": "RSI 30.6 near oversold limits downside"
    }
   ],
   "levels": [
    {
     "price": 81424.0,
-    "reason": "Нижняя граница незакрытого bear OB 15m",
+    "reason": "Bear OB base, unmitigated",
     "source_fields": [
      "order_blocks.unmitigated.2.low"
     ],
@@ -71,41 +57,40 @@
    },
    {
     "price": 81416.8,
-    "reason": "Ближайший bear FVG сверху",
+    "reason": "Nearest bear FVG top",
     "source_fields": [
      "fvg.nearest.0.top"
     ],
     "type": "resistance"
    },
    {
-    "price": 81575.5,
-    "reason": "Последний swing high",
+    "price": 81520.0,
+    "reason": "Bear CHOCH level",
     "source_fields": [
-     "structure.last_swing_high.price"
+     "structure.recent_events.4.level"
     ],
     "type": "resistance"
    },
    {
-    "price": 81380.0,
-    "reason": "Ретест зоны FVG/OB под EMA14",
+    "price": 81349.0,
+    "reason": "Retrace to ema7/FVG edge",
     "source_fields": [
-     "fvg.nearest.1.bottom",
-     "indicators.ema14"
+     "indicators.ema7"
     ],
     "type": "entry"
    },
    {
-    "price": 81545.0,
-    "reason": "Выше OB high 81541.2 (~1.3 ATR от входа)",
+    "price": 81534.0,
+    "reason": "Above swing high + buffer",
     "source_fields": [
-     "order_blocks.unmitigated.2.high",
+     "structure.last_swing_high.price",
      "indicators.atr14"
     ],
     "type": "stop"
    },
    {
-    "price": 81135.0,
-    "reason": "1 ATR вниз от текущей цены",
+    "price": 81067.0,
+    "reason": "2 ATR extension down",
     "source_fields": [
      "price.value",
      "indicators.atr14"
@@ -114,90 +99,50 @@
    },
    {
     "price": 81000.0,
-    "reason": "Round-number sellside пул",
+    "reason": "Round sellside pool",
     "source_fields": [
      "liquidity.pools.0.price"
     ],
-    "type": "target"
+    "type": "liquidity"
    },
    {
     "price": 80755.9,
-    "reason": "EQL sellside, сила 5",
+    "reason": "EQL sellside, strength 5",
     "source_fields": [
      "liquidity.pools.2.price"
     ],
     "type": "liquidity"
-   },
-   {
-    "price": 81765.5,
-    "reason": "EQH buyside сверху, сила 5",
-    "source_fields": [
-     "liquidity.pools.3.price"
-    ],
-    "type": "liquidity"
-   },
-   {
-    "price": 80780.0,
-    "reason": "Единственный bull FVG ниже — зона разворота",
-    "source_fields": [
-     "fvg.nearest.3.top"
-    ],
-    "type": "poi"
-   },
-   {
-    "price": 81157.1,
-    "reason": "Минимум последней свечи",
-    "source_fields": [
-     "candles.recent.23.3"
-    ],
-    "type": "support"
-   },
-   {
-    "price": 81618.431,
-    "reason": "EMA200 как динамическое сопротивление",
-    "source_fields": [
-     "indicators.ema200"
-    ],
-    "type": "resistance"
    }
   ],
   "long_pct": 38,
   "risks": [
-   "RSI 26.5 — вход в перепроданность, отскок на 1 ATR вверх вероятен",
-   "HTF bias long и discount зоны противоречат шорту",
-   "Вне killzone: низкая ликвидность, рваные движения",
-   "Orderbook — один снимок, 20 уровней, быстро меняется",
-   "Regime compressing при confidence 40 — возможен ложный пробой",
-   "Baseline оба вердикта WAIT, слабое преимущество"
+   "HTF bias long moderate, 240/60 discount",
+   "RSI oversold bounce risk",
+   "Regime compressing, chop both stops",
+   "Orderbook is one sampled snapshot"
   ],
   "scenarios": [
    {
-    "invalidation": "Возврат и закрытие выше 81424",
-    "name": "Продолжение снижения",
-    "target": "81135 → 81000 → 80756",
-    "trigger": "Закрытие 15m ниже 81157 с ростом объёма"
+    "invalidation": "15m close above 81424",
+    "name": "Continuation down",
+    "target": "81067 then 81000 round pool",
+    "trigger": "Close below 81149.8 low"
    },
    {
-    "invalidation": "Закрытие 15m выше 81575.5",
-    "name": "Ретест FVG и шорт",
-    "target": "81226 → 81135",
-    "trigger": "Откат в 81412-81434 без закрытия выше 81541"
+    "invalidation": "Accept above 81520",
+    "name": "FVG retest short",
+    "target": "81157 prior low",
+    "trigger": "Tap 81412-81434 bear FVGs, rejection"
    },
    {
-    "invalidation": "Новый минимум ниже 81157",
-    "name": "Отскок от перепроданности",
-    "target": "81583 (VAL) → 81765 (EQH)",
-    "trigger": "RSI14 26.5 + бычья дивергенция, забор выше 81434"
-   },
-   {
-    "invalidation": "Отказ ниже 81520 (CHOCH bear)",
-    "name": "Сквиз по HTF long",
-    "target": "81765 → 82000",
-    "trigger": "HTF discount зоны отрабатывают, закрытие выше 81618 (EMA200)"
+    "invalidation": "Fail back under 81349",
+    "name": "Oversold bounce",
+    "target": "81583 VAL / 81575 swing",
+    "trigger": "RSI 30.6 reclaim of 81424"
    }
   ],
   "short_pct": 62,
-  "summary_ru": "BTCUSDT 15m: цена 81226.7 под всеми EMA, медвежий стек, структура bear после CHOCH 81520. Footprint-дельта и стакан (-0.56) на стороне продавцов. Приоритет — шорт от ретеста 81412-81434 к 81135/81000/80756 со стопом выше 81545. Главный риск: RSI 26.5 и HTF long в discount, что может дать отскок к 81583-81765."
+  "summary_ru": "15m нисходящий: цена 81255 под всеми EMA, стек медвежий, структура bear с последним CHOCH вниз на 81520. Стакан перевешен в аск (-0.59), CVD вниз, дельты отрицательные. Шорт от 81349-81424 (FVG/OB), стоп 81534, цель 81067 и пул 81000/80756. Риск: RSI 30.6 и HTF bias long из дискаунта могут дать отскок к 81583."
  },
  "attempts": 1,
  "baseline": {
@@ -230,7 +175,7 @@
   "short_score": 68,
   "short_verdict": "WAIT",
   "source": "screener.compute_confluence_score + decision.make_decision over screener.fetch_market (Bybit-first USDT aggregate, not venue-pinned)",
-  "ts": 1792257219304
+  "ts": 1792258144856
  },
  "cached": false,
  "evaluation": {
@@ -239,41 +184,42 @@
  },
  "exchange": "binance",
  "freshness": {
-  "last_close_ts": 1792256400000,
+  "last_close_ts": 1792257300000,
   "missing": {},
   "sections": {
-   "baseline": 1792257219304,
-   "candles": 1792256400000,
-   "derivatives": 1792257219307,
-   "flow": 1792257219304,
-   "footprint": 1792257219313,
-   "fvg": 1792256400000,
-   "htf_bias": 1792257219304,
-   "indicators": 1792256400000,
-   "liquidity": 1792257219304,
-   "order_blocks": 1792256400000,
-   "orderbook": 1792257219541,
-   "price": 1792256400000,
-   "regime": 1792257219304,
-   "session": 1792257219304,
-   "structure": 1792256400000
+   "baseline": 1792258144856,
+   "candles": 1792257300000,
+   "derivatives": 1792258144857,
+   "flow": 1792258144856,
+   "footprint": 1792258144858,
+   "funding": 1792258122587,
+   "fvg": 1792257300000,
+   "htf_bias": 1792258144856,
+   "indicators": 1792257300000,
+   "liquidity": 1792258144856,
+   "order_blocks": 1792257300000,
+   "orderbook": 1792258145077,
+   "price": 1792257300000,
+   "regime": 1792258144856,
+   "session": 1792258144856,
+   "structure": 1792257300000
   }
  },
- "generated_at": 1792257219304,
- "id": 1,
+ "generated_at": 1792258144856,
+ "id": 9,
  "interval": "15",
- "latency_ms": 27215,
+ "latency_ms": 17189,
  "model": "hermes-agent",
  "price": {
   "source": "last closed candle close",
-  "ts": 1792256400000,
-  "value": 81226.7
+  "ts": 1792257300000,
+  "value": 81255.0
  },
  "raw_output": [
-  "{\"bias\":\"short\",\"long_pct\":38,\"short_pct\":62,\"confidence\":\"medium\",\"horizon\":\"4-12 bars of 15m\",\"levels\":[{\"type\":\"resistance\",\"price\":81424.0,\"reason\":\"Нижняя граница незакрытого bear OB 15m\",\"source_fields\":[\"order_blocks.unmitigated.2.low\"]},{\"type\":\"resistance\",\"price\":81416.8,\"reason\":\"Ближайший bear FVG сверху\",\"source_fields\":[\"fvg.nearest.0.top\"]},{\"type\":\"resistance\",\"price\":81575.5,\"reason\":\"Последний swing high\",\"source_fields\":[\"structure.last_swing_high.price\"]},{\"type\":\"entry\",\"price\":81380.0,\"reason\":\"Ретест зоны FVG/OB под EMA14\",\"source_fields\":[\"fvg.nearest.1.bottom\",\"indicators.ema14\"]},{\"type\":\"stop\",\"price\":81545.0,\"reason\":\"Выше OB high 81541.2 (~1.3 ATR от входа)\",\"source_fields\":[\"order_blocks.unmitigated.2.high\",\"indicators.atr14\"]},{\"type\":\"target\",\"price\":81135.0,\"reason\":\"1 ATR вниз от текущей цены\",\"source_fields\":[\"price.value\",\"indicators.atr14\"]},{\"type\":\"target\",\"price\":81000.0,\"reason\":\"Round-number sellside пул\",\"source_fields\":[\"liquidity.pools.0.price\"]},{\"type\":\"liquidity\",\"price\":80755.9,\"reason\":\"EQL sellside, сила 5\",\"source_fields\":[\"liquidity.pools.2.price\"]},{\"type\":\"liquidity\",\"price\":81765.5,\"reason\":\"EQH buyside сверху, сила 5\",\"source_fields\":[\"liquidity.pools.3.price\"]},{\"type\":\"poi\",\"price\":80780.0,\"reason\":\"Единственный bull FVG ниже — зона разворота\",\"source_fields\":[\"fvg.nearest.3.top\"]},{\"type\":\"support\",\"price\":81157.1,\"reason\":\"Минимум последней свечи\",\"source_fields\":[\"candles.recent.23.3\"]},{\"type\":\"resistance\",\"price\":81618.431,\"reason\":\"EMA200 как динамическое сопротивление\",\"source_fields\":[\"indicators.ema200\"]}],\"scenarios\":[{\"name\":\"Продолжение снижения\",\"trigger\":\"Закрытие 15m ниже 81157 с ростом объёма\",\"target\":\"81135 → 81000 → 80756\",\"invalidation\":\"Возврат и закрытие выше 81424\"},{\"name\":\"Ретест FVG и шорт\",\"trigger\":\"Откат в 81412-81434 без закрытия выше 81541\",\"target\":\"81226 → 81135\",\"invalidation\":\"Закрытие 15m выше 81575.5\"},{\"name\":\"Отскок от перепроданности\",\"trigger\":\"RSI14 26.5 + бычья дивергенция, забор выше 81434\",\"target\":\"81583 (VAL) → 81765 (EQH)\",\"invalidation\":\"Новый минимум ниже 81157\"},{\"name\":\"Сквиз по HTF long\",\"trigger\":\"HTF discount зоны отрабатывают, закрытие выше 81618 (EMA200)\",\"target\":\"81765 → 82000\",\"invalidation\":\"Отказ ниже 81520 (CHOCH bear)\"}],\"key_factors\":[{\"text\":\"EMA-стек 7/14/28 медвежий, цена под EMA200\",\"source_fields\":[\"indicators.ema_stack_7_14_28\",\"indicators.ema200\"]},{\"text\":\"Структура bear, последний CHOCH bear на 81520\",\"source_fields\":[\"structure.trend\",\"structure.recent_events.4.level\"]},{\"text\":\"Стакан против покупателей, imbalance -0.56\",\"source_fields\":[\"orderbook.imbalance\"]},{\"text\":\"Footprint delta отрицательная 4 из 5 бар, POC падает\",\"source_fields\":[\"footprint.bars.4.delta\",\"footprint.bars.4.poc\"]},{\"text\":\"CVD 1h вниз без дивергенции — продажи подтверждают\",\"source_fields\":[\"flow.cvd_1h.trend\",\"flow.cvd_1h.divergence\"]},{\"text\":\"RSI14 26.5 — перепроданность, риск отскока\",\"source_fields\":[\"indicators.rsi14\"]},{\"text\":\"HTF bias long (moderate), 4H/1H в discount — против шорта\",\"source_fields\":[\"htf_bias.direction\",\"htf_bias.zones.240\"]},{\"text\":\"Три незакрытых bear FVG сверху как магнит для ретеста\",\"source_fields\":[\"fvg.total_unfilled\",\"fvg.nearest.0.direction\"]}],\"risks\":[\"RSI 26.5 — вход в перепроданность, отскок на 1 ATR вверх вероятен\",\"HTF bias long и discount зоны противоречат шорту\",\"Вне killzone: низкая ликвидность, рваные движения\",\"Orderbook — один снимок, 20 уровней, быстро меняется\",\"Regime compressing при confidence 40 — возможен ложный пробой\",\"Baseline оба вердикта WAIT, слабое преимущество\"],\"summary_ru\":\"BTCUSDT 15m: цена 81226.7 под всеми EMA, медвежий стек, структура bear после CHOCH 81520. Footprint-дельта и стакан (-0.56) на стороне продавцов. Приоритет — шорт от ретеста 81412-81434 к 81135/81000/80756 со стопом выше 81545. Главный риск: RSI 26.5 и HTF long в discount, что может дать отскок к 81583-81765.\"}"
+  "{\"bias\":\"short\",\"long_pct\":38,\"short_pct\":62,\"confidence\":\"medium\",\"horizon\":\"4-12 bars of 15m\",\"levels\":[{\"type\":\"resistance\",\"price\":81424.0,\"reason\":\"Bear OB base, unmitigated\",\"source_fields\":[\"order_blocks.unmitigated.2.low\"]},{\"type\":\"resistance\",\"price\":81416.8,\"reason\":\"Nearest bear FVG top\",\"source_fields\":[\"fvg.nearest.0.top\"]},{\"type\":\"resistance\",\"price\":81520.0,\"reason\":\"Bear CHOCH level\",\"source_fields\":[\"structure.recent_events.4.level\"]},{\"type\":\"entry\",\"price\":81349.0,\"reason\":\"Retrace to ema7/FVG edge\",\"source_fields\":[\"indicators.ema7\"]},{\"type\":\"stop\",\"price\":81534.0,\"reason\":\"Above swing high + buffer\",\"source_fields\":[\"structure.last_swing_high.price\",\"indicators.atr14\"]},{\"type\":\"target\",\"price\":81067.0,\"reason\":\"2 ATR extension down\",\"source_fields\":[\"price.value\",\"indicators.atr14\"]},{\"type\":\"liquidity\",\"price\":81000.0,\"reason\":\"Round sellside pool\",\"source_fields\":[\"liquidity.pools.0.price\"]},{\"type\":\"liquidity\",\"price\":80755.9,\"reason\":\"EQL sellside, strength 5\",\"source_fields\":[\"liquidity.pools.2.price\"]}],\"scenarios\":[{\"name\":\"Continuation down\",\"trigger\":\"Close below 81149.8 low\",\"target\":\"81067 then 81000 round pool\",\"invalidation\":\"15m close above 81424\"},{\"name\":\"FVG retest short\",\"trigger\":\"Tap 81412-81434 bear FVGs, rejection\",\"target\":\"81157 prior low\",\"invalidation\":\"Accept above 81520\"},{\"name\":\"Oversold bounce\",\"trigger\":\"RSI 30.6 reclaim of 81424\",\"target\":\"81583 VAL / 81575 swing\",\"invalidation\":\"Fail back under 81349\"}],\"key_factors\":[{\"text\":\"EMA stack 7<14<28<200 bearish\",\"source_fields\":[\"indicators.ema_stack_7_14_28\",\"indicators.ema200\"]},{\"text\":\"Structure bear, last CHOCH bear\",\"source_fields\":[\"structure.trend\",\"structure.recent_events.4.kind\"]},{\"text\":\"Orderbook ask-heavy -0.59\",\"source_fields\":[\"orderbook.imbalance\"]},{\"text\":\"CVD 1h down, no divergence\",\"source_fields\":[\"flow.cvd_1h.trend\",\"flow.cvd_1h.divergence\"]},{\"text\":\"Footprint deltas mostly negative\",\"source_fields\":[\"footprint.bars.3.delta\",\"footprint.bars.4.delta\"]},{\"text\":\"RSI 30.6 near oversold limits downside\",\"source_fields\":[\"indicators.rsi14\"]}],\"risks\":[\"HTF bias long moderate, 240/60 discount\",\"RSI oversold bounce risk\",\"Regime compressing, chop both stops\",\"Orderbook is one sampled snapshot\"],\"summary_ru\":\"15m нисходящий: цена 81255 под всеми EMA, стек медвежий, структура bear с последним CHOCH вниз на 81520. Стакан перевешен в аск (-0.59), CVD вниз, дельты отрицательные. Шорт от 81349-81424 (FVG/OB), стоп 81534, цель 81067 и пул 81000/80756. Риск: RSI 30.6 и HTF bias long из дискаунта могут дать отскок к 81583.\"}"
  ],
- "snapshot_hash": "6479c65f880329b1",
- "snapshot_ms": 14332,
+ "snapshot_hash": "8cea474d4dbd42cb",
+ "snapshot_ms": 5306,
  "source": "hermes",
  "status": "ok",
  "symbol": "BTCUSDT",

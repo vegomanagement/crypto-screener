@@ -5,10 +5,10 @@ import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-from flask import Flask  # noqa: E402
+from flask import Flask
 
-import screener  # noqa: E402
-from agent_api import register_agent_routes  # noqa: E402
+import screener
+from agent_api import register_agent_routes
 
 app = Flask(__name__)
 register_agent_routes(app, market=screener.fetch_market, confluence=screener.compute_confluence_score,
