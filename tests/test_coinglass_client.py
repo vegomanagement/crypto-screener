@@ -86,6 +86,9 @@ def test_http_client_caches_paces_and_caps():
     assert slept == [1.0]                        # second request paced 1 s after the first
     c.request_json("https://h.test/c", body={"type": "x"})
     assert opened[-1][1] == "POST"
+    meta = {}
+    c.request_json("https://h.test/a", ttl=10, meta=meta)
+    assert meta["cached"] is True and isinstance(meta["fetched_at"], int)
     big = HttpClient(opener=lambda r, timeout: FakeResp(b"[" + b"1," * 3_000_000 + b"1]"), min_interval={})
     with pytest.raises(FetchError, match="exceeds"):
         big.request_json("https://h.test/big")
@@ -109,7 +112,8 @@ def test_fetch_raw_keys_and_failure_capture():
                 raise FetchError("fapi.binance.com: HTTP 418")
             return [path, params]
 
-        def request_json(self, url, body=None, ttl=0):
+        def request_json(self, url, body=None, ttl=0, meta=None):
+            meta.update(fetched_at=123)
             return body
 
     raw = fetch_raw(Http(), "binance", "BTCUSDT", "1h")
@@ -119,5 +123,6 @@ def test_fetch_raw_keys_and_failure_capture():
     assert raw["oi_hist"][1] == {"symbol": "BTCUSDT", "period": "1h", "limit": 25}
     by = fetch_raw(Http(), "bybit", "ETHUSDT", "5m")
     assert by["by_account_ratio"][1]["period"] == "5min"
-    assert fetch_raw(Http(), "hyperliquid", "BTC", "1h") == {"hl_ctxs": {"type": "metaAndAssetCtxs"}}
+    assert fetch_raw(Http(), "hyperliquid", "BTC", "1h") == {"hl_ctxs": {"type": "metaAndAssetCtxs"},
+                                                             "hl_fetched_at": 123}
     assert coin_of("binance", "1000PEPEUSDT") == "PEPE" and coin_of("bybit", "ETHUSDT") == "ETH"

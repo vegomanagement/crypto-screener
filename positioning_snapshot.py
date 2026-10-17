@@ -147,12 +147,13 @@ def build_snapshot(exchange, symbol, period, raw, *, now_ms, coin=None,
         snap["crowd"] = P.missing(none, source=HL, venue=HL, period=period)
         snap["taker"] = P.missing("Hyperliquid has no public taker ratio endpoint", source=HL, venue=HL)
         ctx, err = _get(raw, "hl_ctxs", P.hl_asset_ctx, coin or symbol)
-        cur = {"oi": ctx["oi"], "ts": now_ms} if ctx else None
+        fetched = raw.get("hl_fetched_at") or now_ms   # HL has no exchange timestamp: use fetch time
+        cur = {"oi": ctx["oi"], "ts": fetched} if ctx else None
         snap["open_interest"] = _oi_section(HL, period, cur, None, None, err, SOURCES["hl_ctxs"],
                                             ctx["mark"] if ctx else None)
         if ctx:
             snap["basis"] = P.metric(ctx["mark"] - ctx["oracle"], source=SOURCES["hl_ctxs"] +
-                                     " (markPx − oraclePx)", venue=HL, timestamp=now_ms, period="live",
+                                     " (markPx − oraclePx)", venue=HL, timestamp=fetched, period="live",
                                      premium=ctx["premium"], mark=ctx["mark"], index_price=ctx["oracle"],
                                      funding_rate=ctx["funding_rate"], funding_source=SOURCES["hl_ctxs"],
                                      funding_interval="1h")

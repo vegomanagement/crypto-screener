@@ -34,9 +34,9 @@ class HttpClient:
     """Thread-safe JSON client with TTL cache and minimum spacing per host."""
 
     def __init__(self, opener=None, clock=time.monotonic, sleep=time.sleep,
-                 min_interval=None, max_entries=512):
+                 min_interval=None, max_entries=512, wall=time.time):
         self._open = opener or (lambda req, timeout: urlopen(req, timeout=timeout))  # noqa: S310
-        self._clock, self._sleep = clock, sleep
+        self._clock, self._sleep, self._wall = clock, sleep, wall
         self._min = dict(MIN_INTERVAL if min_interval is None else min_interval)
         self._next = {}
         self._cache = {}
@@ -54,12 +54,15 @@ class HttpClient:
         if due > now:
             self._sleep(due - now)
 
-    def request_json(self, url, *, body=None, headers=None, ttl=0, cache_key=None):
+    def request_json(self, url, *, body=None, headers=None, ttl=0, cache_key=None, meta=None):
+        """meta (optional dict) receives fetched_at (wall ms of the real upstream fetch, also on cache hits)."""
         key = cache_key or (url, json.dumps(body, sort_keys=True) if body is not None else None)
         if ttl:
             with self._cache_lock:
                 hit = self._cache.get(key)
                 if hit and hit[0] > self._clock():
+                    if meta is not None:
+                        meta.update(fetched_at=hit[2], cached=True)
                     return hit[1]
         host = urlparse(url).hostname or ""
         self._pace(host)
@@ -81,6 +84,9 @@ class HttpClient:
             payload = json.loads(raw)
         except ValueError:
             raise FetchError(f"{host}: invalid JSON") from None
+        fetched_at = int(self._wall() * 1000)
+        if meta is not None:
+            meta.update(fetched_at=fetched_at, cached=False)
         if ttl:
             with self._cache_lock:
                 if len(self._cache) >= self.max_entries:
@@ -88,11 +94,11 @@ class HttpClient:
                     self._cache = {k: v for k, v in self._cache.items() if v[0] > now}
                     while len(self._cache) >= self.max_entries:
                         self._cache.pop(next(iter(self._cache)))
-                self._cache[key] = (self._clock() + ttl, payload)
+                self._cache[key] = (self._clock() + ttl, payload, fetched_at)
         return payload
 
-    def get(self, base, path, params, ttl):
-        return self.request_json(f"{base}{path}?{urlencode(params)}", ttl=ttl)
+    def get(self, base, path, params, ttl, meta=None):
+        return self.request_json(f"{base}{path}?{urlencode(params)}", ttl=ttl, meta=meta)
 
 
 BINANCE = "https://fapi.binance.com"
@@ -145,10 +151,14 @@ def fetch_raw(client, exchange, symbol, period):
         take("by_klines", lambda: client.get(BYBIT, "/v5/market/kline", {
             "category": "linear", "symbol": symbol, "interval": "60", "limit": 25}, RATIO_TTL))
     elif exchange == "hyperliquid":
-        take("hl_ctxs", lambda: client.request_json(HL_INFO, body={"type": "metaAndAssetCtxs"}, ttl=OI_TTL))
+        meta = {}
+        take("hl_ctxs", lambda: client.request_json(HL_INFO, body={"type": "metaAndAssetCtxs"}, ttl=OI_TTL,
+                                                    meta=meta))
     else:
         raise ValueError("unsupported exchange")
     # Bounded concurrency; the client's per-host pacing still spaces the requests.
     with ThreadPoolExecutor(max_workers=4) as pool:
         list(pool.map(lambda t: run(*t), tasks))
+    if exchange == "hyperliquid":
+        raw["hl_fetched_at"] = meta.get("fetched_at")   # HL ctxs carry no exchange timestamp
     return raw

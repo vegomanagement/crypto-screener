@@ -118,8 +118,9 @@ def test_bybit_snapshot_marks_missing_sections_with_reasons():
 
 
 def test_hyperliquid_snapshot_has_no_oi_history():
-    snap = build_snapshot("hyperliquid", "BTC", "1h", {"hl_ctxs": load("hl_metaAndAssetCtxs.json")},
-                          now_ms=NOW, coin="BTC")
+    snap = build_snapshot("hyperliquid", "BTC", "1h", {"hl_ctxs": load("hl_metaAndAssetCtxs.json"),
+                                                       "hl_fetched_at": NOW - 5000}, now_ms=NOW, coin="BTC")
+    assert snap["open_interest"]["current"]["timestamp"] == NOW - 5000   # fetch time, not render time
     assert snap["open_interest"]["current"]["value"] == "41043.77804"
     assert snap["open_interest"]["changes"]["4h"]["reason"] == "Hyperliquid has no public OI history endpoint"
     assert snap["basis"]["value"] == "-34.9"     # markPx 81255.0 - oraclePx 81289.9
