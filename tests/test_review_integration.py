@@ -314,6 +314,7 @@ def test_hanging_providers_share_one_deadline(monkeypatch):
     ("https://evil.example", 403),
     ("https://bot.example.evil.example", 403),
     ("null", 403),
+    ("http://[::1", 403),
 ])
 def test_same_origin_check_ignores_proxy_scheme(tmp_path, origin, expected):
     from tests.test_agent_api import make_app
