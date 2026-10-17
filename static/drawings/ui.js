@@ -20,7 +20,10 @@
   const MAGNET_TITLES = { off: 'Magnet off', weak: 'Weak magnet: snaps to O/H/L/C within 14 px', strong: 'Strong magnet: always snaps to the nearest O/H/L/C' };
 
   function createChrome(controller, { header, stage, panels }) {
-    const listen = (t, type, fn, o) => t.addEventListener(type, fn, o);
+    // Every listener shares one lifetime: dispose() aborts it, so the document-level
+    // pointerdown listener cannot keep a destroyed pane alive.
+    const lifetime = new AbortController();
+    const listen = (t, type, fn, capture = false) => t.addEventListener(type, fn, { capture, signal: lifetime.signal });
     const ui = { flyout: null };
     // Header toggle (kept from v1) shows/hides the left toolbar.
     const toggle = btn('pane-draw-toggle', '✎', 'Drawing tools for this chart');
@@ -171,7 +174,7 @@
       if (key !== lastSel) { lastSel = key; renderMini(); }
     }
     return { sync, positionMini, closeFlyout, openFlyout: groupId => { const g = TB.model(state().prefs).find(x => x.id === groupId); const more = bar.querySelector(`[data-group="${groupId}"]`); if (g && more) { ui.flyout = null; openFlyout(g, more); } },
-      dispose() { toggle.remove(); bar.remove(); favs.remove(); mini.remove(); fly.remove(); }, elements: { toggle, bar, favs, mini, fly } };
+      dispose() { lifetime.abort(); toggle.remove(); bar.remove(); favs.remove(); mini.remove(); fly.remove(); }, elements: { toggle, bar, favs, mini, fly } };
   }
   return { el, btn, createChrome };
 });
