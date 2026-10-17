@@ -7,7 +7,12 @@ import pytest
 
 import analyst
 import analyst_hermes as ah
-from analyst_service import AnalystService, RateLimited, SnapshotUnavailable, baseline_analysis
+from analyst_service import (
+    AnalystService,
+    RateLimited,
+    SnapshotUnavailable,
+    baseline_analysis,
+)
 from analyst_store import AnalysisStore, evaluate_outcome, evaluate_pending, summarize
 from tests.test_analyst import providers
 

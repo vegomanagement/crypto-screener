@@ -224,6 +224,7 @@
   const grid = $('#chart-grid');
   const footer = $('#workspace-status');
   const panes = new Map();
+  let analyst = null; // static/analyst-panel.js controller (right sidebar)
   // Seconds intervals are trade-built in the browser (static/seconds-candles.js); never fabricated.
   const SECONDS_API = window.WorkspaceSeconds || null;
   let intervals = FAVORITES.map(([value, label]) => ({ value, label, available: !/s$/.test(value) || Boolean(SECONDS_API), reason: /s$/.test(value) ? (SECONDS_API ? 'Built from real trades (live stream; Binance also backfills recent minutes)' : 'Seconds candles module did not load') : '' }));
@@ -414,6 +415,7 @@
     $('#watchlist-toggle').setAttribute('aria-expanded', String(state.sidebar));
     $('#workspace').classList.toggle('sidebar-collapsed', !state.sidebar);
     syncSuggestions();
+    analyst?.activeChanged();
   }
   function setActive(id) {
     if (!panes.has(id)) return;
@@ -1209,6 +1211,30 @@
       this.livePriceEl.dataset.state = 'ready';
       this.livePriceEl.textContent = `${source} ${formatPrice(price)}`;
     }
+    // Hermes analyst levels (static/analyst-panel.js): temporary dashed price lines, never stored.
+    setAnalystLines(rows) {
+      this.clearAnalystLines(false);
+      this.analystLines = rows.map(row => this.series.createPriceLine({ price: row.price, color: row.color, lineWidth: 1,
+        lineStyle: LightweightCharts.LineStyle.LargeDashed, axisLabelVisible: true, title: `H·${row.label}` }));
+    }
+    clearAnalystLines(resetCenter = true) {
+      (this.analystLines || []).forEach(line => { try { this.series.removePriceLine(line); } catch (_) { /* disposed */ } });
+      this.analystLines = [];
+      if (resetCenter) this.centerOnPrice(null);
+    }
+    // Centre the right price scale on `price` keeping the current span; null restores normal autoscale.
+    centerOnPrice(price) {
+      if (!Number.isFinite(price)) {
+        if (this.analystCenter) { this.analystCenter = null; this.series.applyOptions({ autoscaleInfoProvider: original => original() }); }
+        return;
+      }
+      const height = Math.max(0, this.host.clientHeight - this.chart.timeScale().height());
+      const top = this.series.coordinateToPrice(0), bottom = this.series.coordinateToPrice(height);
+      const span = Number.isFinite(top) && Number.isFinite(bottom) && top !== bottom ? Math.abs(top - bottom) : Math.abs(price) * 0.02;
+      this.analystCenter = { minValue: price - span / 2, maxValue: price + span / 2 };
+      this.series.applyOptions({ autoscaleInfoProvider: original => this.analystCenter ? { priceRange: this.analystCenter } : original() });
+      this.chart.priceScale('right').applyOptions({ autoScale: true });
+    }
     removeLivePrice() {
       if (this.priceLine) { this.series.removePriceLine(this.priceLine); this.priceLine = null; }
       if (this.livePriceEl) { this.livePriceEl.dataset.state = 'hidden'; this.livePriceEl.textContent = ''; }
@@ -1370,6 +1396,7 @@
       this.scheduleDraw();
     }
     async load(resetView = false, restart = false) {
+      if (resetView) this.centerOnPrice(null);
       if (this.disposed) return;
       this.updateHeader();
       if (isSecondsInterval(state.panes[this.id].interval)) return this.loadSeconds(resetView, restart);
@@ -1862,13 +1889,32 @@
     $('#watchlist-retry').addEventListener('click', () => refreshPrices(true));
     document.addEventListener('click', event => document.querySelectorAll('.pane-symbol-menu[open]').forEach(menu => { if (!menu.contains(event.target)) menu.open = false; }));
     initSettingsPopovers();
+    mountAnalyst();
     mountLayout(); loadIntervals(); refreshPrices();
+  }
+  function mountAnalyst() {
+    const api = window.WorkspaceAnalyst, el = $('#analyst-panel');
+    if (!api || !el) return;
+    analyst = api.mount(el, {
+      fetch: (url, options) => fetch(url, options),
+      getActive: () => {
+        const config = state.panes[state.active], pane = panes.get(state.active);
+        if (!config || !pane) return null;
+        return { id: state.active, exchange: config.exchange, symbol: config.symbol, interval: config.interval,
+          precision: pane.series.options().priceFormat?.precision };
+      },
+      drawLines: (id, rows) => panes.get(id)?.setAnalystLines(rows),
+      clearLines: id => panes.get(id)?.clearAnalystLines(),
+      centerOn: (id, price) => panes.get(id)?.centerOnPrice(price),
+      levels: window.ScreenerLevels || null,
+      visible: () => document.visibilityState === 'visible'
+    });
   }
   const refreshTimer = setInterval(autoRefresh, 60000);
   // pagehide also covers browser navigation with bfcache; pageshow reconstructs
   // disposed instances without leaving their requests or observers alive.
   window.addEventListener('pagehide', () => {
-    clearInterval(refreshTimer);
+    clearInterval(refreshTimer); analyst?.destroy();
     pricesGeneration += 1; pricesController?.abort(); clearTimeout(pricesTimeout);
     panes.forEach(pane => pane.destroy()); panes.clear();
   });

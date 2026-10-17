@@ -1187,3 +1187,47 @@ input[type="checkbox"] {
 /* Candle-close countdown under the last-price axis label */
 .pane-countdown { position: absolute; z-index: 3; right: 0; height: 15px; pointer-events: none; text-align: center; font: 600 10px/15px SFMono-Regular, Consolas, monospace; color: #dfe7f5; background: rgba(50, 65, 92, 0.92); border-radius: 0 0 2px 2px; }
 .pane-countdown[hidden] { display: none; }
+
+/* Hermes analyst card (static/analyst-panel.js) — replaces the old focus note. */
+.watchlist-rows { min-height: 140px; }
+.analyst-panel { margin: 10px 10px 0; padding: 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); max-height: 58vh; overflow-y: auto; font-size: 11px; color: #a3b1c8; }
+.analyst-head { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; }
+.analyst-head h2 { margin: 0; font-size: 12px; font-weight: 600; color: var(--text); letter-spacing: .02em; }
+.analyst-target { color: var(--muted); font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.analyst-actions { display: flex; align-items: center; gap: 8px; margin: 8px 0 4px; flex-wrap: wrap; }
+.analyst-actions button[data-role="run"] { background: #1d2b4f; border: 1px solid #355199; color: #cfdcff; border-radius: 4px; padding: 3px 10px; cursor: pointer; }
+.analyst-actions button[disabled] { opacity: .6; cursor: progress; }
+.analyst-actions label { display: inline-flex; gap: 3px; align-items: center; color: var(--muted); }
+.analyst-status { margin: 4px 0; color: var(--muted); }
+.analyst-status.is-error { color: #ef6670; }
+.analyst-bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: var(--raised); margin-top: 6px; }
+.analyst-bar .long { background: var(--bull); }
+.analyst-bar .short { background: #ef6670; }
+.analyst-pcts { display: flex; justify-content: space-between; margin-top: 4px; font-weight: 600; }
+.analyst-pcts .long { color: var(--bull); }
+.analyst-pcts .short { color: #ef6670; }
+.analyst-bias { text-transform: uppercase; color: var(--text); font-size: 10px; }
+.analyst-bias.bias-long { color: var(--bull); }
+.analyst-bias.bias-short { color: #ef6670; }
+.analyst-caption, .analyst-fresh, .analyst-stats, .analyst-disclaimer { margin: 4px 0; color: var(--muted); font-size: 10px; }
+.analyst-disclaimer { color: #8d7a52; }
+.analyst-summary { margin: 6px 0; color: var(--text); line-height: 1.4; }
+.analyst-panel h3 { display: flex; align-items: center; gap: 6px; margin: 8px 0 4px; font-size: 11px; color: var(--text); }
+.analyst-panel h3 small { color: var(--muted); font-weight: 400; flex: 1; }
+.analyst-panel h3 button { border: 1px solid var(--line); background: none; border-radius: 3px; padding: 0 5px; cursor: pointer; color: var(--muted); }
+.analyst-levels { list-style: none; margin: 0; padding: 0; }
+.analyst-level { display: flex; align-items: center; gap: 2px; }
+.analyst-level-go { flex: 1; display: grid; grid-template-columns: 8px 1fr auto 52px; gap: 5px; align-items: center; background: none; border: 0; padding: 2px 3px; text-align: left; cursor: pointer; border-radius: 3px; }
+.analyst-level-go:hover { background: var(--raised); }
+.analyst-level-go i { width: 8px; height: 2px; border-top: 2px dashed currentColor; }
+.analyst-level-go i[style] { border: 0; height: 3px; }
+.analyst-level-go b { color: var(--text); font-weight: 500; font-variant-numeric: tabular-nums; }
+.analyst-level-go em { color: var(--muted); font-style: normal; text-align: right; font-variant-numeric: tabular-nums; }
+.analyst-level.is-unanchored .analyst-level-go span::after { content: " ?"; color: #f5a623; }
+.analyst-level-add { border: 1px solid var(--line); background: none; border-radius: 3px; width: 20px; cursor: pointer; color: var(--muted); padding: 0; }
+.analyst-section summary, .analyst-warnings summary { cursor: pointer; margin-top: 6px; color: var(--text); }
+.analyst-section ul, .analyst-warnings ul { margin: 4px 0; padding-left: 16px; }
+.analyst-section li, .analyst-warnings li { margin: 2px 0; line-height: 1.35; }
+.analyst-warnings summary { color: #f5a623; }
+.analyst-section .inval { color: #ef6670; }
+.analyst-empty { color: var(--muted); margin: 2px 0; }
