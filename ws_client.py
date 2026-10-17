@@ -107,15 +107,28 @@ class WebSocket:
     def settimeout(self, seconds):
         self.sock.settimeout(seconds)
 
-    def _read_exact(self, n):
-        while len(self._buf) < n:
-            chunk = self.sock.recv(max(4096, n - len(self._buf)))
-            if not chunk:
-                self.closed = True
-                raise WebSocketClosed("connection closed by peer")
-            self._buf += chunk
-        out, self._buf = self._buf[:n], self._buf[n:]
-        return out
+    def _read_frame(self):
+        """Decode one frame without consuming any bytes until the whole frame has arrived.
+
+        A socket timeout part-way through a frame leaves ``_buf`` intact, so the next call
+        restarts at the frame header instead of treating payload bytes as a header.
+        """
+        pos = 0
+
+        def peek(n):
+            nonlocal pos
+            while len(self._buf) < pos + n:
+                chunk = self.sock.recv(max(4096, pos + n - len(self._buf)))
+                if not chunk:
+                    self.closed = True
+                    raise WebSocketClosed("connection closed by peer")
+                self._buf += chunk
+            out = self._buf[pos:pos + n]
+            pos += n
+            return out
+        frame = decode_frame(peek)
+        self._buf = self._buf[pos:]
+        return frame
 
     def send_text(self, text):
         self.sock.sendall(encode_frame(text.encode(), 0x1))
@@ -123,7 +136,7 @@ class WebSocket:
     def recv(self):
         """Next complete text message; raises socket.timeout when idle, WebSocketClosed on close."""
         while True:
-            fin, opcode, payload = decode_frame(self._read_exact)
+            fin, opcode, payload = self._read_frame()
             if opcode == 0x9:  # ping -> pong with same payload
                 self.sock.sendall(encode_frame(payload, 0xA))
                 continue
