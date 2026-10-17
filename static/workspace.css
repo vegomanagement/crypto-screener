@@ -1150,3 +1150,7 @@ input[type="checkbox"] {
 #local-alerts-feed { padding-left: 16px; max-height: 180px; overflow: auto; line-height: 1.5; }
 #local-alerts-feed li { margin-bottom: 7px; }
 .pane-plugin-warnings { font-size: 10px; color: #ba9665; padding: 3px 8px; max-height: 42px; overflow: auto; overflow-wrap: anywhere; }
+.pane-liquidity-status { flex-shrink: 0; font-size: 10px; color: #b8a7d2; padding: 4px 8px; border-top: 1px solid #30273f; line-height: 1.5; max-height: 49px; overflow: auto; overflow-wrap: anywhere; }
+.pane-liquidity-status[hidden], .liquidity-tooltip[hidden] { display: none; }
+.liquidity-tooltip { position: absolute; z-index: 5; pointer-events: none; max-width: 280px; padding: 6px 8px; border: 1px solid #7a5a91; border-radius: 4px; background: rgba(15,18,27,0.95); color: #e2d9ed; font: 10px/1.5 SFMono-Regular, Consolas, monospace; overflow-wrap: anywhere; }
+

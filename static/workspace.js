@@ -84,6 +84,15 @@
     return zones.slice(-100);
   }
   const INDICATOR_DEFS = [
+    { id: 'liquidity', label: 'Liquidity', kind: 'liquidity', defaultEnabled: false,
+      settingsSchema: [
+        { key: 'historyWindow', label: 'Recent history window (pan for older)', type: 'select', options: ['10m', '1h'], default: '10m' },
+        { key: 'step', label: 'Price bucket step (0 = automatic)', type: 'number', min: 0, max: 1000000, step: 0.00000001, default: 0 },
+        { key: 'minQty', label: 'Minimum bucket quantity (native units)', type: 'number', min: 0, max: 1000000000000, step: 0.00000001, default: 0 },
+        { key: 'opacity', label: 'Heatmap opacity', type: 'number', min: 0, max: 0.6, step: 0.05, default: 0.3 },
+        { key: 'lowColor', label: 'Low intensity', type: 'color', default: '#632ca6' },
+        { key: 'midColor', label: 'Medium intensity', type: 'color', default: '#ed4eaa' },
+        { key: 'highColor', label: 'High intensity', type: 'color', default: '#ffe66d' }], compute: () => [] },
     { id: 'ema7', label: 'EMA 7', kind: 'line', defaultEnabled: true,
       settingsSchema: [
         { key: 'period', label: 'Period', type: 'number', min: 2, max: 500, step: 1, default: 7 },
@@ -474,6 +483,13 @@
     renderLocalAlerts();
   }
   const streamHub = window.WorkspaceMarketStream?.createHub();
+  const liquidityClientId = (() => {
+    const key = 'crypto-screener.liquidity.client.v1';
+    try { const saved = sessionStorage.getItem(key); if (saved) return saved; } catch (_) { /* optional storage */ }
+    const id = window.crypto?.randomUUID?.() || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+    try { sessionStorage.setItem(key, id); } catch (_) { /* session-only identity */ }
+    return id;
+  })();
 
   class Pane {
     constructor(id) {
@@ -524,6 +540,7 @@
           <div class="chart-legend"><span class="ohlc">Waiting for provider…</span><span class="legend-ema ema-7" data-ema="7"></span><span class="legend-ema ema-14" data-ema="14"></span><span class="legend-ema ema-28" data-ema="28"></span><span class="legend-ema ema-200" data-ema="200"></span><span class="pane-live-price" data-state="hidden"></span></div>
           <div class="chart-message"><span>Loading closed candles…</span></div>
         </div>
+        <div class="pane-liquidity-status" role="status" hidden></div>
         <details class="pane-context"><summary>Market context · funding / OI / EMA bias</summary><div class="pane-context-body">—</div></details><div class="pane-plugin-warnings" hidden></div>
         <div class="pane-statusbar"><span class="pane-status" role="status">Connecting to market data…</span><span class="pane-count"></span></div>`;
       grid.append(this.element);
@@ -547,6 +564,7 @@
         handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: true }
       });
       this.series = this.chart.addCandlestickSeries({ upColor: '#00c087', downColor: '#ef6670', borderVisible: false, wickUpColor: '#00c087', wickDownColor: '#ef6670', priceLineVisible: true, lastValueVisible: true });
+      this.initLiquidity();
       this.volume = this.chart.addHistogramSeries({ priceFormat: { type: 'volume' }, priceScaleId: 'volume', lastValueVisible: false, priceLineVisible: false });
       this.chart.priceScale('volume').applyOptions({ scaleMargins: { top: 0.84, bottom: 0 }, visible: false });
       Object.keys(EMA_COLORS).forEach(period => {
@@ -557,10 +575,11 @@
         high: this.chart.addLineSeries({ color: getIndicatorSettings('ma20high').color, lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, visible: state.ma20hl.high }),
         low: this.chart.addLineSeries({ color: getIndicatorSettings('ma20low').color, lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, visible: state.ma20hl.low })
       };
-      this.logicalListener = () => this.scheduleDraw();
+      this.logicalListener = () => { this.scheduleDraw(); this.queueLiquidityRange(); };
       this.crosshairListener = parameter => {
         const candle = parameter.seriesData?.get(this.series);
         this.updateLegend(candle && typeof candle.close === 'number' ? candle : this.candles.at(-1));
+        this.liquidityTooltip(parameter);
         this.scheduleDraw();
       };
       this.chart.timeScale().subscribeVisibleLogicalRangeChange(this.logicalListener);
@@ -585,6 +604,9 @@
       listen($('.pane-reload', this.element), 'click', () => { setActive(id); this.load(false); });
       listen($('.pane-context', this.element), 'toggle', () => this.refreshContext());
       this.contextTimer = setInterval(() => this.refreshContext(), 60000);
+      listen(document, 'visibilitychange', () => { this.syncLiquidity(); });
+      listen(grid, 'scroll', () => this.syncLiquidity(), { passive: true });
+      this.liquidityTimer = setInterval(() => { this.syncLiquidity(); this.renderLiquidityStatus(); }, 1000);
       // Logical-range subscriptions cover time navigation. Price-axis drags do not
       // emit those events in 4.1, so repaint through gestures and their inertia.
       listen(this.host, 'pointerdown', () => { this.dragging = true; this.animateInteraction(); });
@@ -598,6 +620,99 @@
       this.updateHeader();
       this.load(true);
     }
+    initLiquidity() {
+      this.liquidityData = null; this.liquidityModel = null; this.liquidityState = {};
+      this.liquidityStatus = $('.pane-liquidity-status', this.element);
+      this.liquidityTip = document.createElement('div'); this.liquidityTip.className = 'liquidity-tooltip'; this.liquidityTip.hidden = true;
+      $('.chart-stage', this.element).append(this.liquidityTip);
+      const api = window.WorkspaceLiquidity;
+      if (!api || typeof this.series.attachPrimitive !== 'function') { this.liquidityLayer = 'unavailable'; return; }
+      this.liquidityLayer = 'below-candles';
+      this.liquidityPrimitive = new api.HeatmapPrimitive(size => this.buildLiquidityModel(size), () => getIndicatorSettings('liquidity'));
+      this.series.attachPrimitive(this.liquidityPrimitive);
+      this.liquiditySession = new api.CollectionSession({owner: `${liquidityClientId}:pane${this.id}`, fetch: (url, options) => fetch(url, options),
+        visible: () => !this.disposed && document.visibilityState === 'visible' && isVisible(this), range: () => this.liquidityRange(),
+        onData: data => { this.liquidityData = data; this.renderLiquidityStatus(); this.liquidityPrimitive?.requestUpdate?.(); },
+        onStatus: status => { this.liquidityState = status; this.renderLiquidityStatus(); }
+      });
+    }
+    syncLiquidity() {
+      if (this.disposed || !this.liquidityStatus) return;
+      const enabled = isIndicatorEnabled('liquidity'); this.liquidityStatus.hidden = !enabled;
+      const config = state.panes[this.id], key = enabled ? JSON.stringify([config.exchange, config.symbol, config.interval]) : null;
+      if (key !== this.liquidityKey) {
+        this.liquidityKey = key; this.liquidityData = null; this.liquidityModel = null; this.liquidityState = {};
+        this.liquidityTip.hidden = true;
+        this.liquiditySession?.configure(null);
+        if (enabled) this.liquiditySession?.configure({exchange: config.exchange, symbol: config.symbol});
+        this.liquidityPrimitive?.requestUpdate?.();
+      }
+      const settingsKey = JSON.stringify(getIndicatorSettings('liquidity'));
+      if (settingsKey !== this.liquiditySettingsKey) {
+        const windowChanged = this.liquidityWindow !== getIndicatorSettings('liquidity').historyWindow;
+        this.liquidityWindow = getIndicatorSettings('liquidity').historyWindow; this.liquiditySettingsKey = settingsKey;
+        if (windowChanged) this.liquiditySession?.invalidate();
+        this.liquidityPrimitive?.requestUpdate?.();
+      }
+      if (enabled) this.liquiditySession?.tick();
+      this.renderLiquidityStatus();
+    }
+    liquidityRange() {
+      const now = Date.now(), range = this.chart.timeScale().getVisibleLogicalRange();
+      const duration = intervalSeconds(state.panes[this.id].interval, this.candles.at(-1)?.time || now/1000);
+      const toTime = logical => {
+        const index = Math.floor(logical), fraction = logical-index;
+        if (index < 0) return (this.candles[0].time+logical*duration)*1000;
+        if (index >= this.candles.length-1) return (this.candles.at(-1).time+(logical-this.candles.length+1)*duration)*1000;
+        return (this.candles[index].time+fraction*(this.candles[index+1].time-this.candles[index].time))*1000;
+      };
+      if (range && this.candles.length && range.to < this.candles.length-2) return {start_ms: toTime(range.from), end_ms: toTime(range.to)};
+      return {start_ms: now-(getIndicatorSettings('liquidity').historyWindow === '1h' ? 3600000 : 600000), end_ms: now};
+    }
+    queueLiquidityRange() {
+      if (!isIndicatorEnabled('liquidity') || this.disposed) return;
+      clearTimeout(this.liquidityRangeTimer);
+      this.liquidityRangeTimer = setTimeout(() => {
+        if (this.disposed || !isIndicatorEnabled('liquidity')) return;
+        const range = this.liquidityRange();
+        // Ignore a rolling live range's millisecond drift; pan changes are debounced.
+        const key = `${Math.floor(range.start_ms/10000)}:${Math.floor(range.end_ms/10000)}`;
+        if (key === this.liquidityRangeKey) return;
+        this.liquidityRangeKey = key; this.liquiditySession?.invalidate(); this.liquiditySession?.tick();
+      }, 350);
+    }
+    buildLiquidityModel(size) {
+      if (!isIndicatorEnabled('liquidity') || !this.liquidityData || !this.candles.length) { this.liquidityModel = null; return null; }
+      this.liquidityModel = window.WorkspaceLiquidity.geometry(this.liquidityData, getIndicatorSettings('liquidity'), {
+        candles: this.candles, scale: this.chart.timeScale(), interval: intervalSeconds(state.panes[this.id].interval, this.candles.at(-1).time),
+        priceToCoordinate: price => this.series.priceToCoordinate(price), width: size.width, height: size.height, now: Date.now(), pixelRatio: window.devicePixelRatio || 1
+      });
+      return this.liquidityModel;
+    }
+    renderLiquidityStatus() {
+      if (!this.liquidityStatus || !isIndicatorEnabled('liquidity')) return;
+      if (this.liquidityLayer === 'unavailable') { this.liquidityStatus.textContent = 'Liquidity unavailable: native behind-candle renderer could not load. No overlay fallback.'; return; }
+      const data = this.liquidityData, latest = data?.latest, status = this.liquidityState;
+      const date = ms => typeof ms === 'number' && Number.isFinite(ms) ? new Date(ms).toISOString().replace('T',' ').replace('.000Z',' UTC') : null;
+      const coverage = date(data?.coverage_start), last = latest?.observed_at;
+      const age = Number.isFinite(last) ? `${Math.max(0,Math.floor((Date.now()-last)/1000))}s ago` : 'waiting for first sample';
+      const gaps = Array.isArray(data?.gaps) ? data.gaps.length : 0;
+      const sampled = latest ? `${latest.bids?.length || 0} bid / ${latest.asks?.length || 0} ask rows` : 'venue-limited depth';
+      const capacity = [...panes.values()].filter(p => !p.disposed && isVisible(p)).length;
+      const mode = status.paused ? 'Paused · invisible' : status.error ? `Collection error: ${status.error}` : status.collecting ? 'Collecting' : 'Connecting collector';
+      const warnings = (data?.warnings || []).filter(w => typeof w === 'string');
+      this.liquidityStatus.textContent = `${mode} • ${coverage ? `history from ${coverage}` : 'No history yet'} · no history before collection · 10s snapshots, not tick-complete · last sample ${age} · gaps ${gaps}${gaps ? ' (transparent)' : ''} · depth limited: ${sampled} · native quantity (unit unknown unless venue metadata states otherwise) · ${capacity}/6 pane leases · subpixel samples: 1-device-pixel markers, not duration${this.liquidityModel?.truncated ? ' · draw limit reached' : ''}${warnings.length ? ` · ${warnings.join(' · ')}` : ''}`;
+      this.liquidityStatus.title = this.liquidityStatus.textContent;
+    }
+    liquidityTooltip(parameter) {
+      if (!this.liquidityTip) return;
+      const point = parameter.point;
+      const hit = point && this.liquidityModel && isIndicatorEnabled('liquidity') ? window.WorkspaceLiquidity.hitTest(this.liquidityModel, point.x, point.y) : null;
+      this.liquidityTip.hidden = !hit; if (!hit) return;
+      this.liquidityTip.textContent = `${new Date(hit.time).toISOString()}${hit.endTime ? ` – ${new Date(hit.endTime).toISOString()}` : ' (latest snapshot)'} · ${hit.side === 'bids' ? 'Bid' : 'Ask'} · price bucket ${formatPrice(hit.price)} · ${formatPrice(hit.qty)} native qty (unit may be unknown)${hit.marker ? ' · 1px observation marker; not persistence' : ''}`;
+      this.liquidityTip.style.left = `${Math.max(4,Math.min(point.x+12,this.host.clientWidth-285))}px`;
+      this.liquidityTip.style.top = `${Math.max(35,Math.min(point.y+12,this.host.clientHeight-55))}px`;
+    }
     updateHeader() {
       const config = state.panes[this.id];
       $('.pane-title', this.element).textContent = `${EXCHANGES[config.exchange].toUpperCase()} · ${config.symbol}`;
@@ -607,6 +722,7 @@
       this.element.dataset.symbol = config.symbol;
       this.element.dataset.exchange = config.exchange;
       this.element.dataset.interval = config.interval;
+      this.syncLiquidity();
     }
     resize() {
       if (this.disposed) return;
@@ -628,6 +744,7 @@
         this.raf = null;
         if (this.disposed) return;
         this.drawOverlays();
+        this.liquidityPrimitive?.requestUpdate?.();
         if (this.dragging || performance.now() < this.interactionUntil) this.scheduleDraw();
       });
     }
@@ -795,6 +912,7 @@
       });
     }
     applyIndicators() {
+      this.syncLiquidity();
       Object.keys(EMA_COLORS).forEach(period => {
         const settings = getIndicatorSettings(`ema${period}`);
         const data = INDICATOR_BY_ID.get(`ema${period}`).compute(this.candles, settings);
@@ -1118,6 +1236,7 @@
       }
     }
     destroy() {
+      this.liquiditySession?.dispose(); clearInterval(this.liquidityTimer); clearTimeout(this.liquidityRangeTimer);
       this.disposed = true;
       this.generation += 1;
       this.request?.abort();
