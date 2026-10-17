@@ -173,3 +173,33 @@ test('feed: colliding print labels are skipped and counted instead of overprinte
   assert.equal(stats.labels, 1);
   assert.equal(stats.labelsSkipped, 4);
 });
+
+test('levels: drawn on the row centre across clusters/feed/ladder; signal dashed; hit-test by y; off-screen counted', () => {
+  const L = R.layout(800, { clusterCount: 2 }), view = { centerRow: 1000, rowPx: 16 }, ctx = fakeCtx();
+  const dashes = []; ctx.setLineDash = d => dashes.push(d);
+  const lv = [{ id: 'a', price: '100.0', kind: 'simple', color: '#527dff', width: 1, armed: false, note: '' },
+    { id: 'b', price: '100.2', kind: 'signal', color: '#f5a623', width: 2, armed: true, repeat: false, note: 'breakout' },
+    { id: 'c', price: '500.0', kind: 'signal', color: '#f5a623', width: 1, armed: true, note: '' }];
+  const stats = R.drawLevels(ctx, L, 400, view, { levels: lv, tick: 0.1, rowN: 1 });
+  assert.deepEqual(stats, { drawn: 2, offscreen: 1 });
+  assert.equal(R.levelY(view, '100.0', 0.1, 400), 200);
+  assert.equal(R.levelY(view, '100.2', 0.1, 400), 168);
+  assert.equal(R.levelY(view, '100.3', 0.1, 400), 152, 'float division 100.3/0.1 = 1002.999… still lands on row 1003');
+  const line = ctx.ops.filter(o => o.name === 'lineTo').map(o => o.args);
+  assert.deepEqual(line[0], [L.volume.x + L.volume.w, 200.5], 'spans the whole column from x=0');
+  assert.deepEqual(dashes.filter(d => d.length).length, 1, 'only the signal level is dashed');
+  assert.ok(texts(ctx).some(t => t.includes('breakout')));
+  assert.equal(R.levelAtY(lv, view, 171, 400, 0.1, 5)?.id, 'b');
+  assert.equal(R.levelAtY(lv, view, 185, 400, 0.1, 5), null);
+  assert.deepEqual(R.drawLevels(fakeCtx(), L, 400, view, { levels: [], tick: 0.1, rowN: 1 }), { drawn: 0, offscreen: 0 });
+});
+
+test('settings: volume alerts are off by default and sanitised; Shift+L clears levels, plain l does nothing', () => {
+  const d = S.defaultColumn();
+  assert.deepEqual([d.alerts.appear, d.alerts.decrease, d.alerts.print], [false, false, false]);
+  const s = S.sanitizeColumn({ ...d, alerts: { appear: true, appearUsd: -5, withinPct: 99, decreasePct: 0, printAggMs: 1e9, sound: 'yes', evil: 1 } }, d);
+  assert.deepEqual(s.alerts, { appear: true, appearUsd: 1000, withinPct: 20, decrease: false, decreasePct: 1, print: false, printUsd: 500000, printAggMs: 10000, sound: true });
+  assert.deepEqual(S.sanitizeColumn({ venue: 'binance', symbol: 'BTCUSDT' }, d).alerts, d.alerts, 'old saved settings without alerts get the defaults');
+  assert.equal(S.hotkey(d, 'L').action, 'clear-levels');
+  assert.equal(S.hotkey(d, 'l').action, null);
+});

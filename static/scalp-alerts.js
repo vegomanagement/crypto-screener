@@ -13,6 +13,13 @@
   const TYPE_LABELS = { signal: 'Signal level', appear: 'Large volume appeared', decrease: 'Large volume decreased', gone: 'Large volume gone', print: 'Large print' };
 
   // ── signal levels ─────────────────────────────────────────────────────────
+  /** Exact venue price string of a raw trade row (Binance/Bybit `p`, Hyperliquid `px`), or null. */
+  function tradePriceString(venue, row) {
+    const raw = venue === 'hyperliquid' ? row?.px : venue === 'bybit' ? (row?.p ?? row?.price) : venue === 'binance' ? row?.p : null;
+    if (typeof raw !== 'string') return null;
+    const d = levels.parseDecimal(raw);
+    return d && d.n > 0n ? raw.trim() : null;
+  }
   /**
    * One live trade against the column's signal levels. Returns { trigger, rearm } (level lists):
    * armed levels crossed between prevPrice and price trigger; triggered repeat levels re-arm once the
@@ -216,6 +223,6 @@
         type: l.repeat ? 'signal · repeat' : 'signal', status: l.armed ? 'armed' : 'waiting to re-arm (price must leave by ≥ 1 tick)', note: l.note }));
   }
 
-  return { SOUNDS, TYPE_LABELS, DEFAULT_CONFIG, evaluateSignals, triggerPatch, RateLimiter, VolumeAlerts, tickIndex,
+  return { SOUNDS, TYPE_LABELS, DEFAULT_CONFIG, tradePriceString, evaluateSignals, triggerPatch, RateLimiter, VolumeAlerts, tickIndex,
     LOG_KEY, LOG_CAP, AlertLog, sanitizeEntry, activeRows };
 });

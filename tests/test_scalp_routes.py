@@ -32,8 +32,10 @@ def test_scalp_page_is_served_with_its_modules_in_dependency_order():
     response = client.get('/scalp')
     assert response.status_code == 200
     html = response.get_data(as_text=True)
-    order = ['/static/market-stream.js', '/static/footprint.js', '/static/orderbook.js', '/static/scalp-render.js',
-             '/static/scalp-settings.js', '/static/scalp-column.js', '/static/scalp-dom.js', '/static/scalp.js']
+    order = ['/static/market-stream.js', '/static/footprint.js', '/static/orderbook.js', '/static/levels.js',
+             '/static/scalp-alerts.js', '/static/scalp-render.js', '/static/scalp-settings.js', '/static/scalp-column.js',
+             '/static/scalp-dom.js', '/static/scalp-alerts-ui.js', '/static/scalp-levels-ui.js', '/static/scalp-alerts-panel.js',
+             '/static/scalp.js']
     positions = [html.index(src) for src in order]
     assert positions == sorted(positions)
     assert '/static/scalp.css' in html

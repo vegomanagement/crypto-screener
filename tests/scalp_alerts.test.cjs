@@ -142,3 +142,12 @@ test('active rows: armed signals and repeat levels waiting to re-arm; fired one-
     lvl('3', { createdAt: 3, armed: false, triggeredAt: 4 }), lvl('4', { kind: 'simple', createdAt: 4 })]);
   assert.deepEqual(rows.map(r => [r.price, r.type, r.status.split(' ')[0]]), [['2', 'signal · repeat', 'waiting'], ['1', 'signal', 'armed']]);
 });
+
+test('trade price strings are taken verbatim from the venue row (exact decimals, no float round-trip)', () => {
+  assert.equal(A.tradePriceString('binance', { p: '67890.10' }), '67890.10');
+  assert.equal(A.tradePriceString('bybit', { p: '0.00001234' }), '0.00001234');
+  assert.equal(A.tradePriceString('hyperliquid', { px: '3012.5' }), '3012.5');
+  assert.equal(A.tradePriceString('binance', { p: 67890.1 }), null, 'numbers are not accepted as exact');
+  assert.equal(A.tradePriceString('binance', { p: '0' }), null);
+  assert.equal(A.tradePriceString('kraken', { p: '1' }), null);
+});
