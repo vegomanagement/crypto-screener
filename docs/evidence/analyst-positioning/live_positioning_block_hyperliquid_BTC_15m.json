@@ -1,0 +1,198 @@
+{
+ "source": "positioning_api.PositioningService (hyperliquid public endpoints)",
+ "ts": 1792262196114,
+ "exchange": "hyperliquid",
+ "coin": "BTC",
+ "period": "15m",
+ "period_note": "chart interval 15 → positioning period 15m",
+ "top_traders": {
+  "account": {
+   "value": null,
+   "source": "hyperliquid",
+   "ts": null,
+   "period": "15m",
+   "long_share": null,
+   "short_share": null,
+   "reason": "venue publishes no top-trader ratio (only Binance does)"
+  },
+  "position": {
+   "value": null,
+   "source": "hyperliquid",
+   "ts": null,
+   "period": "15m",
+   "long_share": null,
+   "short_share": null,
+   "reason": "venue publishes no top-trader ratio (only Binance does)"
+  }
+ },
+ "crowd": {
+  "value": null,
+  "source": "hyperliquid",
+  "ts": null,
+  "period": "15m",
+  "long_share": null,
+  "short_share": null,
+  "reason": "Hyperliquid publishes no long/short ratio"
+ },
+ "taker": {
+  "value": null,
+  "source": "hyperliquid",
+  "ts": null,
+  "period": null,
+  "buy_volume": null,
+  "sell_volume": null,
+  "reason": "Hyperliquid has no public taker ratio endpoint"
+ },
+ "open_interest": {
+  "current": {
+   "value": 41269.758,
+   "source": "POST api.hyperliquid.xyz/info metaAndAssetCtxs",
+   "ts": 1792262196113,
+   "period": "live",
+   "value_usd": 3364599600.0,
+   "unit": "base asset (one side)"
+  },
+  "change_1h": {
+   "value": null,
+   "source": "POST api.hyperliquid.xyz/info metaAndAssetCtxs",
+   "ts": null,
+   "period": "1h",
+   "price_pct": null,
+   "reason": "Hyperliquid has no public OI history endpoint",
+   "unit": "%",
+   "from_ts": null
+  },
+  "change_4h": {
+   "value": null,
+   "source": "POST api.hyperliquid.xyz/info metaAndAssetCtxs",
+   "ts": null,
+   "period": "4h",
+   "price_pct": null,
+   "reason": "Hyperliquid has no public OI history endpoint",
+   "unit": "%",
+   "from_ts": null
+  },
+  "change_24h": {
+   "value": null,
+   "source": "POST api.hyperliquid.xyz/info metaAndAssetCtxs",
+   "ts": null,
+   "period": "24h",
+   "price_pct": null,
+   "reason": "Hyperliquid has no public OI history endpoint",
+   "unit": "%",
+   "from_ts": null
+  }
+ },
+ "basis": {
+  "value": -31.2,
+  "source": "POST api.hyperliquid.xyz/info metaAndAssetCtxs (markPx − oraclePx)",
+  "ts": 1792262196113,
+  "period": "live",
+  "basis_rate": null,
+  "futures_price": null,
+  "index_price": 81558.2
+ },
+ "signals": {
+  "top_vs_crowd": {
+   "state": null,
+   "value": null,
+   "label": "Top traders vs crowd",
+   "reason": "needs Binance top-position and global ratios"
+  },
+  "oi_price_4h": {
+   "state": null,
+   "value": null,
+   "label": "OI vs price (4h)",
+   "reason": "needs 4h OI history and price at the same stamps"
+  },
+  "taker_flow": {
+   "state": null,
+   "value": null,
+   "label": "Taker flow",
+   "reason": "no taker ratio for this venue"
+  },
+  "crowd_extreme": {
+   "state": null,
+   "value": null,
+   "label": "Crowd positioning",
+   "reason": "no global account ratio for this venue"
+  },
+  "whale_bias": {
+   "state": "whales_net_short",
+   "value": 0.0078,
+   "label": "HL whales"
+  },
+  "liquidation_imbalance": {
+   "state": null,
+   "value": null,
+   "label": "Liquidations (1h)",
+   "reason": "Hyperliquid has no public liquidation stream"
+  }
+ },
+ "liquidations": {
+  "label": null,
+  "lower_bound": null,
+  "source": null,
+  "ts": null,
+  "collector": "n/a",
+  "windows": null,
+  "reason": "Hyperliquid has no public liquidation stream"
+ },
+ "whales": {
+  "label": "Hyperliquid top-50 accounts by account value (public leaderboard), not all whales",
+  "venue": "hyperliquid",
+  "source": "GET stats-data.hyperliquid.xyz/Mainnet/leaderboard + POST api.hyperliquid.xyz/info clearinghouseState",
+  "ts": 1792262154689,
+  "tracker": "running",
+  "caveat": "includes vaults and market makers; changes only seen between polls (~60 s)",
+  "poll": {
+   "number": 9,
+   "ok": 50,
+   "requested": 50
+  },
+  "aggregate": {
+   "long_notional": 3910602.7,
+   "short_notional": 497860960.0,
+   "net_notional": -493950350.0,
+   "long_share": 0.0078,
+   "avg_entry_long": 81328.3,
+   "avg_entry_short": 77151.83,
+   "long_count": 1,
+   "short_count": 7
+  },
+  "changes_count_by_kind": {
+   "decreased": 1
+  },
+  "recent_changes": [
+   {
+    "ts": 1792262033920,
+    "kind": "decreased",
+    "side": "short",
+    "from_size": -21.18783,
+    "to_size": -18.16412,
+    "delta_usd": 246499.79
+   }
+  ]
+ },
+ "caveats": [
+  "liquidations are a LOWER BOUND: only the time the collector was connected is counted and Binance pushes at most one liquidation per symbol per second",
+  "whales = Hyperliquid top-N accounts by account value; they include vaults and market makers, so their net side is not pure directional conviction",
+  "ratios are completed-period venue data and can lag one period"
+ ],
+ "note": "descriptive positioning data, not trade signals",
+ "missing": {
+  "crowd": "Hyperliquid publishes no long/short ratio",
+  "liquidations": "Hyperliquid has no public liquidation stream",
+  "open_interest.change_1h": "Hyperliquid has no public OI history endpoint",
+  "open_interest.change_24h": "Hyperliquid has no public OI history endpoint",
+  "open_interest.change_4h": "Hyperliquid has no public OI history endpoint",
+  "signals.crowd_extreme": "no global account ratio for this venue",
+  "signals.liquidation_imbalance": "Hyperliquid has no public liquidation stream",
+  "signals.oi_price_4h": "needs 4h OI history and price at the same stamps",
+  "signals.taker_flow": "no taker ratio for this venue",
+  "signals.top_vs_crowd": "needs Binance top-position and global ratios",
+  "taker": "Hyperliquid has no public taker ratio endpoint",
+  "top_traders.account": "venue publishes no top-trader ratio (only Binance does)",
+  "top_traders.position": "venue publishes no top-trader ratio (only Binance does)"
+ }
+}

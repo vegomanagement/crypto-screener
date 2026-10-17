@@ -156,3 +156,13 @@ def test_prompt_asks_for_positioning_on_both_sides_with_caveats():
     assert "LOWER BOUND" in text and "vaults and market makers" in text
     msgs = analyst_hermes.build_messages(snap_with())
     assert '"positioning":{' in msgs[1]["content"]
+
+
+def test_service_reports_snapshot_and_positioning_size():
+    from analyst_service import AnalystService
+    from tests.test_analyst_service import Clock
+    svc = AnalystService(providers(), None, configured=False, clock=Clock())
+    out = svc.analyze("binance", "BTCUSDT", "15")
+    assert 0 < out["positioning_bytes"] < 6000 < out["snapshot_bytes"]
+    assert out["freshness"]["positioning_missing"] == {}
+    assert out["freshness"]["sections"]["positioning"]

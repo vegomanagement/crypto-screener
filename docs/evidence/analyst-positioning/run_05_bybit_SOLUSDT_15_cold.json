@@ -1,0 +1,331 @@
+{
+ "age_s": 0.0,
+ "analysis": {
+  "agent_bias": "short",
+  "bias": "short",
+  "confidence": "low",
+  "disagreement": null,
+  "factor_scores": [
+   {
+    "direction": "short",
+    "factor": "EMA stack 7<14<28 bearish, price under EMA200",
+    "source_fields": [
+     "indicators.ema_stack_7_14_28",
+     "indicators.ema200"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "short",
+    "factor": "Structure bear, latest BOS down at 103.76",
+    "source_fields": [
+     "structure.trend",
+     "structure.recent_events.4.level"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "short",
+    "factor": "Bybit/binance/HL EMA bias bearish on 60/240/D",
+    "source_fields": [
+     "derivatives.ema_bias.60",
+     "derivatives.ema_bias.240",
+     "derivatives.ema_bias.D"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "short",
+    "factor": "Crowd 0.756 long = crowded longs, fuel below",
+    "source_fields": [
+     "positioning.crowd.long_share",
+     "positioning.signals.crowd_extreme.state"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "short",
+    "factor": "Funding flips negative->positive, longs start paying",
+    "source_fields": [
+     "funding.last_settled.rate",
+     "funding.predicted.rate",
+     "funding.annualized_predicted"
+    ],
+    "strength": 1
+   },
+   {
+    "direction": "short",
+    "factor": "Last bar delta negative despite green close",
+    "source_fields": [
+     "footprint.bars.0.delta",
+     "footprint.bars.0.poc"
+    ],
+    "strength": 1
+   },
+   {
+    "direction": "short",
+    "factor": "CVD 1h down with price down, no divergence",
+    "source_fields": [
+     "flow.cvd_1h.trend",
+     "flow.cvd_1h.divergence"
+    ],
+    "strength": 1
+   },
+   {
+    "direction": "short",
+    "factor": "HL whales net short, size increased recently",
+    "source_fields": [
+     "positioning.whales.aggregate.net_notional",
+     "positioning.whales.recent_changes.0.side"
+    ],
+    "strength": 1
+   },
+   {
+    "direction": "long",
+    "factor": "HTF discount on D/240, moderate long bias",
+    "source_fields": [
+     "htf_bias.direction",
+     "htf_bias.zones.240",
+     "htf_bias.zones.D"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "long",
+    "factor": "Book bid-heavy, bid wall 103.64 under price",
+    "source_fields": [
+     "orderbook.imbalance",
+     "orderbook.bid_wall"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "long",
+    "factor": "Bounce off 102.91 swing low, 5 green bars",
+    "source_fields": [
+     "structure.last_swing_low.price",
+     "candles.recent.22.4",
+     "candles.recent.23.4"
+    ],
+    "strength": 1
+   },
+   {
+    "direction": "long",
+    "factor": "Cross-venue funding negative on binance = shorts pay",
+    "source_fields": [
+     "funding.cross_venue.0.annualized",
+     "funding.cross_venue_annualized_spread"
+    ],
+    "strength": 1
+   }
+  ],
+  "horizon": "4-12 bars of 15m",
+  "levels": [
+   {
+    "price": 104.41,
+    "reason": "Last swing high",
+    "source_fields": [
+     "structure.last_swing_high.price"
+    ],
+    "type": "resistance"
+   },
+   {
+    "price": 104.02,
+    "reason": "Ask wall",
+    "source_fields": [
+     "orderbook.ask_wall"
+    ],
+    "type": "resistance"
+   },
+   {
+    "price": 104.45,
+    "reason": "Bear FVG bottom",
+    "source_fields": [
+     "fvg.nearest.1.bottom"
+    ],
+    "type": "poi"
+   },
+   {
+    "price": 103.49,
+    "reason": "Bull FVG bottom just below",
+    "source_fields": [
+     "fvg.nearest.0.bottom"
+    ],
+    "type": "support"
+   },
+   {
+    "price": 102.91,
+    "reason": "Last swing low",
+    "source_fields": [
+     "structure.last_swing_low.price"
+    ],
+    "type": "support"
+   },
+   {
+    "price": 102.43,
+    "reason": "EQL sellside pool strength 5",
+    "source_fields": [
+     "liquidity.pools.0.price"
+    ],
+    "type": "liquidity"
+   },
+   {
+    "price": 104.3,
+    "reason": "Fade into bear FVG / OB edge",
+    "source_fields": [
+     "order_blocks.unmitigated.2.low",
+     "fvg.nearest.1.bottom"
+    ],
+    "type": "entry"
+   },
+   {
+    "price": 104.75,
+    "reason": "Above next bear FVG",
+    "source_fields": [
+     "fvg.nearest.2.bottom"
+    ],
+    "type": "stop"
+   }
+  ],
+  "long_pct": 44,
+  "risks": [
+   "Compressing range, chop risk with ATR 0.30",
+   "Liquidation data missing, collector cold",
+   "Whale data includes vaults and MMs",
+   "HTF discount can force a squeeze up"
+  ],
+  "scenarios": [
+   {
+    "invalidation": "15m close above 104.75",
+    "name": "Fade rally",
+    "target": "103.00 then 102.43 EQL",
+    "trigger": "Tag 104.30-104.45 then rejection"
+   },
+   {
+    "invalidation": "Reclaim 103.76 BOS level",
+    "name": "Breakdown",
+    "target": "102.43 sellside pool",
+    "trigger": "15m close below 103.28 OB low"
+   },
+   {
+    "invalidation": "Back under 103.82",
+    "name": "Bull reclaim",
+    "target": "105.24 EQH",
+    "trigger": "Close above 104.41 swing high"
+   }
+  ],
+  "short_pct": 56,
+  "split": {
+   "agent_long_points": 6,
+   "agent_net": -0.3333,
+   "agent_short_points": 12,
+   "baseline_net": 0.3942,
+   "bias": "short",
+   "k": 3.0,
+   "long_pct": 44,
+   "method": "p_long = logistic(k * (w_a*agent_net + w_b*baseline_net)/(w_a+w_b))",
+   "net": -0.0787,
+   "neutral_band": 5.0,
+   "p_long": 44.124,
+   "short_pct": 56,
+   "weights": {
+    "agent": 0.65,
+    "baseline": 0.35
+   }
+  },
+  "summary_ru": "Структура медвежья: BOS вниз, EMA-стек медвежий, цена под EMA200. Толпа перегружена лонгами (0.76), фандинг разворачивается в плюс, дельта последнего бара отрицательная. Против: HTF в дискаунте, стакан бид-тяжёлый, отскок от 102.91. Приоритет — продажа отката в 104.30-104.45 с целью 103.00/102.43, отмена выше 104.75."
+ },
+ "attempts": 1,
+ "baseline": {
+  "long_confidence": 74,
+  "long_factors": [
+   "CVD ⚪ нейтрально",
+   "VP ⚪ внутри VA | POC $110",
+   "Session 🗽 NY Session [4/5]",
+   "F&G 🤑 Greed [55]",
+   "TZ 1H ⚪ Нейтральная [-1.4% от mean]",
+   "TZ 4H ⚪ Нейтральная [-8.2% от mean]",
+   "RSI ⚪ [38]",
+   "MACD ❌ медвежий при лонге"
+  ],
+  "long_pct": 60,
+  "long_score": 82,
+  "long_verdict": "WAIT",
+  "short_confidence": 55,
+  "short_factors": [
+   "CVD ✅ подтверждает направление",
+   "VP ⚪ внутри VA | POC $110",
+   "Session 🗽 NY Session [4/5]",
+   "F&G 🤑 Greed [55]",
+   "TZ 1H ⚪ Нейтральная [-1.4% от mean]",
+   "TZ 4H ⚪ Нейтральная [-8.2% от mean]",
+   "RSI ⚪ [38]",
+   "MACD 🟡 медвежий тренд"
+  ],
+  "short_pct": 40,
+  "short_score": 55,
+  "short_verdict": "WAIT",
+  "source": "screener.compute_confluence_score + decision.make_decision over screener.fetch_market (Bybit-first USDT aggregate, not venue-pinned)",
+  "ts": 1792261864241
+ },
+ "cached": false,
+ "evaluation": {
+  "horizon_bars": 12,
+  "rule": "±1 ATR from the analysis price, bias side first"
+ },
+ "exchange": "bybit",
+ "freshness": {
+  "last_close_ts": 1792261800000,
+  "missing": {},
+  "positioning_missing": {
+   "liquidations": "liquidation collector has not run for this market yet; collector is cold and is not started by an analysis (open the Positioning panel)",
+   "signals.liquidation_imbalance": "liquidation collector has not run for this market yet",
+   "signals.taker_flow": "no taker ratio for this venue",
+   "signals.top_vs_crowd": "needs Binance top-position and global ratios",
+   "taker": "Bybit has no public taker buy/sell ratio endpoint",
+   "top_traders.account": "venue publishes no top-trader ratio (only Binance does)",
+   "top_traders.position": "venue publishes no top-trader ratio (only Binance does)"
+  },
+  "sections": {
+   "baseline": 1792261864241,
+   "candles": 1792261800000,
+   "derivatives": 1792261864242,
+   "flow": 1792261864241,
+   "footprint": 1792261864244,
+   "funding": 1792261864243,
+   "fvg": 1792261800000,
+   "htf_bias": 1792261864241,
+   "indicators": 1792261800000,
+   "liquidity": 1792261864241,
+   "order_blocks": 1792261800000,
+   "orderbook": 1792261864321,
+   "positioning": 1792261864793,
+   "price": 1792261800000,
+   "regime": 1792261864241,
+   "session": 1792261864241,
+   "structure": 1792261800000
+  }
+ },
+ "generated_at": 1792261864241,
+ "id": 5,
+ "interval": "15",
+ "latency_ms": 22765,
+ "model": "hermes-agent",
+ "positioning_bytes": 4694,
+ "price": {
+  "source": "last closed candle close",
+  "ts": 1792261800000,
+  "value": 103.82
+ },
+ "raw_output": [
+  "{\"bias\":\"short\",\"confidence\":\"low\",\"horizon\":\"4-12 bars of 15m\",\"factor_scores\":[{\"factor\":\"EMA stack 7<14<28 bearish, price under EMA200\",\"direction\":\"short\",\"strength\":2,\"source_fields\":[\"indicators.ema_stack_7_14_28\",\"indicators.ema200\"]},{\"factor\":\"Structure bear, latest BOS down at 103.76\",\"direction\":\"short\",\"strength\":2,\"source_fields\":[\"structure.trend\",\"structure.recent_events.4.level\"]},{\"factor\":\"Bybit/binance/HL EMA bias bearish on 60/240/D\",\"direction\":\"short\",\"strength\":2,\"source_fields\":[\"derivatives.ema_bias.60\",\"derivatives.ema_bias.240\",\"derivatives.ema_bias.D\"]},{\"factor\":\"Crowd 0.756 long = crowded longs, fuel below\",\"direction\":\"short\",\"strength\":2,\"source_fields\":[\"positioning.crowd.long_share\",\"positioning.signals.crowd_extreme.state\"]},{\"factor\":\"Funding flips negative->positive, longs start paying\",\"direction\":\"short\",\"strength\":1,\"source_fields\":[\"funding.last_settled.rate\",\"funding.predicted.rate\",\"funding.annualized_predicted\"]},{\"factor\":\"Last bar delta negative despite green close\",\"direction\":\"short\",\"strength\":1,\"source_fields\":[\"footprint.bars.0.delta\",\"footprint.bars.0.poc\"]},{\"factor\":\"CVD 1h down with price down, no divergence\",\"direction\":\"short\",\"strength\":1,\"source_fields\":[\"flow.cvd_1h.trend\",\"flow.cvd_1h.divergence\"]},{\"factor\":\"HL whales net short, size increased recently\",\"direction\":\"short\",\"strength\":1,\"source_fields\":[\"positioning.whales.aggregate.net_notional\",\"positioning.whales.recent_changes.0.side\"]},{\"factor\":\"HTF discount on D/240, moderate long bias\",\"direction\":\"long\",\"strength\":2,\"source_fields\":[\"htf_bias.direction\",\"htf_bias.zones.240\",\"htf_bias.zones.D\"]},{\"factor\":\"Book bid-heavy, bid wall 103.64 under price\",\"direction\":\"long\",\"strength\":2,\"source_fields\":[\"orderbook.imbalance\",\"orderbook.bid_wall\"]},{\"factor\":\"Bounce off 102.91 swing low, 5 green bars\",\"direction\":\"long\",\"strength\":1,\"source_fields\":[\"structure.last_swing_low.price\",\"candles.recent.22.4\",\"candles.recent.23.4\"]},{\"factor\":\"Cross-venue funding negative on binance = shorts pay\",\"direction\":\"long\",\"strength\":1,\"source_fields\":[\"funding.cross_venue.0.annualized\",\"funding.cross_venue_annualized_spread\"]}],\"levels\":[{\"type\":\"resistance\",\"price\":104.41,\"reason\":\"Last swing high\",\"source_fields\":[\"structure.last_swing_high.price\"]},{\"type\":\"resistance\",\"price\":104.02,\"reason\":\"Ask wall\",\"source_fields\":[\"orderbook.ask_wall\"]},{\"type\":\"poi\",\"price\":104.45,\"reason\":\"Bear FVG bottom\",\"source_fields\":[\"fvg.nearest.1.bottom\"]},{\"type\":\"support\",\"price\":103.49,\"reason\":\"Bull FVG bottom just below\",\"source_fields\":[\"fvg.nearest.0.bottom\"]},{\"type\":\"support\",\"price\":102.91,\"reason\":\"Last swing low\",\"source_fields\":[\"structure.last_swing_low.price\"]},{\"type\":\"liquidity\",\"price\":102.43,\"reason\":\"EQL sellside pool strength 5\",\"source_fields\":[\"liquidity.pools.0.price\"]},{\"type\":\"entry\",\"price\":104.30,\"reason\":\"Fade into bear FVG / OB edge\",\"source_fields\":[\"order_blocks.unmitigated.2.low\",\"fvg.nearest.1.bottom\"]},{\"type\":\"stop\",\"price\":104.75,\"reason\":\"Above next bear FVG\",\"source_fields\":[\"fvg.nearest.2.bottom\"]}],\"scenarios\":[{\"name\":\"Fade rally\",\"trigger\":\"Tag 104.30-104.45 then rejection\",\"target\":\"103.00 then 102.43 EQL\",\"invalidation\":\"15m close above 104.75\"},{\"name\":\"Breakdown\",\"trigger\":\"15m close below 103.28 OB low\",\"target\":\"102.43 sellside pool\",\"invalidation\":\"Reclaim 103.76 BOS level\"},{\"name\":\"Bull reclaim\",\"trigger\":\"Close above 104.41 swing high\",\"target\":\"105.24 EQH\",\"invalidation\":\"Back under 103.82\"}],\"risks\":[\"Compressing range, chop risk with ATR 0.30\",\"Liquidation data missing, collector cold\",\"Whale data includes vaults and MMs\",\"HTF discount can force a squeeze up\"],\"summary_ru\":\"Структура медвежья: BOS вниз, EMA-стек медвежий, цена под EMA200. Толпа перегружена лонгами (0.76), фандинг разворачивается в плюс, дельта последнего бара отрицательная. Против: HTF в дискаунте, стакан бид-тяжёлый, отскок от 102.91. Приоритет — продажа отката в 104.30-104.45 с целью 103.00/102.43, отмена выше 104.75.\"}"
+ ],
+ "snapshot_bytes": 13895,
+ "snapshot_hash": "a7e3d54c3b4e2817",
+ "snapshot_ms": 1203,
+ "source": "hermes",
+ "status": "ok",
+ "symbol": "SOLUSDT",
+ "warnings": [],
+ "_wall_s": 24.0
+}
