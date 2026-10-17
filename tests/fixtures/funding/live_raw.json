@@ -1,0 +1,252 @@
+{
+ "binance_premiumIndex_BTCUSDT": {
+  "symbol": "BTCUSDT",
+  "markPrice": "81237.58919565",
+  "indexPrice": "81277.80521739",
+  "estimatedSettlePrice": "81247.70866787",
+  "lastFundingRate": "0.00002858",
+  "interestRate": "0.00010000",
+  "nextFundingTime": 1792281600000,
+  "time": 1792257805000
+ },
+ "binance_fundingRate_BTCUSDT": [
+  {
+   "symbol": "BTCUSDT",
+   "fundingTime": 1792166400000,
+   "fundingRate": "0.00004313",
+   "markPrice": "81325.60000000",
+   "rateType": "Regular"
+  },
+  {
+   "symbol": "BTCUSDT",
+   "fundingTime": 1792195200000,
+   "fundingRate": "0.00010000",
+   "markPrice": "81578.20000000",
+   "rateType": "Regular"
+  },
+  {
+   "symbol": "BTCUSDT",
+   "fundingTime": 1792224000000,
+   "fundingRate": "0.00003710",
+   "markPrice": "81697.49123913",
+   "rateType": "Regular"
+  },
+  {
+   "symbol": "BTCUSDT",
+   "fundingTime": 1792252800003,
+   "fundingRate": "0.00003726",
+   "markPrice": "81315.62167916",
+   "rateType": "Regular"
+  }
+ ],
+ "binance_fundingInfo_subset": [
+  {
+   "symbol": "GTCUSDT",
+   "adjustedFundingRateCap": "0.02000000",
+   "adjustedFundingRateFloor": "-0.02000000",
+   "fundingIntervalHours": 4,
+   "disclaimer": false,
+   "updateTime": 1791950460152
+  },
+  {
+   "symbol": "BTCUSDT",
+   "adjustedFundingRateCap": "0.00300",
+   "adjustedFundingRateFloor": "-0.00300",
+   "fundingIntervalHours": 8,
+   "disclaimer": true,
+   "updateTime": null
+  }
+ ],
+ "bybit_tickers_SOLUSDT": {
+  "retCode": 0,
+  "retMsg": "OK",
+  "result": {
+   "category": "linear",
+   "list": [
+    {
+     "symbol": "SOLUSDT",
+     "lastPrice": "103.230",
+     "indexPrice": "103.287",
+     "markPrice": "103.229",
+     "prevPrice24h": "102.900",
+     "price24hPcnt": "0.003206",
+     "highPrice24h": "105.240",
+     "lowPrice24h": "102.430",
+     "prevPrice1h": "103.450",
+     "openInterest": "5736651.1",
+     "openInterestValue": "592188756.40",
+     "singleOpenInterest": "2868325.6",
+     "singleOpenInterestValue": "296094383.36",
+     "turnover24h": "264952154.1380",
+     "volume24h": "2547650.9000",
+     "fundingRate": "0.00000456",
+     "nextFundingTime": "1792281600000",
+     "predictedDeliveryPrice": "",
+     "basisRate": "",
+     "deliveryFeeRate": "",
+     "deliveryTime": "0",
+     "ask1Size": "186.5",
+     "bid1Price": "103.220",
+     "ask1Price": "103.230",
+     "bid1Size": "630.6",
+     "basis": "",
+     "preOpenPrice": "",
+     "preQty": "",
+     "curPreListingPhase": "",
+     "fundingIntervalHour": "8",
+     "basisRateYear": "",
+     "fundingCap": "0.005"
+    }
+   ]
+  },
+  "retExtInfo": {},
+  "time": 1792257806660
+ },
+ "bybit_history_SOLUSDT": {
+  "retCode": 0,
+  "retMsg": "OK",
+  "result": {
+   "category": "linear",
+   "list": [
+    {
+     "symbol": "SOLUSDT",
+     "fundingRate": "-0.00000826",
+     "fundingRateTimestamp": "1792252800000"
+    },
+    {
+     "symbol": "SOLUSDT",
+     "fundingRate": "0.00003775",
+     "fundingRateTimestamp": "1792224000000"
+    },
+    {
+     "symbol": "SOLUSDT",
+     "fundingRate": "-0.0000396",
+     "fundingRateTimestamp": "1792195200000"
+    },
+    {
+     "symbol": "SOLUSDT",
+     "fundingRate": "-0.00005526",
+     "fundingRateTimestamp": "1792166400000"
+    }
+   ]
+  },
+  "retExtInfo": {},
+  "time": 1792257806903
+ },
+ "hl_metaAndAssetCtxs_BTC_only": [
+  {
+   "universe": [
+    {
+     "szDecimals": 5,
+     "name": "BTC",
+     "maxLeverage": 40,
+     "marginTableId": 56
+    }
+   ]
+  },
+  [
+   {
+    "funding": "0.0000091531",
+    "openInterest": "41037.41178",
+    "prevDayPx": "80857.0",
+    "dayNtlVlm": "1406551067.9182808399",
+    "premium": "-0.0003445094",
+    "oraclePx": "81275.0",
+    "markPx": "81243.0",
+    "midPx": "81246.5",
+    "impactPxs": [
+     "81246.0",
+     "81247.0"
+    ],
+    "dayBaseVlm": "17292.23491"
+   }
+  ]
+ ],
+ "hl_fundingHistory_BTC": [
+  {
+   "coin": "BTC",
+   "fundingRate": "0.0000125",
+   "premium": "-0.000369536",
+   "time": 1792245600046
+  },
+  {
+   "coin": "BTC",
+   "fundingRate": "0.0000111239",
+   "premium": "-0.0004110089",
+   "time": 1792249200046
+  },
+  {
+   "coin": "BTC",
+   "fundingRate": "0.0000087758",
+   "premium": "-0.0004297939",
+   "time": 1792252800013
+  },
+  {
+   "coin": "BTC",
+   "fundingRate": "0.0000041636",
+   "premium": "-0.000466691",
+   "time": 1792256400036
+  }
+ ],
+ "hl_predictedFundings_subset": [
+  [
+   "BTC",
+   [
+    [
+     "BinPerp",
+     {
+      "fundingRate": "0.00002858",
+      "nextFundingTime": 1792281600000,
+      "fundingIntervalHours": 8
+     }
+    ],
+    [
+     "HlPerp",
+     {
+      "fundingRate": "0.0000091165",
+      "nextFundingTime": 1792256400000,
+      "fundingIntervalHours": 1
+     }
+    ],
+    [
+     "BybitPerp",
+     {
+      "fundingRate": "0.00006431",
+      "nextFundingTime": 1792281600000,
+      "fundingIntervalHours": 8
+     }
+    ]
+   ]
+  ],
+  [
+   "kPEPE",
+   [
+    [
+     "BinPerp",
+     {
+      "fundingRate": "-0.00034614",
+      "nextFundingTime": 1792281600000,
+      "fundingIntervalHours": 8
+     }
+    ],
+    [
+     "HlPerp",
+     {
+      "fundingRate": "-0.0000249724",
+      "nextFundingTime": 1792256400000,
+      "fundingIntervalHours": 1
+     }
+    ],
+    [
+     "BybitPerp",
+     {
+      "fundingRate": "-0.00015429",
+      "nextFundingTime": 1792281600000,
+      "fundingIntervalHours": 8
+     }
+    ]
+   ]
+  ]
+ ],
+ "_captured_at_ms": 1792257808449
+}
