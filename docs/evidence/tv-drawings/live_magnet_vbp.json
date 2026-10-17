@@ -1,0 +1,38 @@
+{
+ "when": "2026-10-17T18:32:06.634Z",
+ "magnet": {
+  "modes": [
+   "weak",
+   "strong"
+  ],
+  "target": {
+   "x": 841.236641221374,
+   "y": 492.5723028237585,
+   "high": "81659.5",
+   "time": 1792234800000
+  },
+  "stored": {
+   "time": 1792234800000,
+   "price": "81659.5"
+  },
+  "exact": true
+ },
+ "footprint": {
+  "bars": 6,
+  "complete": 6
+ },
+ "vbp": {
+  "range": {
+   "from": 295,
+   "to": 298,
+   "allComplete": true,
+   "x0": 1062.9923664122136,
+   "x1": 1089.6030534351146,
+   "y0": 353,
+   "y1": 553
+  },
+  "klineVolumeSum": 2715.63,
+  "footprintVolumeSum": 2715.989999999999,
+  "label": "VbP 4 bars · Σ 2.72K · POC 81482.04 · exact from footprint trades"
+ }
+}
