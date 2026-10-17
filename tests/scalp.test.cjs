@@ -162,3 +162,14 @@ test('no order path: scalp scripts only read public endpoints and never send key
     assert.doesNotMatch(src, /vataga/i, f);
   }
 });
+
+test('feed: colliding print labels are skipped and counted instead of overprinted', () => {
+  const feed = new ob.PrintFeed({ tick: 0.1 });
+  for (let k = 0; k < 5; k += 1) feed.add({ time: 50000 + k * 10, price: 100, qty: 100, side: 'buy' });
+  const f = { ...S.defaultColumn().feed, spanMs: 60000, labelMinUsd: 1000 };
+  const ctx = fakeCtx(), L = R.layout(800, { clusterCount: 0 });
+  const stats = R.drawFeed(ctx, L, 600, { centerRow: 1000, rowPx: 16 }, { feed, tick: 0.1, rowN: 1, now: 60000 }, { ...S.defaultColumn(), feed: f });
+  assert.equal(stats.drawn, 5);
+  assert.equal(stats.labels, 1);
+  assert.equal(stats.labelsSkipped, 4);
+});

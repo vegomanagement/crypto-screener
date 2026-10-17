@@ -211,16 +211,21 @@
       pts.forEach((q, k) => (k ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y))); ctx.stroke();
     }
     ctx.font = FONT; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const placed = [];
     for (const q of pts) {
       const color = q.p.side === 'buy' ? COLORS.bid : COLORS.ask;
       ctx.fillStyle = rgba(color, 0.55); ctx.strokeStyle = color; ctx.lineWidth = 1;
       ctx.beginPath(); ctx.arc(q.x, q.y, q.r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
       stats.drawn += 1; stats.trades += q.p.count;
       if (q.p.usd >= (f.labelMinUsd || Infinity)) {
-        stats.labels += 1; ctx.fillStyle = COLORS.text;
         const label = ob.abbreviate(s.units === 'coin' ? q.p.qty : q.p.usd), nearEdge = q.x > area.x + area.w - 24;
+        const w = label.length * 6.6 + 4, ly = nearEdge || q.r >= 9 ? q.y : q.y - q.r - 7, lx = nearEdge ? q.x - q.r - 2 - w : q.x - w / 2;
+        // Older labels are already painted; a colliding newer label is skipped (counted) rather than overprinted.
+        if (placed.some(b => lx < b.x + b.w && lx + w > b.x && Math.abs(ly - b.y) < 12)) { stats.labelsSkipped = (stats.labelsSkipped || 0) + 1; continue; }
+        placed.push({ x: lx, y: ly, w }); if (placed.length > 40) placed.shift();
+        stats.labels += 1; ctx.fillStyle = COLORS.text;
         if (nearEdge) { ctx.textAlign = 'right'; ctx.fillText(label, q.x - q.r - 2, q.y); ctx.textAlign = 'center'; }
-        else ctx.fillText(label, q.x, q.r >= 9 ? q.y : q.y - q.r - 7);
+        else ctx.fillText(label, q.x, ly);
       }
     }
     ctx.restore();
