@@ -1,0 +1,344 @@
+{
+ "at_ms": 1792264850264,
+ "liquidations": {
+  "binance:SUIUSDT": {
+   "collector": {
+    "connected": false,
+    "connects": 0,
+    "error": null,
+    "events": 0,
+    "last_message_at": null,
+    "messages": 0,
+    "running": false,
+    "subscribed": [],
+    "watched": []
+   },
+   "coverage": {
+    "connected": false,
+    "since": 1792264153238,
+    "spans": [
+     [
+      1792264153238,
+      1792264763279
+     ]
+    ]
+   },
+   "label": "LOWER BOUND \u2014 Binance pushes at most one liquidation per symbol per 1000 ms (forceOrder snapshot stream); only connected time is covered.",
+   "largest": [
+    {
+     "notional_usd": "714.7",
+     "price": "0.9892",
+     "qty": "722.5",
+     "side": "short",
+     "ts": 1792264304147
+    }
+   ],
+   "lower_bound": true,
+   "reason": null,
+   "source": "WS fstream.binance.com/market/ws/!forceOrder@arr",
+   "symbol": "SUIUSDT",
+   "timestamp": 1792264851403,
+   "venue": "binance",
+   "windows": {
+    "1h": {
+     "complete_coverage": false,
+     "covered_ms": 610041,
+     "long_count": 0,
+     "long_usd": "0",
+     "short_count": 1,
+     "short_usd": "714.7",
+     "total_usd": "714.7",
+     "window_ms": 3600000
+    },
+    "24h": {
+     "complete_coverage": false,
+     "covered_ms": 610041,
+     "long_count": 0,
+     "long_usd": "0",
+     "short_count": 1,
+     "short_usd": "714.7",
+     "total_usd": "714.7",
+     "window_ms": 86400000
+    },
+    "4h": {
+     "complete_coverage": false,
+     "covered_ms": 610041,
+     "long_count": 0,
+     "long_usd": "0",
+     "short_count": 1,
+     "short_usd": "714.7",
+     "total_usd": "714.7",
+     "window_ms": 14400000
+    }
+   }
+  },
+  "binance:DOGEUSDT": {
+   "collector": {
+    "connected": false,
+    "connects": 0,
+    "error": null,
+    "events": 0,
+    "last_message_at": null,
+    "messages": 0,
+    "running": false,
+    "subscribed": [],
+    "watched": []
+   },
+   "coverage": {
+    "connected": false,
+    "since": 1792264152237,
+    "spans": [
+     [
+      1792264152237,
+      1792264763279
+     ]
+    ]
+   },
+   "label": "LOWER BOUND \u2014 Binance pushes at most one liquidation per symbol per 1000 ms (forceOrder snapshot stream); only connected time is covered.",
+   "largest": [
+    {
+     "notional_usd": "630.49",
+     "price": "0.07991",
+     "qty": "7890",
+     "side": "short",
+     "ts": 1792264308131
+    }
+   ],
+   "lower_bound": true,
+   "reason": null,
+   "source": "WS fstream.binance.com/market/ws/!forceOrder@arr",
+   "symbol": "DOGEUSDT",
+   "timestamp": 1792264852523,
+   "venue": "binance",
+   "windows": {
+    "1h": {
+     "complete_coverage": false,
+     "covered_ms": 611042,
+     "long_count": 0,
+     "long_usd": "0",
+     "short_count": 1,
+     "short_usd": "630.49",
+     "total_usd": "630.49",
+     "window_ms": 3600000
+    },
+    "24h": {
+     "complete_coverage": false,
+     "covered_ms": 611042,
+     "long_count": 0,
+     "long_usd": "0",
+     "short_count": 1,
+     "short_usd": "630.49",
+     "total_usd": "630.49",
+     "window_ms": 86400000
+    },
+    "4h": {
+     "complete_coverage": false,
+     "covered_ms": 611042,
+     "long_count": 0,
+     "long_usd": "0",
+     "short_count": 1,
+     "short_usd": "630.49",
+     "total_usd": "630.49",
+     "window_ms": 14400000
+    }
+   }
+  },
+  "binance:LINKUSDT": {
+   "collector": {
+    "connected": false,
+    "connects": 0,
+    "error": null,
+    "events": 0,
+    "last_message_at": null,
+    "messages": 0,
+    "running": false,
+    "subscribed": [],
+    "watched": []
+   },
+   "coverage": {
+    "connected": false,
+    "since": 1792264157243,
+    "spans": [
+     [
+      1792264157243,
+      1792264767287
+     ]
+    ]
+   },
+   "label": "LOWER BOUND \u2014 Binance pushes at most one liquidation per symbol per 1000 ms (forceOrder snapshot stream); only connected time is covered.",
+   "largest": [
+    {
+     "notional_usd": "144.09",
+     "price": "12.048",
+     "qty": "11.96",
+     "side": "short",
+     "ts": 1792264296127
+    }
+   ],
+   "lower_bound": true,
+   "reason": null,
+   "source": "WS fstream.binance.com/market/ws/!forceOrder@arr",
+   "symbol": "LINKUSDT",
+   "timestamp": 1792264853631,
+   "venue": "binance",
+   "windows": {
+    "1h": {
+     "complete_coverage": false,
+     "covered_ms": 610044,
+     "long_count": 0,
+     "long_usd": "0",
+     "short_count": 1,
+     "short_usd": "144.09",
+     "total_usd": "144.09",
+     "window_ms": 3600000
+    },
+    "24h": {
+     "complete_coverage": false,
+     "covered_ms": 610044,
+     "long_count": 0,
+     "long_usd": "0",
+     "short_count": 1,
+     "short_usd": "144.09",
+     "total_usd": "144.09",
+     "window_ms": 86400000
+    },
+    "4h": {
+     "complete_coverage": false,
+     "covered_ms": 610044,
+     "long_count": 0,
+     "long_usd": "0",
+     "short_count": 1,
+     "short_usd": "144.09",
+     "total_usd": "144.09",
+     "window_ms": 14400000
+    }
+   }
+  },
+  "binance:BTCUSDT": {
+   "collector": {
+    "connected": false,
+    "connects": 0,
+    "error": null,
+    "events": 0,
+    "last_message_at": null,
+    "messages": 0,
+    "running": false,
+    "subscribed": [],
+    "watched": []
+   },
+   "coverage": {
+    "connected": false,
+    "since": 1792263659522,
+    "spans": [
+     [
+      1792263659522,
+      1792264763279
+     ]
+    ]
+   },
+   "label": "LOWER BOUND \u2014 Binance pushes at most one liquidation per symbol per 1000 ms (forceOrder snapshot stream); only connected time is covered.",
+   "largest": [],
+   "lower_bound": true,
+   "reason": null,
+   "source": "WS fstream.binance.com/market/ws/!forceOrder@arr",
+   "symbol": "BTCUSDT",
+   "timestamp": 1792264854749,
+   "venue": "binance",
+   "windows": {
+    "1h": {
+     "complete_coverage": false,
+     "covered_ms": 1103757,
+     "long_count": 0,
+     "long_usd": "0",
+     "short_count": 0,
+     "short_usd": "0",
+     "total_usd": "0",
+     "window_ms": 3600000
+    },
+    "24h": {
+     "complete_coverage": false,
+     "covered_ms": 1103757,
+     "long_count": 0,
+     "long_usd": "0",
+     "short_count": 0,
+     "short_usd": "0",
+     "total_usd": "0",
+     "window_ms": 86400000
+    },
+    "4h": {
+     "complete_coverage": false,
+     "covered_ms": 1103757,
+     "long_count": 0,
+     "long_usd": "0",
+     "short_count": 0,
+     "short_usd": "0",
+     "total_usd": "0",
+     "window_ms": 14400000
+    }
+   }
+  },
+  "bybit:BTCUSDT": {
+   "collector": {
+    "connected": false,
+    "connects": 0,
+    "error": null,
+    "events": 0,
+    "last_message_at": null,
+    "messages": 0,
+    "running": false,
+    "subscribed": [],
+    "watched": []
+   },
+   "coverage": {
+    "connected": false,
+    "since": 1792263659582,
+    "spans": [
+     [
+      1792263659582,
+      1792264771937
+     ]
+    ]
+   },
+   "label": "Bybit allLiquidation pushes all liquidations (500 ms batches); notional uses the bankruptcy price; only connected time is covered, so totals are a lower bound.",
+   "largest": [],
+   "lower_bound": true,
+   "reason": null,
+   "source": "WS stream.bybit.com/v5/public/linear allLiquidation.<symbol>",
+   "symbol": "BTCUSDT",
+   "timestamp": 1792264855297,
+   "venue": "bybit",
+   "windows": {
+    "1h": {
+     "complete_coverage": false,
+     "covered_ms": 1112355,
+     "long_count": 0,
+     "long_usd": "0",
+     "short_count": 0,
+     "short_usd": "0",
+     "total_usd": "0",
+     "window_ms": 3600000
+    },
+    "24h": {
+     "complete_coverage": false,
+     "covered_ms": 1112355,
+     "long_count": 0,
+     "long_usd": "0",
+     "short_count": 0,
+     "short_usd": "0",
+     "total_usd": "0",
+     "window_ms": 86400000
+    },
+    "4h": {
+     "complete_coverage": false,
+     "covered_ms": 1112355,
+     "long_count": 0,
+     "long_usd": "0",
+     "short_count": 0,
+     "short_usd": "0",
+     "total_usd": "0",
+     "window_ms": 14400000
+    }
+   }
+  }
+ }
+}

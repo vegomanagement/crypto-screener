@@ -152,6 +152,14 @@ def build_chart_snapshot(symbol, interval, limit, fetch_candles, as_of_ms=None, 
     if type(now) is not int:
         raise ValueError("as_of_ms must be an integer millisecond timestamp")
     base = _BASE[interval]
+    notes = []
+    if interval == "W" and exchange == "hyperliquid":
+        # Hyperliquid's native 1w candles open Thursday 00:00 UTC (epoch-aligned); the
+        # chart's weeks are Monday 00:00 UTC like Binance/Bybit, so build them from 7
+        # complete daily candles (incomplete weeks are dropped, never padded).
+        base = "D"
+        notes.append("Hyperliquid 1w candles start Thursday 00:00 UTC; Monday-based weeks are "
+                     "aggregated from 7 complete daily candles")
     ratio = 31 if interval == "M" else _duration(interval) // INTERVAL_MS[base]
     request_limit = min(1000, limit if base == interval else (limit + 1) * ratio)
     rows = fetch_candles(symbol, base, request_limit)
@@ -162,5 +170,5 @@ def build_chart_snapshot(symbol, interval, limit, fetch_candles, as_of_ms=None, 
     return {"symbol": symbol, "interval": interval, "exchange": exchange,
             "source": validated[0]["source"] if validated else None,
             "closed_only": True, "candles": candles, "zones": _fvg_zones(candles),
-            "warnings": [] if len(candles) >= limit else [
-                f"Only {len(candles)} of {limit} requested closed candles available"]}
+            "warnings": notes + ([] if len(candles) >= limit else [
+                f"Only {len(candles)} of {limit} requested closed candles available"])}

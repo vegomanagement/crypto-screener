@@ -992,3 +992,36 @@ test('seconds intervals: intervalSeconds steps and pixel edges on a 5s pane with
     assert.equal(pane.edgeCoordinate(1792195200 + 40), 100 + 5 * 15 - 7.5, 'right edge of the last 5s bar');
   } finally { coordinates.state.panes[0].interval = '2D'; }
 });
+
+test('legend EMA: closed-bar value, provisional live value on the forming bar, warming up only before the first period', () => {
+  const line = source.split('\n').find(value => value.trim().startsWith('const legendEmaValue ='));
+  assert.ok(line, 'legendEmaValue must remain testable');
+  const legendEmaValue = vm.runInNewContext(`${line}\nlegendEmaValue`);
+  // 300 closed 4h bars with an EMA 7 value at every bar from index 6.
+  const closed = Array.from({ length: 300 }, (_, i) => ({ time: 1_790_000_000 + i * 14400, close: 100 + i }));
+  const values = new Map(closed.slice(6).map((c, i) => [c.time, 200 + i]));
+  const last = closed.at(-1), forming = { time: last.time + 14400, close: 410 };
+  const own = legendEmaValue(values, last, last, 7);
+  assert.equal(own.value, values.get(last.time)); assert.equal(own.live, false);
+  const live = legendEmaValue(values, forming, last, 7);
+  assert.equal(live.live, true, 'the forming bar (4h panes always have one) no longer reads warming up');
+  assert.ok(Math.abs(live.value - (0.25 * 410 + 0.75 * values.get(last.time))) < 1e-9, 'alpha = 2 / (7 + 1)');
+  assert.equal(legendEmaValue(values, closed[3], last, 7), null, 'genuine warm-up bar');
+  assert.equal(legendEmaValue(new Map(), forming, last, 7), null, 'no closed EMA yet → warming up');
+  assert.equal(legendEmaValue(values, null, last, 7), null);
+});
+
+test('venue tick: fixed tickSize from Binance/Bybit metadata, Hyperliquid szDecimals price rule, null without metadata', () => {
+  const line = source.split('\n').find(value => value.trim().startsWith('const venueTick ='));
+  assert.ok(line, 'venueTick must remain testable');
+  const venueTick = vm.runInNewContext(`${line}\nvenueTick`);
+  assert.equal(venueTick({ tick_size: '0.10', sz_decimals: null, tick_rule: 'fixed' }, 81500), 0.1);
+  assert.equal(venueTick({ tick_size: '0.10' }, null), 0.1, 'fixed ticks do not need a price');
+  // Hyperliquid BTC: szDecimals 5 → ≤ 1 decimal, but 5 significant figures at 81 500 → tick 1.
+  assert.equal(venueTick({ tick_size: null, sz_decimals: 5 }, 81500), 1);
+  assert.equal(venueTick({ tick_size: null, sz_decimals: 4 }, 2400.5), 0.1, 'ETH: 5 sig figs → 0.1');
+  assert.equal(venueTick({ tick_size: null, sz_decimals: 0 }, 0.012345), 0.000001, 'max decimals 6 − 0');
+  assert.equal(venueTick({ tick_size: null, sz_decimals: 2 }, 0.5), 0.0001, '6 − 2 = 4 decimals beat 5 sig figs');
+  assert.equal(venueTick({ tick_size: null, sz_decimals: 5 }, null), null);
+  assert.equal(venueTick(null, 100), null);
+});

@@ -19,8 +19,6 @@
   const EMA_COLORS = { 200: '#c9d2df' };
   const GROUPS = window.WorkspaceIndicatorGroups || null, OPENS = window.WorkspaceOpens || null, SESSIONS = window.WorkspaceSessions || null;
   const RIBBON_KEYS = ['r0', 'r1', 'r2'];
-  // Ids replaced by the grouped indicators; never registered again.
-  const LEGACY_SPLIT_IDS = ['turtle-upper', 'turtle-lower', 'prev-day-high', 'prev-day-low', 'prev-week-high', 'prev-week-low', 'session-asia', 'session-london', 'session-ny'];
 
   // ─── Part A: generic indicator plugin registry (see docs/INDICATOR_PLUGIN_PLAN.md) ───
   // Each entry: { id, label, kind: 'line'|'band'|'boxes', defaultEnabled,
@@ -44,6 +42,24 @@
     }
     return result;
   }
+  // Venue price grid from the server's exchange metadata (/api/scalp/instrument,
+  // shared with /scalp: Binance PRICE_FILTER.tickSize, Bybit priceFilter.tickSize,
+  // Hyperliquid szDecimals). Hyperliquid's tick depends on the price (≤ 5
+  // significant figures, ≤ 6 − szDecimals decimals), as in footprint.hyperliquid_tick.
+  const instrumentCache = new Map();
+  function fetchInstrument(exchange, symbol) {
+    const key = `${exchange}:${symbol}`;
+    if (!instrumentCache.has(key)) instrumentCache.set(key, fetch(`/api/scalp/instrument?${new URLSearchParams({ exchange, symbol })}`, { headers: { Accept: 'application/json' } })
+      .then(async response => { const data = await response.json().catch(() => null); if (!response.ok || !data) throw new Error(data?.error || `HTTP ${response.status}`); return data; })
+      .catch(error => { instrumentCache.delete(key); throw error; }));
+    return instrumentCache.get(key);
+  }
+  const venueTick = (meta, price) => { if (!meta) return null; const fixed = Number(meta.tick_size); if (fixed > 0) return fixed; if (!Number.isInteger(meta.sz_decimals) || meta.sz_decimals < 0 || !(price > 0)) return null; return Number(Math.min(1, Math.max(10 ** (Math.floor(Math.log10(price)) - 4), 10 ** -(6 - meta.sz_decimals))).toPrecision(12)); };
+  // Legend value of an EMA computed over closed bars. The forming bar has no
+  // closed-bar value, so it gets the provisional live EMA from the last closed
+  // value and the forming close ({live: true}); 'warming up' is only for bars
+  // before the first `period` closed candles.
+  const legendEmaValue = (values, candle, lastClosed, period) => { if (!candle || !values) return null; if (values.has(candle.time)) return { value: values.get(candle.time), live: false }; if (!lastClosed || candle.time <= lastClosed.time || !values.has(lastClosed.time) || !Number.isFinite(candle.close)) return null; const alpha = 2 / (period + 1); return { value: alpha * candle.close + (1 - alpha) * values.get(lastClosed.time), live: true }; };
   // Rolling SMA of a single OHLC component (no 0-padding warm-up: callers get
   // nothing before `period` closed candles exist).
   function smaData(candles, period, source) {
@@ -160,7 +176,7 @@
     labelForSettings: () => 'Key levels / Opens' });
   if (SESSIONS) INDICATOR_DEFS.push({ id: 'sessions', label: 'Market Sessions', kind: 'sessions', defaultEnabled: false, settingsSchema: SESSIONS.settingsSchema(),
     labelForSettings: () => 'Market Sessions' });
-  INDICATOR_DEFS.push(...(window.WorkspaceIndicatorExtras?.definitions || []).filter(def => !LEGACY_SPLIT_IDS.includes(def.id)).map(def => def.kind !== 'band' ? def : ({ ...def, settingsSchema: [...def.settingsSchema,
+  INDICATOR_DEFS.push(...(window.WorkspaceIndicatorExtras?.definitions || []).map(def => def.kind !== 'band' ? def : ({ ...def, settingsSchema: [...def.settingsSchema,
     { key: 'innerBoundary', label: 'Visible inner boundary', type: 'select', default: def.innerBoundary || 'lower', options: ['upper', 'lower'] },
     { key: 'showOuter', label: 'Show outer boundary', type: 'boolean', default: false }
   ].filter((field, index, fields) => fields.findIndex(other => other.key === field.key) === index) })));
@@ -685,13 +701,21 @@
         levels: window.ScreenerLevels || null, requestDraw: () => this.scheduleDraw(), getContext: () => this.drawingContext(),
         onError: message => { this.status.textContent = `Levels store: ${message}`; this.status.title = this.status.textContent; } });
     }
+    refreshInstrument() {
+      const config = state.panes[this.id], key = `${config.exchange}:${config.symbol}`;
+      this.instrumentKey = key; this.instrument = null; this.instrumentError = null;
+      fetchInstrument(config.exchange, config.symbol).then(meta => { if (this.instrumentKey === key && !this.disposed) { this.instrument = meta; this.scheduleDraw(); } })
+        .catch(error => { if (this.instrumentKey === key) { this.instrumentError = error.message; this.instrumentKey = null; } });
+    }
     drawingContext() {
       const config = state.panes[this.id];
+      const tickSize = venueTick(this.instrument, this.lastDisplayPrice ?? this.candles.at(-1)?.close);
       const fp = config.footprint ? this.footprint?.store : null;
       return { exchange: config.exchange, symbol: config.symbol, interval: config.interval, candles: this.candles, chart: this.chart, series: this.series, host: this.host,
         footprint: fp || null, footprintVersion: fp ? `${fp.bars?.size}:${this.footprint.status?.state}` : 0,
         stepMs: intervalSeconds(config.interval, this.candles.at(-1)?.time || Date.now() / 1000) * 1000,
         precision: this.series.options().priceFormat?.precision ?? 2,
+        tickSize, tickSource: tickSize ? `${config.exchange} ${this.instrument.tick_rule === 'fixed' ? 'tickSize' : 'szDecimals rule'}` : 'chart precision',
         plotWidth: Math.max(0, this.host.clientWidth - this.chart.priceScale('right').width()),
         plotHeight: Math.max(0, this.host.clientHeight - this.chart.timeScale().height()) };
     }
@@ -1115,8 +1139,9 @@
         element.hidden = isRibbon ? !(isIndicatorEnabled('ema-ribbon') && ribbon[`show${n}`]) : !isIndicatorEnabled('ema200');
         const effectivePeriod = isRibbon ? ribbon[`period${n}`] : getIndicatorSettings('ema200').period;
         if (isRibbon) element.style.color = ribbon[`color${n}`];
-        const value = candle ? this.emaValues[key]?.get(candle.time) : undefined;
-        element.textContent = `EMA ${effectivePeriod} ${value === undefined ? '· warming up' : formatPrice(value)}`;
+        const point = legendEmaValue(this.emaValues[key], candle, this.candles.at(-1), effectivePeriod);
+        element.textContent = `EMA ${effectivePeriod} ${point === null ? '· warming up' : `${formatPrice(point.value)}${point.live ? ' (live)' : ''}`}`;
+        element.title = point?.live ? 'Provisional EMA including the forming bar; the plotted line uses closed bars only' : '';
       });
     }
     applyIndicators() {
@@ -1478,6 +1503,7 @@
     async load(resetView = false, restart = false) {
       if (resetView) this.centerOnPrice(null);
       if (this.fundingKey !== `${state.panes[this.id].exchange}:${state.panes[this.id].symbol}`) this.refreshFunding();
+      if (this.instrumentKey !== `${state.panes[this.id].exchange}:${state.panes[this.id].symbol}`) this.refreshInstrument();
       if (this.disposed) return;
       this.updateHeader();
       if (isSecondsInterval(state.panes[this.id].interval)) return this.loadSeconds(resetView, restart);
@@ -1794,7 +1820,7 @@
         input = document.createElement('select');
         field.options.forEach(option => {
           const optionEl = document.createElement('option');
-          optionEl.value = option; optionEl.textContent = option;
+          optionEl.value = option; optionEl.textContent = field.optionLabels?.[option] ?? option;
           input.append(optionEl);
         });
         input.value = settings[field.key];

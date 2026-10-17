@@ -125,7 +125,7 @@
     function view(ctx = getContext()) {
       if (!ctx.candles?.length) return null;
       const mapper = C.createMapper(ctx);
-      return mapper && { mapper, candles: ctx.candles, w: ctx.plotWidth, h: ctx.plotHeight, precision: ctx.precision, stepMs: ctx.stepMs,
+      return mapper && { mapper, candles: ctx.candles, w: ctx.plotWidth, h: ctx.plotHeight, precision: ctx.precision, tickSize: ctx.tickSize || null, stepMs: ctx.stepMs,
         footprint: ctx.footprint || null, footprintVersion: ctx.footprintVersion || 0 };
     }
     const visible = () => all().filter(d => C.visibleOn(d, self.interval ?? getContext().interval));

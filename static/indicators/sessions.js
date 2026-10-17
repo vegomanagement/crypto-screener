@@ -12,9 +12,11 @@
  * re-implements the few helpers it needs (colours, weekday names, history
  * trimming) instead of using those libraries. Sessions are computed only from
  * the chart's real closed candles. Port differences (no bar colouring, info /
- * opening-range tables or alerts; "pips" shown as range %; fixed GMT offsets
- * without DST, exactly as the script's timezone input) are listed in
- * docs/INDICATOR_GROUPS_RESULT.md.
+ * opening-range tables or alerts; "pips" shown as range %) are listed in
+ * docs/INDICATOR_GROUPS_RESULT.md. Additions over the script (not in v54): an
+ * optional per-session time zone, including DST-aware IANA zones resolved in
+ * the browser with Intl.DateTimeFormat (docs/POLISH_RESULT.md). The default is
+ * still the script's GMT+0 windows.
  */
 (function (root, factory) {
   'use strict';
@@ -25,6 +27,9 @@
   const DAY = 86400;
   const TIMEZONES = ['GMT-11', 'GMT-10', 'GMT-9', 'GMT-8', 'GMT-7', 'GMT-6', 'GMT-5', 'GMT-4', 'GMT-3', 'GMT-2', 'GMT-1', 'GMT+0', 'GMT+1', 'GMT+2', 'GMT+3',
     'GMT+330', 'GMT+4', 'GMT+430', 'GMT+5', 'GMT+530', 'GMT+6', 'GMT+7', 'GMT+8', 'GMT+9', 'GMT+10', 'GMT+11', 'GMT+12'];
+  // DST-aware zones offered in addition to the script's fixed offsets.
+  const IANA_ZONES = ['Europe/London', 'America/New_York', 'Asia/Tokyo', 'Australia/Sydney'];
+  const INHERIT = 'inherit'; // per-session zone: use the General timezone
   // Script defaults (name, colour, window, enabled). Monokai-like colours from the source.
   const SESSION_DEFAULTS = [['London', '#66d9ef', '0800-1700', true], ['New York', '#fd971f', '1300-2200', true],
     ['Tokyo', '#ae81ff', '0000-0900', true], ['Sydney', '#fb71a3', '2000-0500', false]];
@@ -42,6 +47,40 @@
     if (hours > 14 || minutes >= 60) throw new RangeError(`invalid GMT offset ${tz}`);
     return (m[1] === '-' ? -1 : 1) * (hours * 3600 + minutes * 60);
   }
+  // ── Time zones ──
+  // A zone is either a fixed 'GMT±H[MM]' offset (as in the script) or one of
+  // IANA_ZONES, whose UTC offset at an instant comes from Intl.DateTimeFormat.
+  const formatters = new Map();
+  function zoneFormatter(tz) {
+    if (!formatters.has(tz)) formatters.set(tz, new Intl.DateTimeFormat('en-US', { timeZone: tz, hourCycle: 'h23', year: 'numeric',
+      month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+    return formatters.get(tz);
+  }
+  function resolveZone(tz) {
+    if (/^GMT[+-]/.test(tz || '')) return { id: tz, fixed: parseOffset(tz) };
+    if (!IANA_ZONES.includes(tz)) throw new RangeError(`timezone must be a fixed GMT offset or one of ${IANA_ZONES.join(', ')}, got ${tz}`);
+    zoneFormatter(tz); // throws RangeError if the runtime lacks the zone
+    return { id: tz, fixed: null };
+  }
+  // Seconds east of UTC at the instant t (unix seconds).
+  function zoneOffset(zone, t) {
+    if (zone.fixed !== null) return zone.fixed;
+    const whole = Math.floor(t), p = {};
+    zoneFormatter(zone.id).formatToParts(new Date(whole * 1000)).forEach(part => { p[part.type] = Number(part.value); });
+    return Date.UTC(p.year, p.month - 1, p.day, p.hour % 24, p.minute, p.second) / 1000 - whole;
+  }
+  // Local wall-clock seconds (expressed as if UTC) → unix seconds. Ambiguous
+  // times (clocks back) take the earlier instant; skipped times (clocks
+  // forward) keep the pre-transition offset, i.e. land after the gap. This is
+  // what Python's zoneinfo does with fold=0.
+  function localToUtc(zone, wall) {
+    if (zone.fixed !== null) return wall - zone.fixed;
+    const before = zoneOffset(zone, wall - DAY), after = zoneOffset(zone, wall + DAY);
+    const valid = [...new Set([before, after])].map(o => wall - o).filter(u => u + zoneOffset(zone, u) === wall);
+    return valid.length ? Math.min(...valid) : wall - before;
+  }
+  const localDay = (zone, t) => Math.floor((t + zoneOffset(zone, t)) / DAY);
+
   // Pine session string 'HHMM-HHMM'; end <= start crosses midnight.
   function parseSession(value) {
     const m = /^(\d{2})(\d{2})-(\d{2})(\d{2})$/.exec(value || '');
@@ -58,7 +97,7 @@
       orMinutes: 15, orNowOnly: false, orBreakout: false, orTargets: false, orTargetBoxes: false, orColor: 'blue-red',
       fibStyle: 'solid', fibWidth: 1 };
     SESSION_DEFAULTS.forEach(([name, color, time, on], i) => Object.assign(s, { [`s${i + 1}Show`]: on, [`s${i + 1}Name`]: name, [`s${i + 1}Color`]: color,
-      [`s${i + 1}Time`]: time, [`s${i + 1}Extend`]: false, [`s${i + 1}Op`]: false, [`s${i + 1}Fib`]: false }));
+      [`s${i + 1}Time`]: time, [`s${i + 1}Tz`]: INHERIT, [`s${i + 1}Extend`]: false, [`s${i + 1}Op`]: false, [`s${i + 1}Fib`]: false }));
     return s;
   }
 
@@ -71,21 +110,23 @@
     if (!Array.isArray(candles) || !candles.length) return out;
     if (!Number.isFinite(step) || step <= 0) { out.warnings.push('Unknown bar duration'); return out; }
     if (step >= DAY) { out.hidden = true; out.warnings.push('Sessions are intraday-only and are hidden on daily and higher intervals'); return out; }
-    let offset;
-    try { offset = parseOffset(s.timezone); } catch (error) { out.warnings.push(error.message); return out; }
     const history = Math.max(1, Math.min(500, Math.trunc(s.history) || 10));
     const first = candles[0].time, last = candles.at(-1).time;
     const times = candles.map(c => c.time);
     const lowerBound = t => { let lo = 0, hi = times.length; while (lo < hi) { const mid = (lo + hi) >>> 1; if (times[mid] < t) lo = mid + 1; else hi = mid; } return lo; };
     for (let n = 1; n <= 4; n += 1) {
       if (!s[`s${n}Show`]) continue;
-      let window;
-      try { window = parseSession(s[`s${n}Time`]); } catch (error) { out.warnings.push(`${s[`s${n}Name`]}: ${error.message}`); continue; }
+      let window, zone;
+      const tz = s[`s${n}Tz`] && s[`s${n}Tz`] !== INHERIT ? s[`s${n}Tz`] : s.timezone;
+      try { window = parseSession(s[`s${n}Time`]); zone = resolveZone(tz); } catch (error) { out.warnings.push(`${s[`s${n}Name`]}: ${error.message}`); continue; }
       const extend = Boolean(s[`s${n}Extend`]);
       const list = [], ranges = [];
-      const firstDay = Math.floor((first + offset) / DAY) - 1, lastDay = Math.floor((last + offset) / DAY);
+      const firstDay = localDay(zone, first) - 1, lastDay = localDay(zone, last);
       for (let day = firstDay; day <= lastDay; day += 1) {
-        const start = day * DAY + window.start * 60 - offset, end = start + window.minutes * 60;
+        // Start and end are resolved separately, so a window spanning a DST
+        // change is one hour shorter or longer in UTC, like Pine's time(..., tz).
+        const start = localToUtc(zone, day * DAY + window.start * 60);
+        const end = localToUtc(zone, (window.end > window.start ? day : day + 1) * DAY + window.end * 60);
         const i0 = lowerBound(start), i1 = lowerBound(end); // bars [i0, i1)
         if (i1 <= i0) continue;
         const bars = candles.slice(i0, i1);
@@ -94,11 +135,15 @@
         const ended = last + step >= end; // the last closed bar reaches the window end
         const inst = { n, name: s[`s${n}Name`], color: s[`s${n}Color`], start, end, firstIndex: i0, lastIndex: i1 - 1,
           firstTime: bars[0].time, lastTime: bars.at(-1).time, open: bars[0].open, close: bars.at(-1).close, high, low,
-          range: high - low, rangePct: (high - low) / low * 100, day: WEEKDAYS[new Date((start + offset) * 1000).getUTCDay()],
+          range: high - low, rangePct: (high - low) / low * 100, day: WEEKDAYS[new Date((day * DAY) * 1000).getUTCDay()], timezone: zone.id,
           ended, inProgress: !ended, extend,
           avgRange: ranges.length ? ranges.reduce((a, b) => a + b, 0) / ranges.length : null };
         inst.fib = s[`s${n}Fib`] ? FIB_LEVELS.map(level => ({ level, price: (high - low) * level + low })) : [];
-        if (s[`s${n}Op`]) inst.or = openingRange(bars, inst, s, step);
+        // The loaded history starts after this session's start: its first N minutes
+        // are not in the data, so no opening range is drawn (Pine would take the
+        // first chart bar as the start; that range would not be the session's).
+        inst.truncated = i0 === 0 && candles[0].time > start;
+        if (s[`s${n}Op`]) inst.or = inst.truncated ? { truncated: true } : openingRange(bars, inst, s, step);
         inst.label = labelText(inst, s);
         list.push(inst);
         if (ended) { ranges.unshift(inst.range); if (ranges.length > INFO_PERIOD) ranges.pop(); }
@@ -113,26 +158,37 @@
     return out;
   }
 
-  // Opening range = bars whose open time is inside the first N minutes of the
-  // session (at least the first bar). It is fixed only once those bars closed.
+  // Opening range, as in f_render_oprange: N is forced to at least the chart
+  // timeframe + 1 minute (i_o_minutes := max(i_o_minutes, timeframe.multiplier + 1)),
+  // the session start is the first session bar's own time, and the range is
+  // fixed on the bar(s) whose open time is in (start + N − 1 bar, start + N],
+  // with top/bottom = highest/lowest since the session start. So it includes
+  // the bar opening exactly at start + N (15m chart, N = 15 → 16 → 2 bars).
+  // Pine's f_get_time_by_bar is `multiplier × 60 s`; on seconds charts that is
+  // multiplier minutes, which makes several bars "fix" the range in a row; the
+  // last one wins, i.e. the range is every bar with time ≤ start + N.
   function openingRange(bars, inst, s, step) {
-    const minutes = Math.max(1, Math.trunc(s.orMinutes) || 15);
-    const limit = inst.start + minutes * 60;
-    let k = bars.findIndex(c => c.time >= limit);
-    if (k === -1) k = bars.length;
-    k = Math.max(1, k);
-    const orBars = bars.slice(0, k);
-    const closeTime = orBars.at(-1).time + step;
-    if (closeTime < Math.min(limit, inst.end) && k === bars.length && !inst.ended) return { pending: true, minutes };
+    const requested = Math.max(1, Math.trunc(s.orMinutes) || 15);
+    const multiplier = step >= 60 ? step / 60 : step; // timeframe.multiplier (minutes, or seconds on S charts)
+    const minutes = Math.max(requested, Math.ceil(multiplier) + 1);
+    const startTime = bars[0].time, limit = startTime + minutes * 60, delay = multiplier * 60;
+    let k = -1; // last fixing bar
+    for (let i = 1; i < bars.length && bars[i].time <= limit; i += 1) if (bars[i].time > limit - delay) k = i;
+    const lastSeen = bars.at(-1).time;
+    if (!inst.ended && lastSeen + step <= limit) return { pending: true, minutes, requestedMinutes: requested };
+    if (k === -1) return { missing: true, minutes, requestedMinutes: requested }; // no bar at start + N: Pine never fixes it
+    const orBars = bars.slice(0, k + 1);
     let top = -Infinity, btm = Infinity;
     orBars.forEach(c => { top = Math.max(top, c.high); btm = Math.min(btm, c.low); });
-    const mdl = (top + btm) / 2, or = { minutes, top, btm, mdl, endTime: closeTime, lastOrTime: orBars.at(-1).time, breakouts: [], targets: null };
+    const mdl = (top + btm) / 2;
+    const or = { minutes, requestedMinutes: requested, bars: orBars.length, top, btm, mdl, endTime: orBars.at(-1).time + step, lastOrTime: orBars.at(-1).time, breakouts: [], targets: null };
     if (inst.avgRange !== null) {
       const avg1 = inst.avgRange * 0.786 * 0.5, avg2 = inst.avgRange * 1.272 * 0.5;
       or.targets = { R1: (btm + mdl) / 2 + avg1, R2: (btm + mdl) / 2 + avg2, S1: (top + mdl) / 2 - avg1, S2: (top + mdl) / 2 - avg2 };
-      // ta.crossover(high, R) / ta.crossunder(low, S): first crossing per level after the range is fixed.
+      // ta.crossover(high, R) / ta.crossunder(low, S): first crossing per level
+      // on the session bars after the fixing bar, against the previous chart bar.
       const reached = new Set();
-      for (let i = k; i < bars.length; i += 1) {
+      for (let i = k + 1; i < bars.length; i += 1) {
         const c = bars[i], p = bars[i - 1];
         [['R1', 'high', 1], ['R2', 'high', 1], ['S1', 'low', -1], ['S2', 'low', -1]].forEach(([name, field, dir]) => {
           const level = or.targets[name];
@@ -161,7 +217,7 @@
 
   function settingsSchema() {
     const d = settingsDefaults(), f = [];
-    f.push({ key: 'timezone', label: 'Timezone (fixed offset, no DST)', type: 'select', options: TIMEZONES.slice(), default: 'GMT+0', group: 'General' },
+    f.push({ key: 'timezone', label: 'Timezone (GMT±N fixed; city zones follow DST)', type: 'select', options: [...TIMEZONES, ...IANA_ZONES], default: 'GMT+0', group: 'General' },
       { key: 'history', label: 'History (sessions)', type: 'number', min: 1, max: 500, step: 1, default: 10, group: 'General' });
     for (let n = 1; n <= 4; n += 1) {
       const group = `Session #${n}`;
@@ -169,6 +225,7 @@
         { key: `s${n}Name`, label: 'Name', type: 'text', maxLength: 24, default: d[`s${n}Name`], group },
         { key: `s${n}Color`, label: 'Color', type: 'color', default: d[`s${n}Color`], group },
         { key: `s${n}Time`, label: 'Time (HHMM-HHMM)', type: 'session', default: d[`s${n}Time`], group },
+        { key: `s${n}Tz`, label: 'Time zone', type: 'select', options: [INHERIT, ...IANA_ZONES, ...TIMEZONES], optionLabels: { [INHERIT]: 'General timezone' }, default: INHERIT, group },
         { key: `s${n}Extend`, label: 'Extend right', type: 'boolean', default: false, group },
         { key: `s${n}Op`, label: 'Opening range', type: 'boolean', default: false, group },
         { key: `s${n}Fib`, label: 'Fibonacci levels', type: 'boolean', default: false, group });
@@ -249,7 +306,7 @@
       }
       inst.fib.forEach(f => seg(x1, view.y(f.price), x2, view.y(f.price), rgba(inst.color, 0.7), f.level === 0.5 ? 2 : s.fibWidth, f.level === 0.5 ? [] : DASH[s.fibStyle]));
       const or = inst.or;
-      if (or && !or.pending) {
+      if (or && !or.pending && !or.missing && !or.truncated) {
         const topColor = s.orColor === 'session' ? inst.color : TV.blue, btmColor = s.orColor === 'session' ? inst.color : TV.red;
         const xr = view.x(or.endTime), yt = view.y(or.top), yb = view.y(or.btm);
         rect(x1, yt, xr, yb, rgba(TV.yellow, 0.5));
@@ -270,5 +327,5 @@
     return drawn;
   }
 
-  return { DAY, TIMEZONES, SESSION_DEFAULTS, WEEKDAYS, FIB_LEVELS, TV, parseOffset, parseSession, settingsDefaults, settingsSchema, compute, openingRange, labelText, draw };
+  return { DAY, TIMEZONES, IANA_ZONES, INHERIT, resolveZone, zoneOffset, localToUtc, SESSION_DEFAULTS, WEEKDAYS, FIB_LEVELS, TV, parseOffset, parseSession, settingsDefaults, settingsSchema, compute, openingRange, labelText, draw };
 }));

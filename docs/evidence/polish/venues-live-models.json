@@ -1,0 +1,1932 @@
+[
+ {
+  "exchange": "bybit",
+  "symbol": "BTCUSDT",
+  "interval": "15",
+  "bars": 300,
+  "firstBar": 1791994500,
+  "lastBar": 1792263600,
+  "opens": [
+   {
+    "kind": "open",
+    "key": "D",
+    "name": "D",
+    "price": 81581.2,
+    "startTime": 1792195200,
+    "current": true,
+    "source": "daily",
+    "sourceTime": null
+   },
+   {
+    "kind": "open",
+    "key": "W",
+    "name": "W",
+    "price": 83733.1,
+    "startTime": 1791763200,
+    "current": true,
+    "source": "daily",
+    "sourceTime": null
+   },
+   {
+    "kind": "open",
+    "key": "M",
+    "name": "M",
+    "price": 83573.8,
+    "startTime": 1790812800,
+    "current": true,
+    "source": "daily",
+    "sourceTime": null
+   },
+   {
+    "kind": "open",
+    "key": "3M",
+    "name": "3M",
+    "price": 83573.8,
+    "startTime": 1790812800,
+    "current": true,
+    "source": "daily",
+    "sourceTime": null
+   },
+   {
+    "kind": "open",
+    "key": "Y",
+    "name": "Y",
+    "price": 87594.9,
+    "startTime": 1767225600,
+    "current": true,
+    "source": "daily",
+    "sourceTime": null
+   },
+   {
+    "kind": "prev",
+    "key": "pdh",
+    "name": "PDH",
+    "price": 82900,
+    "startTime": 1792195200,
+    "current": true,
+    "source": null,
+    "sourceTime": 1792108800
+   },
+   {
+    "kind": "prev",
+    "key": "pdl",
+    "name": "PDL",
+    "price": 80755.9,
+    "startTime": 1792195200,
+    "current": true,
+    "source": null,
+    "sourceTime": 1792108800
+   },
+   {
+    "kind": "prev",
+    "key": "pwh",
+    "name": "PWH",
+    "price": 86986.5,
+    "startTime": 1791763200,
+    "current": true,
+    "source": null,
+    "sourceTime": 1791158400
+   },
+   {
+    "kind": "prev",
+    "key": "pwl",
+    "name": "PWL",
+    "price": 80350.1,
+    "startTime": 1791763200,
+    "current": true,
+    "source": null,
+    "sourceTime": 1791158400
+   },
+   {
+    "kind": "prev",
+    "key": "pmh",
+    "name": "PMH",
+    "price": 87383.6,
+    "startTime": 1790812800,
+    "current": true,
+    "source": null,
+    "sourceTime": 1788220800
+   },
+   {
+    "kind": "prev",
+    "key": "pml",
+    "name": "PML",
+    "price": 74919.6,
+    "startTime": 1790812800,
+    "current": true,
+    "source": null,
+    "sourceTime": 1788220800
+   }
+  ],
+  "htf": {
+   "D": [
+    [
+     1792022400,
+     81642.6,
+     true
+    ],
+    [
+     1792108800,
+     82190.1,
+     true
+    ],
+    [
+     1792195200,
+     81581.2,
+     false
+    ]
+   ],
+   "W": [
+    [
+     1790553600,
+     84437.1,
+     true
+    ],
+    [
+     1791158400,
+     86486.7,
+     true
+    ],
+    [
+     1791763200,
+     83733.1,
+     false
+    ]
+   ],
+   "M": [
+    [
+     1782864000,
+     58603.5,
+     true
+    ],
+    [
+     1785542400,
+     62857.8,
+     true
+    ],
+    [
+     1788220800,
+     78541.8,
+     true
+    ]
+   ]
+  },
+  "htfErrors": [],
+  "opensWarnings": [],
+  "sessions": [
+   {
+    "n": 1,
+    "name": "London",
+    "start": 1791964800,
+    "end": 1791997200,
+    "firstTime": 1791994500,
+    "lastTime": 1791996300,
+    "high": 81978.5,
+    "low": 81545,
+    "ended": true,
+    "or": "truncated"
+   },
+   {
+    "n": 2,
+    "name": "New York",
+    "start": 1791982800,
+    "end": 1792015200,
+    "firstTime": 1791994500,
+    "lastTime": 1792014300,
+    "high": 82070,
+    "low": 81464.6,
+    "ended": true,
+    "or": null
+   },
+   {
+    "n": 3,
+    "name": "Tokyo",
+    "start": 1792022400,
+    "end": 1792054800,
+    "firstTime": 1792022400,
+    "lastTime": 1792053900,
+    "high": 81897.1,
+    "low": 80167,
+    "ended": true,
+    "or": null
+   },
+   {
+    "n": 1,
+    "name": "London",
+    "start": 1792051200,
+    "end": 1792083600,
+    "firstTime": 1792051200,
+    "lastTime": 1792082700,
+    "high": 82618,
+    "low": 79750,
+    "ended": true,
+    "or": {
+     "top": 81548,
+     "btm": 81140,
+     "bars": 2,
+     "lastOrTime": 1792052100,
+     "minutes": 16,
+     "targets": {
+      "R1": 81412.3655,
+      "R2": 81517.706,
+      "S1": 81275.6345,
+      "S2": 81170.294
+     },
+     "breakouts": [
+      {
+       "level": "S2",
+       "time": 1792057500,
+       "price": 81159.9,
+       "side": "down"
+      },
+      {
+       "level": "R1",
+       "time": 1792074600,
+       "price": 81594.6,
+       "side": "up"
+      },
+      {
+       "level": "R2",
+       "time": 1792074600,
+       "price": 81594.6,
+       "side": "up"
+      }
+     ]
+    }
+   },
+   {
+    "n": 2,
+    "name": "New York",
+    "start": 1792069200,
+    "end": 1792101600,
+    "firstTime": 1792069200,
+    "lastTime": 1792100700,
+    "high": 82618,
+    "low": 79750,
+    "ended": true,
+    "or": null
+   },
+   {
+    "n": 3,
+    "name": "Tokyo",
+    "start": 1792108800,
+    "end": 1792141200,
+    "firstTime": 1792108800,
+    "lastTime": 1792140300,
+    "high": 82503.7,
+    "low": 81640.9,
+    "ended": true,
+    "or": null
+   },
+   {
+    "n": 1,
+    "name": "London",
+    "start": 1792137600,
+    "end": 1792170000,
+    "firstTime": 1792137600,
+    "lastTime": 1792169100,
+    "high": 82900,
+    "low": 81199.2,
+    "ended": true,
+    "or": {
+     "top": 82328.3,
+     "btm": 82120,
+     "bars": 2,
+     "lastOrTime": 1792138500,
+     "minutes": 16,
+     "targets": {
+      "R1": 82820.81975,
+      "R2": 83221.95199999999,
+      "S1": 81627.48025000001,
+      "S2": 81226.34800000001
+     },
+     "breakouts": [
+      {
+       "level": "R1",
+       "time": 1792149300,
+       "price": 82900,
+       "side": "up"
+      },
+      {
+       "level": "S1",
+       "time": 1792162800,
+       "price": 81451,
+       "side": "down"
+      },
+      {
+       "level": "S2",
+       "time": 1792166400,
+       "price": 81199.2,
+       "side": "down"
+      }
+     ]
+    }
+   },
+   {
+    "n": 2,
+    "name": "New York",
+    "start": 1792155600,
+    "end": 1792188000,
+    "firstTime": 1792155600,
+    "lastTime": 1792187100,
+    "high": 82463.9,
+    "low": 80755.9,
+    "ended": true,
+    "or": null
+   },
+   {
+    "n": 3,
+    "name": "Tokyo",
+    "start": 1792195200,
+    "end": 1792227600,
+    "firstTime": 1792195200,
+    "lastTime": 1792226700,
+    "high": 81735.7,
+    "low": 81359.8,
+    "ended": true,
+    "or": null
+   },
+   {
+    "n": 1,
+    "name": "London",
+    "start": 1792224000,
+    "end": 1792256400,
+    "firstTime": 1792224000,
+    "lastTime": 1792255500,
+    "high": 81730,
+    "low": 81152,
+    "ended": true,
+    "or": {
+     "top": 81730,
+     "btm": 81673.4,
+     "bars": 2,
+     "lastOrTime": 1792224900,
+     "minutes": 16,
+     "targets": {
+      "R1": 82342.8513,
+      "R2": 82748.0376,
+      "S1": 81060.5487,
+      "S2": 80655.3624
+     },
+     "breakouts": []
+    }
+   },
+   {
+    "n": 2,
+    "name": "New York",
+    "start": 1792242000,
+    "end": 1792274400,
+    "firstTime": 1792242000,
+    "lastTime": 1792263600,
+    "high": 81583.5,
+    "low": 81144.4,
+    "ended": false,
+    "or": null
+   }
+  ],
+  "warnings": "",
+  "ready": true
+ },
+ {
+  "exchange": "bybit",
+  "symbol": "BTCUSDT",
+  "interval": "60",
+  "bars": 300,
+  "firstBar": 1791183600,
+  "lastBar": 1792260000,
+  "opens": [
+   {
+    "kind": "open",
+    "key": "D",
+    "name": "D",
+    "price": 81581.2,
+    "startTime": 1792195200,
+    "current": true,
+    "source": "daily",
+    "sourceTime": null
+   },
+   {
+    "kind": "open",
+    "key": "W",
+    "name": "W",
+    "price": 83733.1,
+    "startTime": 1791763200,
+    "current": true,
+    "source": "daily",
+    "sourceTime": null
+   },
+   {
+    "kind": "open",
+    "key": "M",
+    "name": "M",
+    "price": 83573.8,
+    "startTime": 1790812800,
+    "current": true,
+    "source": "daily",
+    "sourceTime": null
+   },
+   {
+    "kind": "open",
+    "key": "3M",
+    "name": "3M",
+    "price": 83573.8,
+    "startTime": 1790812800,
+    "current": true,
+    "source": "daily",
+    "sourceTime": null
+   },
+   {
+    "kind": "open",
+    "key": "Y",
+    "name": "Y",
+    "price": 87594.9,
+    "startTime": 1767225600,
+    "current": true,
+    "source": "daily",
+    "sourceTime": null
+   },
+   {
+    "kind": "prev",
+    "key": "pdh",
+    "name": "PDH",
+    "price": 82900,
+    "startTime": 1792195200,
+    "current": true,
+    "source": null,
+    "sourceTime": 1792108800
+   },
+   {
+    "kind": "prev",
+    "key": "pdl",
+    "name": "PDL",
+    "price": 80755.9,
+    "startTime": 1792195200,
+    "current": true,
+    "source": null,
+    "sourceTime": 1792108800
+   },
+   {
+    "kind": "prev",
+    "key": "pwh",
+    "name": "PWH",
+    "price": 86986.5,
+    "startTime": 1791763200,
+    "current": true,
+    "source": null,
+    "sourceTime": 1791158400
+   },
+   {
+    "kind": "prev",
+    "key": "pwl",
+    "name": "PWL",
+    "price": 80350.1,
+    "startTime": 1791763200,
+    "current": true,
+    "source": null,
+    "sourceTime": 1791158400
+   },
+   {
+    "kind": "prev",
+    "key": "pmh",
+    "name": "PMH",
+    "price": 87383.6,
+    "startTime": 1790812800,
+    "current": true,
+    "source": null,
+    "sourceTime": 1788220800
+   },
+   {
+    "kind": "prev",
+    "key": "pml",
+    "name": "PML",
+    "price": 74919.6,
+    "startTime": 1790812800,
+    "current": true,
+    "source": null,
+    "sourceTime": 1788220800
+   }
+  ],
+  "htf": {
+   "D": [
+    [
+     1792022400,
+     81642.6,
+     true
+    ],
+    [
+     1792108800,
+     82190.1,
+     true
+    ],
+    [
+     1792195200,
+     81581.2,
+     false
+    ]
+   ],
+   "W": [
+    [
+     1790553600,
+     84437.1,
+     true
+    ],
+    [
+     1791158400,
+     86486.7,
+     true
+    ],
+    [
+     1791763200,
+     83733.1,
+     false
+    ]
+   ],
+   "M": [
+    [
+     1782864000,
+     58603.5,
+     true
+    ],
+    [
+     1785542400,
+     62857.8,
+     true
+    ],
+    [
+     1788220800,
+     78541.8,
+     true
+    ]
+   ]
+  },
+  "htfErrors": [],
+  "opensWarnings": [],
+  "sessions": [
+   {
+    "n": 3,
+    "name": "Tokyo",
+    "start": 1791417600,
+    "end": 1791450000,
+    "firstTime": 1791417600,
+    "lastTime": 1791446400,
+    "high": 83482,
+    "low": 82152.1,
+    "ended": true,
+    "or": null
+   },
+   {
+    "n": 1,
+    "name": "London",
+    "start": 1791446400,
+    "end": 1791478800,
+    "firstTime": 1791446400,
+    "lastTime": 1791475200,
+    "high": 83143.2,
+    "low": 80745.5,
+    "ended": true,
+    "or": {
+     "top": 83143.2,
+     "btm": 82735.5,
+     "bars": 2,
+     "lastOrTime": 1791450000,
+     "minutes": 61,
+     "targets": {
+      "R1": 83419.4318,
+      "R2": 83779.29860000001,
+      "S1": 82459.26819999999,
+      "S2": 82099.40139999999
+     },
+     "breakouts": [
+      {
+       "level": "S1",
+       "time": 1791457200,
+       "price": 82258.2,
+       "side": "down"
+      },
+      {
+       "level": "S2",
+       "time": 1791460800,
+       "price": 81888.1,
+       "side": "down"
+      }
+     ]
+    }
+   },
+   {
+    "n": 2,
+    "name": "New York",
+    "start": 1791464400,
+    "end": 1791496800,
+    "firstTime": 1791464400,
+    "lastTime": 1791493200,
+    "high": 82754.1,
+    "low": 80350.1,
+    "ended": true,
+    "or": null
+   },
+   {
+    "n": 3,
+    "name": "Tokyo",
+    "start": 1791504000,
+    "end": 1791536400,
+    "firstTime": 1791504000,
+    "lastTime": 1791532800,
+    "high": 82721.6,
+    "low": 81569.5,
+    "ended": true,
+    "or": null
+   },
+   {
+    "n": 1,
+    "name": "London",
+    "start": 1791532800,
+    "end": 1791565200,
+    "firstTime": 1791532800,
+    "lastTime": 1791561600,
+    "high": 83497,
+    "low": 82356.4,
+    "ended": true,
+    "or": {
+     "top": 82721.6,
+     "btm": 82476.5,
+     "bars": 2,
+     "lastOrTime": 1791536400,
+     "minutes": 61,
+     "targets": {
+      "R1": 83209.854125,
+      "R2": 83625.4145,
+      "S1": 81988.24587500001,
+      "S2": 81572.6855
+     },
+     "breakouts": [
+      {
+       "level": "R1",
+       "time": 1791543600,
+       "price": 83497,
+       "side": "up"
+      }
+     ]
+    }
+   },
+   {
+    "n": 2,
+    "name": "New York",
+    "start": 1791550800,
+    "end": 1791583200,
+    "firstTime": 1791550800,
+    "lastTime": 1791579600,
+    "high": 83280.9,
+    "low": 82217.5,
+    "ended": true,
+    "or": null
+   },
+   {
+    "n": 3,
+    "name": "Tokyo",
+    "start": 1791590400,
+    "end": 1791622800,
+    "firstTime": 1791590400,
+    "lastTime": 1791619200,
+    "high": 82860.4,
+    "low": 82500,
+    "ended": true,
+    "or": null
+   },
+   {
+    "n": 1,
+    "name": "London",
+    "start": 1791619200,
+    "end": 1791651600,
+    "firstTime": 1791619200,
+    "lastTime": 1791648000,
+    "high": 83050.1,
+    "low": 82712.5,
+    "ended": true,
+    "or": {
+     "top": 82910.8,
+     "btm": 82712.5,
+     "bars": 2,
+     "lastOrTime": 1791622800,
+     "minutes": 61,
+     "targets": {
+      "R1": 83389.38945999999,
+      "R2": 83777.27092,
+      "S1": 82233.91054000001,
+      "S2": 81846.02908000001
+     },
+     "breakouts": []
+    }
+   },
+   {
+    "n": 2,
+    "name": "New York",
+    "start": 1791637200,
+    "end": 1791669600,
+    "firstTime": 1791637200,
+    "lastTime": 1791666000,
+    "high": 83138.8,
+    "low": 82730.4,
+    "ended": true,
+    "or": null
+   },
+   {
+    "n": 3,
+    "name": "Tokyo",
+    "start": 1791676800,
+    "end": 1791709200,
+    "firstTime": 1791676800,
+    "lastTime": 1791705600,
+    "high": 83205.5,
+    "low": 82751.8,
+    "ended": true,
+    "or": null
+   },
+   {
+    "n": 1,
+    "name": "London",
+    "start": 1791705600,
+    "end": 1791738000,
+    "firstTime": 1791705600,
+    "lastTime": 1791734400,
+    "high": 84000,
+    "low": 82927.5,
+    "ended": true,
+    "or": {
+     "top": 83085.1,
+     "btm": 82933,
+     "bars": 2,
+     "lastOrTime": 1791709200,
+     "minutes": 61,
+     "targets": {
+      "R1": 83515.89985,
+      "R2": 83852.8072,
+      "S1": 82502.20015,
+      "S2": 82165.29280000001
+     },
+     "breakouts": [
+      {
+       "level": "R1",
+       "time": 1791730800,
+       "price": 83963.5,
+       "side": "up"
+      },
+      {
+       "level": "R2",
+       "time": 1791730800,
+       "price": 83963.5,
+       "side": "up"
+      }
+     ]
+    }
+   },
+   {
+    "n": 2,
+    "name": "New York",
+    "start": 1791723600,
+    "end": 1791756000,
+    "firstTime": 1791723600,
+    "lastTime": 1791752400,
+    "high": 84188.1,
+    "low": 82977.7,
+    "ended": true,
+    "or": null
+   },
+   {
+    "n": 3,
+    "name": "Tokyo",
+    "start": 1791763200,
+    "end": 1791795600,
+    "firstTime": 1791763200,
+    "lastTime": 1791792000,
+    "high": 84332.5,
+    "low": 83426.9,
+    "ended": true,
+    "or": null
+   },
+   {
+    "n": 1,
+    "name": "London",
+    "start": 1791792000,
+    "end": 1791824400,
+    "firstTime": 1791792000,
+    "lastTime": 1791820800,
+    "high": 83979,
+    "low": 82360.6,
+    "ended": true,
+    "or": {
+     "top": 83979,
+     "btm": 83273.2,
+     "bars": 2,
+     "lastOrTime": 1791795600,
+     "minutes": 61,
+     "targets": {
+      "R1": 83976.8988,
+      "R2": 84302.90759999999,
+      "S1": 83275.3012,
+      "S2": 82949.2924
+     },
+     "breakouts": [
+      {
+       "level": "S1",
+       "time": 1791802800,
+       "price": 83238,
+       "side": "down"
+      },
+      {
+       "level": "S2",
+       "time": 1791806400,
+       "price": 82607.7,
+       "side": "down"
+      }
+     ]
+    }
+   },
+   {
+    "n": 2,
+    "name": "New York",
+    "start": 1791810000,
+    "end": 1791842400,
+    "firstTime": 1791810000,
+    "lastTime": 1791838800,
+    "high": 83118.2,
+    "low": 82243.2,
+    "ended": true,
+    "or": null
+   },
+   {
+    "n": 3,
+    "name": "Tokyo",
+    "start": 1791849600,
+    "end": 1791882000,
+    "firstTime": 1791849600,
+    "lastTime": 1791878400,
+    "high": 84138.6,
+    "low": 81000,
+    "ended": true,
+    "or": null
+   },
+   {
+    "n": 1,
+    "name": "London",
+    "start": 1791878400,
+    "end": 1791910800,
+    "firstTime": 1791878400,
+    "lastTime": 1791907200,
+    "high": 84138.6,
+    "low": 83078.4,
+    "ended": true,
+    "or": {
+     "top": 84138.6,
+     "btm": 83340,
+     "bars": 2,
+     "lastOrTime": 1791882000,
+     "minutes": 61,
+     "targets": {
+      "R1": 84080.4966,
+      "R2": 84414.9132,
+      "S1": 83398.1034,
+      "S2": 83063.68680000001
+     },
+     "breakouts": []
+    }
+   },
+   {
+    "n": 2,
+    "name": "New York",
+    "start": 1791896400,
+    "end": 1791928800,
+    "firstTime": 1791896400,
+    "lastTime": 1791925200,
+    "high": 83834.5,
+    "low": 82923.2,
+    "ended": true,
+    "or": null
+   },
+   {
+    "n": 3,
+    "name": "Tokyo",
+    "start": 1791936000,
+    "end": 1791968400,
+    "firstTime": 1791936000,
+    "lastTime": 1791964800,
+    "high": 84119.6,
+    "low": 83117.6,
+    "ended": true,
+    "or": null
+   },
+   {
+    "n": 1,
+    "name": "London",
+    "start": 1791964800,
+    "end": 1791997200,
+    "firstTime": 1791964800,
+    "lastTime": 1791993600,
+    "high": 84119.6,
+    "low": 81519.5,
+    "ended": true,
+    "or": {
+     "top": 84119.6,
+     "btm": 83163.2,
+     "bars": 2,
+     "lastOrTime": 1791968400,
+     "minutes": 61,
+     "targets": {
+      "R1": 83929.34793333332,
+      "R2": 84255.23253333333,
+      "S1": 83353.45206666666,
+      "S2": 83027.56746666666
+     },
+     "breakouts": [
+      {
+       "level": "S2",
+       "time": 1791972000,
+       "price": 82987.7,
+       "side": "down"
+      }
+     ]
+    }
+   },
+   {
+    "n": 2,
+    "name": "New York",
+    "start": 1791982800,
+    "end": 1792015200,
+    "firstTime": 1791982800,
+    "lastTime": 1792011600,
+    "high": 83080,
+    "low": 81464.6,
+    "ended": true,
+    "or": null
+   },
+   {
+    "n": 3,
+    "name": "Tokyo",
+    "start": 1792022400,
+    "end": 1792054800,
+    "firstTime": 1792022400,
+    "lastTime": 1792051200,
+    "high": 81897.1,
+    "low": 80167,
+    "ended": true,
+    "or": null
+   },
+   {
+    "n": 1,
+    "name": "London",
+    "start": 1792051200,
+    "end": 1792083600,
+    "firstTime": 1792051200,
+    "lastTime": 1792080000,
+    "high": 82618,
+    "low": 79750,
+    "ended": true,
+    "or": {
+     "top": 81548,
+     "btm": 81140,
+     "bars": 2,
+     "lastOrTime": 1792054800,
+     "minutes": 61,
+     "targets": {
+      "R1": 81818.52707,
+      "R2": 82175.00564,
+      "S1": 80869.47293,
+      "S2": 80512.99436
+     },
+     "breakouts": [
+      {
+       "level": "S1",
+       "time": 1792058400,
+       "price": 80818.4,
+       "side": "down"
+      },
+      {
+       "level": "S2",
+       "time": 1792065600,
+       "price": 80500,
+       "side": "down"
+      },
+      {
+       "level": "R1",
+       "time": 1792072800,
+       "price": 82025.9,
+       "side": "up"
+      },
+      {
+       "level": "R2",
+       "time": 1792076400,
+       "price": 82618,
+       "side": "up"
+      }
+     ]
+    }
+   },
+   {
+    "n": 2,
+    "name": "New York",
+    "start": 1792069200,
+    "end": 1792101600,
+    "firstTime": 1792069200,
+    "lastTime": 1792098000,
+    "high": 82618,
+    "low": 79750,
+    "ended": true,
+    "or": null
+   },
+   {
+    "n": 3,
+    "name": "Tokyo",
+    "start": 1792108800,
+    "end": 1792141200,
+    "firstTime": 1792108800,
+    "lastTime": 1792137600,
+    "high": 82503.7,
+    "low": 81640.9,
+    "ended": true,
+    "or": null
+   },
+   {
+    "n": 1,
+    "name": "London",
+    "start": 1792137600,
+    "end": 1792170000,
+    "firstTime": 1792137600,
+    "lastTime": 1792166400,
+    "high": 82900,
+    "low": 81199.2,
+    "ended": true,
+    "or": {
+     "top": 82353,
+     "btm": 81963.1,
+     "bars": 2,
+     "lastOrTime": 1792141200,
+     "minutes": 61,
+     "targets": {
+      "R1": 82687.15633636365,
+      "R2": 83074.58449090911,
+      "S1": 81628.94366363635,
+      "S2": 81241.5155090909
+     },
+     "breakouts": [
+      {
+       "level": "R1",
+       "time": 1792148400,
+       "price": 82900,
+       "side": "up"
+      },
+      {
+       "level": "S1",
+       "time": 1792162800,
+       "price": 81287.9,
+       "side": "down"
+      },
+      {
+       "level": "S2",
+       "time": 1792166400,
+       "price": 81199.2,
+       "side": "down"
+      }
+     ]
+    }
+   },
+   {
+    "n": 2,
+    "name": "New York",
+    "start": 1792155600,
+    "end": 1792188000,
+    "firstTime": 1792155600,
+    "lastTime": 1792184400,
+    "high": 82463.9,
+    "low": 80755.9,
+    "ended": true,
+    "or": null
+   },
+   {
+    "n": 3,
+    "name": "Tokyo",
+    "start": 1792195200,
+    "end": 1792227600,
+    "firstTime": 1792195200,
+    "lastTime": 1792224000,
+    "high": 81735.7,
+    "low": 81359.8,
+    "ended": true,
+    "or": null
+   },
+   {
+    "n": 1,
+    "name": "London",
+    "start": 1792224000,
+    "end": 1792256400,
+    "firstTime": 1792224000,
+    "lastTime": 1792252800,
+    "high": 81730,
+    "low": 81152,
+    "ended": true,
+    "or": {
+     "top": 81730,
+     "btm": 81552.3,
+     "bars": 2,
+     "lastOrTime": 1792227600,
+     "minutes": 61,
+     "targets": {
+      "R1": 82226.792425,
+      "R2": 82616.37610000001,
+      "S1": 81055.507575,
+      "S2": 80665.9239
+     },
+     "breakouts": []
+    }
+   },
+   {
+    "n": 2,
+    "name": "New York",
+    "start": 1792242000,
+    "end": 1792274400,
+    "firstTime": 1792242000,
+    "lastTime": 1792260000,
+    "high": 81583.5,
+    "low": 81144.4,
+    "ended": false,
+    "or": null
+   }
+  ],
+  "warnings": "",
+  "ready": true
+ },
+ {
+  "exchange": "hyperliquid",
+  "symbol": "BTC",
+  "interval": "15",
+  "bars": 300,
+  "firstBar": 1791994500,
+  "lastBar": 1792263600,
+  "opens": [
+   {
+    "kind": "open",
+    "key": "D",
+    "name": "D",
+    "price": 81589,
+    "startTime": 1792195200,
+    "current": true,
+    "source": "daily",
+    "sourceTime": null
+   },
+   {
+    "kind": "open",
+    "key": "W",
+    "name": "W",
+    "price": 83730,
+    "startTime": 1791763200,
+    "current": true,
+    "source": "daily",
+    "sourceTime": null
+   },
+   {
+    "kind": "open",
+    "key": "M",
+    "name": "M",
+    "price": 83607,
+    "startTime": 1790812800,
+    "current": true,
+    "source": "daily",
+    "sourceTime": null
+   },
+   {
+    "kind": "open",
+    "key": "3M",
+    "name": "3M",
+    "price": 83607,
+    "startTime": 1790812800,
+    "current": true,
+    "source": "daily",
+    "sourceTime": null
+   },
+   {
+    "kind": "open",
+    "key": "Y",
+    "name": "Y",
+    "price": 87631,
+    "startTime": 1767225600,
+    "current": true,
+    "source": "daily",
+    "sourceTime": null
+   },
+   {
+    "kind": "prev",
+    "key": "pdh",
+    "name": "PDH",
+    "price": 82898,
+    "startTime": 1792195200,
+    "current": true,
+    "source": null,
+    "sourceTime": 1792108800
+   },
+   {
+    "kind": "prev",
+    "key": "pdl",
+    "name": "PDL",
+    "price": 80772,
+    "startTime": 1792195200,
+    "current": true,
+    "source": null,
+    "sourceTime": 1792108800
+   },
+   {
+    "kind": "prev",
+    "key": "pwh",
+    "name": "PWH",
+    "price": 86990,
+    "startTime": 1791763200,
+    "current": true,
+    "source": null,
+    "sourceTime": 1791158400
+   },
+   {
+    "kind": "prev",
+    "key": "pwl",
+    "name": "PWL",
+    "price": 80351,
+    "startTime": 1791763200,
+    "current": true,
+    "source": null,
+    "sourceTime": 1791158400
+   },
+   {
+    "kind": "prev",
+    "key": "pmh",
+    "name": "PMH",
+    "price": 87471,
+    "startTime": 1790812800,
+    "current": true,
+    "source": null,
+    "sourceTime": 1788220800
+   },
+   {
+    "kind": "prev",
+    "key": "pml",
+    "name": "PML",
+    "price": 74903,
+    "startTime": 1790812800,
+    "current": true,
+    "source": null,
+    "sourceTime": 1788220800
+   }
+  ],
+  "htf": {
+   "D": [
+    [
+     1792022400,
+     81651,
+     true
+    ],
+    [
+     1792108800,
+     82211,
+     true
+    ],
+    [
+     1792195200,
+     81589,
+     false
+    ]
+   ],
+   "W": [
+    [
+     1789948800,
+     81221,
+     true
+    ],
+    [
+     1790553600,
+     84438,
+     true
+    ],
+    [
+     1791158400,
+     86500,
+     true
+    ]
+   ],
+   "M": [
+    [
+     1782864000,
+     58604,
+     true
+    ],
+    [
+     1785542400,
+     62857,
+     true
+    ],
+    [
+     1788220800,
+     78575,
+     true
+    ]
+   ]
+  },
+  "htfErrors": [],
+  "opensWarnings": [],
+  "sessions": [
+   {
+    "n": 1,
+    "name": "London",
+    "start": 1791964800,
+    "end": 1791997200,
+    "firstTime": 1791994500,
+    "lastTime": 1791996300,
+    "high": 81993,
+    "low": 81556,
+    "ended": true,
+    "or": "truncated"
+   },
+   {
+    "n": 2,
+    "name": "New York",
+    "start": 1791982800,
+    "end": 1792015200,
+    "firstTime": 1791994500,
+    "lastTime": 1792014300,
+    "high": 82072,
+    "low": 81497,
+    "ended": true,
+    "or": null
+   },
+   {
+    "n": 3,
+    "name": "Tokyo",
+    "start": 1792022400,
+    "end": 1792054800,
+    "firstTime": 1792022400,
+    "lastTime": 1792053900,
+    "high": 81900,
+    "low": 80193,
+    "ended": true,
+    "or": null
+   },
+   {
+    "n": 1,
+    "name": "London",
+    "start": 1792051200,
+    "end": 1792083600,
+    "firstTime": 1792051200,
+    "lastTime": 1792082700,
+    "high": 82604,
+    "low": 79732,
+    "ended": true,
+    "or": {
+     "top": 81544,
+     "btm": 81147,
+     "bars": 2,
+     "lastOrTime": 1792052100,
+     "minutes": 16,
+     "targets": {
+      "R1": 81417.991,
+      "R2": 81524.182,
+      "S1": 81273.009,
+      "S2": 81166.818
+     },
+     "breakouts": [
+      {
+       "level": "S2",
+       "time": 1792058400,
+       "price": 80994,
+       "side": "down"
+      },
+      {
+       "level": "R1",
+       "time": 1792072800,
+       "price": 81450,
+       "side": "up"
+      },
+      {
+       "level": "R2",
+       "time": 1792074600,
+       "price": 81580,
+       "side": "up"
+      }
+     ]
+    }
+   },
+   {
+    "n": 2,
+    "name": "New York",
+    "start": 1792069200,
+    "end": 1792101600,
+    "firstTime": 1792069200,
+    "lastTime": 1792100700,
+    "high": 82613,
+    "low": 79732,
+    "ended": true,
+    "or": null
+   },
+   {
+    "n": 3,
+    "name": "Tokyo",
+    "start": 1792108800,
+    "end": 1792141200,
+    "firstTime": 1792108800,
+    "lastTime": 1792140300,
+    "high": 82505,
+    "low": 81657,
+    "ended": true,
+    "or": null
+   },
+   {
+    "n": 1,
+    "name": "London",
+    "start": 1792137600,
+    "end": 1792170000,
+    "firstTime": 1792137600,
+    "lastTime": 1792169100,
+    "high": 82898,
+    "low": 81226,
+    "ended": true,
+    "or": {
+     "top": 82336,
+     "btm": 82132,
+     "bars": 2,
+     "lastOrTime": 1792138500,
+     "minutes": 16,
+     "targets": {
+      "R1": 82833.2185,
+      "R2": 83235.262,
+      "S1": 81634.7815,
+      "S2": 81232.738
+     },
+     "breakouts": [
+      {
+       "level": "R1",
+       "time": 1792149300,
+       "price": 82898,
+       "side": "up"
+      },
+      {
+       "level": "S1",
+       "time": 1792162800,
+       "price": 81450,
+       "side": "down"
+      },
+      {
+       "level": "S2",
+       "time": 1792166400,
+       "price": 81226,
+       "side": "down"
+      }
+     ]
+    }
+   },
+   {
+    "n": 2,
+    "name": "New York",
+    "start": 1792155600,
+    "end": 1792188000,
+    "firstTime": 1792155600,
+    "lastTime": 1792187100,
+    "high": 82479,
+    "low": 80772,
+    "ended": true,
+    "or": null
+   },
+   {
+    "n": 3,
+    "name": "Tokyo",
+    "start": 1792195200,
+    "end": 1792227600,
+    "firstTime": 1792195200,
+    "lastTime": 1792226700,
+    "high": 81737,
+    "low": 81387,
+    "ended": true,
+    "or": null
+   },
+   {
+    "n": 1,
+    "name": "London",
+    "start": 1792224000,
+    "end": 1792256400,
+    "firstTime": 1792224000,
+    "lastTime": 1792255500,
+    "high": 81720,
+    "low": 81157,
+    "ended": true,
+    "or": {
+     "top": 81720,
+     "btm": 81676,
+     "bars": 2,
+     "lastOrTime": 1792224900,
+     "minutes": 16,
+     "targets": {
+      "R1": 82339.511,
+      "R2": 82742.972,
+      "S1": 81056.489,
+      "S2": 80653.028
+     },
+     "breakouts": []
+    }
+   },
+   {
+    "n": 2,
+    "name": "New York",
+    "start": 1792242000,
+    "end": 1792274400,
+    "firstTime": 1792242000,
+    "lastTime": 1792263600,
+    "high": 81577,
+    "low": 81148,
+    "ended": false,
+    "or": null
+   }
+  ],
+  "warnings": "",
+  "ready": true
+ },
+ {
+  "exchange": "binance",
+  "symbol": "BTCUSDT",
+  "interval": "15",
+  "bars": 300,
+  "firstBar": 1791994500,
+  "lastBar": 1792263600,
+  "opens": [
+   {
+    "kind": "open",
+    "key": "D",
+    "name": "D",
+    "price": 81578.3,
+    "startTime": 1792195200,
+    "current": true,
+    "source": "daily",
+    "sourceTime": null
+   },
+   {
+    "kind": "open",
+    "key": "W",
+    "name": "W",
+    "price": 83723.1,
+    "startTime": 1791763200,
+    "current": true,
+    "source": "daily",
+    "sourceTime": null
+   },
+   {
+    "kind": "open",
+    "key": "M",
+    "name": "M",
+    "price": 83576.8,
+    "startTime": 1790812800,
+    "current": true,
+    "source": "daily",
+    "sourceTime": null
+   },
+   {
+    "kind": "open",
+    "key": "3M",
+    "name": "3M",
+    "price": 83576.8,
+    "startTime": 1790812800,
+    "current": true,
+    "source": "daily",
+    "sourceTime": null
+   },
+   {
+    "kind": "open",
+    "key": "Y",
+    "name": "Y",
+    "price": 87608.3,
+    "startTime": 1767225600,
+    "current": true,
+    "source": "daily",
+    "sourceTime": null
+   },
+   {
+    "kind": "prev",
+    "key": "pdh",
+    "name": "PDH",
+    "price": 82900.5,
+    "startTime": 1792195200,
+    "current": true,
+    "source": null,
+    "sourceTime": 1792108800
+   },
+   {
+    "kind": "prev",
+    "key": "pdl",
+    "name": "PDL",
+    "price": 80780,
+    "startTime": 1792195200,
+    "current": true,
+    "source": null,
+    "sourceTime": 1792108800
+   },
+   {
+    "kind": "prev",
+    "key": "pwh",
+    "name": "PWH",
+    "price": 86976.1,
+    "startTime": 1791763200,
+    "current": true,
+    "source": null,
+    "sourceTime": 1791158400
+   },
+   {
+    "kind": "prev",
+    "key": "pwl",
+    "name": "PWL",
+    "price": 80344.8,
+    "startTime": 1791763200,
+    "current": true,
+    "source": null,
+    "sourceTime": 1791158400
+   },
+   {
+    "kind": "prev",
+    "key": "pmh",
+    "name": "PMH",
+    "price": 87385.1,
+    "startTime": 1790812800,
+    "current": true,
+    "source": null,
+    "sourceTime": 1788220800
+   },
+   {
+    "kind": "prev",
+    "key": "pml",
+    "name": "PML",
+    "price": 74909.4,
+    "startTime": 1790812800,
+    "current": true,
+    "source": null,
+    "sourceTime": 1788220800
+   }
+  ],
+  "htf": {
+   "D": [
+    [
+     1792022400,
+     81641.6,
+     true
+    ],
+    [
+     1792108800,
+     82195.3,
+     true
+    ],
+    [
+     1792195200,
+     81578.3,
+     false
+    ]
+   ],
+   "W": [
+    [
+     1790553600,
+     84433,
+     true
+    ],
+    [
+     1791158400,
+     86482.8,
+     true
+    ],
+    [
+     1791763200,
+     83723.1,
+     false
+    ]
+   ],
+   "M": [
+    [
+     1782864000,
+     58605.4,
+     true
+    ],
+    [
+     1785542400,
+     62859.9,
+     true
+    ],
+    [
+     1788220800,
+     78549.6,
+     true
+    ]
+   ]
+  },
+  "htfErrors": [],
+  "opensWarnings": [],
+  "sessions": [
+   {
+    "n": 1,
+    "name": "London",
+    "start": 1791964800,
+    "end": 1791997200,
+    "firstTime": 1791994500,
+    "lastTime": 1791996300,
+    "high": 81969.5,
+    "low": 81543.8,
+    "ended": true,
+    "or": "truncated"
+   },
+   {
+    "n": 2,
+    "name": "New York",
+    "start": 1791982800,
+    "end": 1792015200,
+    "firstTime": 1791994500,
+    "lastTime": 1792014300,
+    "high": 82051.3,
+    "low": 81452.2,
+    "ended": true,
+    "or": null
+   },
+   {
+    "n": 3,
+    "name": "Tokyo",
+    "start": 1792022400,
+    "end": 1792054800,
+    "firstTime": 1792022400,
+    "lastTime": 1792053900,
+    "high": 81893.8,
+    "low": 80188,
+    "ended": true,
+    "or": null
+   },
+   {
+    "n": 1,
+    "name": "London",
+    "start": 1792051200,
+    "end": 1792083600,
+    "firstTime": 1792051200,
+    "lastTime": 1792082700,
+    "high": 82588.9,
+    "low": 79732.3,
+    "ended": true,
+    "or": {
+     "top": 81540,
+     "btm": 81139,
+     "bars": 2,
+     "lastOrTime": 1792052100,
+     "minutes": 16,
+     "targets": {
+      "R1": 81406.5501,
+      "R2": 81509.9952,
+      "S1": 81272.4499,
+      "S2": 81169.0048
+     },
+     "breakouts": [
+      {
+       "level": "S2",
+       "time": 1792057500,
+       "price": 81152.5,
+       "side": "down"
+      },
+      {
+       "level": "R1",
+       "time": 1792074600,
+       "price": 81594.1,
+       "side": "up"
+      },
+      {
+       "level": "R2",
+       "time": 1792074600,
+       "price": 81594.1,
+       "side": "up"
+      }
+     ]
+    }
+   },
+   {
+    "n": 2,
+    "name": "New York",
+    "start": 1792069200,
+    "end": 1792101600,
+    "firstTime": 1792069200,
+    "lastTime": 1792100700,
+    "high": 82639.2,
+    "low": 79732.3,
+    "ended": true,
+    "or": null
+   },
+   {
+    "n": 3,
+    "name": "Tokyo",
+    "start": 1792108800,
+    "end": 1792141200,
+    "firstTime": 1792108800,
+    "lastTime": 1792140300,
+    "high": 82500,
+    "low": 81637.7,
+    "ended": true,
+    "or": null
+   },
+   {
+    "n": 1,
+    "name": "London",
+    "start": 1792137600,
+    "end": 1792170000,
+    "firstTime": 1792137600,
+    "lastTime": 1792169100,
+    "high": 82900.5,
+    "low": 81214.2,
+    "ended": true,
+    "or": {
+     "top": 82328.5,
+     "btm": 82120.9,
+     "bars": 2,
+     "lastOrTime": 1792138500,
+     "minutes": 16,
+     "targets": {
+      "R1": 82817.77194999998,
+      "R2": 83216.57139999999,
+      "S1": 81631.62805000001,
+      "S2": 81232.82860000001
+     },
+     "breakouts": [
+      {
+       "level": "R1",
+       "time": 1792149300,
+       "price": 82900.5,
+       "side": "up"
+      },
+      {
+       "level": "S1",
+       "time": 1792162800,
+       "price": 81450,
+       "side": "down"
+      },
+      {
+       "level": "S2",
+       "time": 1792166400,
+       "price": 81214.2,
+       "side": "down"
+      }
+     ]
+    }
+   },
+   {
+    "n": 2,
+    "name": "New York",
+    "start": 1792155600,
+    "end": 1792188000,
+    "firstTime": 1792155600,
+    "lastTime": 1792187100,
+    "high": 82459.8,
+    "low": 80780,
+    "ended": true,
+    "or": null
+   },
+   {
+    "n": 3,
+    "name": "Tokyo",
+    "start": 1792195200,
+    "end": 1792227600,
+    "firstTime": 1792195200,
+    "lastTime": 1792226700,
+    "high": 81733,
+    "low": 81373.3,
+    "ended": true,
+    "or": null
+   },
+   {
+    "n": 1,
+    "name": "London",
+    "start": 1792224000,
+    "end": 1792256400,
+    "firstTime": 1792224000,
+    "lastTime": 1792255500,
+    "high": 81724.8,
+    "low": 81157.1,
+    "ended": true,
+    "or": {
+     "top": 81724.8,
+     "btm": 81672.4,
+     "bars": 2,
+     "lastOrTime": 1792224900,
+     "minutes": 16,
+     "targets": {
+      "R1": 82336.3866,
+      "R2": 82738.8432,
+      "S1": 81060.81340000001,
+      "S2": 80658.35680000001
+     },
+     "breakouts": []
+    }
+   },
+   {
+    "n": 2,
+    "name": "New York",
+    "start": 1792242000,
+    "end": 1792274400,
+    "firstTime": 1792242000,
+    "lastTime": 1792263600,
+    "high": 81575.5,
+    "low": 81149.8,
+    "ended": false,
+    "or": null
+   }
+  ],
+  "warnings": "",
+  "ready": true
+ }
+]

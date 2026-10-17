@@ -11,7 +11,8 @@
   const text = (x, y, value, extra = {}) => ({ t: 'text', x, y, text: value, size: 11, ...extra });
   const box = (l, t, r, b, extra = {}) => ({ t: 'poly', pts: [{ x: l, y: t }, { x: r, y: t }, { x: r, y: b }, { x: l, y: b }], closed: true, ...extra });
   const UP = '#2fae86', DOWN = '#d9534f';
-  const tickOf = (o, view) => (o.tick > 0 ? o.tick : 10 ** -(view.precision ?? 2));
+  // Tick: the tool's own override, else the venue tick from exchange metadata, else the chart precision.
+  const tickOf = (o, view) => (o.tick > 0 ? o.tick : view.tickSize > 0 ? view.tickSize : 10 ** -(view.precision ?? 2));
 
   // ── ranges ──
   function rangeStats(d, view) {
@@ -69,7 +70,7 @@
       type: side, group: 'measure', label: side === 'long' ? 'Long position' : 'Short position', icon: side === 'long' ? '⬆$' : '⬇$', points: 2, storedPoints: 3,
       defaults: { opts: { account: 1000, riskPct: 1, qtyStep: 0, tick: 0, showPnl: true } },
       options: [{ key: 'account', label: 'Account size', type: 'number', min: 0, step: 1 }, { key: 'riskPct', label: 'Risk %', type: 'number', min: 0, max: 100, step: 0.1 },
-        { key: 'qtyStep', label: 'Quantity step (0 = exact)', type: 'number', min: 0, step: 0.0001 }, { key: 'tick', label: 'Tick size (0 = chart precision)', type: 'number', min: 0, step: 0.0001 },
+        { key: 'qtyStep', label: 'Quantity step (0 = exact)', type: 'number', min: 0, step: 0.0001 }, { key: 'tick', label: 'Tick size (0 = exchange tick)', type: 'number', min: 0, step: 0.0001 },
         { key: 'showPnl', label: 'Show P&L', type: 'bool' }],
       finalize: (points, view) => finalizePosition(side, points, view),
       build(d, view, pts, o) {
