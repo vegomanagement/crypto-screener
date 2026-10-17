@@ -215,6 +215,15 @@ def _text(value, limit):
     return value.strip()[:limit] if isinstance(value, str) and value.strip() else None
 
 
+def _list(raw, key, warnings):
+    """``raw[key]`` when it is a list; anything else (dict, number, string) is ignored with a warning."""
+    value = raw.get(key)
+    if value is None or isinstance(value, list):
+        return value or []
+    warnings.append(f"{key}: not a list; ignored")
+    return []
+
+
 def _sources(item, snapshot, where, warnings):
     raw = item.get("source_fields")
     if not isinstance(raw, list) or not raw:
@@ -301,7 +310,7 @@ def validate(raw, snapshot):
         confidence = "low"
     bounds = price_bounds(snapshot)
     levels = []
-    for i, item in enumerate((raw.get("levels") or [])[:MAX_LEVELS * 2]):
+    for i, item in enumerate(_list(raw, "levels", warnings)[:MAX_LEVELS * 2]):
         where = f"levels[{i}]"
         if not isinstance(item, dict) or item.get("type") not in LEVEL_TYPES:
             warnings.append(f"{where}: dropped, invalid type")
@@ -333,14 +342,14 @@ def validate(raw, snapshot):
         raise ValueError("factor_scores must contain at least one valid factor "
                          "{factor, direction long|short, strength 1-3, source_fields}")
     scenarios = []
-    for i, item in enumerate((raw.get("scenarios") or [])[:MAX_SCENARIOS * 2]):
+    for i, item in enumerate(_list(raw, "scenarios", warnings)[:MAX_SCENARIOS * 2]):
         fields = {k: _text(item.get(k), 200) if isinstance(item, dict) else None
                   for k in ("name", "trigger", "target", "invalidation")}
         if not fields["name"] or not fields["trigger"]:
             warnings.append(f"scenarios[{i}]: dropped, needs name and trigger")
         elif len(scenarios) < MAX_SCENARIOS:
             scenarios.append({k: v or "" for k, v in fields.items()})
-    risks = [r for r in (_text(x, 200) for x in (raw.get("risks") or [])[:MAX_RISKS]) if r]
+    risks = [r for r in (_text(x, 200) for x in _list(raw, "risks", warnings)[:MAX_RISKS]) if r]
     summary = _text(raw.get("summary_ru"), 2000) or ""
     if len(summary) > 400:
         warnings.append(f"summary_ru truncated from {len(summary)} to 400 chars")
@@ -363,6 +372,8 @@ def ask_hermes(snapshot, send, *, timeout=TIMEOUT_S, clock=time.monotonic):
     raws, model, error = [], None, None
     for attempt in range(2):
         text, model = send(messages, deadline=deadline)
+        if not isinstance(text, str):   # e.g. a content-parts list from a non-standard gateway
+            text = ""
         raws.append(text)
         try:
             raw_obj, notes = parse_reply(text)
