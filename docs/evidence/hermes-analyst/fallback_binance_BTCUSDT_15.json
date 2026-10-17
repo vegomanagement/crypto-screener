@@ -1,0 +1,98 @@
+{
+ "http": 200,
+ "status": "hermes_unavailable",
+ "source": "baseline",
+ "warnings": [
+  "Hermes gateway not configured (HERMES_API_URL); baseline shown"
+ ],
+ "analysis": {
+  "bias": "long",
+  "confidence": "low",
+  "horizon": "12 bars of 15",
+  "key_factors": [
+   {
+    "source_fields": [
+     "baseline.long_factors"
+    ],
+    "text": "CVD ⚪ нейтрально"
+   },
+   {
+    "source_fields": [
+     "baseline.long_factors"
+    ],
+    "text": "VP ⚪ вне VA | POC $82,538"
+   },
+   {
+    "source_fields": [
+     "baseline.long_factors"
+    ],
+    "text": "Session 🗽 NY Session [4/5]"
+   },
+   {
+    "source_fields": [
+     "baseline.long_factors"
+    ],
+    "text": "Book ✅ bid>ask"
+   },
+   {
+    "source_fields": [
+     "baseline.long_factors"
+    ],
+    "text": "F&G 🤑 Greed [55]"
+   },
+   {
+    "source_fields": [
+     "baseline.long_factors"
+    ],
+    "text": "TZ 1H ⚪ Нейтральная [-0.9% от mean]"
+   }
+  ],
+  "levels": [
+   {
+    "price": 81575.5,
+    "reason": "last confirmed swing high",
+    "source_fields": [
+     "structure.last_swing_high.price"
+    ],
+    "type": "resistance"
+   },
+   {
+    "price": 81583.0,
+    "reason": "VAL pool (buyside)",
+    "source_fields": [
+     "liquidity.pools.1.price"
+    ],
+    "type": "liquidity"
+   },
+   {
+    "price": 81000.0,
+    "reason": "round pool (sellside)",
+    "source_fields": [
+     "liquidity.pools.0.price"
+    ],
+    "type": "liquidity"
+   },
+   {
+    "price": 81414.65,
+    "reason": "midpoint of nearest bear FVG",
+    "source_fields": [
+     "fvg.nearest.0"
+    ],
+    "type": "poi"
+   }
+  ],
+  "long_pct": 59,
+  "risks": [
+   "Baseline only: the language-model analyst did not answer."
+  ],
+  "scenarios": [],
+  "short_pct": 41,
+  "summary_ru": "Детерминированная оценка (без Hermes): confluence long 84 / short 58."
+ },
+ "baseline_scores": {
+  "long_score": 84,
+  "short_score": 58,
+  "long_verdict": "WAIT",
+  "short_verdict": "WAIT"
+ }
+}
