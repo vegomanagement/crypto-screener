@@ -33,10 +33,12 @@ def default_fetch_bars(exchange, symbol, interval, after_ms, count):
     """Closed bars opening at/after ``after_ms`` (the analysed bar's close), oldest first."""
     from chart_data import build_chart_snapshot
     from exchange_markets import fetch_exchange_candles
+
+    from analyst_store import BarsUnavailable
     elapsed = int(time.time() * 1000) - after_ms
     need = elapsed // interval_duration_ms(interval) + 2
     if need > 500:
-        raise ValueError("analysis too old for the candle window")
+        raise BarsUnavailable("analysis too old for the candle window")
     chart = build_chart_snapshot(symbol, interval, int(max(need, count)),
                                  lambda s, i, n: fetch_exchange_candles(exchange, s, i, n),
                                  exchange=exchange)

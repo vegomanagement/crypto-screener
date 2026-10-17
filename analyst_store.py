@@ -44,6 +44,12 @@ EXTRA_COLUMNS = (("p_long", "REAL"), ("net", "REAL"), ("factors_json", "TEXT"),
                  ("agent_bias", "TEXT"), ("disagreement", "TEXT"))
 
 OUTCOMES = ("win", "loss", "ambiguous", "timeout")
+# Terminal states for rows that can never be scored; they are not hits and leave the queue.
+EXPIRED, UNSCORABLE = "expired", "unscorable"
+
+
+class BarsUnavailable(ValueError):
+    """The bars after this analysis can no longer be fetched (too old for the candle window)."""
 
 
 def evaluate_outcome(bias, entry, atr, bars, horizon_bars):
@@ -152,21 +158,29 @@ class AnalysisStore:
             self._conn.commit()
             return cur.lastrowid
 
-    def pending(self, now_ms, interval_ms_fn, limit=20):
-        """Rows with a directional bias whose horizon has fully elapsed and no outcome yet."""
-        with self._lock:
-            rows = self._conn.execute(
-                "SELECT id, exchange, symbol, interval, price, atr, bar_close_ts, bias, horizon_bars "
-                "FROM agent_analyses WHERE outcome IS NULL AND bias IN ('long','short') "
-                "ORDER BY ts LIMIT 500").fetchall()
-        due = []
-        for r in rows:
-            try:
-                span = interval_ms_fn(r[3]) * (r[8] or 0)
-            except ValueError:
-                continue
-            if r[6] is not None and r[6] + span <= now_ms:
-                due.append(r)
+    def pending(self, now_ms, interval_ms_fn, limit=20, batch=500):
+        """Rows with a directional bias whose horizon has fully elapsed and no outcome yet.
+
+        Walks the whole queue in id-ordered batches, so rows that are not due yet (e.g. weekly
+        analyses) can never hide due rows behind a fixed LIMIT.
+        """
+        due, last_id = [], 0
+        while len(due) < limit:
+            with self._lock:
+                rows = self._conn.execute(
+                    "SELECT id, exchange, symbol, interval, price, atr, bar_close_ts, bias, horizon_bars "
+                    "FROM agent_analyses WHERE outcome IS NULL AND bias IN ('long','short') AND id > ? "
+                    "ORDER BY id LIMIT ?", (last_id, batch)).fetchall()
+            if not rows:
+                break
+            last_id = rows[-1][0]
+            for r in rows:
+                try:
+                    span = interval_ms_fn(r[3]) * (r[8] or 0)
+                except ValueError:
+                    continue
+                if r[6] is not None and r[6] + span <= now_ms:
+                    due.append(r)
         return due[:limit]
 
     def set_outcome(self, row_id, outcome, now_ms):
@@ -191,6 +205,8 @@ class AnalysisStore:
         out = summarize(rows)
         out.update(total=len(rows), pending=pending,
                    neutral=sum(1 for r in rows if r[1] == "neutral"),
+                   expired=sum(1 for r in rows if r[4] == EXPIRED),
+                   unscorable=sum(1 for r in rows if r[4] == UNSCORABLE),
                    split=split_stats(full))
         return out
 
@@ -199,13 +215,21 @@ def evaluate_pending(store, fetch_bars, now_ms, interval_ms_fn, limit=20):
     """Fetch later closed bars for due rows and store outcomes. Returns count evaluated.
 
     ``fetch_bars(exchange, symbol, interval, after_ms, count)`` → closed bars whose
-    open time is ≥ after_ms, oldest first. Fetch errors leave the row pending.
+    open time is ≥ after_ms, oldest first. Transient fetch errors leave the row pending;
+    ``BarsUnavailable`` (bars too old to fetch) marks it ``expired`` and a row without a
+    usable price/ATR is marked ``unscorable``, so neither can block the queue forever.
     """
     done = 0
     for row_id, exchange, symbol, interval, price, atr_v, close_ts, bias, horizon in \
             store.pending(now_ms, interval_ms_fn, limit):
+        if not price or not atr_v or atr_v <= 0:
+            store.set_outcome(row_id, UNSCORABLE, now_ms)
+            continue
         try:
             bars = fetch_bars(exchange, symbol, interval, close_ts, horizon)
+        except BarsUnavailable:
+            store.set_outcome(row_id, EXPIRED, now_ms)
+            continue
         except Exception:  # noqa: BLE001, S112 — row stays pending
             continue
         outcome = evaluate_outcome(bias, price, atr_v, bars, horizon)
