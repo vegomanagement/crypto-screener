@@ -75,6 +75,16 @@ Rules:
   funding.cross_venue / funding.cross_venue_annualized_spread. Positive funding = longs pay
   (crowded longs), negative = shorts pay. funding.predicted is a live estimate that changes until
   settlement; funding.last_settled is final.
+- Positioning: when snapshot.positioning is present, look for positioning evidence on BOTH
+  sides (e.g. crowd long-heavy vs top traders, taker sellers vs OI building) and add 1-3 factors
+  citing leaf values such as positioning.top_traders.position.long_share,
+  positioning.crowd.long_share, positioning.taker.value, positioning.open_interest.change_4h.value
+  with .price_pct, positioning.basis.value, positioning.signals.<id>.state,
+  positioning.liquidations.windows.1h.long_usd, positioning.whales.aggregate.long_notional.
+  Never cite a null value (see positioning.missing). Caveats: liquidations are a LOWER BOUND
+  (check covered_min / complete_coverage; strength 1 when coverage is partial), and HL whales
+  are top-N accounts by account value that include vaults and market makers (strength at most
+  2). Positioning labels are descriptive, not trade signals.
 - Do not cite baseline.* in factor_scores: the server blends that deterministic baseline in
   itself, so citing it would count it twice.
 - bias is your own reading and is used only as a cross-check against the computed split.
@@ -217,12 +227,20 @@ def _sources(item, snapshot, where, warnings):
     return [str(s) for s in raw[:6]]
 
 
+def _is_null(snapshot, path):
+    """True when a cited path holds null, or a metric envelope whose ``value`` is null."""
+    value = _lookup(snapshot, path)
+    return value is None or (isinstance(value, dict) and "value" in value and value["value"] is None)
+
+
 def validate_factors(items, snapshot, warnings):
     """Keep factors with a known direction, integer strength 1-3 and resolvable source_fields.
 
     A factor whose source_fields set equals one already kept is a duplicate (the same
     evidence counted twice) and is dropped, whatever its direction or wording. Factors
-    citing ``baseline.*`` are dropped too: the server blends the baseline in itself.
+    citing ``baseline.*`` are dropped too: the server blends the baseline in itself, and so
+    are factors citing a null (missing) ``positioning.*`` value. ``positioning.*`` paths are accepted like any
+    other existing snapshot path.
     """
     if not isinstance(items, list):
         warnings.append("factor_scores missing or not a list")
@@ -246,6 +264,10 @@ def validate_factors(items, snapshot, warnings):
             continue
         if any(x.split(".")[0].split("[")[0] in SERVER_BLENDED for x in sources):
             warnings.append(f"{where}: dropped, cites the baseline that the server already blends in")
+            continue
+        nulls = [x for x in sources if x.startswith("positioning.") and _is_null(snapshot, x)]
+        if nulls:
+            warnings.append(f"{where}: dropped, cites null (missing) positioning fields {nulls[:3]}")
             continue
         key = frozenset(sources)
         if key in seen:

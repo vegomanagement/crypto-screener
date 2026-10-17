@@ -89,3 +89,32 @@ test('formatters', () => {
   assert.equal(PP.fmtPx('0.06303'), '0.0630300');
   assert.equal(PP.fmtPx(null), '—');
 });
+
+test('mount: timer ticks skip while not visible; update() switches target and drops the old coin', async () => {
+  const urls = [];
+  const fetchStub = async url => { urls.push(url); return { ok: true, json: async () => snap }; };
+  const doc = { getElementById: () => true, createElement: () => ({ className: '', innerHTML: '', remove() {} }) };
+  const el = { ownerDocument: doc, appendChild(c) { return c; } };
+  const timers = [];
+  const realSet = global.setInterval, realClear = global.clearInterval;
+  global.setInterval = fn => { timers.push(fn); return 1; };
+  global.clearInterval = () => {};
+  let visible = false;
+  try {
+    const ctl = PP.mount(el, { exchange: 'binance', symbol: 'BTCUSDT', period: '15m', coin: 'BTC', owner: 'analyst-card', fetch: fetchStub, visible: () => visible });
+    await new Promise(r => setImmediate(r));
+    const n = urls.length;
+    assert.ok(n >= 1);
+    timers[0]();
+    await new Promise(r => setImmediate(r));
+    assert.equal(urls.length, n, 'hidden → no poll');
+    visible = true;
+    timers[0]();
+    await new Promise(r => setImmediate(r));
+    assert.ok(urls.length > n);
+    ctl.update({ exchange: 'bybit', symbol: 'SOLUSDT', period: '1h', coin: 'SOL' });
+    await new Promise(r => setImmediate(r));
+    assert.ok(urls.some(u => u.includes('exchange=bybit') && u.includes('symbol=SOLUSDT') && u.includes('period=1h')));
+    ctl.destroy();
+  } finally { global.setInterval = realSet; global.clearInterval = realClear; }
+});

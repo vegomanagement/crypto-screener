@@ -99,8 +99,10 @@ def split_stats(rows):
         except ValueError:
             factor_lists.append([])
     hermes = [f for r, f in zip(scored, factor_lists) if r[0] == "hermes"]
-    with_funding = sum(1 for fs in hermes
-                       if any(s.startswith("funding.") for f in fs for s in f.get("source_fields", [])))
+    def citing(prefix):
+        return sum(1 for fs in hermes
+                   if any(s.startswith(prefix) for f in fs for s in f.get("source_fields", [])))
+    with_funding = citing("funding.")
     n = len(ps)
     mean = sum(ps) / n if n else None
     hist = {f"{lo}-{lo + 10}": sum(1 for p in ps if lo <= p < lo + 10 or (lo == 90 and p == 100))
@@ -115,6 +117,7 @@ def split_stats(rows):
         "hermes_runs": len(hermes),
         "factors_per_hermes_run": round(sum(len(f) for f in hermes) / len(hermes), 2) if hermes else None,
         "hermes_runs_citing_funding": with_funding,
+        "hermes_runs_citing_positioning": citing("positioning."),
         "disagreements": {s: sum(1 for r in scored if r[7] == s) for s in ("opposite", "neutral_mismatch")},
     }
 

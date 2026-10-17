@@ -43,8 +43,22 @@ def default_fetch_bars(exchange, symbol, interval, after_ms, count):
     return [c for c in chart["candles"] if c["ts"] >= after_ms]
 
 
+def app_positioning(app):
+    """Positioning provider bound late to the app's PositioningService (registered later).
+
+    ``watch=False``: an analysis reads whatever the liquidation collector and the whale
+    tracker already hold and never starts them (cold collectors → null + reason).
+    """
+    def provider(exchange, symbol, period):
+        ext = app.extensions.get('positioning')
+        if not ext:
+            raise RuntimeError('positioning routes are not registered')
+        return ext['get_service']().snapshot(exchange, symbol, period, owner='analyst', watch=False)
+    return provider
+
+
 def register_agent_routes(app, *, market=None, confluence=None, funding=None, service_factory=None,
-                          store_path=None, fetch_bars=None, env=None):
+                          store_path=None, fetch_bars=None, env=None, positioning=None):
     """``market``/``confluence`` are screener callables (late-bound lambdas are fine)."""
     blueprint = Blueprint('agent', __name__)
     path = Path(store_path) if store_path else Path(app.root_path) / '.data' / 'agent_analyses.sqlite3'
@@ -71,7 +85,8 @@ def register_agent_routes(app, *, market=None, confluence=None, funding=None, se
                         from analyst_service import AnalystService
                         config = config_from_env(env)
                         state['service'] = AnalystService(
-                            default_providers(market=market, confluence=confluence, funding=funding),
+                            default_providers(market=market, confluence=confluence, funding=funding,
+                                              positioning=positioning or app_positioning(app)),
                             make_transport(config), store, configured=config is not None)
         return state['service']
 

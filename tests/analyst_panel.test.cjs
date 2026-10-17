@@ -167,3 +167,59 @@ test('controller shows rate-limit and seconds-chart errors without posting', asy
     assert.match(el.roles.status.textContent, /retry in 33s/);
   } finally { ctl.destroy(); }
 });
+
+test('positioningTarget maps the active pane to venue/symbol/period, rejecting what positioning cannot serve', () => {
+  assert.deepEqual(A.positioningTarget({ exchange: 'binance', symbol: 'BTCUSDT', interval: '15' }),
+    { exchange: 'binance', symbol: 'BTCUSDT', period: '15m', coin: 'BTC', key: 'binance:BTCUSDT:15m' });
+  assert.equal(A.positioningTarget({ exchange: 'bybit', symbol: '1000PEPEUSDT', interval: '240' }).period, '4h');
+  assert.equal(A.positioningTarget({ exchange: 'bybit', symbol: '1000PEPEUSDT', interval: '240' }).coin, 'PEPE');
+  assert.equal(A.positioningTarget({ exchange: 'hyperliquid', symbol: 'BTC', interval: 'D' }).coin, 'BTC');
+  assert.match(A.positioningTarget({ exchange: 'binance', symbol: 'BTCUSDT', interval: '5s' }).error, /No positioning period/);
+  assert.match(A.positioningTarget({ exchange: 'hyperliquid', symbol: 'xyz:GOLD', interval: '15' }).error, /no data/);
+  assert.ok(A.positioningTarget(null).error);
+});
+
+test('Positioning section mounts positioning-panel only while open, follows the pane, polls only when visible', async () => {
+  const mounts = [], updates = [], destroyed = [];
+  const fakePanel = { mount(box, opts) { mounts.push(opts); return { update(t) { updates.push(t); }, destroy() { destroyed.push(1); } }; } };
+  let active = { id: 1, exchange: 'binance', symbol: 'BTCUSDT', interval: '15' };
+  const fetch = async () => ({ ok: true, json: async () => ({ total: 0, overall: { n: 0 } }) });
+  const el = fakeEl();
+  const ctl = A.mount(el, { fetch, getActive: () => active, drawLines() {}, clearLines() {}, centerOn() {},
+    visible: () => true, positioning: fakePanel });
+  try {
+    assert.match(Object.keys(el.roles).join(','), /positioning/);
+    ctl.activeChanged();
+    assert.equal(mounts.length, 0, 'closed section does not mount or poll');
+    el.roles.positioning.open = true;
+    el.roles.positioning.ontoggle();
+    assert.equal(mounts.length, 1);
+    assert.deepEqual([mounts[0].exchange, mounts[0].symbol, mounts[0].period, mounts[0].coin, mounts[0].intervalMs],
+      ['binance', 'BTCUSDT', '15m', 'BTC', 60000]);
+    assert.equal(mounts[0].owner, 'analyst-card');
+    assert.equal(mounts[0].visible(), true);
+    assert.equal(el.roles.posTarget.textContent, 'binance · BTCUSDT · 15m');
+    ctl.activeChanged();
+    assert.equal(updates.length, 0, 'same pane → no refetch');
+    active = { id: 2, exchange: 'bybit', symbol: 'SOLUSDT', interval: '60' };
+    ctl.activeChanged();
+    assert.deepEqual(updates.at(-1), { exchange: 'bybit', symbol: 'SOLUSDT', period: '1h', coin: 'SOL' });
+    active = { id: 3, exchange: 'binance', symbol: 'BTCUSDT', interval: '5s' };
+    ctl.activeChanged();
+    assert.equal(destroyed.length, 1);
+    assert.match(el.roles.posBody.innerHTML, /No positioning period/);
+    active = { id: 1, exchange: 'binance', symbol: 'ETHUSDT', interval: '15' };
+    ctl.activeChanged();
+    assert.equal(mounts.length, 2);
+    el.roles.positioning.open = false;
+    assert.equal(mounts[1].visible(), false, 'closed section → timer ticks skipped');
+    el.roles.positioning.ontoggle();
+    assert.equal(destroyed.length, 2);
+  } finally { ctl.destroy(); }
+});
+
+test('workspace loads positioning-panel.js before the analyst card', () => {
+  const html = require('node:fs').readFileSync(require('node:path').join(__dirname, '../templates/workspace.html'), 'utf8');
+  const p = html.indexOf('/static/positioning-panel.js'), a = html.indexOf('/static/analyst-panel.js');
+  assert.ok(p > 0 && a > p);
+});
