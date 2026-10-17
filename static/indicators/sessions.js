@@ -139,7 +139,11 @@
           ended, inProgress: !ended, extend,
           avgRange: ranges.length ? ranges.reduce((a, b) => a + b, 0) / ranges.length : null };
         inst.fib = s[`s${n}Fib`] ? FIB_LEVELS.map(level => ({ level, price: (high - low) * level + low })) : [];
-        if (s[`s${n}Op`]) inst.or = openingRange(bars, inst, s, step);
+        // The loaded history starts after this session's start: its first N minutes
+        // are not in the data, so no opening range is drawn (Pine would take the
+        // first chart bar as the start; that range would not be the session's).
+        inst.truncated = i0 === 0 && candles[0].time > start;
+        if (s[`s${n}Op`]) inst.or = inst.truncated ? { truncated: true } : openingRange(bars, inst, s, step);
         inst.label = labelText(inst, s);
         list.push(inst);
         if (ended) { ranges.unshift(inst.range); if (ranges.length > INFO_PERIOD) ranges.pop(); }
@@ -302,7 +306,7 @@
       }
       inst.fib.forEach(f => seg(x1, view.y(f.price), x2, view.y(f.price), rgba(inst.color, 0.7), f.level === 0.5 ? 2 : s.fibWidth, f.level === 0.5 ? [] : DASH[s.fibStyle]));
       const or = inst.or;
-      if (or && !or.pending && !or.missing) {
+      if (or && !or.pending && !or.missing && !or.truncated) {
         const topColor = s.orColor === 'session' ? inst.color : TV.blue, btmColor = s.orColor === 'session' ? inst.color : TV.red;
         const xr = view.x(or.endTime), yt = view.y(or.top), yb = view.y(or.btm);
         rect(x1, yt, xr, yb, rgba(TV.yellow, 0.5));

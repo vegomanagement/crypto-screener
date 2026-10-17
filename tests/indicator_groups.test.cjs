@@ -285,6 +285,11 @@ test('opening range (Pine rule): N ≥ timeframe + 1 min, includes the bar openi
   // No bar at start + N (data gap) → Pine never fixes the range → nothing drawn.
   const gap = q.filter(c => c.time !== iso('2026-10-12T08:15:00Z'));
   assert.equal(S.compute(gap, only(1, { s1Op: true }), 900).instances[0].or.missing, true);
+  // History starting after the session start (08:30): no opening range from a truncated session.
+  const late = q.filter(c => c.time >= iso('2026-10-12T08:30:00Z'));
+  const lateFirst = S.compute(late, only(1, { s1Op: true }), 900).instances[0];
+  assert.equal(lateFirst.truncated, true); assert.deepEqual(lateFirst.or, { truncated: true });
+  assert.equal(S.compute(q, only(1, { s1Op: true }), 900).instances[0].truncated, false);
   // Seconds chart (5s): every bar with time ≤ start + 15m.
   const sec = bars(200 * 2, iso('2026-10-12T07:59:00Z'), 5, i => 100 + i);
   const secOr = S.compute(sec, only(1, { s1Op: true, s1Time: '0800-0830' }), 5).instances[0].or;
