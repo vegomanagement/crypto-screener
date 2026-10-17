@@ -79,10 +79,12 @@ test('controller: Binance backfill then id-contiguous live continuation; buffere
   const T = 1792195200000;
   let now = T + 12500;
   const hub = fakeHub();
-  let resolve;
+  let resolve, waited = null;
   const fetch = url => { assert.match(url, /^\/api\/seconds\?exchange=binance&symbol=BTCUSDT&minutes=10&seconds=5$/); return new Promise(r => { resolve = r; }); };
-  const ctl = sc.createController({ exchange: 'binance', symbol: 'BTCUSDT', interval: '5s', hub, fetch, now: () => now, setInterval: () => 1, clearInterval: () => {} }).start();
-  hub.push([bt(11, T + 12100, '101'), bt(12, T + 12200, '102')]); // arrive before REST answers
+  const ctl = sc.createController({ exchange: 'binance', symbol: 'BTCUSDT', interval: '5s', hub, fetch, now: () => now, setInterval: () => 1, clearInterval: () => {}, setTimeout: (fn, ms) => { waited = ms; return 7; }, clearTimeout: () => {} }).start();
+  assert.equal(resolve, undefined, 'REST waits for the first live trade so snapshot and stream overlap');
+  assert.equal(waited, 5000, 'bounded wait: a silent stream still gets the backfill after 5 s');
+  hub.push([bt(11, T + 12100, '101'), bt(12, T + 12200, '102')]); // first live trades trigger REST
   resolve({ ok: true, status: 200, json: async () => ({ exchange: 'binance', symbol: 'BTCUSDT', seconds: 5, as_of: T + 12150, last_trade_id: 11, complete_from_ms: T + 5000, trades: 3, requests: 1, truncated: false,
     bars: [{ t: T + 5000, o: '99', h: '100', l: '99', c: '100', v: '0.02', buy_v: '0', n: 2, first_id: 9, last_id: 10, forming: false },
       { t: T + 10000, o: '101', h: '101', l: '101', c: '101', v: '0.01', buy_v: '0.01', n: 1, first_id: 11, last_id: 11, forming: true }] }) });
@@ -122,7 +124,7 @@ test('controller: Bybit is live-only, first bucket partial, ids deduped, empty s
 
 test('controller: failed backfill falls back to live-only with explicit status', async () => {
   const hub = fakeHub();
-  const ctl = sc.createController({ exchange: 'binance', symbol: 'BTCUSDT', interval: '15s', hub, fetch: async () => ({ ok: false, status: 502, json: async () => ({ error: 'binance down' }) }), now: () => 1792195200000, setInterval: () => 1, clearInterval: () => {} }).start();
+  const ctl = sc.createController({ exchange: 'binance', symbol: 'BTCUSDT', interval: '15s', hub, fetch: async () => ({ ok: false, status: 502, json: async () => ({ error: 'binance down' }) }), now: () => 1792195200000, setInterval: () => 1, clearInterval: () => {}, setTimeout: fn => { fn(); return 1; }, clearTimeout: () => {} }).start();
   await new Promise(r => setImmediate(r));
   hub.push([bt(5, 1792195200100)]);
   assert.match(ctl.statusText(), /Backfill failed \(binance down\); live only/);

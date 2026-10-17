@@ -148,6 +148,13 @@
       lastId: null, latestTradeMs: 0, firstLiveBucket: null };
     const seen = new Set(), seenOrder = [];
     let buffer = exchange === 'binance' ? [] : null, disposed = false, off = null, request = null, timer = null, formingOpen = null;
+    let backfillStarted = false, waitTimer = null;
+    const later = options.setTimeout || setTimeout, cancelLater = options.clearTimeout || clearTimeout;
+    function startBackfill() {
+      if (backfillStarted || disposed) return;
+      backfillStarted = true; cancelLater(waitTimer); waitTimer = null;
+      backfill();
+    }
     const emit = () => { if (!disposed) onChange(api); };
 
     function ingest(trade) {
@@ -179,7 +186,13 @@
       if (event.type !== 'trades' || event.venue !== exchange || event.symbol !== symbol) return;
       const trades = [];
       for (const row of event.rows) { try { trades.push(normalize(exchange, row)); } catch (_) { st.errors += 1; } }
-      if (buffer) { buffer.push(...trades); return; }
+      if (buffer) {
+        buffer.push(...trades);
+        // Ask REST only once the stream delivers: its snapshot then overlaps the buffered
+        // live trades, so the id seam is provably contiguous (no startup gap).
+        if (trades.length && !backfillStarted) startBackfill();
+        return;
+      }
       trades.forEach(ingest);
       if (st.state === 'loading') st.state = 'live';
       emit();
@@ -210,13 +223,13 @@
     function start() {
       off = hub?.subscribeTrades ? hub.subscribeTrades({ venue: exchange, symbol }, onEvent) : null;
       if (!off) { st.state = 'unsupported'; st.message = 'live trade stream unavailable'; buffer = null; emit(); return api; }
-      if (exchange === 'binance' && fetchFn) backfill(); else { buffer = null; emit(); }
+      if (exchange === 'binance' && fetchFn) waitTimer = later(startBackfill, options.backfillWaitMs ?? 5000); else { buffer = null; emit(); }
       // Close the forming bucket on the clock even when no further trade arrives.
       timer = every(() => { if (formingOpen !== null && now() >= formingOpen + step) { formingOpen = null; emit(); } }, 250);
       return api;
     }
     function dispose() {
-      disposed = true; off?.(); off = null; request?.abort(); request = null;
+      disposed = true; off?.(); off = null; request?.abort(); request = null; cancelLater(waitTimer);
       if (timer !== null) stopEvery(timer); timer = null;
     }
     function statusText() {

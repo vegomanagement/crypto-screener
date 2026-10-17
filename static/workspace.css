@@ -1168,3 +1168,22 @@ input[type="checkbox"] {
 .pane-footprint-settings[hidden] { display: none; }
 .pane-footprint-status { flex-shrink: 0; font-size: 10px; color: #d8c08a; padding: 4px 8px; border-top: 1px solid #3a3322; line-height: 1.5; max-height: 49px; overflow: auto; overflow-wrap: anywhere; }
 .pane-footprint-status[hidden] { display: none; }
+
+/* Drawing tools (static/drawings.js) */
+.pane-draw-toggle { flex-shrink: 0; height: 20px; padding: 0 6px; border: 1px solid #283145; border-radius: 3px; background: transparent; color: #76849b; font: 600 11px/1 SFMono-Regular, Consolas, monospace; cursor: pointer; }
+.pane-draw-toggle.is-active, .pane-draw-toggle[aria-pressed="true"] { color: #8aa8ff; border-color: #3d5590; background: #182239; }
+.draw-toolbar { position: absolute; z-index: 4; top: 30px; left: 6px; display: flex; flex-direction: column; gap: 3px; padding: 4px; background: rgba(16, 20, 28, 0.94); border: 1px solid #283145; border-radius: 4px; }
+.draw-toolbar[hidden] { display: none; }
+.draw-toolbar button { width: 26px; height: 24px; padding: 0; border: 1px solid transparent; border-radius: 3px; background: transparent; color: #a3b0c6; font: 13px/1 SFMono-Regular, Consolas, monospace; cursor: pointer; }
+.draw-toolbar button:hover { background: #1c2536; }
+.draw-toolbar button[aria-pressed="true"] { color: #8aa8ff; border-color: #3d5590; background: #182239; }
+.draw-toolbar .draw-danger:hover { color: #ef6670; }
+.draw-selection { display: flex; flex-direction: column; gap: 3px; padding-top: 4px; border-top: 1px solid #283145; }
+.draw-selection[hidden] { display: none; }
+.draw-selection input[type="color"] { width: 26px; height: 22px; padding: 0; border: 0; background: transparent; cursor: pointer; }
+.draw-selection select { width: 26px; height: 22px; padding: 0; font-size: 9px; background: #10141c; color: #a3b0c6; border: 1px solid #283145; }
+.chart-stage:not([data-draw-tool="cursor"]):not([data-draw-tool=""]) .chart-host { cursor: crosshair; }
+.chart-stage[data-draw-hover="true"] .chart-host { cursor: move; }
+/* Candle-close countdown under the last-price axis label */
+.pane-countdown { position: absolute; z-index: 3; right: 0; height: 15px; pointer-events: none; text-align: center; font: 600 10px/15px SFMono-Regular, Consolas, monospace; color: #dfe7f5; background: rgba(50, 65, 92, 0.92); border-radius: 0 0 2px 2px; }
+.pane-countdown[hidden] { display: none; }

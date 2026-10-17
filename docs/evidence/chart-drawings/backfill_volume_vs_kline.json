@@ -1,0 +1,103 @@
+{
+ "as_of": 1792254021309,
+ "complete_from_ms": 1792253375000,
+ "requests": 5,
+ "truncated": false,
+ "trades": 5000,
+ "bars": 130,
+ "full_minutes_compared": 10,
+ "exact_equal": 9,
+ "rows": [
+  {
+   "minute_ms": 1792253400000,
+   "sum_5s_volume": "10.745",
+   "kline_volume": "10.745",
+   "equal": true,
+   "bars_5s": 12,
+   "agg_trades": 184,
+   "kline_trades": 498
+  },
+  {
+   "minute_ms": 1792253460000,
+   "sum_5s_volume": "17.502",
+   "kline_volume": "17.502",
+   "equal": true,
+   "bars_5s": 12,
+   "agg_trades": 123,
+   "kline_trades": 283
+  },
+  {
+   "minute_ms": 1792253520000,
+   "sum_5s_volume": "8.596",
+   "kline_volume": "8.596",
+   "equal": true,
+   "bars_5s": 12,
+   "agg_trades": 167,
+   "kline_trades": 348
+  },
+  {
+   "minute_ms": 1792253580000,
+   "sum_5s_volume": "26.900",
+   "kline_volume": "26.900",
+   "equal": true,
+   "bars_5s": 12,
+   "agg_trades": 284,
+   "kline_trades": 937
+  },
+  {
+   "minute_ms": 1792253640000,
+   "sum_5s_volume": "51.486",
+   "kline_volume": "51.486",
+   "equal": true,
+   "bars_5s": 12,
+   "agg_trades": 421,
+   "kline_trades": 1107
+  },
+  {
+   "minute_ms": 1792253700000,
+   "sum_5s_volume": "66.030",
+   "kline_volume": "66.030",
+   "equal": true,
+   "bars_5s": 12,
+   "agg_trades": 569,
+   "kline_trades": 1389
+  },
+  {
+   "minute_ms": 1792253760000,
+   "sum_5s_volume": "68.436",
+   "kline_volume": "68.436",
+   "equal": true,
+   "bars_5s": 12,
+   "agg_trades": 620,
+   "kline_trades": 1758
+  },
+  {
+   "minute_ms": 1792253820000,
+   "sum_5s_volume": "31.482",
+   "kline_volume": "31.482",
+   "equal": true,
+   "bars_5s": 12,
+   "agg_trades": 614,
+   "kline_trades": 1291
+  },
+  {
+   "minute_ms": 1792253880000,
+   "sum_5s_volume": "48.734",
+   "kline_volume": "48.734",
+   "equal": true,
+   "bars_5s": 12,
+   "agg_trades": 535,
+   "kline_trades": 1307
+  },
+  {
+   "minute_ms": 1792253940000,
+   "sum_5s_volume": "88.678",
+   "kline_volume": "88.674",
+   "equal": false,
+   "bars_5s": 12,
+   "agg_trades": 795,
+   "kline_trades": 1804
+  }
+ ],
+ "note": "kline_trades counts raw fills; agg_trades counts aggregate trades (one aggTrade may hold several fills)."
+}

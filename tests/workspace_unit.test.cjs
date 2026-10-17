@@ -17,7 +17,8 @@ test('multi-day interval metadata is not dropped from dropdown or stored setting
   for (const interval of ['1', '12', '45', '240', '720', 'D', '2D', '3D', 'W', 'M']) {
     assert.equal(helpers.validInterval(interval), true, interval);
   }
-  assert.equal(helpers.validInterval('30s'), false, 'unavailable seconds cannot be a stored active timeframe');
+  for (const interval of ['1s', '5s', '15s', '30s']) assert.equal(helpers.validInterval(interval), true, `trade-built ${interval}`);
+  for (const interval of ['2s', '60s', '0s', 's']) assert.equal(helpers.validInterval(interval), false, interval);
   assert.equal(helpers.validInterval('<script>'), false);
 });
 
