@@ -282,3 +282,25 @@ def test_positioning_snapshot_survives_attribute_errors_in_one_section():
                              now_ms=1, coin="BTC")
     assert snap["basis"]["value"] is None and "unexpected response" in snap["basis"]["reason"]
     assert snap["open_interest"]["current"]["value"] is None
+
+
+# ── analyst.build_snapshot: the provider timeout is one deadline, not one per provider ──
+
+def test_hanging_providers_share_one_deadline(monkeypatch):
+    import threading
+    import time as _time
+    release = threading.Event()
+
+    def hang(*args):
+        release.wait(5)
+        raise RuntimeError("released")
+    monkeypatch.setattr(analyst, "PROVIDER_TIMEOUT_S", 0.3)
+    p = providers(context=hang, depth=hang, funding=hang, footprint=hang, market=hang, positioning=hang)
+    started = _time.monotonic()
+    try:
+        snap = analyst.build_snapshot("binance", "BTCUSDT", "15", p)
+    finally:
+        release.set()
+    elapsed = _time.monotonic() - started
+    assert elapsed < 1.0, f"build_snapshot waited {elapsed:.2f}s for 6 hanging providers"
+    assert "timed out" in snap["missing"]["funding"]
