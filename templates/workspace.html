@@ -6,8 +6,12 @@
   <meta name="color-scheme" content="dark">
   <title>Research workspace · Crypto Screener</title>
   <link rel="stylesheet" href="/static/workspace.css">
+  <link rel="stylesheet" href="/static/indicators/indicators.css">
   <script defer src="/static/vendor/lightweight-charts.standalone.production.js"></script>
   <script defer src="/static/indicator-extras.js"></script>
+  <script defer src="/static/indicators/groups.js"></script>
+  <script defer src="/static/indicators/opens.js"></script>
+  <script defer src="/static/indicators/sessions.js"></script>
   <script defer src="/static/market-stream.js"></script>
   <script defer src="/static/liquidity-heatmap.js"></script>
   <script defer src="/static/footprint.js"></script>
@@ -39,19 +43,6 @@
     <span class="toolbar-caption">OVERLAYS</span>
     <label class="toggle-chip fvg-chip"><input id="fvg-toggle" type="checkbox" checked><span><i class="zone-icon" aria-hidden="true"></i>FVG</span></label>
     <button type="button" class="indicator-settings-btn" data-indicator="fvg" aria-label="FVG settings" aria-expanded="false" title="FVG settings">⚙</button>
-    <label class="toggle-chip ema7"><input id="ema7-toggle" type="checkbox" checked><span>EMA 7</span></label>
-    <button type="button" class="indicator-settings-btn" data-indicator="ema7" aria-label="EMA 7 settings" aria-expanded="false" title="EMA 7 settings">⚙</button>
-    <label class="toggle-chip ema14"><input id="ema14-toggle" type="checkbox" checked><span>EMA 14</span></label>
-    <button type="button" class="indicator-settings-btn" data-indicator="ema14" aria-label="EMA 14 settings" aria-expanded="false" title="EMA 14 settings">⚙</button>
-    <label class="toggle-chip ema28"><input id="ema28-toggle" type="checkbox" checked><span>EMA 28</span></label>
-    <button type="button" class="indicator-settings-btn" data-indicator="ema28" aria-label="EMA 28 settings" aria-expanded="false" title="EMA 28 settings">⚙</button>
-    <label class="toggle-chip ema200"><input id="ema200-toggle" type="checkbox"><span>EMA 200</span></label>
-    <button type="button" class="indicator-settings-btn" data-indicator="ema200" aria-label="EMA 200 settings" aria-expanded="false" title="EMA 200 settings">⚙</button>
-    <span class="toolbar-divider" aria-hidden="true"></span>
-    <label class="toggle-chip ma20-high"><input id="ma20-high-toggle" type="checkbox"><span>MA20 High</span></label>
-    <button type="button" class="indicator-settings-btn" data-indicator="ma20high" aria-label="MA20 High settings" aria-expanded="false" title="MA20 High settings">⚙</button>
-    <label class="toggle-chip ma20-low"><input id="ma20-low-toggle" type="checkbox"><span>MA20 Low</span></label>
-    <button type="button" class="indicator-settings-btn" data-indicator="ma20low" aria-label="MA20 Low settings" aria-expanded="false" title="MA20 Low settings">⚙</button>
     <span id="extra-indicator-controls"></span>
     <span class="fill-policy" title="Fully filled gaps are removed using wick highs/lows on closed candles">Wick fill · closed candles</span>
     <label class="toggle-chip"><input id="local-alerts-toggle" type="checkbox"><span>LOCAL FVG alerts</span></label>

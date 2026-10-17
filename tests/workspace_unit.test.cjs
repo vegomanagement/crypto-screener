@@ -364,24 +364,27 @@ test('MA20 high/low SMA has no fake warm-up and tracks only its own OHLC field',
 function settingsHarness(saved, inputs = []) {
   const storage = new Map([['crypto-screener.workspace.v3', JSON.stringify(saved)]]);
   const extras = require('../static/indicator-extras.js');
+  const groups = require('../static/indicators/groups.js'), opens = require('../static/indicators/opens.js'), sessions = require('../static/indicators/sessions.js');
   let saves = 0, redraws = 0;
   const code = source.slice(source.indexOf('  const STORAGE_KEY'), source.indexOf('  const $ =')) +
     source.slice(source.indexOf('  const defaultPanes'), source.indexOf('  function resetIndicatorSettings')) +
-    `\nconst settingsPopoverId = 'ema7', settingsPopover = {}; const $all = () => inputs; const panes = new Map([[0, {applyIndicators() { redraw(); }}]]);\n` +
+    source.slice(source.indexOf('  function isIndicatorEnabled('), source.indexOf('  function readFavorites(')) +
+    `\nconst settingsPopoverId = 'ema200', settingsPopover = {}; const $all = () => inputs; const panes = new Map([[0, {applyIndicators() { redraw(); }}]]);\n` +
     source.slice(source.indexOf('  function applySettingsPopover()'), source.indexOf('  function resetSettingsPopover()')) +
-    '\n({state, sanitizeFieldValue, setIndicatorSettings, applySettingsPopover, emaData, smaData})';
-  const api = vm.runInNewContext(code, { window: { WorkspaceIndicatorExtras: extras }, inputs,
+    '\n({state, migrationNotes, sanitizeFieldValue, setIndicatorSettings, applySettingsPopover, emaData, smaData, INDICATOR_DEFS, isIndicatorEnabled, getIndicatorSettings})';
+  const api = vm.runInNewContext(code, { window: { WorkspaceIndicatorExtras: extras, WorkspaceIndicatorGroups: groups, WorkspaceOpens: opens, WorkspaceSessions: sessions }, inputs,
     redraw: () => redraws++, localStorage: { getItem: k => storage.get(k), setItem: (k,v) => { saves++; storage.set(k,v); } } });
   return { api, storage, counts: () => [saves, redraws] };
 }
 
 test('integer settings sanitize and migrate fractional periods to documented defaults without truncating fractional fields', () => {
-  const h = settingsHarness({ version: 3, layout: '1', indicatorSettings: { ema7: { period: 7.5 }, fvg: { minGapPct: 0.01 }, 'turtle-upper': { inner: 5.6 } } });
-  assert.equal(h.api.state.indicatorSettings.ema7.period, 7);
+  const h = settingsHarness({ version: 3, layout: '1', indicatorSettings: { ema200: { period: 7.5 }, ema7: { period: 7.5 }, fvg: { minGapPct: 0.01 }, 'turtle-upper': { inner: 5.6 } } });
+  assert.equal(h.api.state.indicatorSettings.ema200.period, 200);
+  assert.equal(h.api.state.indicatorSettings['ema-ribbon'].period1, 7, 'fractional legacy EMA 7 period → ribbon default');
   assert.equal(h.api.state.indicatorSettings.fvg.minGapPct, 0.01);
-  assert.equal(h.api.state.indicatorSettings['turtle-upper'].inner, 5.6);
-  h.api.setIndicatorSettings('ema7', { period: 7.5 });
-  assert.equal(JSON.parse(h.storage.get('crypto-screener.workspace.v4')).indicatorSettings.ema7.period, 7);
+  assert.equal(h.api.state.indicatorSettings['turtle-zone'].inner, 5.6);
+  h.api.setIndicatorSettings('ema200', { period: 7.5 });
+  assert.equal(JSON.parse(h.storage.get('crypto-screener.workspace.v5')).indicatorSettings.ema200.period, 200);
 });
 
 test('Apply rejects invalid fractional integer drafts before saving or recomputing', () => {
@@ -390,12 +393,12 @@ test('Apply rejects invalid fractional integer drafts before saving or recomputi
   const h = settingsHarness({ version:4, layout:'1' }, [input]);
   h.api.applySettingsPopover();
   assert.deepEqual(h.counts(), [0, 0]);
-  assert.equal(h.api.state.indicatorSettings.ema7.period, 7);
+  assert.equal(h.api.state.indicatorSettings.ema200.period, 200);
   assert.equal(reported, 1);
   input.value = '10'; input.checkValidity = () => true;
   h.api.applySettingsPopover();
   assert.deepEqual(h.counts(), [1, 1]);
-  assert.equal(JSON.parse(h.storage.get('crypto-screener.workspace.v4')).indicatorSettings.ema7.period, 10);
+  assert.equal(JSON.parse(h.storage.get('crypto-screener.workspace.v5')).indicatorSettings.ema200.period, 10);
 });
 
 test('EMA and SMA defensively reject nonpositive, nonfinite and fractional periods', () => {
@@ -405,6 +408,51 @@ test('EMA and SMA defensively reject nonpositive, nonfinite and fractional perio
     assert.equal(h.api.emaData(candles, period).length, 0, `EMA ${period}`);
     assert.equal(h.api.smaData(candles, period, 'high').length, 0, `SMA ${period}`);
   }
+});
+
+test('readState migrates a v4 save with split overlays into grouped indicators (one id each)', () => {
+  const h = settingsHarness({ version: 4, layout: '1', ema: { 7: true, 14: true, 28: true, 200: false }, ma20hl: { high: true, low: true },
+    indicatorEnabled: { 'turtle-upper': true, 'turtle-lower': true, 'prev-day-high': true, 'prev-day-low': true, 'session-london': true, 'vwap-weekly': true },
+    indicatorSettings: { ema28: { period: 30, color: '#abcdef' }, ma20low: { period: 20, source: 'close' } } });
+  const { state, isIndicatorEnabled, getIndicatorSettings } = h.api;
+  assert.equal(state.version, 5);
+  for (const id of ['ema-ribbon', 'ma-channel', 'turtle-zone', 'opens', 'sessions', 'vwap-weekly']) assert.equal(isIndicatorEnabled(id), true, id);
+  assert.equal(isIndicatorEnabled('ema200'), false);
+  const ribbon = getIndicatorSettings('ema-ribbon');
+  assert.deepEqual([ribbon.period1, ribbon.period2, ribbon.period3, ribbon.color3], [7, 14, 30, '#abcdef'], 'custom EMA 28 period kept');
+  assert.equal(getIndicatorSettings('ma-channel').lowSource, 'close');
+  assert.equal(getIndicatorSettings('opens').pdhShow, true);
+  assert.equal(getIndicatorSettings('sessions').s1Show, true);
+  assert.equal('ema' in state, false); assert.equal('ma20hl' in state, false);
+  for (const id of ['ema7', 'ema14', 'ema28', 'ma20high', 'ma20low', 'turtle-upper', 'turtle-lower', 'prev-day-high', 'session-london', 'session-asia']) {
+    assert.equal(id in state.indicatorEnabled, false, id); assert.equal(id in state.indicatorSettings, false, id);
+  }
+  assert.ok(h.api.migrationNotes.some(note => /custom period 30/.test(note)));
+  // A fresh (no save) workspace: ribbon on with 7/14/21, everything else grouped and off.
+  const fresh = settingsHarness(null).api;
+  assert.equal(fresh.isIndicatorEnabled('ema-ribbon'), true);
+  assert.deepEqual([1, 2, 3].map(n => fresh.getIndicatorSettings('ema-ribbon')[`period${n}`]), [7, 14, 21]);
+});
+
+test('overlay list renders exactly one toggle + one settings button per indicator', () => {
+  const template = fs.readFileSync(path.join(__dirname, '../templates/workspace.html'), 'utf8');
+  for (const legacy of ['ema7-toggle', 'ema14-toggle', 'ema28-toggle', 'ema200-toggle', 'ma20-high-toggle', 'ma20-low-toggle']) assert.equal(template.includes(legacy), false, legacy);
+  for (const script of ['indicators/groups.js', 'indicators/opens.js', 'indicators/sessions.js']) assert.ok(template.indexOf(script) < template.indexOf('workspace.js'), script);
+  const h = settingsHarness(null);
+  const made = [];
+  const element = tag => { const el = { tag, dataset: {}, children: [], className: '', append(...kids) { this.children.push(...kids); }, setAttribute() {}, addEventListener() {}, matches: () => false };
+    made.push(el); return el; };
+  const group = element('span');
+  const code = source.slice(source.indexOf('  function indicatorLabel(def)'), source.indexOf('  function initSettingsPopovers()')) + '\ninitGenericIndicators();';
+  vm.runInNewContext(code, { INDICATOR_DEFS: h.api.INDICATOR_DEFS, getIndicatorSettings: h.api.getIndicatorSettings, isIndicatorEnabled: h.api.isIndicatorEnabled,
+    setIndicatorEnabled() {}, panes: new Map(), document: { createElement: element },
+    $: selector => selector === '#extra-indicator-controls' ? group : selector.includes('data-indicator="fvg"') ? { setAttribute() {}, previousElementSibling: null } : null });
+  const toggles = group.children.filter(el => el.tag === 'label').map(el => el.children[0].dataset.indicatorToggle);
+  const buttons = group.children.filter(el => el.tag === 'button').map(el => el.dataset.indicator);
+  assert.deepEqual(toggles, ['ema-ribbon', 'ema200', 'ma-channel', 'turtle-zone', 'vwap-daily', 'vwap-weekly', 'opens', 'sessions', 'liquidity']);
+  assert.deepEqual(buttons, toggles);
+  assert.equal(group.children.find(el => el.dataset.indicatorChip === 'ema-ribbon').children[1].textContent, 'EMA 7/14/21');
+  assert.equal(group.children.find(el => el.dataset.indicatorChip === 'ma-channel').children[1].textContent, 'MA 20 H/L');
 });
 
 function resyncHarness() {
