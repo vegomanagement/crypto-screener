@@ -7,11 +7,11 @@ Branch: `claude/footprint` (from `claude/chart-workspace` @ `a530726`).
 - Reference product: DeepCharts "Deep Print (Footprint®)". No DeepCharts subscription;
   only public material was examined.
 - REA `analyze-web-bundle` on the public help page (evidence:
-  `docs/evidence/footprint/rea-web-bundle-deep-print-page.json`) found only 10 small
+  REA evidence (kept locally by the maintainer, not committed: third-party material)) found only 10 small
   marketing-site (Webflow) scripts — **no footprint engine is shipped publicly**; the app
   is behind login. Therefore nothing of their code is used or available.
 - Behaviour spec comes from their public help-centre/blog text, saved verbatim under
-  `docs/evidence/footprint/deepcharts-public-docs/`. Everything below is our own design
+  local research notes (kept locally by the maintainer, not committed: third-party material). Everything below is our own design
   on top of standard order-flow definitions. Do not copy their wording into UI copy;
   do not use the "Footprint®" / "Deep Print" names in the product.
 

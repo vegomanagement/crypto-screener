@@ -1,6 +1,6 @@
 # Footprint — implemented and verified locally
 
-Branch: `claude/footprint` (based on `claude/chart-workspace` @ `a530726`). Spec: `docs/FOOTPRINT_PLAN.md`, ★ items only. Clean-room: behaviour is based on the public DeepCharts help text in `docs/evidence/footprint/deepcharts-public-docs/`. None of their code or UI copy is used, and the product name is "Footprint" only.
+Branch: `claude/footprint` (based on `claude/chart-workspace` @ `a530726`). Spec: `docs/FOOTPRINT_PLAN.md`, ★ items only. Clean-room: behaviour is based on the public DeepCharts help text (local research notes, not committed: third-party material). None of their code or UI copy is used, and the product name is "Footprint" only.
 
 ## Delivered
 
