@@ -165,6 +165,18 @@ test('ranges: price/date stats with volume and ticks', () => {
   assert.equal(dr.formatDuration(90061000), '1d 1h'); assert.equal(dr.formatDuration(-3725000), '-1h 2m');
 });
 
+test('ticks use the venue tick from the drawing context; an explicit tool tick still wins; chart precision is the last fallback', () => {
+  const v = { ...view(), tickSize: 0.1 };
+  assert.equal(measure.rangeStats(dr.makeDrawing('datepricerange', [P(2, 100), P(14, 103)]), v).ticks, 30, '3.0 / 0.1 (Binance BTCUSDT tick)');
+  assert.equal(measure.rangeStats(dr.makeDrawing('datepricerange', [P(2, 100), P(14, 103)]), { ...view(), tickSize: null }).ticks, 300, 'no metadata → 10^-precision');
+  const d = dr.makeDrawing('long', measure.finalizePosition('long', [P(4, 100), P(10, 110)], v));
+  const label = prims => prims.filter(p => p.t === 'text').map(p => p.text).join('\n');
+  assert.match(label(dr.build(d, v)), /Target 110 [^\n]*\n100 ticks/, 'target 10.0 away at tick 0.1');
+  assert.match(label(dr.build(d, v)), /Stop 95 [^\n]*\n50 ticks/);
+  d.opts = { ...d.opts, tick: 0.5 };
+  assert.match(label(dr.build(d, v)), /Target 110 [^\n]*\n20 ticks/, 'the tool option overrides the venue tick');
+});
+
 test('shapes and annotations: rectangle fill, circle, rotated rectangle, text box, simplify', () => {
   const v = view();
   const rect = dr.makeDrawing('rect', [P(12, 170), P(16, 160)]);
