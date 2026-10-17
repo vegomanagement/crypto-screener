@@ -703,7 +703,9 @@
     }
     drawingContext() {
       const config = state.panes[this.id];
-      return { exchange: config.exchange, symbol: config.symbol, candles: this.candles, chart: this.chart, series: this.series, host: this.host,
+      const fp = config.footprint ? this.footprint?.store : null;
+      return { exchange: config.exchange, symbol: config.symbol, interval: config.interval, candles: this.candles, chart: this.chart, series: this.series, host: this.host,
+        footprint: fp || null, footprintVersion: fp ? `${fp.bars?.size}:${this.footprint.status?.state}` : 0,
         stepMs: intervalSeconds(config.interval, this.candles.at(-1)?.time || Date.now() / 1000) * 1000,
         precision: this.series.options().priceFormat?.precision ?? 2,
         plotWidth: Math.max(0, this.host.clientWidth - this.chart.priceScale('right').width()),
