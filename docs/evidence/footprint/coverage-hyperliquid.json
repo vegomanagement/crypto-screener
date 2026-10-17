@@ -1,0 +1,28 @@
+{
+ "symbol": "BTC",
+ "interval": "1m",
+ "as_of": 1792244490156,
+ "coverage": {
+  "complete": 0,
+  "partial": 1,
+  "missing": 10,
+  "requested": 11,
+  "trades_from": 1792244461481,
+  "trades_to": 1792244489008
+ },
+ "tick_size": "1",
+ "warnings": [
+  "Hyperliquid recentTrades is the only public trade history; older bars are missing or partial."
+ ],
+ "rows": [
+  {
+   "open_time": 1792244460000,
+   "coverage": "partial",
+   "forming": true,
+   "footprint_total": "0.0915",
+   "footprint_trades": 10,
+   "candle_v": "0.09265",
+   "candle_n": 13
+  }
+ ]
+}

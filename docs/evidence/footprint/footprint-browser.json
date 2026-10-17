@@ -1,0 +1,75 @@
+{
+  "console_errors": [
+    "Failed to load resource: the server responded with a status of 404 (NOT FOUND)"
+  ],
+  "page_errors": [],
+  "failed_requests": [],
+  "1m": {
+    "zoomed": {
+      "draw": {
+        "drawn": 16,
+        "mode": "cells",
+        "group": 5,
+        "cells": 88
+      },
+      "status": "Footprint · Binance aggTrades · 61 complete / 0 partial bars · 0 of 61 requested bars missing (blank) · group 5×0.1 · venue kline check: 58 exact / 2 differ · 1 live id gap(s) seen → affected bar marked partial, then re-fetched · Forming bar is a REST snapshot as of 'as_of'; live trades merge client-side. · 2 complete bar(s) differ from the venue kline: an aggregated trade straddling a bar boundary is attributed to its first fill's time; marked, not redistributed. · view: cells (×5 rows)",
+      "barSpacing": 80.23529411764706,
+      "summary": {
+        "bars": 61,
+        "complete": 61,
+        "partial": 0,
+        "live": 0,
+        "gaps": 1,
+        "klineExact": 58,
+        "klineMismatch": 2
+      },
+      "tick": "0.1",
+      "group": 5,
+      "wsLabel": "WS LIVE · 0s"
+    },
+    "zoomedOut": {
+      "draw": {
+        "drawn": 61,
+        "mode": "marks",
+        "group": 10,
+        "cells": 0
+      },
+      "barSpacing": 8.857142857142858
+    }
+  },
+  "15m": {
+    "zoomed": {
+      "draw": {
+        "drawn": 14,
+        "mode": "cells",
+        "group": 10,
+        "cells": 106
+      },
+      "status": "Footprint · Binance aggTrades · 12 complete / 2 partial bars · 47 of 61 requested bars missing (blank) · group 10×0.1 · venue kline check: 12 exact / 0 differ · 1 live id gap(s) seen → affected bar marked partial, then re-fetched · budget-truncated history (refresh extends) · Forming bar is a REST snapshot as of 'as_of'; live trades merge client-side. · Request budget reached: older bars are missing, not interpolated. · view: cells (×10 rows)",
+      "barSpacing": 80.23529411764706,
+      "summary": {
+        "bars": 14,
+        "complete": 12,
+        "partial": 2,
+        "live": 0,
+        "gaps": 1,
+        "klineExact": 12,
+        "klineMismatch": 0
+      },
+      "tick": "0.1",
+      "group": 10,
+      "wsLabel": "WS LIVE · 0s"
+    },
+    "zoomedOut": {
+      "draw": {
+        "drawn": 14,
+        "mode": "marks",
+        "group": 100,
+        "cells": 0
+      },
+      "barSpacing": 8.857142857142858
+    }
+  },
+  "captured_at": "2026-10-17T13:43:13.068Z",
+  "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/155.0.0.0 Safari/537.36"
+}

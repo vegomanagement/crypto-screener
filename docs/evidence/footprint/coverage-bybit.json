@@ -1,0 +1,66 @@
+{
+ "symbol": "BTCUSDT",
+ "interval": "1m",
+ "as_of": 1792244489151,
+ "coverage": {
+  "complete": 5,
+  "partial": 1,
+  "missing": 5,
+  "requested": 11,
+  "trades_from": 1792244191383,
+  "trades_to": 1792244483582
+ },
+ "warnings": [
+  "Bybit recent-trade (\u22641000 latest) is the only public trade history; older bars are missing or partial."
+ ],
+ "rows": [
+  {
+   "open_time": 1792244160000,
+   "coverage": "partial",
+   "forming": false,
+   "footprint_total": "8.832",
+   "kline_volume": "12.256",
+   "volume_equal": false
+  },
+  {
+   "open_time": 1792244220000,
+   "coverage": "complete",
+   "forming": false,
+   "footprint_total": "14.091",
+   "kline_volume": "14.091",
+   "volume_equal": true
+  },
+  {
+   "open_time": 1792244280000,
+   "coverage": "complete",
+   "forming": false,
+   "footprint_total": "6.073",
+   "kline_volume": "6.073",
+   "volume_equal": true
+  },
+  {
+   "open_time": 1792244340000,
+   "coverage": "complete",
+   "forming": false,
+   "footprint_total": "0.698",
+   "kline_volume": "0.698",
+   "volume_equal": true
+  },
+  {
+   "open_time": 1792244400000,
+   "coverage": "complete",
+   "forming": false,
+   "footprint_total": "4.887",
+   "kline_volume": "4.887",
+   "volume_equal": true
+  },
+  {
+   "open_time": 1792244460000,
+   "coverage": "complete",
+   "forming": true,
+   "footprint_total": "0.373",
+   "kline_volume": "0.373",
+   "volume_equal": true
+  }
+ ]
+}
