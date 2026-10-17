@@ -1,0 +1,44 @@
+{
+  "base": "http://127.0.0.1:5088",
+  "at": "2026-10-17T16:24:07.786Z",
+  "storage": {
+    "before": 0,
+    "added": {
+      "id": "lmvclwlnn0hqi7",
+      "exchange": "binance",
+      "symbol": "BTCUSDT",
+      "price": "12345.6",
+      "kind": "simple",
+      "source": "chart",
+      "color": "#527dff",
+      "width": 1,
+      "repeat": false,
+      "armed": false,
+      "createdAt": 1792254249635,
+      "triggeredAt": null,
+      "note": "from other document"
+    },
+    "afterAdd": [
+      {
+        "id": "lmvclwlnn0hqi7",
+        "price": "12345.6",
+        "source": "chart",
+        "note": "from other document"
+      }
+    ],
+    "seenAfterAdd": true,
+    "afterRemove": 0
+  },
+  "ui": {
+    "title": "Research workspace · Crypto Screener"
+  },
+  "browser": {
+    "console_errors": [
+      "network: Failed to load resource: the server responded with a status of 404 (NOT FOUND) http://127.0.0.1:5088/favicon.ico"
+    ],
+    "exceptions": [],
+    "failed_requests": [
+      "404 http://127.0.0.1:5088/favicon.ico"
+    ]
+  }
+}

@@ -16,7 +16,11 @@
       ['feed.aggregateMs', 'Aggregate same side within ms', 'number'], ['feed.aggregateTicks', '…and within ticks (0 = any)', 'number'],
       ['feed.line', 'Connecting line', 'bool'], ['feed.maxRadius', 'Max radius px', 'number'], ['feed.maxSizeUsd', 'Max radius at $', 'number']]],
     ['Clusters', [['clusters.count', 'Columns (0–8)', 'number'], ['clusters.intervalMs', 'Timeframe', [60000, 300000, 900000]],
-      ['clusters.mode', 'Mode', ['volume', 'delta', 'bidask']], ['clusters.showMinUsd', 'Show values ≥ $', 'number'], ['clusters.markMinUsd', 'Mark cells ≥ $', 'number']]]
+      ['clusters.mode', 'Mode', ['volume', 'delta', 'bidask']], ['clusters.showMinUsd', 'Show values ≥ $', 'number'], ['clusters.markMinUsd', 'Mark cells ≥ $', 'number']]],
+    ['Volume alerts (off by default)', [['alerts.appear', 'Large volume appears', 'bool'], ['alerts.appearUsd', '…size ≥ $', 'number'],
+      ['alerts.withinPct', '…within % of mid', 'number'], ['alerts.decrease', 'Tracked large volume drops / goes', 'bool'],
+      ['alerts.decreasePct', '…by ≥ % from its peak', 'number'], ['alerts.print', 'Large print', 'bool'], ['alerts.printUsd', '…print ≥ $', 'number'],
+      ['alerts.printAggMs', '…aggregate same side within ms (0 = single)', 'number'], ['alerts.sound', 'Sound for these alerts', 'bool']]]
   ];
   const getPath = (obj, path) => path.split('.').reduce((o, k) => o?.[k], obj);
   function setPath(obj, path, value) {
@@ -59,6 +63,7 @@
       if (action === 'feed') col.data?.setFeedAggregation(next.feed);
       if (action === 'clusters') col.data?.setClusters(next.clusters);
       if (action === 'density') col.density.since.clear();
+      col.volAlerts?.configure(next.alerts);
       col.renderText(); this.dirty(col);
     },
     toggleSettings(col) {
@@ -119,7 +124,11 @@
     if (!action) return;
     event.preventDefault();
     if (action === 'center') { page.updateColumn(col.index, column, 'redraw'); col.center(); }
-    else if (action === 'clear-ruler') { col.ruler = { anchorRow: null, hoverRow: null }; page.dirty(col); }
+    else if (action === 'clear-ruler') { col.ruler = { anchorRow: null, hoverRow: null }; page.dirty(col); $('.level-editor', col.element)?.remove(); }
+    else if (action === 'clear-levels') {
+      const n = page.alerts.store.clear({ exchange: col.cfg.venue, symbol: col.cfg.symbol });
+      page.alerts.status(`Cleared ${n} level${n === 1 ? '' : 's'} of ${col.cfg.symbol}`);
+    }
     else page.updateColumn(col.index, column, action);
   });
   $('#scalp-columns').addEventListener('change', event => { page.settings.columns = Number(event.target.value); page.persist(); page.layout(); });
@@ -130,11 +139,14 @@
   setInterval(() => { if (document.visibilityState === 'visible') page.columns.forEach(c => page.dirty(c)); }, 100);
   setInterval(() => { if (document.visibilityState === 'visible') page.columns.forEach(c => c.renderText()); }, 500);
   window.addEventListener('pagehide', () => { page.columns.forEach(c => c.stop()); U.hub.dispose(); });
+  page.alerts = window.ScalpAlertCenter.createAlertCenter(page);
   page.layout();
+  window.ScalpAlertsPanel.mountPanel(page, page.alerts);
+  if (page.alerts.store.lastError) footer.textContent = page.alerts.store.lastError;
 
   function perfSummary() {
     const ms = page.perf.frames.map(f => f.ms).sort((a, b) => a - b), q = p => ms[Math.min(ms.length - 1, Math.floor(p * ms.length))] ?? null;
     return { paints: page.perf.paints, sampled: ms.length, avgMs: ms.length ? ms.reduce((a, b) => a + b, 0) / ms.length : null, p50Ms: q(0.5), p95Ms: q(0.95), maxMs: ms.at(-1) ?? null };
   }
-  window.__scalp = { page, perfSummary, evidence: U.evidence };
+  window.__scalp = { page, perfSummary, evidence: U.evidence, alerts: page.alerts };
 })();

@@ -17,7 +17,10 @@
       autocenter: true, autocenterPct: 30, fullScaleUsd: 0, big1Usd: 500000, big2Usd: 2000000, densityUsd: 500000,
       feed: { spanMs: 60000, minUsd: 0, labelMinUsd: 50000, aggregateMs: 0, aggregateTicks: 0, line: true,
         minRadius: 2, maxRadius: 16, maxSizeUsd: 500000 },
-      clusters: { count: 3, intervalMs: 60000, mode: 'volume', showMinUsd: 5000, markMinUsd: 500000 } };
+      clusters: { count: 3, intervalMs: 60000, mode: 'volume', showMinUsd: 5000, markMinUsd: 500000 },
+      // Volume alerts: every type off by default (docs/SCALPING_PHASE2_PLAN.md, Track A §3).
+      alerts: { appear: false, appearUsd: 1000000, withinPct: 0.5, decrease: false, decreasePct: 50,
+        print: false, printUsd: 500000, printAggMs: 0, sound: true } };
   }
   function defaults() {
     return { version: VERSION, columns: 1, active: 0, cols: DEFAULT_SYMBOLS.map(([v, s]) => defaultColumn(v, s)) };
@@ -39,6 +42,7 @@
     const venue = Object.hasOwn(VENUES, r.venue) ? r.venue : d.venue;
     const symbol = validSymbol(venue, r.symbol) ? r.symbol : venue === d.venue ? d.symbol : venue === 'hyperliquid' ? 'BTC' : 'BTCUSDT';
     const f = r.feed && typeof r.feed === 'object' ? r.feed : {}, c = r.clusters && typeof r.clusters === 'object' ? r.clusters : {};
+    const a = r.alerts && typeof r.alerts === 'object' ? r.alerts : {}, da = d.alerts || defaultColumn().alerts;
     return {
       venue, symbol,
       scaleMode: pick(r.scaleMode, ['ticks', 'percent'], d.scaleMode),
@@ -57,7 +61,11 @@
       clusters: { count: Math.round(clamp(c.count, 0, 8, d.clusters.count)),
         intervalMs: pick(c.intervalMs, Object.keys(CLUSTER_INTERVALS).map(Number), d.clusters.intervalMs),
         mode: pick(c.mode, ['volume', 'delta', 'bidask'], d.clusters.mode),
-        showMinUsd: clamp(c.showMinUsd, 0, 1e12, d.clusters.showMinUsd), markMinUsd: clamp(c.markMinUsd, 0, 1e12, d.clusters.markMinUsd) }
+        showMinUsd: clamp(c.showMinUsd, 0, 1e12, d.clusters.showMinUsd), markMinUsd: clamp(c.markMinUsd, 0, 1e12, d.clusters.markMinUsd) },
+      alerts: { appear: bool(a.appear, da.appear), appearUsd: clamp(a.appearUsd, 1000, 1e12, da.appearUsd), withinPct: clamp(a.withinPct, 0.01, 20, da.withinPct),
+        decrease: bool(a.decrease, da.decrease), decreasePct: clamp(a.decreasePct, 1, 100, da.decreasePct),
+        print: bool(a.print, da.print), printUsd: clamp(a.printUsd, 1000, 1e12, da.printUsd), printAggMs: Math.round(clamp(a.printAggMs, 0, 10000, da.printAggMs)),
+        sound: bool(a.sound, da.sound) }
     };
   }
   function sanitize(raw) {
@@ -82,7 +90,7 @@
 
   /**
    * View-only hotkeys → { column, action }. Never places, edits or cancels anything; there is no order path.
-   * action: 'center' | 'clear-ruler' | 'regroup' | 'redraw' | null.
+   * action: 'center' | 'clear-ruler' | 'clear-levels' | 'regroup' | 'redraw' | null.
    */
   function hotkey(col, key) {
     const next = { ...col };
@@ -93,6 +101,7 @@
     if (key === 'p' || key === 'P') return { column: { ...next, scaleMode: col.scaleMode === 'ticks' ? 'percent' : 'ticks' }, action: 'regroup' };
     if (key === 'u' || key === 'U') return { column: { ...next, units: col.units === 'usd' ? 'coin' : 'usd' }, action: 'redraw' };
     if (key === 'Escape') return { column: next, action: 'clear-ruler' };
+    if (key === 'L') return { column: next, action: 'clear-levels' }; // Shift+L only, so a stray 'l' never wipes levels
     return { column: col, action: null };
   }
   /** Chart deep link understood by /ui (workspace.js reads ?exchange=&symbol= for the active pane). */
