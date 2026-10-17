@@ -2,50 +2,106 @@
  {
   "success": true,
   "ret_msg": "",
-  "conn_id": "db292vi4p82e50lplhpg-3mu01",
+  "conn_id": "db293t615sdn23peeulg-3nrrf",
   "req_id": "",
   "op": "subscribe"
  },
  {
   "success": true,
-  "ret_msg": "pong",
-  "conn_id": "db292vi4p82e50lplhpg-3mu01",
+  "ret_msg": "",
+  "conn_id": "db293t615sdn23peeulg-3nrrf",
   "req_id": "",
-  "op": "ping"
+  "op": "subscribe"
  },
  {
   "success": true,
-  "ret_msg": "pong",
-  "conn_id": "db292vi4p82e50lplhpg-3mu01",
+  "ret_msg": "",
+  "conn_id": "db293t615sdn23peeulg-3nrrf",
   "req_id": "",
-  "op": "ping"
+  "op": "subscribe"
  },
  {
-  "success": true,
-  "ret_msg": "pong",
-  "conn_id": "db292vi4p82e50lplhpg-3mu01",
-  "req_id": "",
-  "op": "ping"
+  "topic": "allLiquidation.ETHUSDT",
+  "type": "snapshot",
+  "ts": 1792259686814,
+  "data": [
+   {
+    "T": 1792259686601,
+    "s": "ETHUSDT",
+    "S": "Sell",
+    "v": "0.01",
+    "p": "2418.16"
+   }
+  ]
  },
  {
-  "success": true,
-  "ret_msg": "pong",
-  "conn_id": "db292vi4p82e50lplhpg-3mu01",
-  "req_id": "",
-  "op": "ping"
+  "topic": "allLiquidation.ETHUSDT",
+  "type": "snapshot",
+  "ts": 1792260123814,
+  "data": [
+   {
+    "T": 1792260123722,
+    "s": "ETHUSDT",
+    "S": "Sell",
+    "v": "0.52",
+    "p": "2420.84"
+   }
+  ]
  },
  {
-  "success": true,
-  "ret_msg": "pong",
-  "conn_id": "db292vi4p82e50lplhpg-3mu01",
-  "req_id": "",
-  "op": "ping"
+  "topic": "allLiquidation.WLDUSDT",
+  "type": "snapshot",
+  "ts": 1792260134520,
+  "data": [
+   {
+    "T": 1792260134354,
+    "s": "WLDUSDT",
+    "S": "Sell",
+    "v": "6930.1",
+    "p": "0.4987"
+   }
+  ]
  },
  {
-  "success": true,
-  "ret_msg": "pong",
-  "conn_id": "db292vi4p82e50lplhpg-3mu01",
-  "req_id": "",
-  "op": "ping"
+  "topic": "allLiquidation.TIAUSDT",
+  "type": "snapshot",
+  "ts": 1792260134607,
+  "data": [
+   {
+    "T": 1792260134354,
+    "s": "TIAUSDT",
+    "S": "Sell",
+    "v": "3210.9",
+    "p": "0.6684"
+   }
+  ]
+ },
+ {
+  "topic": "allLiquidation.1000PEPEUSDT",
+  "type": "snapshot",
+  "ts": 1792260134756,
+  "data": [
+   {
+    "T": 1792260134354,
+    "s": "1000PEPEUSDT",
+    "S": "Sell",
+    "v": "738600",
+    "p": "0.0039130"
+   }
+  ]
+ },
+ {
+  "topic": "allLiquidation.NEARUSDT",
+  "type": "snapshot",
+  "ts": 1792260134756,
+  "data": [
+   {
+    "T": 1792260134354,
+    "s": "NEARUSDT",
+    "S": "Sell",
+    "v": "792.5",
+    "p": "4.9250"
+   }
+  ]
  }
 ]

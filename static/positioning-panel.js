@@ -34,6 +34,12 @@
     const s = Math.max(0, Math.round((now - ms) / 1000));
     return s < 90 ? `${s}s ago` : s < 5400 ? `${Math.round(s / 60)}m ago` : `${Math.round(s / 3600)}h ago`;
   }
+  /** Price display: 6 significant digits, no exponent (raw exact value stays in the API). */
+  function fmtPx(v) {
+    const n = num(v); if (!isNum(n)) return '—';
+    const a = Math.abs(n), d = a >= 1e5 ? 0 : Math.max(0, 5 - Math.floor(Math.log10(a || 1)));
+    return n.toFixed(Math.min(d, 8));
+  }
   const short = addr => (typeof addr === 'string' && addr.length > 12 ? `${addr.slice(0, 6)}…${addr.slice(-4)}` : addr || '');
 
   /** A bar row: long share 0..1 split; missing → null share with the reason shown instead. */
@@ -56,7 +62,7 @@
         share: t > 0 ? l / t : null, complete: !!x.complete_coverage,
         coverage: x.complete_coverage ? 'full window' : `covered ${Math.round(x.covered_ms / 60000)} of ${Math.round(x.window_ms / 60000)} min` };
     });
-    const largest = (liq.largest || []).map(e => ({ side: e.side, usd: fmtUsd(e.notional_usd), price: e.price, time: fmtTime(e.ts), age: fmtAge(e.ts, now) }));
+    const largest = (liq.largest || []).map(e => ({ side: e.side, usd: fmtUsd(e.notional_usd), price: fmtPx(e.price), time: fmtTime(e.ts), age: fmtAge(e.ts, now) }));
     const c = liq.collector || {};
     return { available: true, lowerBound: liq.lower_bound === true, label: liq.label, rows, largest,
       status: c.connected ? `connected · ${c.events || 0} events stored` : (c.error ? `reconnecting: ${c.error}` : 'connecting…') };
@@ -70,9 +76,9 @@
     if (!a) return { ...head, available: false, reason: w.reason || 'warming up', changes: [], positions: [] };
     const l = num(a.long_notional), s = num(a.short_notional), t = l + s;
     return { ...head, available: true, share: t > 0 ? l / t : null, long: fmtUsd(l), short: fmtUsd(s), net: fmtUsd(a.net_notional),
-      longCount: a.long_count, shortCount: a.short_count, avgLong: a.avg_entry_long || '—', avgShort: a.avg_entry_short || '—',
+      longCount: a.long_count, shortCount: a.short_count, avgLong: fmtPx(a.avg_entry_long), avgShort: fmtPx(a.avg_entry_short),
       empty: a.long_count + a.short_count === 0,
-      positions: (a.positions || []).slice(0, 6).map(p => ({ who: short(p.address), side: p.side, usd: fmtUsd(p.notional), entry: p.entry, liq: p.liquidation_px || '—', lev: p.leverage })),
+      positions: (a.positions || []).slice(0, 6).map(p => ({ who: short(p.address), side: p.side, usd: fmtUsd(p.notional), entry: fmtPx(p.entry), liq: fmtPx(p.liquidation_px), lev: p.leverage })),
       changes: (w.changes || []).slice(0, 8).map(c => ({ kind: c.kind, side: c.side, who: short(c.address), usd: fmtUsd(c.delta_notional), age: fmtAge(c.ts, now), detail: `${c.from_szi} → ${c.to_szi}` })) };
   }
 
@@ -165,5 +171,5 @@
     return { refresh, update(next) { Object.assign(o, next); refresh(); }, destroy() { alive = false; clearInterval(timer); box.remove(); } };
   }
 
-  return { viewModel, renderHtml, mount, fmtUsd, fmtPct, fmtSigned };
+  return { viewModel, renderHtml, mount, fmtUsd, fmtPct, fmtSigned, fmtPx };
 });

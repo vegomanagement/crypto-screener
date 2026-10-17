@@ -84,4 +84,8 @@ test('formatters', () => {
   assert.equal(PP.fmtUsd(null), '—');
   assert.equal(PP.fmtSigned('0.5', 2, '%'), '+0.50%');
   assert.equal(PP.fmtPct('0.6341'), '63.4%');
+  assert.equal(PP.fmtPx('148956.7885880246'), '148957');
+  assert.equal(PP.fmtPx('2404.44'), '2404.44');
+  assert.equal(PP.fmtPx('0.06303'), '0.0630300');
+  assert.equal(PP.fmtPx(null), '—');
 });

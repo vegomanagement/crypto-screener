@@ -40,8 +40,9 @@ def test_bybit_all_liquidation_shape_and_side_semantics():
     with pytest.raises(NormaliseError):
         normalise_bybit({"topic": "allLiquidation.X", "data": [{"S": "Up", "v": "1", "p": "1", "s": "X", "T": 1}]})
     recorded = json.loads((FIX / "bybit_allLiquidation_ws.json").read_text())
-    for m in recorded:                      # whatever was captured live must parse
-        normalise_bybit(m)
+    live = [e for m in recorded for e in normalise_bybit(m)]
+    assert len(live) == 6
+    assert (live[0]["symbol"], live[0]["side"], live[0]["notional"]) == ("ETHUSDT", "short", Decimal("24.1816"))
 
 
 def test_store_windows_lower_bound_and_largest():
