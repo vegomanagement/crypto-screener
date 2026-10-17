@@ -1,0 +1,62 @@
+{
+ "steps": [
+  {
+   "name": "created",
+   "drawings": [
+    [
+     "hline",
+     "81509.69",
+     "lv-mvcm3eee-1-779u7"
+    ],
+    [
+     "hray",
+     "81256.64",
+     "lv-mvcm3eex-2-9qdsju"
+    ]
+   ],
+   "levels": [
+    [
+     "lv-mvcm3eee-1-779u7",
+     "81509.69",
+     "chart"
+    ],
+    [
+     "lv-mvcm3eex-2-9qdsju",
+     "81256.64",
+     "chart"
+    ]
+   ]
+  },
+  {
+   "name": "dragged_hline_level",
+   "before": "81509.69",
+   "hline_after": "81551.58",
+   "store_after": "81551.58"
+  },
+  {
+   "name": "selection_toolbar_visible",
+   "visible": true
+  },
+  {
+   "name": "deleted_hray",
+   "drawings": [
+    "hline"
+   ],
+   "levels": [
+    "81551.58"
+   ]
+  },
+  {
+   "name": "status",
+   "status": "16:29:20 UTC · binance",
+   "canvas": 1
+  },
+  {
+   "name": "dom_level_added",
+   "levels": [
+    "chart:simple:81551.58",
+    "dom:signal:81521.6"
+   ]
+  }
+ ]
+}

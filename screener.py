@@ -23,6 +23,7 @@ from flask import Flask, request, jsonify, render_template
 from market_candles import closed_candles, interval_ms
 from liquidity_api import register_liquidity_routes
 from footprint_api import register_footprint_routes
+from seconds_api import register_seconds_routes
 from scalp_api import register_scalp_routes
 
 from decision import make_decision, format_decision_header
@@ -74,6 +75,7 @@ log = logging.getLogger(__name__)
 app = Flask(__name__)
 register_liquidity_routes(app)
 register_footprint_routes(app)
+register_seconds_routes(app)
 register_scalp_routes(app)
 ai  = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
@@ -4195,7 +4197,8 @@ def api_chart_snapshot():
     pattern = (r"[A-Za-z0-9_.:-]{1,80}" if exchange == "hyperliquid" else
                r"[^\W_]\w{0,79}" if exchange == "binance" else r"[A-Z0-9_]{1,80}")
     interval = (request.args.get("interval") or "240").strip()
-    supported = {i["value"] for i in list_chart_intervals() if i["available"]}
+    # Seconds intervals are built in the browser from trades; /api/chart never serves them.
+    supported = {i["value"] for i in list_chart_intervals() if i["available"] and i.get("source") != "trades"}
     if not re.fullmatch(pattern, symbol) or interval not in supported:
         return jsonify({"error": "unsupported symbol or interval"}), 400
     try:

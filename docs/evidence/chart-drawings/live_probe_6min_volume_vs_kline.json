@@ -1,0 +1,166 @@
+{
+ "probe_status": "Backfilled from Binance aggTrades since 16:20:05 UTC (6000 trades, 6 requests) · live since 16:30:02 UTC · seconds without trades have no candle",
+ "probe_state": {
+  "state": "live",
+  "stream": "live",
+  "message": "",
+  "liveSince": 1792254602854,
+  "backfill": {
+   "ok": true,
+   "from": 1792254005000,
+   "asOf": 1792254602634,
+   "trades": 6000,
+   "requests": 6,
+   "truncated": false,
+   "bars": 120
+  },
+  "gaps": 0,
+  "errors": 0,
+  "lastId": 3488521349,
+  "latestTradeMs": 1792254955630,
+  "firstLiveBucket": 1792254600000
+ },
+ "note": "first group skipped (starts before complete_from); live = built in browser from WS aggTrades",
+ "rows": [
+  {
+   "minute_utc": "16:21:00",
+   "origins": "backfill",
+   "partial": false,
+   "bars_5s": 12,
+   "sum_5s_volume_units1e18": "31416000000000000000",
+   "kline_volume": "31.416",
+   "equal": true,
+   "ohlc_equal": true
+  },
+  {
+   "minute_utc": "16:22:00",
+   "origins": "backfill",
+   "partial": false,
+   "bars_5s": 12,
+   "sum_5s_volume_units1e18": "36162000000000000000",
+   "kline_volume": "36.162",
+   "equal": true,
+   "ohlc_equal": true
+  },
+  {
+   "minute_utc": "16:23:00",
+   "origins": "backfill",
+   "partial": false,
+   "bars_5s": 12,
+   "sum_5s_volume_units1e18": "21448000000000000000",
+   "kline_volume": "21.448",
+   "equal": true,
+   "ohlc_equal": true
+  },
+  {
+   "minute_utc": "16:24:00",
+   "origins": "backfill",
+   "partial": false,
+   "bars_5s": 12,
+   "sum_5s_volume_units1e18": "12989000000000000000",
+   "kline_volume": "12.988",
+   "equal": false,
+   "ohlc_equal": true
+  },
+  {
+   "minute_utc": "16:25:00",
+   "origins": "backfill",
+   "partial": false,
+   "bars_5s": 12,
+   "sum_5s_volume_units1e18": "58181000000000000000",
+   "kline_volume": "58.182",
+   "equal": false,
+   "ohlc_equal": false
+  },
+  {
+   "minute_utc": "16:26:00",
+   "origins": "backfill",
+   "partial": false,
+   "bars_5s": 12,
+   "sum_5s_volume_units1e18": "64162000000000000000",
+   "kline_volume": "64.162",
+   "equal": true,
+   "ohlc_equal": true
+  },
+  {
+   "minute_utc": "16:27:00",
+   "origins": "backfill",
+   "partial": false,
+   "bars_5s": 12,
+   "sum_5s_volume_units1e18": "23347000000000000000",
+   "kline_volume": "23.347",
+   "equal": true,
+   "ohlc_equal": true
+  },
+  {
+   "minute_utc": "16:28:00",
+   "origins": "backfill",
+   "partial": false,
+   "bars_5s": 12,
+   "sum_5s_volume_units1e18": "9062000000000000000",
+   "kline_volume": "9.062",
+   "equal": true,
+   "ohlc_equal": true
+  },
+  {
+   "minute_utc": "16:29:00",
+   "origins": "backfill",
+   "partial": false,
+   "bars_5s": 12,
+   "sum_5s_volume_units1e18": "10297000000000000000",
+   "kline_volume": "10.297",
+   "equal": true,
+   "ohlc_equal": true
+  },
+  {
+   "minute_utc": "16:30:00",
+   "origins": "backfill+live",
+   "partial": false,
+   "bars_5s": 12,
+   "sum_5s_volume_units1e18": "63018000000000000000",
+   "kline_volume": "63.018",
+   "equal": true,
+   "ohlc_equal": true
+  },
+  {
+   "minute_utc": "16:31:00",
+   "origins": "live",
+   "partial": false,
+   "bars_5s": 12,
+   "sum_5s_volume_units1e18": "69847000000000000000",
+   "kline_volume": "69.847",
+   "equal": true,
+   "ohlc_equal": true
+  },
+  {
+   "minute_utc": "16:32:00",
+   "origins": "live",
+   "partial": false,
+   "bars_5s": 12,
+   "sum_5s_volume_units1e18": "25590000000000000000",
+   "kline_volume": "25.590",
+   "equal": true,
+   "ohlc_equal": true
+  },
+  {
+   "minute_utc": "16:33:00",
+   "origins": "live",
+   "partial": false,
+   "bars_5s": 12,
+   "sum_5s_volume_units1e18": "25174000000000000000",
+   "kline_volume": "25.174",
+   "equal": true,
+   "ohlc_equal": true
+  },
+  {
+   "minute_utc": "16:34:00",
+   "origins": "live",
+   "partial": false,
+   "bars_5s": 12,
+   "sum_5s_volume_units1e18": "50657000000000000000",
+   "kline_volume": "50.608",
+   "equal": false,
+   "ohlc_equal": true
+  }
+ ]
+}

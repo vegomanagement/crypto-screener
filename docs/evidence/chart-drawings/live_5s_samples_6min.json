@@ -1,0 +1,1125 @@
+{
+ "started_utc": "2026-10-17T16:30:01.702Z",
+ "samples": [
+  {
+   "interval": "5s",
+   "exchange": "binance",
+   "state": "ready",
+   "status": "Backfilled from Binance aggTrades since 16:20:05 UTC (5998 trades, 6 requests) · live since 16:30:01 UTC · seconds without trades have no candle",
+   "count": "120 closed bars",
+   "label": "TRADES LIVE",
+   "source": "BINANCE · TRADES",
+   "live": "WS trade 81,275.9",
+   "countdown": "00:05",
+   "countdownHidden": false,
+   "favorite": [
+    [
+     "1s",
+     false
+    ],
+    [
+     "5s",
+     false
+    ],
+    [
+     "15s",
+     false
+    ],
+    [
+     "30s",
+     false
+    ]
+   ],
+   "elapsed_s": 4
+  },
+  {
+   "interval": "5s",
+   "exchange": "binance",
+   "state": "ready",
+   "status": "Backfilled from Binance aggTrades since 16:20:05 UTC (5998 trades, 6 requests) · live since 16:30:01 UTC · seconds without trades have no candle",
+   "count": "122 closed bars",
+   "label": "TRADES LIVE",
+   "source": "BINANCE · TRADES",
+   "live": "WS trade 81,267.8",
+   "countdown": "00:05",
+   "countdownHidden": false,
+   "favorite": [
+    [
+     "1s",
+     false
+    ],
+    [
+     "5s",
+     false
+    ],
+    [
+     "15s",
+     false
+    ],
+    [
+     "30s",
+     false
+    ]
+   ],
+   "elapsed_s": 14
+  },
+  {
+   "interval": "5s",
+   "exchange": "binance",
+   "state": "ready",
+   "status": "Backfilled from Binance aggTrades since 16:20:05 UTC (5998 trades, 6 requests) · live since 16:30:01 UTC · seconds without trades have no candle",
+   "count": "124 closed bars",
+   "label": "TRADES LIVE",
+   "source": "BINANCE · TRADES",
+   "live": "WS trade 81,263.8",
+   "countdown": "00:05",
+   "countdownHidden": false,
+   "favorite": [
+    [
+     "1s",
+     false
+    ],
+    [
+     "5s",
+     false
+    ],
+    [
+     "15s",
+     false
+    ],
+    [
+     "30s",
+     false
+    ]
+   ],
+   "elapsed_s": 24
+  },
+  {
+   "interval": "5s",
+   "exchange": "binance",
+   "state": "ready",
+   "status": "Backfilled from Binance aggTrades since 16:20:05 UTC (5998 trades, 6 requests) · live since 16:30:01 UTC · seconds without trades have no candle",
+   "count": "126 closed bars",
+   "label": "TRADES LIVE",
+   "source": "BINANCE · TRADES",
+   "live": "WS trade 81,263.8",
+   "countdown": "00:05",
+   "countdownHidden": false,
+   "favorite": [
+    [
+     "1s",
+     false
+    ],
+    [
+     "5s",
+     false
+    ],
+    [
+     "15s",
+     false
+    ],
+    [
+     "30s",
+     false
+    ]
+   ],
+   "elapsed_s": 34
+  },
+  {
+   "interval": "5s",
+   "exchange": "binance",
+   "state": "ready",
+   "status": "Backfilled from Binance aggTrades since 16:20:05 UTC (5998 trades, 6 requests) · live since 16:30:01 UTC · seconds without trades have no candle",
+   "count": "128 closed bars",
+   "label": "TRADES LIVE",
+   "source": "BINANCE · TRADES",
+   "live": "WS trade 81,234.5",
+   "countdown": "00:05",
+   "countdownHidden": false,
+   "favorite": [
+    [
+     "1s",
+     false
+    ],
+    [
+     "5s",
+     false
+    ],
+    [
+     "15s",
+     false
+    ],
+    [
+     "30s",
+     false
+    ]
+   ],
+   "elapsed_s": 44
+  },
+  {
+   "interval": "5s",
+   "exchange": "binance",
+   "state": "ready",
+   "status": "Backfilled from Binance aggTrades since 16:20:05 UTC (5998 trades, 6 requests) · live since 16:30:01 UTC · seconds without trades have no candle",
+   "count": "130 closed bars",
+   "label": "TRADES LIVE",
+   "source": "BINANCE · TRADES",
+   "live": "WS trade 81,238.6",
+   "countdown": "00:05",
+   "countdownHidden": false,
+   "favorite": [
+    [
+     "1s",
+     false
+    ],
+    [
+     "5s",
+     false
+    ],
+    [
+     "15s",
+     false
+    ],
+    [
+     "30s",
+     false
+    ]
+   ],
+   "elapsed_s": 54
+  },
+  {
+   "interval": "5s",
+   "exchange": "binance",
+   "state": "ready",
+   "status": "Backfilled from Binance aggTrades since 16:20:05 UTC (5998 trades, 6 requests) · live since 16:30:01 UTC · seconds without trades have no candle",
+   "count": "132 closed bars",
+   "label": "TRADES LIVE",
+   "source": "BINANCE · TRADES",
+   "live": "WS trade 81,220",
+   "countdown": "00:05",
+   "countdownHidden": false,
+   "favorite": [
+    [
+     "1s",
+     false
+    ],
+    [
+     "5s",
+     false
+    ],
+    [
+     "15s",
+     false
+    ],
+    [
+     "30s",
+     false
+    ]
+   ],
+   "elapsed_s": 64
+  },
+  {
+   "interval": "5s",
+   "exchange": "binance",
+   "state": "ready",
+   "status": "Backfilled from Binance aggTrades since 16:20:05 UTC (5998 trades, 6 requests) · live since 16:30:01 UTC · seconds without trades have no candle",
+   "count": "134 closed bars",
+   "label": "TRADES LIVE",
+   "source": "BINANCE · TRADES",
+   "live": "WS trade 81,220.1",
+   "countdown": "00:05",
+   "countdownHidden": false,
+   "favorite": [
+    [
+     "1s",
+     false
+    ],
+    [
+     "5s",
+     false
+    ],
+    [
+     "15s",
+     false
+    ],
+    [
+     "30s",
+     false
+    ]
+   ],
+   "elapsed_s": 74
+  },
+  {
+   "interval": "5s",
+   "exchange": "binance",
+   "state": "ready",
+   "status": "Backfilled from Binance aggTrades since 16:20:05 UTC (5998 trades, 6 requests) · live since 16:30:01 UTC · seconds without trades have no candle",
+   "count": "136 closed bars",
+   "label": "TRADES LIVE",
+   "source": "BINANCE · TRADES",
+   "live": "WS trade 81,216.2",
+   "countdown": "00:05",
+   "countdownHidden": false,
+   "favorite": [
+    [
+     "1s",
+     false
+    ],
+    [
+     "5s",
+     false
+    ],
+    [
+     "15s",
+     false
+    ],
+    [
+     "30s",
+     false
+    ]
+   ],
+   "elapsed_s": 84
+  },
+  {
+   "interval": "5s",
+   "exchange": "binance",
+   "state": "ready",
+   "status": "Backfilled from Binance aggTrades since 16:20:05 UTC (5998 trades, 6 requests) · live since 16:30:01 UTC · seconds without trades have no candle",
+   "count": "138 closed bars",
+   "label": "TRADES LIVE",
+   "source": "BINANCE · TRADES",
+   "live": "WS trade 81,216.2",
+   "countdown": "00:05",
+   "countdownHidden": false,
+   "favorite": [
+    [
+     "1s",
+     false
+    ],
+    [
+     "5s",
+     false
+    ],
+    [
+     "15s",
+     false
+    ],
+    [
+     "30s",
+     false
+    ]
+   ],
+   "elapsed_s": 94
+  },
+  {
+   "interval": "5s",
+   "exchange": "binance",
+   "state": "ready",
+   "status": "Backfilled from Binance aggTrades since 16:20:05 UTC (5998 trades, 6 requests) · live since 16:30:01 UTC · seconds without trades have no candle",
+   "count": "140 closed bars",
+   "label": "TRADES LIVE",
+   "source": "BINANCE · TRADES",
+   "live": "WS trade 81,219.6",
+   "countdown": "00:05",
+   "countdownHidden": false,
+   "favorite": [
+    [
+     "1s",
+     false
+    ],
+    [
+     "5s",
+     false
+    ],
+    [
+     "15s",
+     false
+    ],
+    [
+     "30s",
+     false
+    ]
+   ],
+   "elapsed_s": 104
+  },
+  {
+   "interval": "5s",
+   "exchange": "binance",
+   "state": "ready",
+   "status": "Backfilled from Binance aggTrades since 16:20:05 UTC (5998 trades, 6 requests) · live since 16:30:01 UTC · seconds without trades have no candle",
+   "count": "142 closed bars",
+   "label": "TRADES LIVE",
+   "source": "BINANCE · TRADES",
+   "live": "WS trade 81,225.9",
+   "countdown": "00:05",
+   "countdownHidden": false,
+   "favorite": [
+    [
+     "1s",
+     false
+    ],
+    [
+     "5s",
+     false
+    ],
+    [
+     "15s",
+     false
+    ],
+    [
+     "30s",
+     false
+    ]
+   ],
+   "elapsed_s": 114
+  },
+  {
+   "interval": "5s",
+   "exchange": "binance",
+   "state": "ready",
+   "status": "Backfilled from Binance aggTrades since 16:20:05 UTC (5998 trades, 6 requests) · live since 16:30:01 UTC · seconds without trades have no candle",
+   "count": "144 closed bars",
+   "label": "TRADES LIVE",
+   "source": "BINANCE · TRADES",
+   "live": "WS trade 81,226",
+   "countdown": "00:05",
+   "countdownHidden": false,
+   "favorite": [
+    [
+     "1s",
+     false
+    ],
+    [
+     "5s",
+     false
+    ],
+    [
+     "15s",
+     false
+    ],
+    [
+     "30s",
+     false
+    ]
+   ],
+   "elapsed_s": 124
+  },
+  {
+   "interval": "5s",
+   "exchange": "binance",
+   "state": "ready",
+   "status": "Backfilled from Binance aggTrades since 16:20:05 UTC (5998 trades, 6 requests) · live since 16:30:01 UTC · seconds without trades have no candle",
+   "count": "146 closed bars",
+   "label": "TRADES LIVE",
+   "source": "BINANCE · TRADES",
+   "live": "WS trade 81,229.8",
+   "countdown": "00:05",
+   "countdownHidden": false,
+   "favorite": [
+    [
+     "1s",
+     false
+    ],
+    [
+     "5s",
+     false
+    ],
+    [
+     "15s",
+     false
+    ],
+    [
+     "30s",
+     false
+    ]
+   ],
+   "elapsed_s": 134
+  },
+  {
+   "interval": "5s",
+   "exchange": "binance",
+   "state": "ready",
+   "status": "Backfilled from Binance aggTrades since 16:20:05 UTC (5998 trades, 6 requests) · live since 16:30:01 UTC · seconds without trades have no candle",
+   "count": "148 closed bars",
+   "label": "TRADES LIVE",
+   "source": "BINANCE · TRADES",
+   "live": "WS trade 81,226",
+   "countdown": "00:05",
+   "countdownHidden": false,
+   "favorite": [
+    [
+     "1s",
+     false
+    ],
+    [
+     "5s",
+     false
+    ],
+    [
+     "15s",
+     false
+    ],
+    [
+     "30s",
+     false
+    ]
+   ],
+   "elapsed_s": 144
+  },
+  {
+   "interval": "5s",
+   "exchange": "binance",
+   "state": "ready",
+   "status": "Backfilled from Binance aggTrades since 16:20:05 UTC (5998 trades, 6 requests) · live since 16:30:01 UTC · seconds without trades have no candle",
+   "count": "150 closed bars",
+   "label": "TRADES LIVE",
+   "source": "BINANCE · TRADES",
+   "live": "WS trade 81,226",
+   "countdown": "00:05",
+   "countdownHidden": false,
+   "favorite": [
+    [
+     "1s",
+     false
+    ],
+    [
+     "5s",
+     false
+    ],
+    [
+     "15s",
+     false
+    ],
+    [
+     "30s",
+     false
+    ]
+   ],
+   "elapsed_s": 154
+  },
+  {
+   "interval": "5s",
+   "exchange": "binance",
+   "state": "ready",
+   "status": "Backfilled from Binance aggTrades since 16:20:05 UTC (5998 trades, 6 requests) · live since 16:30:01 UTC · seconds without trades have no candle",
+   "count": "152 closed bars",
+   "label": "TRADES LIVE",
+   "source": "BINANCE · TRADES",
+   "live": "WS trade 81,226.1",
+   "countdown": "00:05",
+   "countdownHidden": false,
+   "favorite": [
+    [
+     "1s",
+     false
+    ],
+    [
+     "5s",
+     false
+    ],
+    [
+     "15s",
+     false
+    ],
+    [
+     "30s",
+     false
+    ]
+   ],
+   "elapsed_s": 164
+  },
+  {
+   "interval": "5s",
+   "exchange": "binance",
+   "state": "ready",
+   "status": "Backfilled from Binance aggTrades since 16:20:05 UTC (5998 trades, 6 requests) · live since 16:30:01 UTC · seconds without trades have no candle",
+   "count": "154 closed bars",
+   "label": "TRADES LIVE",
+   "source": "BINANCE · TRADES",
+   "live": "WS trade 81,226.1",
+   "countdown": "00:05",
+   "countdownHidden": false,
+   "favorite": [
+    [
+     "1s",
+     false
+    ],
+    [
+     "5s",
+     false
+    ],
+    [
+     "15s",
+     false
+    ],
+    [
+     "30s",
+     false
+    ]
+   ],
+   "elapsed_s": 174
+  },
+  {
+   "interval": "5s",
+   "exchange": "binance",
+   "state": "ready",
+   "status": "Backfilled from Binance aggTrades since 16:20:05 UTC (5998 trades, 6 requests) · live since 16:30:01 UTC · seconds without trades have no candle",
+   "count": "156 closed bars",
+   "label": "TRADES LIVE",
+   "source": "BINANCE · TRADES",
+   "live": "WS trade 81,239",
+   "countdown": "00:05",
+   "countdownHidden": false,
+   "favorite": [
+    [
+     "1s",
+     false
+    ],
+    [
+     "5s",
+     false
+    ],
+    [
+     "15s",
+     false
+    ],
+    [
+     "30s",
+     false
+    ]
+   ],
+   "elapsed_s": 184
+  },
+  {
+   "interval": "5s",
+   "exchange": "binance",
+   "state": "ready",
+   "status": "Backfilled from Binance aggTrades since 16:20:05 UTC (5998 trades, 6 requests) · live since 16:30:01 UTC · seconds without trades have no candle",
+   "count": "158 closed bars",
+   "label": "TRADES LIVE",
+   "source": "BINANCE · TRADES",
+   "live": "WS trade 81,245.9",
+   "countdown": "00:05",
+   "countdownHidden": false,
+   "favorite": [
+    [
+     "1s",
+     false
+    ],
+    [
+     "5s",
+     false
+    ],
+    [
+     "15s",
+     false
+    ],
+    [
+     "30s",
+     false
+    ]
+   ],
+   "elapsed_s": 194
+  },
+  {
+   "interval": "5s",
+   "exchange": "binance",
+   "state": "ready",
+   "status": "Backfilled from Binance aggTrades since 16:20:05 UTC (5998 trades, 6 requests) · live since 16:30:01 UTC · seconds without trades have no candle",
+   "count": "160 closed bars",
+   "label": "TRADES LIVE",
+   "source": "BINANCE · TRADES",
+   "live": "WS trade 81,250.9",
+   "countdown": "00:05",
+   "countdownHidden": false,
+   "favorite": [
+    [
+     "1s",
+     false
+    ],
+    [
+     "5s",
+     false
+    ],
+    [
+     "15s",
+     false
+    ],
+    [
+     "30s",
+     false
+    ]
+   ],
+   "elapsed_s": 204
+  },
+  {
+   "interval": "5s",
+   "exchange": "binance",
+   "state": "ready",
+   "status": "Backfilled from Binance aggTrades since 16:20:05 UTC (5998 trades, 6 requests) · live since 16:30:01 UTC · seconds without trades have no candle",
+   "count": "162 closed bars",
+   "label": "TRADES LIVE",
+   "source": "BINANCE · TRADES",
+   "live": "WS trade 81,257.3",
+   "countdown": "00:05",
+   "countdownHidden": false,
+   "favorite": [
+    [
+     "1s",
+     false
+    ],
+    [
+     "5s",
+     false
+    ],
+    [
+     "15s",
+     false
+    ],
+    [
+     "30s",
+     false
+    ]
+   ],
+   "elapsed_s": 214
+  },
+  {
+   "interval": "5s",
+   "exchange": "binance",
+   "state": "ready",
+   "status": "Backfilled from Binance aggTrades since 16:20:05 UTC (5998 trades, 6 requests) · live since 16:30:01 UTC · seconds without trades have no candle",
+   "count": "164 closed bars",
+   "label": "TRADES LIVE",
+   "source": "BINANCE · TRADES",
+   "live": "WS trade 81,260.7",
+   "countdown": "00:05",
+   "countdownHidden": false,
+   "favorite": [
+    [
+     "1s",
+     false
+    ],
+    [
+     "5s",
+     false
+    ],
+    [
+     "15s",
+     false
+    ],
+    [
+     "30s",
+     false
+    ]
+   ],
+   "elapsed_s": 224
+  },
+  {
+   "interval": "5s",
+   "exchange": "binance",
+   "state": "ready",
+   "status": "Backfilled from Binance aggTrades since 16:20:05 UTC (5998 trades, 6 requests) · live since 16:30:01 UTC · seconds without trades have no candle",
+   "count": "166 closed bars",
+   "label": "TRADES LIVE",
+   "source": "BINANCE · TRADES",
+   "live": "WS trade 81,267.9",
+   "countdown": "00:05",
+   "countdownHidden": false,
+   "favorite": [
+    [
+     "1s",
+     false
+    ],
+    [
+     "5s",
+     false
+    ],
+    [
+     "15s",
+     false
+    ],
+    [
+     "30s",
+     false
+    ]
+   ],
+   "elapsed_s": 234
+  },
+  {
+   "interval": "5s",
+   "exchange": "binance",
+   "state": "ready",
+   "status": "Backfilled from Binance aggTrades since 16:20:05 UTC (5998 trades, 6 requests) · live since 16:30:01 UTC · seconds without trades have no candle",
+   "count": "168 closed bars",
+   "label": "TRADES LIVE",
+   "source": "BINANCE · TRADES",
+   "live": "WS trade 81,275",
+   "countdown": "00:05",
+   "countdownHidden": false,
+   "favorite": [
+    [
+     "1s",
+     false
+    ],
+    [
+     "5s",
+     false
+    ],
+    [
+     "15s",
+     false
+    ],
+    [
+     "30s",
+     false
+    ]
+   ],
+   "elapsed_s": 244
+  },
+  {
+   "interval": "5s",
+   "exchange": "binance",
+   "state": "ready",
+   "status": "Backfilled from Binance aggTrades since 16:20:05 UTC (5998 trades, 6 requests) · live since 16:30:01 UTC · seconds without trades have no candle",
+   "count": "170 closed bars",
+   "label": "TRADES LIVE",
+   "source": "BINANCE · TRADES",
+   "live": "WS trade 81,261",
+   "countdown": "00:05",
+   "countdownHidden": false,
+   "favorite": [
+    [
+     "1s",
+     false
+    ],
+    [
+     "5s",
+     false
+    ],
+    [
+     "15s",
+     false
+    ],
+    [
+     "30s",
+     false
+    ]
+   ],
+   "elapsed_s": 254
+  },
+  {
+   "interval": "5s",
+   "exchange": "binance",
+   "state": "ready",
+   "status": "Backfilled from Binance aggTrades since 16:20:05 UTC (5998 trades, 6 requests) · live since 16:30:01 UTC · seconds without trades have no candle",
+   "count": "172 closed bars",
+   "label": "TRADES LIVE",
+   "source": "BINANCE · TRADES",
+   "live": "WS trade 81,264.9",
+   "countdown": "00:05",
+   "countdownHidden": false,
+   "favorite": [
+    [
+     "1s",
+     false
+    ],
+    [
+     "5s",
+     false
+    ],
+    [
+     "15s",
+     false
+    ],
+    [
+     "30s",
+     false
+    ]
+   ],
+   "elapsed_s": 264
+  },
+  {
+   "interval": "5s",
+   "exchange": "binance",
+   "state": "ready",
+   "status": "Backfilled from Binance aggTrades since 16:20:05 UTC (5998 trades, 6 requests) · live since 16:30:01 UTC · seconds without trades have no candle",
+   "count": "174 closed bars",
+   "label": "TRADES LIVE",
+   "source": "BINANCE · TRADES",
+   "live": "WS trade 81,274.1",
+   "countdown": "00:05",
+   "countdownHidden": false,
+   "favorite": [
+    [
+     "1s",
+     false
+    ],
+    [
+     "5s",
+     false
+    ],
+    [
+     "15s",
+     false
+    ],
+    [
+     "30s",
+     false
+    ]
+   ],
+   "elapsed_s": 274
+  },
+  {
+   "interval": "5s",
+   "exchange": "binance",
+   "state": "ready",
+   "status": "Backfilled from Binance aggTrades since 16:20:05 UTC (5998 trades, 6 requests) · live since 16:30:01 UTC · seconds without trades have no candle",
+   "count": "176 closed bars",
+   "label": "TRADES LIVE",
+   "source": "BINANCE · TRADES",
+   "live": "WS trade 81,282.3",
+   "countdown": "00:05",
+   "countdownHidden": false,
+   "favorite": [
+    [
+     "1s",
+     false
+    ],
+    [
+     "5s",
+     false
+    ],
+    [
+     "15s",
+     false
+    ],
+    [
+     "30s",
+     false
+    ]
+   ],
+   "elapsed_s": 284
+  },
+  {
+   "interval": "5s",
+   "exchange": "binance",
+   "state": "ready",
+   "status": "Backfilled from Binance aggTrades since 16:20:05 UTC (5998 trades, 6 requests) · live since 16:30:01 UTC · seconds without trades have no candle",
+   "count": "178 closed bars",
+   "label": "TRADES LIVE",
+   "source": "BINANCE · TRADES",
+   "live": "WS trade 81,274.1",
+   "countdown": "00:05",
+   "countdownHidden": false,
+   "favorite": [
+    [
+     "1s",
+     false
+    ],
+    [
+     "5s",
+     false
+    ],
+    [
+     "15s",
+     false
+    ],
+    [
+     "30s",
+     false
+    ]
+   ],
+   "elapsed_s": 294
+  },
+  {
+   "interval": "5s",
+   "exchange": "binance",
+   "state": "ready",
+   "status": "Backfilled from Binance aggTrades since 16:20:05 UTC (5998 trades, 6 requests) · live since 16:30:01 UTC · seconds without trades have no candle",
+   "count": "180 closed bars",
+   "label": "TRADES LIVE",
+   "source": "BINANCE · TRADES",
+   "live": "WS trade 81,248.5",
+   "countdown": "00:05",
+   "countdownHidden": false,
+   "favorite": [
+    [
+     "1s",
+     false
+    ],
+    [
+     "5s",
+     false
+    ],
+    [
+     "15s",
+     false
+    ],
+    [
+     "30s",
+     false
+    ]
+   ],
+   "elapsed_s": 304
+  },
+  {
+   "interval": "5s",
+   "exchange": "binance",
+   "state": "ready",
+   "status": "Backfilled from Binance aggTrades since 16:20:05 UTC (5998 trades, 6 requests) · live since 16:30:01 UTC · seconds without trades have no candle",
+   "count": "182 closed bars",
+   "label": "TRADES LIVE",
+   "source": "BINANCE · TRADES",
+   "live": "WS trade 81,226.1",
+   "countdown": "00:05",
+   "countdownHidden": false,
+   "favorite": [
+    [
+     "1s",
+     false
+    ],
+    [
+     "5s",
+     false
+    ],
+    [
+     "15s",
+     false
+    ],
+    [
+     "30s",
+     false
+    ]
+   ],
+   "elapsed_s": 314
+  },
+  {
+   "interval": "5s",
+   "exchange": "binance",
+   "state": "ready",
+   "status": "Backfilled from Binance aggTrades since 16:20:05 UTC (5998 trades, 6 requests) · live since 16:30:01 UTC · seconds without trades have no candle",
+   "count": "184 closed bars",
+   "label": "TRADES LIVE",
+   "source": "BINANCE · TRADES",
+   "live": "WS trade 81,233.8",
+   "countdown": "00:05",
+   "countdownHidden": false,
+   "favorite": [
+    [
+     "1s",
+     false
+    ],
+    [
+     "5s",
+     false
+    ],
+    [
+     "15s",
+     false
+    ],
+    [
+     "30s",
+     false
+    ]
+   ],
+   "elapsed_s": 324
+  },
+  {
+   "interval": "5s",
+   "exchange": "binance",
+   "state": "ready",
+   "status": "Backfilled from Binance aggTrades since 16:20:05 UTC (5998 trades, 6 requests) · live since 16:30:01 UTC · seconds without trades have no candle",
+   "count": "186 closed bars",
+   "label": "TRADES LIVE",
+   "source": "BINANCE · TRADES",
+   "live": "WS trade 81,238.5",
+   "countdown": "00:05",
+   "countdownHidden": false,
+   "favorite": [
+    [
+     "1s",
+     false
+    ],
+    [
+     "5s",
+     false
+    ],
+    [
+     "15s",
+     false
+    ],
+    [
+     "30s",
+     false
+    ]
+   ],
+   "elapsed_s": 334
+  },
+  {
+   "interval": "5s",
+   "exchange": "binance",
+   "state": "ready",
+   "status": "Backfilled from Binance aggTrades since 16:20:05 UTC (5998 trades, 6 requests) · live since 16:30:01 UTC · seconds without trades have no candle",
+   "count": "188 closed bars",
+   "label": "TRADES LIVE",
+   "source": "BINANCE · TRADES",
+   "live": "WS trade 81,226.4",
+   "countdown": "00:05",
+   "countdownHidden": false,
+   "favorite": [
+    [
+     "1s",
+     false
+    ],
+    [
+     "5s",
+     false
+    ],
+    [
+     "15s",
+     false
+    ],
+    [
+     "30s",
+     false
+    ]
+   ],
+   "elapsed_s": 344
+  },
+  {
+   "interval": "5s",
+   "exchange": "binance",
+   "state": "ready",
+   "status": "Backfilled from Binance aggTrades since 16:20:05 UTC (5998 trades, 6 requests) · live since 16:30:01 UTC · seconds without trades have no candle",
+   "count": "190 closed bars",
+   "label": "TRADES LIVE",
+   "source": "BINANCE · TRADES",
+   "live": "WS trade 81,231.3",
+   "countdown": "00:05",
+   "countdownHidden": false,
+   "favorite": [
+    [
+     "1s",
+     false
+    ],
+    [
+     "5s",
+     false
+    ],
+    [
+     "15s",
+     false
+    ],
+    [
+     "30s",
+     false
+    ]
+   ],
+   "elapsed_s": 354
+  }
+ ],
+ "js_errors": [
+  "{\"entry\":{\"source\":\"network\",\"level\":\"error\",\"text\":\"Failed to load resource: the server responded with a status of 404 (NOT FOUND)\",\"timestamp\":1792254559831.038,\"url\":\"http://127.0.0.1:5089/favicon.ico\",\"networkRequestId\":\"10984.225\"}}",
+  "{\"entry\":{\"source\":\"network\",\"level\":\"error\",\"text\":\"Failed to load resource: the server responded with a status of 404 (NOT FOUND)\",\"timestamp\":1792254600265.399,\"url\":\"http://127.0.0.1:5089/favicon.ico\",\"networkRequestId\":\"10984.278\"}}"
+ ]
+}

@@ -18,12 +18,15 @@ _VALUES = ("1", "3", "5", "10", "12", "15", "30", "45", "60", "120",
 
 
 def list_chart_intervals() -> list[dict]:
-    """Return UI choices, including an explicit unavailable seconds option."""
+    """Return UI choices; seconds intervals are trade-built and client-side only."""
     labels = {"D": "D", "2D": "2D", "3D": "3D", "W": "W", "M": "M",
               "60": "1h", "120": "2h", "180": "3h", "240": "4h",
               "480": "8h", "720": "12h"}
-    return [{"value": "30s", "label": "30s", "available": False,
-             "reason": "Unsupported: providers do not supply 30-second candles"}] + [
+    seconds = [{"value": value, "label": value, "available": True, "source": "trades",
+                "reason": "Built in the browser from real trades (live stream; Binance also "
+                          "backfills recent minutes from aggTrades). Not served by /api/chart."}
+               for value in ("1s", "5s", "15s", "30s")]
+    return seconds + [
         {"value": value, "label": labels.get(value, f"{value}m"),
          "available": True} for value in _VALUES]
 

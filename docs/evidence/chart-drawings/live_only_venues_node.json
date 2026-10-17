@@ -1,0 +1,64 @@
+{
+ "bybit": {
+  "status": "No public trade history for this venue; candles start with the live stream · live since 16:30:48 UTC · 1 partial bar(s) grey · seconds without trades have no candle",
+  "stream": "live",
+  "closed": 46,
+  "partial": 1,
+  "first": {
+   "time": 1792254648,
+   "open": 81240.7,
+   "high": 81240.8,
+   "low": 81240.7,
+   "close": 81240.8,
+   "volume": 0.288,
+   "volumeExact": "0.288",
+   "trades": 36,
+   "partial": true,
+   "origin": "live"
+  },
+  "last": {
+   "time": 1792254706,
+   "open": 81224,
+   "high": 81224,
+   "low": 81224,
+   "close": 81224,
+   "volume": 0.001,
+   "volumeExact": "0.001",
+   "trades": 1,
+   "partial": false,
+   "origin": "live"
+  },
+  "gaps_in_seconds": 11
+ },
+ "hyperliquid": {
+  "status": "No public trade history for this venue; candles start with the live stream · live since 16:31:24 UTC · 1 partial bar(s) grey · seconds without trades have no candle",
+  "stream": "live",
+  "closed": 42,
+  "partial": 1,
+  "first": {
+   "time": 1792254684,
+   "open": 81217,
+   "high": 81217,
+   "low": 81217,
+   "close": 81217,
+   "volume": 0.00466,
+   "volumeExact": "0.00466",
+   "trades": 1,
+   "partial": true,
+   "origin": "live"
+  },
+  "last": {
+   "time": 1792254764,
+   "open": 81220,
+   "high": 81220,
+   "low": 81220,
+   "close": 81220,
+   "volume": 0.00569,
+   "volumeExact": "0.00569",
+   "trades": 1,
+   "partial": false,
+   "origin": "live"
+  },
+  "gaps_in_seconds": 22
+ }
+}

@@ -1,0 +1,196 @@
+{
+ "as_of": 1792254579068,
+ "complete_from_ms": 1792253915000,
+ "requests": 7,
+ "truncated": false,
+ "trades": 7000,
+ "bars": 133,
+ "full_minutes_compared": 10,
+ "exact_equal": 6,
+ "rows": [
+  {
+   "minute_ms": 1792253940000,
+   "sum_5s_volume": "88.678",
+   "kline_volume": "88.674",
+   "equal": false,
+   "bars_5s": 12,
+   "agg_trades": 795,
+   "kline_trades": 1804,
+   "diff": "0.004",
+   "multi_fill_aggtrades_last_2s": [
+    {
+     "a": 3488511258,
+     "T": 1792253998147,
+     "q": "0.202",
+     "fills": 2
+    },
+    {
+     "a": 3488511259,
+     "T": 1792253998336,
+     "q": "0.252",
+     "fills": 2
+    },
+    {
+     "a": 3488511260,
+     "T": 1792253998504,
+     "q": "0.041",
+     "fills": 2
+    },
+    {
+     "a": 3488511268,
+     "T": 1792253999917,
+     "q": "2.153",
+     "fills": 4
+    }
+   ],
+   "pair_sum_equal": true
+  },
+  {
+   "minute_ms": 1792254000000,
+   "sum_5s_volume": "95.814",
+   "kline_volume": "95.818",
+   "equal": false,
+   "bars_5s": 12,
+   "agg_trades": 1081,
+   "kline_trades": 3186,
+   "diff": "-0.004",
+   "multi_fill_aggtrades_last_2s": [],
+   "pair_sum_equal": false
+  },
+  {
+   "minute_ms": 1792254060000,
+   "sum_5s_volume": "31.416",
+   "kline_volume": "31.416",
+   "equal": true,
+   "bars_5s": 12,
+   "agg_trades": 797,
+   "kline_trades": 1690
+  },
+  {
+   "minute_ms": 1792254120000,
+   "sum_5s_volume": "36.162",
+   "kline_volume": "36.162",
+   "equal": true,
+   "bars_5s": 12,
+   "agg_trades": 560,
+   "kline_trades": 1377
+  },
+  {
+   "minute_ms": 1792254180000,
+   "sum_5s_volume": "21.448",
+   "kline_volume": "21.448",
+   "equal": true,
+   "bars_5s": 12,
+   "agg_trades": 384,
+   "kline_trades": 707
+  },
+  {
+   "minute_ms": 1792254240000,
+   "sum_5s_volume": "12.989",
+   "kline_volume": "12.988",
+   "equal": false,
+   "bars_5s": 12,
+   "agg_trades": 630,
+   "kline_trades": 1220,
+   "diff": "0.001",
+   "multi_fill_aggtrades_last_2s": [
+    {
+     "a": 3488514714,
+     "T": 1792254298939,
+     "q": "0.159",
+     "fills": 4
+    },
+    {
+     "a": 3488514715,
+     "T": 1792254299054,
+     "q": "0.074",
+     "fills": 3
+    },
+    {
+     "a": 3488514717,
+     "T": 1792254299349,
+     "q": "0.022",
+     "fills": 2
+    },
+    {
+     "a": 3488514718,
+     "T": 1792254299465,
+     "q": "0.065",
+     "fills": 3
+    },
+    {
+     "a": 3488514720,
+     "T": 1792254299961,
+     "q": "0.003",
+     "fills": 2
+    }
+   ],
+   "pair_sum_equal": true
+  },
+  {
+   "minute_ms": 1792254300000,
+   "sum_5s_volume": "58.181",
+   "kline_volume": "58.182",
+   "equal": false,
+   "bars_5s": 12,
+   "agg_trades": 720,
+   "kline_trades": 1910,
+   "diff": "-0.001",
+   "multi_fill_aggtrades_last_2s": [
+    {
+     "a": 3488515434,
+     "T": 1792254358647,
+     "q": "0.027",
+     "fills": 9
+    },
+    {
+     "a": 3488515435,
+     "T": 1792254358852,
+     "q": "0.002",
+     "fills": 2
+    },
+    {
+     "a": 3488515437,
+     "T": 1792254359253,
+     "q": "0.035",
+     "fills": 3
+    },
+    {
+     "a": 3488515438,
+     "T": 1792254359529,
+     "q": "0.003",
+     "fills": 2
+    }
+   ],
+   "pair_sum_equal": false
+  },
+  {
+   "minute_ms": 1792254360000,
+   "sum_5s_volume": "64.162",
+   "kline_volume": "64.162",
+   "equal": true,
+   "bars_5s": 12,
+   "agg_trades": 792,
+   "kline_trades": 1959
+  },
+  {
+   "minute_ms": 1792254420000,
+   "sum_5s_volume": "23.347",
+   "kline_volume": "23.347",
+   "equal": true,
+   "bars_5s": 12,
+   "agg_trades": 400,
+   "kline_trades": 769
+  },
+  {
+   "minute_ms": 1792254480000,
+   "sum_5s_volume": "9.062",
+   "kline_volume": "9.062",
+   "equal": true,
+   "bars_5s": 12,
+   "agg_trades": 423,
+   "kline_trades": 846
+  }
+ ],
+ "note": "kline_trades counts raw fills; agg_trades counts aggregate trades (one aggTrade may hold several fills)."
+}

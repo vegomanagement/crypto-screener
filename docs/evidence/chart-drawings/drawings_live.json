@@ -1,0 +1,114 @@
+{
+ "steps": [
+  {
+   "name": "host",
+   "x": 4,
+   "y": 203,
+   "w": 1230,
+   "h": 624
+  },
+  {
+   "name": "toolbar_open",
+   "hidden": false
+  },
+  {
+   "name": "magnet",
+   "pressed": "true"
+  },
+  {
+   "name": "magnet_off",
+   "pressed": "false"
+  },
+  {
+   "name": "level_mode",
+   "pressed": "true"
+  },
+  {
+   "name": "level_mode_off",
+   "pressed": "false"
+  },
+  {
+   "name": "stored_drawings",
+   "count": 5,
+   "types": [
+    "line",
+    "rect",
+    "ray",
+    "hline",
+    "hray"
+   ],
+   "points": [
+    [
+     {
+      "time": 1792249440000,
+      "price": "81517.1"
+     },
+     {
+      "time": 1792251540000,
+      "price": "81423.1"
+     }
+    ],
+    [
+     {
+      "time": 1792251960000,
+      "price": "81483.13"
+     },
+     {
+      "time": 1792252920000,
+      "price": "81416.29"
+     }
+    ],
+    [
+     {
+      "time": 1792247760000,
+      "price": "81260.33"
+     },
+     {
+      "time": 1792249020000,
+      "price": "81316.03"
+     }
+    ],
+    [
+     {
+      "time": 1792250280000,
+      "price": "81527.69"
+     }
+    ],
+    [
+     {
+      "time": 1792250700000,
+      "price": "81215.77"
+     }
+    ]
+   ],
+   "levelIds": [
+    null,
+    null,
+    null,
+    "lv-mvcm1h0r-1-8z3lun",
+    "lv-mvcm1h15-2-84czuw"
+   ]
+  },
+  {
+   "name": "stored_levels",
+   "levels": [
+    {
+     "id": "lv-mvcm1h0r-1-8z3lun",
+     "price": "81527.69",
+     "source": "chart",
+     "kind": "simple"
+    },
+    {
+     "id": "lv-mvcm1h15-2-84czuw",
+     "price": "81215.77",
+     "source": "chart",
+     "kind": "simple"
+    }
+   ]
+  },
+  {
+   "name": "ruler",
+   "drawn": true
+  }
+ ]
+}
