@@ -10,6 +10,7 @@ import logging
 import time
 from pathlib import Path
 from threading import Lock
+from urllib.parse import urlsplit
 
 from flask import Blueprint, jsonify, request
 
@@ -97,8 +98,10 @@ def register_agent_routes(app, *, market=None, confluence=None, funding=None, se
         if request.method != 'POST':
             return None
         origin = request.headers.get('Origin')
+        # Compare hosts only: behind a TLS-terminating proxy (Railway) the app sees http://
+        # while the browser's Origin is https://, so a scheme compare rejected every POST.
         if (request.headers.get('Sec-Fetch-Site') == 'cross-site'
-                or (origin and origin.rstrip('/') != request.host_url.rstrip('/'))):
+                or (origin and urlsplit(origin).netloc.lower() != request.host.lower())):
             return jsonify({'error': 'cross-site analyst requests forbidden'}), 403
         if request.content_length is not None and request.content_length > 2048:
             return jsonify({'error': 'request body too large'}), 413

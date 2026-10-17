@@ -304,3 +304,20 @@ def test_hanging_providers_share_one_deadline(monkeypatch):
     elapsed = _time.monotonic() - started
     assert elapsed < 1.0, f"build_snapshot waited {elapsed:.2f}s for 6 hanging providers"
     assert "timed out" in snap["missing"]["funding"]
+
+
+# ── agent_api: same-origin check must survive a TLS-terminating proxy (Railway) ──
+
+@pytest.mark.parametrize("origin,expected", [
+    ("https://bot.example", 400),        # the page itself, served over https by the proxy
+    ("http://bot.example", 400),
+    ("https://evil.example", 403),
+    ("https://bot.example.evil.example", 403),
+    ("null", 403),
+])
+def test_same_origin_check_ignores_proxy_scheme(tmp_path, origin, expected):
+    from tests.test_agent_api import make_app
+    client = make_app(tmp_path, lambda m, deadline=None: ("", "m"))
+    resp = client.post("/api/agent/analysis", data="[]", content_type="application/json",
+                       base_url="http://bot.example", headers={"Origin": origin})
+    assert resp.status_code == expected
