@@ -29,8 +29,21 @@
     if (!(px > 0)) throw new Error('hyperliquid: no book price to derive tick');
     return OB.hyperliquidTick(px, meta.sz_decimals);
   }
-  /** Mark price + funding where the venue publishes it publicly. Returns null fields when unknown. */
+  /** Last SETTLED funding from this app's /api/funding (server-normalised, cached 30 s). Null when unavailable. */
+  async function fetchSettledFunding(venue, symbol) {
+    try {
+      const d = await fetchJson(`/api/funding?${new URLSearchParams({ exchange: venue, symbol })}`);
+      const last = d?.last_settled;
+      return last && Number.isFinite(Number(last.rate)) ? { rate: Number(last.rate), time: Number(last.time), interval: d.interval_hours?.value ?? null } : null;
+    } catch (_) { return null; }
+  }
+  /** Mark + predicted funding (venue live estimate) + last settled funding. Null fields when unknown. */
   async function fetchMarket(venue, symbol) {
+    const [market, settled] = await Promise.all([fetchVenueMarket(venue, symbol), fetchSettledFunding(venue, symbol)]);
+    return { ...market, lastFunding: settled ? settled.rate : null, lastFundingTime: settled ? settled.time : null };
+  }
+  /** Mark price + predicted funding where the venue publishes it publicly. */
+  async function fetchVenueMarket(venue, symbol) {
     if (venue === 'binance') {
       const d = await fetchJson(`https://fapi.binance.com/fapi/v1/premiumIndex?symbol=${encodeURIComponent(symbol)}`);
       return { mark: Number(d.markPrice), funding: Number(d.lastFundingRate), nextFunding: Number(d.nextFundingTime), basis: 'premiumIndex' };
@@ -192,7 +205,7 @@
       const fmt = v => R.formatPrice(v, d);
       let text = `Bid <b>${fmt(bid)}</b> · Ask <b>${fmt(ask)}</b> · Spread ${fmt(ask - bid)} (${((ask - bid) / mid * 100).toFixed(4)}%)`;
       if (m && m.mark > 0) text += ` · Mark <b>${fmt(m.mark)}</b> (Δ ${m.mark - mid >= 0 ? '+' : ''}${(m.mark - mid).toFixed(d)})`;
-      if (m && Number.isFinite(m.funding)) text += ` · Funding <b>${(m.funding * 100).toFixed(4)}%</b>${m.basis === 'hourly' ? '/h' : ''} · in ${window.ScalpPageUtil.countdown(m.nextFunding - Date.now())}`;
+      if (m && Number.isFinite(m.funding)) text += ` · Funding last <b>${Number.isFinite(m.lastFunding) ? `${(m.lastFunding * 100).toFixed(4)}%` : 'n/a'}</b> → pred <b title="Predicted: live estimate for the current period, changes until settlement">${(m.funding * 100).toFixed(4)}%</b>${m.basis === 'hourly' ? '/h' : ''} · in ${window.ScalpPageUtil.countdown(m.nextFunding - Date.now())}`;
       else if (this.marketError) text += ' · funding n/a';
       mk.innerHTML = text; // numbers only (formatted locally); no venue strings are interpolated
     }

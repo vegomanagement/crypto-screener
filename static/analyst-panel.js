@@ -125,6 +125,7 @@
         <label title="Draw agent levels on the active chart"><input type="checkbox" data-role="lines" checked> Lines</label></div>
       <p class="analyst-status" data-role="status" role="status">Analyze the blue-bordered chart from its real data.</p>
       <div data-role="body"></div>
+      <div class="analyst-funding" data-role="funding"></div>
       <p class="analyst-stats" data-role="stats"></p>
       <p class="analyst-disclaimer">Not financial advice. Research only — no orders are placed.</p>`;
     const $ = role => el.querySelector(`[data-role="${role}"]`);
@@ -225,7 +226,12 @@
     $('lines').addEventListener('change', e => { st.showLines = e.target.checked; drawLines(); });
     const timer = setInterval(() => { if (autoDue(st.auto, deps.visible(), st.lastRun, now(), st.busy)) run(false); }, 15000);
     activeChanged();
-    return { activeChanged, run, redraw: drawLines, destroy() { clearInterval(timer); clearLines(); }, _state: st };
+    function setFunding(data, at) {
+      const api = deps.funding || root.WorkspaceFunding, box = $('funding');
+      if (!api || !box) return;
+      box.innerHTML = api.sectionHtml(data, at ?? now());
+    }
+    return { activeChanged, run, redraw: drawLines, setFunding, destroy() { clearInterval(timer); clearLines(); }, _state: st };
   }
 
   return Object.assign({ mount, esc }, model);

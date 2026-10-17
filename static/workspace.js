@@ -569,6 +569,7 @@
           </details>
           <select class="pane-interval" aria-label="Interval for chart ${id + 1}"></select>
           <span class="pane-source" title="Data provider from chart response">—</span>
+          <span class="pane-funding" data-sign="none" hidden></span>
           <span class="pane-closed" title="Only completed candles are requested">CLOSED ONLY</span>
           <button type="button" class="pane-footprint-toggle" aria-pressed="false" aria-label="Footprint for chart ${id + 1}" title="Footprint (bid × ask order flow) for this chart">FP</button>
           <button type="button" class="pane-footprint-settings" aria-label="Footprint settings" title="Footprint settings">⚙</button>
@@ -1211,6 +1212,29 @@
       this.livePriceEl.dataset.state = 'ready';
       this.livePriceEl.textContent = `${source} ${formatPrice(price)}`;
     }
+    // Funding chip (static/funding.js): last settled → predicted · countdown, via GET /api/funding.
+    async refreshFunding() {
+      const config = state.panes[this.id], key = `${config.exchange}:${config.symbol}`;
+      if (this.fundingKey !== key) { this.fundingKey = key; this.fundingData = null; this.renderFundingChip(); }
+      if (this.fundingBusy) return;
+      this.fundingBusy = true;
+      try {
+        const response = await fetch(`/api/funding?${new URLSearchParams({ exchange: config.exchange, symbol: config.symbol })}`, { headers: { Accept: 'application/json' } });
+        const data = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+        if (this.fundingKey === key && !this.disposed) this.fundingData = response.ok ? data : { error: data.error || `HTTP ${response.status}`, detail: data.detail };
+      } catch (error) {
+        if (this.fundingKey === key) this.fundingData = { error: 'request failed', detail: String(error && error.message || error) };
+      } finally { this.fundingBusy = false; this.renderFundingChip(); }
+    }
+    renderFundingChip(now = Date.now()) {
+      const el = $('.pane-funding', this.element), api = window.WorkspaceFunding;
+      if (!el || !api) return;
+      const model = api.chipModel(this.fundingData, now);
+      el.hidden = !model && !this.fundingData?.error;
+      el.textContent = model ? model.text : this.fundingData?.error ? 'F n/a' : '';
+      el.title = model ? model.title : this.fundingData?.detail || this.fundingData?.error || '';
+      el.dataset.sign = model ? model.sign : 'none';
+    }
     // Hermes analyst levels (static/analyst-panel.js): temporary dashed price lines, never stored.
     setAnalystLines(rows) {
       this.clearAnalystLines(false);
@@ -1397,6 +1421,7 @@
     }
     async load(resetView = false, restart = false) {
       if (resetView) this.centerOnPrice(null);
+      if (this.fundingKey !== `${state.panes[this.id].exchange}:${state.panes[this.id].symbol}`) this.refreshFunding();
       if (this.disposed) return;
       this.updateHeader();
       if (isSecondsInterval(state.panes[this.id].interval)) return this.loadSeconds(resetView, restart);
@@ -1910,11 +1935,22 @@
       visible: () => document.visibilityState === 'visible'
     });
   }
+  // Funding: refetch visible panes every 30 s (server caches 30 s too); tick countdowns every second.
+  const fundingTimer = setInterval(() => {
+    if (document.visibilityState !== 'visible') return;
+    panes.forEach(pane => { if (isVisible(pane)) pane.refreshFunding(); });
+  }, 30000);
+  const fundingTick = setInterval(() => {
+    if (document.visibilityState !== 'visible') return;
+    const now = Date.now();
+    panes.forEach(pane => pane.renderFundingChip(now));
+    analyst?.setFunding(panes.get(state.active)?.fundingData || null, now);
+  }, 1000);
   const refreshTimer = setInterval(autoRefresh, 60000);
   // pagehide also covers browser navigation with bfcache; pageshow reconstructs
   // disposed instances without leaving their requests or observers alive.
   window.addEventListener('pagehide', () => {
-    clearInterval(refreshTimer); analyst?.destroy();
+    clearInterval(refreshTimer); clearInterval(fundingTimer); clearInterval(fundingTick); analyst?.destroy();
     pricesGeneration += 1; pricesController?.abort(); clearTimeout(pricesTimeout);
     panes.forEach(pane => pane.destroy()); panes.clear();
   });
