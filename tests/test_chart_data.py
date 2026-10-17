@@ -39,16 +39,16 @@ def test_native_closed_candles_preserve_provenance_without_mutation():
     assert len(rows) == 3
 
 
-def test_menu_contains_all_ui_intervals_and_disabled_seconds():
+def test_menu_contains_all_ui_intervals_and_trade_built_seconds():
     from chart_data import list_chart_intervals
     menu = list_chart_intervals()
     assert [x["value"] for x in menu] == [
-        "30s", "1", "3", "5", "10", "12", "15", "30", "45", "60",
+        "1s", "5s", "15s", "30s", "1", "3", "5", "10", "12", "15", "30", "45", "60",
         "120", "180", "240", "480", "720", "D", "2D", "3D", "W", "M"]
-    assert menu[0]["label"] == "30s"
-    assert menu[0]["available"] is False
-    assert menu[0]["reason"]
-    assert all(x["available"] and x["label"] for x in menu[1:])
+    seconds = menu[:4]
+    assert [x["label"] for x in seconds] == ["1s", "5s", "15s", "30s"]
+    assert all(x["available"] and x["source"] == "trades" and x["reason"] for x in seconds)
+    assert all(x["available"] and x["label"] and "source" not in x for x in menu[4:])
 
 
 @pytest.mark.parametrize("symbol,interval,limit", [

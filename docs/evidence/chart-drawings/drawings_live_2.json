@@ -1,0 +1,86 @@
+{
+ "steps": [
+  {
+   "name": "magnet_vs_binance_kline",
+   "checks": [
+    {
+     "time": "2026-10-17T15:04:00.000Z",
+     "stored": "81517.1",
+     "kline_open_time": "2026-10-17T15:04:00.000Z",
+     "ohlc": {
+      "open": "81517.10",
+      "high": "81517.20",
+      "low": "81517.10",
+      "close": "81517.10"
+     },
+     "snapped_to": "open"
+    },
+    {
+     "time": "2026-10-17T15:39:00.000Z",
+     "stored": "81423.1",
+     "kline_open_time": "2026-10-17T15:39:00.000Z",
+     "ohlc": {
+      "open": "81423.10",
+      "high": "81458.50",
+      "low": "81423.10",
+      "close": "81458.50"
+     },
+     "snapped_to": "open"
+    }
+   ]
+  },
+  {
+   "name": "drag_level",
+   "before": [
+    "81527.69",
+    "81215.77",
+    "81487.7"
+   ],
+   "after": [
+    "81527.69",
+    "81215.77",
+    "81487.7"
+   ],
+   "hline_price": "81527.69",
+   "linked_level_price": "81527.69"
+  },
+  {
+   "name": "delete_hray_level",
+   "drawings": [
+    "line",
+    "rect",
+    "ray",
+    "hline",
+    "hray"
+   ],
+   "levels": [
+    "chart:simple:81527.69",
+    "chart:simple:81215.77",
+    "dom:signal:81487.7"
+   ]
+  },
+  {
+   "name": "dom_level_moved",
+   "levels": [
+    "chart:simple:81527.69",
+    "chart:simple:81215.77",
+    "dom:signal:81497.7"
+   ]
+  },
+  {
+   "name": "interval_5m",
+   "interval": "5",
+   "drawings": 5
+  },
+  {
+   "name": "interval_5s",
+   "interval": "5s",
+   "drawings": 5,
+   "status": "Backfilled from Binance aggTrades since 16:18:10 UTC (6999 trades, 7 requests) · live since 16:28:49 UTC · seconds without trades have no candle"
+  },
+  {
+   "name": "js_exceptions",
+   "errors": []
+  }
+ ]
+}

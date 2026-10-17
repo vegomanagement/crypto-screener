@@ -276,6 +276,47 @@
     return stats;
   }
 
+  // ── price levels (levels.js) ──────────────────────────────────────────────
+  /** A level is drawn on the centre of the ladder row that contains its price (where that row's price label is). */
+  function levelY(view, price, rowSize, height) {
+    const p = Number(price);
+    if (!(p > 0) || !(rowSize > 0)) return NaN;
+    return rowCenterY(view, Math.floor(p / rowSize + 1e-6), height);
+  }
+  /** Nearest drawn level within `tol` px of y (for drag / double-click), or null. */
+  function levelAtY(list, view, y, height, rowSize, tol = 4) {
+    let best = null, dist = Infinity;
+    for (const level of list || []) {
+      const d = Math.abs(levelY(view, level.price, rowSize, height) - y);
+      if (d <= tol && d < dist) { best = level; dist = d; }
+    }
+    return best;
+  }
+  /** Lines across clusters, feed and ladder. Signal levels dashed; a fired one-shot level is drawn in its (grey) colour, dotted. */
+  function drawLevels(ctx, L, height, view, model) {
+    const list = model.levels || [], stats = { drawn: 0, offscreen: 0 };
+    if (!list.length || !(model.tick > 0)) return stats;
+    const rowSize = model.rowN * model.tick, x1 = L.volume.x + L.volume.w;
+    ctx.save(); ctx.font = FONT; ctx.textBaseline = 'middle';
+    for (const level of list) {
+      const y = levelY(view, level.dragPrice ?? level.price, rowSize, height);
+      if (!Number.isFinite(y) || y < -2 || y > height + 2) { stats.offscreen += 1; continue; }
+      const yy = Math.round(y) + (level.width % 2 ? 0.5 : 0), signal = level.kind === 'signal', fired = signal && !level.armed;
+      ctx.strokeStyle = level.color; ctx.lineWidth = level.width;
+      ctx.setLineDash?.(signal ? (fired ? [2, 3] : [6, 4]) : []);
+      ctx.globalAlpha = level.dragPrice ? 0.6 : 1;
+      ctx.beginPath(); ctx.moveTo(0, yy); ctx.lineTo(x1, yy); ctx.stroke();
+      ctx.setLineDash?.([]); ctx.globalAlpha = 1;
+      const tag = `${signal ? (fired ? '◇' : '◆') : '—'} ${level.note ? level.note.slice(0, 24) : signal ? (fired ? 'fired' : level.repeat ? 'signal ↻' : 'signal') : 'level'}`.trim();
+      const w = tag.length * 6.6 + 8, tx = Math.max(0, L.price.x - w - 2);
+      ctx.fillStyle = level.color; ctx.fillRect(tx, yy - 7, w, 14);
+      ctx.fillStyle = '#0c0f15'; ctx.textAlign = 'left'; ctx.fillText(tag, tx + 4, yy);
+      stats.drawn += 1;
+    }
+    ctx.restore();
+    return stats;
+  }
+
   /** One full column paint. Returns per-part stats (also used for render-level feed accounting). */
   function drawColumn(ctx, size, view, model, s) {
     const L = layout(size.width, { clusterCount: s.clusters.count });
@@ -283,9 +324,10 @@
     const clusters = drawClusters(ctx, L, size.height, view, model, s);
     const feed = drawFeed(ctx, L, size.height, view, model, s);
     const ladder = drawLadder(ctx, L, size.height, view, model, s);
-    return { layout: L, clusters, feed, ladder };
+    const levels = drawLevels(ctx, L, size.height, view, model);
+    return { layout: L, clusters, feed, ladder, levels };
   }
 
   return { COLORS, layout, rowCenterY, rowAtY, priceY, visibleRows, autocenter, fullScale, bigColor, formatVolume,
-    formatPrice, pctBetween, rgba, drawLadder, drawRuler, feedX, visiblePrints, drawFeed, drawClusters, drawColumn, FONT };
+    formatPrice, pctBetween, rgba, drawLadder, drawRuler, feedX, visiblePrints, drawFeed, drawClusters, levelY, levelAtY, drawLevels, drawColumn, FONT };
 });

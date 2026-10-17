@@ -10,10 +10,15 @@
   <script defer src="/static/market-stream.js"></script>
   <script defer src="/static/footprint.js"></script>
   <script defer src="/static/orderbook.js"></script>
+  <script defer src="/static/levels.js"></script>
+  <script defer src="/static/scalp-alerts.js"></script>
   <script defer src="/static/scalp-render.js"></script>
   <script defer src="/static/scalp-settings.js"></script>
   <script defer src="/static/scalp-column.js"></script>
   <script defer src="/static/scalp-dom.js"></script>
+  <script defer src="/static/scalp-alerts-ui.js"></script>
+  <script defer src="/static/scalp-levels-ui.js"></script>
+  <script defer src="/static/scalp-alerts-panel.js"></script>
   <script defer src="/static/scalp.js"></script>
 </head>
 <body>
@@ -26,6 +31,7 @@
         <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
       </select>
     </label>
+    <button id="scalp-alerts-toggle" type="button" aria-expanded="false" aria-controls="scalp-alerts" title="Alerts and signal levels">🔔 Alerts <span class="badge">0</span></button>
     <button id="scalp-help-toggle" type="button" aria-expanded="false" aria-controls="scalp-help" title="View hotkeys">⌨ Hotkeys</button>
     <a class="top-link" href="/ui">Charts ↗</a>
   </header>
@@ -33,9 +39,13 @@
     <strong>View hotkeys</strong> (apply to the highlighted column):
     <kbd>C</kbd> center &amp; resume autocenter · <kbd>+</kbd>/<kbd>−</kbd> row height ·
     <kbd>1</kbd>–<kbd>5</kbd> price scale · <kbd>P</kbd> ticks / % scale · <kbd>U</kbd> $ / coin volumes ·
-    <kbd>Esc</kbd> clear ruler · wheel scrolls · <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+wheel zooms · click a price sets the % ruler.
+    <kbd>Esc</kbd> clear ruler · wheel scrolls · <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+wheel zooms · click a price sets the % ruler.<br>
+    <strong>Levels</strong> (markers and alerts only, never orders): <kbd>Alt</kbd>+click a price sets/removes a level ·
+    <kbd>Shift</kbd>+<kbd>Alt</kbd>+click sets/removes a signal level (alerts when a trade crosses it) · drag a level to move ·
+    double-click a level to edit · <kbd>Shift</kbd>+<kbd>L</kbd> clears all levels of the column.
   </div>
-  <main id="scalp-grid" class="scalp-grid" data-columns="1" aria-label="Order book columns"></main>
+  <div class="scalp-work"><main id="scalp-grid" class="scalp-grid" data-columns="1" aria-label="Order book columns"></main>
+  <aside id="scalp-alerts" class="scalp-alerts" aria-label="Alerts and notifications" hidden></aside></div>
   <footer class="scalp-footer"><span id="scalp-status" role="status">Public venue data · book rows outside the venue's depth window are greyed (unknown, never filled in) · density age counts only since this page saw the level</span><span class="footer-utc">UTC</span></footer>
 </div>
 <noscript><p class="fatal">JavaScript is required for the live order book. No market data is generated locally.</p></noscript>

@@ -280,7 +280,7 @@ class FootprintService:
                 self._cache.popitem(last=False)
 
     def _agg_page(self, symbol, params, state):
-        if state["requests"] >= self.max_requests or state["trades"] >= self.max_trades:
+        if state["requests"] >= state.get("max_requests", self.max_requests) or state["trades"] >= self.max_trades:
             state["truncated"] = True
             return None
         if not self._rate.take():
@@ -381,6 +381,36 @@ class FootprintService:
         return bars, {"tick_size": tick, "truncated": state["truncated"], "requests": state["requests"],
                       "last_trade_id": last_id, "trades_from": lo_seen, "trades_to": hi_seen,
                       "warnings": warnings}
+
+    def binance_trades_since(self, symbol, since_ms, *, max_requests=20):
+        """Latest contiguous Binance aggTrades back to ``since_ms`` (bounded budget).
+
+        Pages backward by ``fromId`` from the latest page, sharing the footprint rate
+        window. Returns ``(trades, info)``; ``info['oldest_ms']`` is the first fetched trade
+        time, so only buckets opening strictly after it are complete. A budget stop
+        sets ``truncated`` (old history is what gets cut, never the newest).
+        """
+        state = {"requests": 0, "trades": 0, "truncated": False, "warnings": set(),
+                 "max_requests": min(self.max_requests, max_requests)}
+        as_of = self._clock()
+        page = self._agg_page(symbol, {}, state)
+        collected = [t for t in (page or []) if t.time_ms <= as_of]
+        while collected and collected[0].time_ms >= since_ms and collected[0].ident > 0:
+            cursor = collected[0].ident
+            older = self._agg_page(symbol, {"fromId": max(0, cursor - BINANCE_PAGE)}, state)
+            if older is None:
+                break
+            older = [t for t in older if t.ident < cursor]
+            if not older:
+                break
+            collected = older + collected
+        ids = [t.ident for t in collected]
+        if any(b - a != 1 for a, b in zip(ids, ids[1:])):
+            raise FootprintError("binance: non-contiguous aggTrade ids")
+        return collected, {"as_of": as_of, "requests": state["requests"], "truncated": state["truncated"],
+                           "oldest_ms": collected[0].time_ms if collected else None,
+                           "last_trade_id": ids[-1] if ids else None,
+                           "warnings": sorted(state["warnings"])}
 
     # ── bybit / hyperliquid: latest trades only ─────────────────────────────
 

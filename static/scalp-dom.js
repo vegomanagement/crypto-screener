@@ -3,7 +3,7 @@
  */
 (function () {
   'use strict';
-  const OB = window.ScalpOrderBook, R = window.ScalpRender, S = window.ScalpSettings, CD = window.ScalpColumnData;
+  const OB = window.ScalpOrderBook, R = window.ScalpRender, S = window.ScalpSettings, CD = window.ScalpColumnData, SA = window.ScalpAlerts;
   const $ = (sel, el = document) => el.querySelector(sel);
   const evidence = new URLSearchParams(location.search).get('evidence') === '1';
   const hub = window.WorkspaceMarketStream.createHub();
@@ -56,6 +56,7 @@
       this.rowN = null; this.tick = null; this.stream = null; this.data = null; this.density = new OB.DensityTracker();
       this.market = null; this.marketError = null; this.status = 'loading'; this.statusDetail = ''; this.error = null;
       this.lastDraw = null; this.records = []; this.generation = 0; this.unsubTrades = null; this.marketTimer = null;
+      this.levels = []; this.volAlerts = null; this.lastTradePrice = null; this.tradeGap = false; this.tickStr = null; this.suppressClick = false;
       this.element = this.build(); this.start();
     }
     build() {
@@ -79,7 +80,12 @@
       canvas.addEventListener('wheel', event => this.onWheel(event), { passive: false });
       canvas.addEventListener('mousemove', event => { this.ruler.hoverRow = this.rowAt(event); this.page.dirty(this); });
       canvas.addEventListener('mouseleave', () => { this.ruler.hoverRow = null; this.page.dirty(this); });
-      canvas.addEventListener('click', event => { this.ruler.anchorRow = this.rowAt(event); this.page.dirty(this); });
+      canvas.addEventListener('click', event => {
+        if (this.suppressClick) { this.suppressClick = false; return; } // end of a level drag, not a ruler click
+        this.ruler.anchorRow = this.rowAt(event); this.page.dirty(this);
+      });
+      $('.dom-head', el).addEventListener('click', () => { const h = $('.dom-head', el); h.classList.remove('alert-blink', 'alert-hold'); clearTimeout(this.blinkTimer); });
+      if (this.page.alerts) window.ScalpLevelsUI.bind(this, this.page.alerts);
       new ResizeObserver(() => this.resize()).observe($('.dom-body', el));
       return el;
     }
@@ -114,6 +120,7 @@
     async start() {
       this.stop();
       const g = this.generation, { venue, symbol } = this.cfg;
+      this.volAlerts = null; this.levels = [];
       this.status = 'loading'; this.error = null; this.rowN = null; this.view.centerRow = NaN; this.follow = true;
       this.density = new OB.DensityTracker(); this.market = null; this.records = [];
       const link = $('.chart-link', this.element); link.href = S.chartLink(this.cfg);
@@ -124,16 +131,25 @@
       }
       if (g !== this.generation) return;
       this.data = new CD.ColumnData({ venue, symbol, tick: this.tick, feed: this.cfg.feed, clusters: this.cfg.clusters });
+      this.tickStr = CD.tickString(this.tick); this.lastTradePrice = null; this.tradeGap = false;
+      this.volAlerts = new SA.VolumeAlerts({ tick: this.tick, tickStr: this.tickStr }); this.volAlerts.configure(this.cfg.alerts);
+      this.levels = this.page.alerts ? this.page.alerts.store.list({ exchange: venue, symbol }) : [];
       this.unsubTrades = hub.subscribeTrades({ venue, symbol }, event => {
         if (g !== this.generation) return;
         if (this.data.onEvent(event)) this.page.dirty(this);
+        this.page.alerts?.onTrades(this, event);
       });
       this.stream = OB.createBookStream({ venue, symbol, tick: this.tick,
-        onStatus: ({ status, detail }) => { if (g !== this.generation) return; this.status = status; this.statusDetail = detail || ''; this.renderText(); },
+        onStatus: ({ status, detail }) => {
+          if (g !== this.generation) return;
+          this.status = status; this.statusDetail = detail || ''; this.renderText();
+          if (status !== 'synced') this.volAlerts?.reset(); // resync: re-seed, never alert on a rebuilt book
+        },
         onApplied: evidence ? (msg, sync) => this.record(msg, sync) : null,
         onUpdate: sync => {
           if (g !== this.generation) return;
           if (sync.state === 'synced') this.density.update(sync.book, this.cfg.densityUsd, Date.now());
+          this.page.alerts?.onBook(this, sync);
           this.page.dirty(this);
         } });
       this.pollMarket(g);
@@ -194,7 +210,7 @@
       }
       if (this.rowN === null) { this.ctx.clearRect(0, 0, this.size.width, this.size.height); return null; }
       const model = { book, tick: this.tick, rowN: this.rowN, decimals: OB.decimalsOf(this.tick), density: this.density, now,
-        mark: this.market?.mark, ruler: this.ruler, feed: this.data?.feed, clusters: this.data?.bars };
+        mark: this.market?.mark, ruler: this.ruler, feed: this.data?.feed, clusters: this.data?.bars, levels: this.levels };
       this.lastDraw = R.drawColumn(this.ctx, this.size, this.view, model, this.cfg);
       return this.lastDraw;
     }

@@ -11,7 +11,7 @@
   const FAVORITES_KEY = 'crypto-screener.workspace.favorites.v1';
   const EXCHANGES = { bybit: 'Bybit', binance: 'Binance', hyperliquid: 'Hyperliquid' };
   const LAYOUTS = { '1': 1, '2cols': 2, '2rows': 2, '3cols': 3, '4grid': 4, '6grid': 6 };
-  const FAVORITES = [['30s', '30s'], ['1', '1m'], ['3', '3m'], ['5', '5m'], ['10', '10m'], ['12', '12m'], ['15', '15m'], ['30', '30m'], ['45', '45m'], ['60', '1h'], ['120', '2h'], ['180', '3h'], ['240', '4h'], ['480', '8h'], ['720', '12h'], ['D', 'D'], ['2D', '2D'], ['3D', '3D'], ['W', 'W'], ['M', 'M']];
+  const FAVORITES = [['1s', '1s'], ['5s', '5s'], ['15s', '15s'], ['30s', '30s'], ['1', '1m'], ['3', '3m'], ['5', '5m'], ['10', '10m'], ['12', '12m'], ['15', '15m'], ['30', '30m'], ['45', '45m'], ['60', '1h'], ['120', '2h'], ['180', '3h'], ['240', '4h'], ['480', '8h'], ['720', '12h'], ['D', 'D'], ['2D', '2D'], ['3D', '3D'], ['W', 'W'], ['M', 'M']];
 
   const EMA_COLORS = { 7: '#d4ac5c', 14: '#b593d2', 28: '#6b98cf', 200: '#c9d2df' };
   const MA20_COLORS = { high: '#f0b429', low: '#26c6da' };
@@ -224,7 +224,9 @@
   const grid = $('#chart-grid');
   const footer = $('#workspace-status');
   const panes = new Map();
-  let intervals = FAVORITES.map(([value, label]) => ({ value, label, available: value !== '30s', reason: value === '30s' ? 'Real 30-second candles require trade/tick data' : '' }));
+  // Seconds intervals are trade-built in the browser (static/seconds-candles.js); never fabricated.
+  const SECONDS_API = window.WorkspaceSeconds || null;
+  let intervals = FAVORITES.map(([value, label]) => ({ value, label, available: !/s$/.test(value) || Boolean(SECONDS_API), reason: /s$/.test(value) ? (SECONDS_API ? 'Built from real trades (live stream; Binance also backfills recent minutes)' : 'Seconds candles module did not load') : '' }));
   let intervalWarning = '';
   let pricesController = null;
   let pricesGeneration = 0;
@@ -243,7 +245,8 @@
   ].map(pane => ({ ...pane, exchange: 'bybit' }));
   const normalizeSymbol = (value, exchange = 'bybit') => typeof value !== 'string' ? '' : exchange === 'bybit' ? value.trim().toUpperCase().replace(/^BYBIT:/, '').replace(/\.P$/, '').replace(/^([A-Z0-9]+)\/(USDT|USDC)$/, '$1$2') : value.trim();
   const validSymbol = (value, exchange = 'bybit') => typeof value === 'string' && (exchange === 'hyperliquid' ? /^(?:[a-z][a-z0-9_-]{0,31}:)?[A-Za-z0-9][A-Za-z0-9._-]{0,39}$/.test(value) && !/^(?:bybit|binance|hyperliquid):/i.test(value) : exchange === 'bybit' ? /^[A-Z0-9]{1,26}(?:USDT|USDC|PERP)$/.test(value) : exchange === 'binance' && /^[\p{L}\p{N}]{1,60}(?:USDT|USDC)$/u.test(value));
-  const validInterval = value => typeof value === 'string' && /^(?:[1-9]\d{0,5}|[23]?D|W|M)$/.test(value);
+  const validInterval = value => typeof value === 'string' && /^(?:[1-9]\d{0,5}|[23]?D|W|M|1s|5s|15s|30s)$/.test(value);
+  const isSecondsInterval = value => /^(?:1|5|15|30)s$/.test(value);
   function readState() {
     const fallback = { version: VERSION, layout: '4grid', active: 0, panes: defaultPanes(), watchlistExchange: 'bybit', watchlistSearch: '', watchlistFavoritesOnly: false, watchlistSort: 'none', fvg: true, ema: { 7: true, 14: true, 28: true, 200: false }, ma20hl: { high: false, low: false }, auto: false, sidebar: true, localAlerts: false, indicatorEnabled: Object.fromEntries(INDICATOR_DEFS.map(d => [d.id, Boolean(d.defaultEnabled)])), indicatorSettings: defaultIndicatorSettings() };
     try {
@@ -448,6 +451,7 @@
     return true;
   }
   function intervalSeconds(interval, anchor) {
+    if (/^(?:1|5|15|30)s$/.test(interval)) return Number(interval.slice(0, -1)); // trade-built seconds
     if (interval === 'M') {
       const date = new Date(anchor * 1000);
       return Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 1) / 1000 - anchor;
@@ -609,6 +613,8 @@
         high: this.chart.addLineSeries({ color: getIndicatorSettings('ma20high').color, lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, visible: state.ma20hl.high }),
         low: this.chart.addLineSeries({ color: getIndicatorSettings('ma20low').color, lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, visible: state.ma20hl.low })
       };
+      this.initDrawings();
+      this.initCountdown();
       this.logicalListener = () => { this.scheduleDraw(); this.queueLiquidityRange(); };
       this.crosshairListener = parameter => {
         const candle = parameter.seriesData?.get(this.series);
@@ -635,7 +641,7 @@
         }
       });
       listen($('.pane-interval', this.element), 'change', event => updatePaneConfig(id, { interval: event.target.value }));
-      listen($('.pane-reload', this.element), 'click', () => { setActive(id); this.load(false); });
+      listen($('.pane-reload', this.element), 'click', () => { setActive(id); this.load(false, true); });
       listen($('.pane-footprint-toggle', this.element), 'click', () => {
         state.panes[id] = { ...state.panes[id], footprint: !state.panes[id].footprint };
         if (!state.panes[id].footprint) delete state.panes[id].footprint;
@@ -686,6 +692,44 @@
       this.footprint = api.createController({ fetch: (url, options) => fetch(url, options), hub: streamHub,
         visible: () => !this.disposed && document.visibilityState === 'visible' && isVisible(this),
         onChange: () => { this.renderFootprintStatus(); this.scheduleDraw(); } });
+    }
+    // Drawing tools + shared price levels live in static/drawings.js; the pane only maps pixels.
+    initDrawings() {
+      const api = window.WorkspaceDrawings;
+      if (!api) return;
+      this.drawings = api.createController({ header: $('.pane-header', this.element), stage: $('.chart-stage', this.element), paneElement: this.element,
+        levels: window.ScreenerLevels || null, requestDraw: () => this.scheduleDraw(), getContext: () => this.drawingContext(),
+        onError: message => { this.status.textContent = `Levels store: ${message}`; this.status.title = this.status.textContent; } });
+    }
+    drawingContext() {
+      const config = state.panes[this.id];
+      return { exchange: config.exchange, symbol: config.symbol, candles: this.candles, chart: this.chart, series: this.series, host: this.host,
+        stepMs: intervalSeconds(config.interval, this.candles.at(-1)?.time || Date.now() / 1000) * 1000,
+        precision: this.series.options().priceFormat?.precision ?? 2,
+        plotWidth: Math.max(0, this.host.clientWidth - this.chart.priceScale('right').width()),
+        plotHeight: Math.max(0, this.host.clientHeight - this.chart.timeScale().height()) };
+    }
+    // Countdown to the active interval's candle close, pinned under the last-price axis label.
+    initCountdown() {
+      this.countdownEl = document.createElement('div');
+      this.countdownEl.className = 'pane-countdown'; this.countdownEl.hidden = true; this.countdownEl.title = 'Time to candle close (UTC boundaries)';
+      $('.chart-stage', this.element).append(this.countdownEl);
+      this.countdownTimer = setInterval(() => this.renderCountdown(), 1000);
+    }
+    renderCountdown() {
+      const api = window.WorkspaceSeconds, el = this.countdownEl;
+      if (!api || !el || this.disposed) return;
+      const interval = state.panes[this.id].interval, now = Date.now();
+      const close = api.nextCloseMs(interval, now);
+      const price = this.lastDisplayPrice ?? this.candles.at(-1)?.close;
+      const y = Number.isFinite(price) && this.candles.length ? this.series.priceToCoordinate(price) : null;
+      const plotHeight = this.host.clientHeight - this.chart.timeScale().height();
+      if (close === null || y === null || y < 0 || y > plotHeight - 12) { el.hidden = true; return; }
+      el.hidden = false;
+      el.textContent = api.formatCountdown(close - now);
+      el.style.top = `${Math.round(y + 9)}px`;
+      el.style.width = `${this.chart.priceScale('right').width()}px`;
+      el.dataset.interval = interval;
     }
     syncFootprint() {
       if (this.disposed) return;
@@ -903,6 +947,7 @@
     }
     drawOverlays() {
       const context = this.context;
+      this.renderCountdown();
       if (!context) return;
       const ratio = window.devicePixelRatio || 1;
       const width = this.canvas.width / ratio;
@@ -918,6 +963,7 @@
       if (state.fvg) this.drawZones(context, plotWidth, plotHeight);
       this.drawBands(context, plotWidth, plotHeight);
       if (state.panes[this.id].footprint) this.drawFootprint(context, plotWidth, plotHeight);
+      this.drawings?.draw(context, plotWidth, plotHeight);
       context.restore();
     }
     drawZones(context, plotWidth, plotHeight) {
@@ -1256,9 +1302,78 @@
       } catch (_) { /* No fake candles on network failure. WS can still recover. */ }
       finally { clearTimeout(timeout); }
     }
-    async load(resetView = false) {
+    // Seconds intervals: candles come only from real trades (static/seconds-candles.js).
+    // /api/chart is never asked for them; gaps stay gaps; partial bars are drawn grey.
+    loadSeconds(resetView, restart) {
+      const api = window.WorkspaceSeconds, config = { ...state.panes[this.id] };
+      const key = JSON.stringify([config.exchange, config.symbol, config.interval]);
+      if (this.seconds && this.secondsKey === key && !resetView && !restart) { this.queueSecondsRender(); return; }
+      this.generation += 1; this.request?.abort(); this.request = null; clearTimeout(this.requestTimer);
+      this.stopSeconds(); this.stopTicker(); this.clearData();
+      if (resetView) this.resetContext();
+      $('.pane-source', this.element).textContent = `${config.exchange.toUpperCase()} · TRADES`;
+      $('.pane-source', this.element).title = 'Seconds candles aggregated in the browser from real venue trades';
+      if (!api) { this.element.dataset.state = 'error'; this.status.textContent = 'Seconds candles module did not load.'; this.showMessage(this.status.textContent); return; }
+      this.chart.applyOptions({ timeScale: { secondsVisible: true } });
+      this.element.dataset.state = 'loading';
+      this.status.textContent = config.exchange === 'binance' ? 'Loading recent Binance aggTrades…' : 'Waiting for live trades…';
+      this.showMessage(this.status.textContent);
+      this.secondsKey = key; this.secondsFit = true; this.secondsPrecision = false; this.secondsPartial = undefined; this.secondsFormingTime = undefined;
+      this.seconds = api.createController({ exchange: config.exchange, symbol: config.symbol, interval: config.interval, hub: streamHub,
+        fetch: (url, options) => fetch(url, options), onChange: () => this.queueSecondsRender() }).start();
+    }
+    stopSeconds() {
+      if (!this.seconds) return;
+      this.seconds.dispose(); this.seconds = null; this.secondsKey = null;
+      if (this.secondsRaf) { cancelAnimationFrame(this.secondsRaf); this.secondsRaf = null; }
+      this.chart.applyOptions({ timeScale: { secondsVisible: false } });
+    }
+    queueSecondsRender() {
+      if (this.disposed || this.secondsRaf) return;
+      this.secondsRaf = requestAnimationFrame(() => { this.secondsRaf = null; this.renderSeconds(); });
+    }
+    renderSeconds() {
+      if (this.disposed || !this.seconds) return;
+      const { closed, forming } = this.seconds.view();
+      const grey = '#5d6b80';
+      const bar = c => ({ time: c.time, open: c.open, high: c.high, low: c.low, close: c.close, ...(c.partial ? { color: grey, wickColor: grey, borderColor: grey } : {}) });
+      const vol = c => ({ time: c.time, value: c.volume, color: c.partial ? '#5d6b8055' : c.close >= c.open ? '#00c08744' : '#ef667044' });
+      const partial = closed.filter(c => c.partial).length + (forming?.partial ? 1 : 0);
+      const lastClosed = closed.at(-1)?.time ?? null;
+      const structural = closed.length !== this.candles.length || lastClosed !== (this.candles.at(-1)?.time ?? null)
+        || partial !== this.secondsPartial || (forming?.time ?? null) !== this.secondsFormingTime;
+      if (structural) {
+        this.secondsPartial = partial; this.secondsFormingTime = forming?.time ?? null;
+        this.candles = closed.map(({ time, open, high, low, close, volume, partial: p }) => ({ time, open, high, low, close, volume, partial: p }));
+        const rows = forming && forming.time > (lastClosed ?? -1) ? [...closed, forming] : closed;
+        if (!this.secondsPrecision && rows.length) {
+          const minPrice = Math.min(...rows.map(c => c.low));
+          const precision = Math.min(10, Math.max(2, 3 - Math.floor(Math.log10(minPrice))));
+          this.series.applyOptions({ priceFormat: { type: 'price', precision, minMove: 10 ** -precision } });
+          this.secondsPrecision = true;
+        }
+        this.series.setData(rows.map(bar)); this.volume.setData(rows.map(vol));
+        if (this.secondsFit && rows.length) { this.chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, rows.length - 150), to: rows.length + 5 }); this.secondsFit = false; }
+        this.applyIndicators();
+      } else if (forming) { this.series.update(bar(forming)); this.volume.update(vol(forming)); }
+      const last = forming || closed.at(-1);
+      if (last) { this.setLivePrice(last.close, forming ? 'WS trade' : 'Last trade'); this.updateLegend(closed.at(-1) || last); } // legend: last closed bar (EMAs exist only for closed bars)
+      const st = this.seconds.state;
+      this.element.dataset.state = last ? 'ready' : st.state === 'unsupported' ? 'error' : 'loading';
+      this.count.textContent = `${closed.length} closed bars${partial ? ` · ${partial} partial` : ''}`;
+      this.status.textContent = this.seconds.statusText(); this.status.title = this.status.textContent;
+      this.showMessage(last ? '' : st.state === 'unsupported' ? this.status.textContent : 'Waiting for the first live trade… no candles are invented.');
+      const label = $('.pane-closed', this.element);
+      label.textContent = `TRADES ${String(st.stream || '').toUpperCase()}`;
+      label.dataset.stream = st.stream === 'live' ? 'live' : 'offline';
+      label.title = 'Seconds candles from real trades only. Grey = partial coverage. Seconds without trades have no candle.';
+      this.scheduleDraw();
+    }
+    async load(resetView = false, restart = false) {
       if (this.disposed) return;
       this.updateHeader();
+      if (isSecondsInterval(state.panes[this.id].interval)) return this.loadSeconds(resetView, restart);
+      if (this.seconds) { this.stopSeconds(); this.clearData(); }
       this.request?.abort();
       clearTimeout(this.requestTimer);
       const generation = ++this.generation;
@@ -1333,6 +1448,7 @@
       }
     }
     destroy() {
+      this.stopSeconds(); this.drawings?.dispose(); clearInterval(this.countdownTimer);
       this.footprint?.disable();
       this.liquiditySession?.dispose(); clearInterval(this.liquidityTimer); clearTimeout(this.liquidityRangeTimer);
       this.disposed = true;
@@ -1379,7 +1495,7 @@
       const data = await response.json();
       if (!response.ok || !Array.isArray(data.intervals) || !data.intervals.length) throw new Error('Interval list unavailable');
       const seen = new Set();
-      const available = data.intervals.filter(item => item && (validInterval(String(item.value)) || (item.value === '30s' && item.available === false)) && typeof item.label === 'string').map(item => ({ ...item, value: String(item.value) })).filter(item => {
+      const available = data.intervals.filter(item => item && validInterval(String(item.value)) && typeof item.label === 'string').map(item => ({ ...item, value: String(item.value), ...(isSecondsInterval(String(item.value)) && !SECONDS_API ? { available: false, reason: 'Seconds candles module did not load' } : {}) })).filter(item => {
         if (seen.has(item.value)) return false;
         seen.add(item.value); return true;
       });
