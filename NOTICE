@@ -25,3 +25,33 @@ unrelated repository files. The JavaScript source is static/indicator-extras.js.
 Source provenance and limitations, including versioned official TradingView
 source endpoints, are recorded in docs/INDICATOR_EXTRAS.md. Verification of the
 algorithm source is not a claim of bit-exact TradingView output equivalence.
+
+
+Grouped overlays — TradingView script ports (MPL-2.0)
+=====================================================
+
+static/indicators/opens.js is a JavaScript port of the TradingView script
+"Daily Weekly Monthly Yearly Opens" by sbtnc, version 7.0:
+https://www.tradingview.com/script/2lN76Vax-Daily-Weekly-Monthly-Yearly-Opens/
+Original notice:
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © sbtnc
+
+static/indicators/sessions.js is a JavaScript port of the TradingView script
+"FX Market Sessions" by boitoki, version 54:
+https://www.tradingview.com/script/IijBXaGM-FX-Market-Sessions/
+Original notice:
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © boitoki
+The original imports boitoki/AwesomeColor and boitoki/Utilities; those
+libraries are not included — the few helpers needed were re-implemented.
+
+The original Pine sources are kept unmodified, with their headers, in
+third_party/tradingview/ (sbtnc-daily-weekly-monthly-yearly-opens-v7.pine,
+boitoki-fx-market-sessions-v54.pine). The full MPL-2.0 text is in
+third_party/tradingview/LICENSE-MPL-2.0 (from
+https://www.mozilla.org/media/MPL/2.0/index.txt). Both ported files are
+MPL-2.0-covered Source Code (file-level copyleft); this notice does not
+relicense any other repository file. Port differences and limitations are
+listed in docs/INDICATOR_GROUPS_RESULT.md. A port is not a claim of
+bit-exact equality with TradingView output.

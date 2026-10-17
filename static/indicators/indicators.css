@@ -1,0 +1,10 @@
+/* Grouped indicator settings popover (TradingView-style sections). */
+.indicator-settings-popover { width: 280px; }
+.indicator-settings-fields { max-height: min(70vh, 560px); overflow-y: auto; padding-right: 4px; }
+.indicator-settings-group {
+  margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--line);
+  color: var(--text); font-weight: 600; font-size: 10px; letter-spacing: 0.04em; text-transform: uppercase;
+}
+.indicator-settings-group:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+.indicator-settings-input[type="text"] { width: 110px; }
+.indicator-settings-input:invalid { outline: 1px solid #ef6670; }
