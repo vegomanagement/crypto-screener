@@ -1,0 +1,47 @@
+run minutes 13.1
+leaderboard {'duration_s': 1.43, 'fetched_at': 1792259668692, 'min_account_value': '49282417.1228459999', 'total_rows': 47151}
+poll 1: ok 50/50 failed 0 duration 50.3s changes 0
+poll 2: ok 50/50 failed 0 duration 49.3s changes 16
+poll 3: ok 50/50 failed 0 duration 49.3s changes 11
+poll 4: ok 50/50 failed 0 duration 49.3s changes 8
+poll 5: ok 50/50 failed 0 duration 49.3s changes 14
+poll 6: ok 50/50 failed 0 duration 50.7s changes 7
+poll 7: ok 50/50 failed 0 duration 49.3s changes 10
+poll 8: ok 50/50 failed 0 duration 49.3s changes 12
+poll 9: ok 50/50 failed 0 duration 49.3s changes 14
+poll 10: ok 50/50 failed 0 duration 49.3s changes 19
+poll 11: ok 50/50 failed 0 duration 49.3s changes 16
+poll 12: ok 50/50 failed 0 duration 49.3s changes 17
+BTC {'long_notional': '4983094.3', 'short_notional': '496480357.99', 'long_count': 1, 'short_count': 7, 'avg_entry_long': '81328.1', 'avg_entry_short': '77142.32', 'long_share': '0.0099'}
+  change decreased long 0xf5d81a13 4.61594 -> 0.85359 306067.17
+  change decreased long 0xecb63caa 75.89169 -> 67.56294 677537.15
+  change flipped short 0xf5d81a13 0.85359 -> -0.53043 112591.41
+  change increased short 0xf5d81a13 -0.53262 -> -0.92699 32089.1
+  change flipped long 0xf5d81a13 -0.92699 -> 1.25999 177980.37
+  change increased long 0xf5d81a13 1.25999 -> 5.62424 355599.09
+  change increased long 0xf5d81a13 5.62424 -> 6.15157 42961.05
+  change flipped short 0xf5d81a13 6.15157 -> -5.87831 980134.47
+  change decreased long 0xecb63caa 65.16324 -> 61.16853 325429.05
+ETH {'long_notional': '16568.44', 'short_notional': '508022629.39', 'long_count': 2, 'short_count': 6, 'avg_entry_long': '2414.82', 'avg_entry_short': '2355.6', 'long_share': '0'}
+  change increased short 0xf5d81a13 -23.0211 -> -69.7233 112552.3
+  change decreased short 0xf5d81a13 -69.6195 -> -58.4461 26933.48
+  change increased short 0xf5d81a13 -58.4461 -> -63.297 11693.82
+  change flipped long 0xf5d81a13 -63.4214 -> 5.8809 167143.29
+  change flipped short 0xf5d81a13 5.8809 -> -35.9527 100906.83
+  change decreased short 0xf5d81a13 -35.9527 -> -13.6799 53752.95
+  change decreased short 0xf5d81a13 -13.6799 -> -1.9209 28405.04
+  change increased short 0xf5d81a13 -1.9209 -> -5.5387 8737.71
+  change flipped long 0xf5d81a13 -5.5387 -> 6.8504 29924.63
+  binance BTCUSDT: long 0 $0 short 14 $347869.35 covered 12.6 min
+  binance DOGEUSDT: long 0 $0 short 3 $4166.66 covered 12.5 min
+  binance ETHUSDT: long 1 $347.23 short 10 $559811.02 covered 12.5 min
+  binance SOLUSDT: long 0 $0 short 0 $0 covered 12.5 min
+  binance XRPUSDT: long 0 $0 short 1 $38.08 covered 12.5 min
+binance events stored 29 long $347.23 short $911,885.11 collector: {'messages': 208, 'events': 29, 'connects': 1, 'error': None, 'connected': True}
+  bybit BTCUSDT: long 0 $0 short 3 $19529.68 covered 12.5 min
+  bybit DOGEUSDT: long 0 $0 short 0 $0 covered 12.5 min
+  bybit ETHUSDT: long 0 $0 short 7 $15357.42 covered 12.5 min
+  bybit SOLUSDT: long 0 $0 short 0 $0 covered 12.5 min
+  bybit XRPUSDT: long 0 $0 short 3 $13094.09 covered 12.5 min
+bybit events stored 13 long $0.00 short $47,981.19 collector: {'messages': 52, 'events': 13, 'connects': 1, 'error': None, 'connected': True}
+api latency s: median 0.424 max 1.512 n 264

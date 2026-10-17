@@ -1,0 +1,230 @@
+{
+ "age_s": 0.0,
+ "analysis": {
+  "bias": "short",
+  "confidence": "low",
+  "horizon": "4-12 bars of 60m",
+  "key_factors": [
+   {
+    "source_fields": [
+     "indicators.ema_stack_7_14_28",
+     "indicators.ema200"
+    ],
+    "text": "EMA stack bearish, price under EMA200"
+   },
+   {
+    "source_fields": [
+     "structure.trend",
+     "structure.recent_events.4.level"
+    ],
+    "text": "Structure bear, latest CHOCH bear 2423"
+   },
+   {
+    "source_fields": [
+     "flow.cvd_1h.trend",
+     "flow.cvd_1h.divergence"
+    ],
+    "text": "CVD 1h down with price, no divergence"
+   },
+   {
+    "source_fields": [
+     "footprint.bars.0.delta"
+    ],
+    "text": "Negative footprint delta on last bar"
+   },
+   {
+    "source_fields": [
+     "htf_bias.direction",
+     "htf_bias.zones.D"
+    ],
+    "text": "HTF bias long, D/4H in discount"
+   },
+   {
+    "source_fields": [
+     "indicators.rsi14",
+     "regime.range_state"
+    ],
+    "text": "RSI 34 near oversold, range compressing"
+   }
+  ],
+  "levels": [
+   {
+    "price": 2419.05,
+    "reason": "Bear FVG just above price",
+    "source_fields": [
+     "fvg.nearest.1.top"
+    ],
+    "type": "resistance"
+   },
+   {
+    "price": 2440.88,
+    "reason": "Last swing high / EQH cluster",
+    "source_fields": [
+     "structure.last_swing_high.price",
+     "liquidity.pools.3.price"
+    ],
+    "type": "resistance"
+   },
+   {
+    "price": 2391.51,
+    "reason": "EQL sellside pool strength 5",
+    "source_fields": [
+     "liquidity.pools.2.price"
+    ],
+    "type": "support"
+   },
+   {
+    "price": 2392.14,
+    "reason": "Last swing low, bull FVG top",
+    "source_fields": [
+     "structure.last_swing_low.price",
+     "fvg.nearest.0.top"
+    ],
+    "type": "support"
+   },
+   {
+    "price": 2413.0,
+    "reason": "Sell into bear FVG retest",
+    "source_fields": [
+     "fvg.nearest.1.bottom"
+    ],
+    "type": "entry"
+   },
+   {
+    "price": 2433.0,
+    "reason": "Above bear FVG 2432.63",
+    "source_fields": [
+     "fvg.nearest.2.top"
+    ],
+    "type": "stop"
+   },
+   {
+    "price": 2355.54,
+    "reason": "Bull FVG bottom / OB zone",
+    "source_fields": [
+     "fvg.nearest.0.bottom",
+     "order_blocks.unmitigated.4.high"
+    ],
+    "type": "target"
+   },
+   {
+    "price": 2400.0,
+    "reason": "Round number + footprint POC",
+    "source_fields": [
+     "liquidity.pools.1.price",
+     "footprint.bars.0.poc"
+    ],
+    "type": "liquidity"
+   }
+  ],
+  "long_pct": 38,
+  "risks": [
+   "HTF discount bias opposes short",
+   "Bid imbalance 0.24 favors buyers",
+   "RSI 34 risks mean-reversion squeeze",
+   "Outside killzone, thin liquidity"
+  ],
+  "scenarios": [
+   {
+    "invalidation": "Reclaim and hold above 2419.05",
+    "name": "Continuation down",
+    "target": "2355.54 then 2348.29",
+    "trigger": "Hourly close below 2391.51"
+   },
+   {
+    "invalidation": "Close above 2432.63",
+    "name": "FVG retest short",
+    "target": "2392 then 2375",
+    "trigger": "Tag 2413-2419 then rejection wick"
+   },
+   {
+    "invalidation": "Close below 2384.4",
+    "name": "Discount bounce",
+    "target": "2432-2440",
+    "trigger": "Sweep 2391.51 then reclaim 2406.75"
+   }
+  ],
+  "short_pct": 62,
+  "summary_ru": "1H структура медвежья: EMA-стек вниз, цена под EMA200, CHOCH bear 2423, CVD и дельта футпринта отрицательные. Приоритет — шорт от bear FVG 2413-2419 со стопом выше 2433, цели 2392 и 2355. Против идеи: HTF-bias long, D/4H в дискаунте, RSI 34 и перевес бидов в стакане, поэтому уверенность низкая. Отмена при закрытии выше 2432.63."
+ },
+ "attempts": 1,
+ "baseline": {
+  "long_confidence": 76,
+  "long_factors": [
+   "CVD ⚪ нейтрально",
+   "VP ✅ у VAL $2,407",
+   "Session 🗽 NY Session [4/5]",
+   "Book ❌ стакан против сигнала",
+   "F&G 🤑 Greed [55]",
+   "TZ 1H ⚪ Нейтральная [-1.4% от mean]",
+   "TZ 4H ⚪ Нейтральная [-5.9% от mean]",
+   "RSI ⚪ [34]"
+  ],
+  "long_pct": 55,
+  "long_score": 84,
+  "long_verdict": "WAIT",
+  "short_confidence": 68,
+  "short_factors": [
+   "CVD ✅ подтверждает направление",
+   "VP ❌ у VAL — против сигнала",
+   "Session 🗽 NY Session [4/5]",
+   "Book ✅ ask>bid",
+   "F&G 🤑 Greed [55]",
+   "TZ 1H ⚪ Нейтральная [-1.4% от mean]",
+   "TZ 4H ⚪ Нейтральная [-5.9% от mean]",
+   "RSI ⚪ [34]"
+  ],
+  "short_pct": 45,
+  "short_score": 68,
+  "short_verdict": "WAIT",
+  "source": "screener.compute_confluence_score + decision.make_decision over screener.fetch_market (Bybit-first USDT aggregate, not venue-pinned)",
+  "ts": 1792258167362
+ },
+ "cached": false,
+ "evaluation": {
+  "horizon_bars": 12,
+  "rule": "±1 ATR from the analysis price, bias side first"
+ },
+ "exchange": "binance",
+ "freshness": {
+  "last_close_ts": 1792256400000,
+  "missing": {},
+  "sections": {
+   "baseline": 1792258167362,
+   "candles": 1792256400000,
+   "derivatives": 1792258167363,
+   "flow": 1792258167362,
+   "footprint": 1792258167365,
+   "funding": 1792258167364,
+   "fvg": 1792256400000,
+   "htf_bias": 1792258167362,
+   "indicators": 1792256400000,
+   "liquidity": 1792258167362,
+   "order_blocks": 1792256400000,
+   "orderbook": 1792258167602,
+   "price": 1792256400000,
+   "regime": 1792258167362,
+   "session": 1792258167362,
+   "structure": 1792256400000
+  }
+ },
+ "generated_at": 1792258167362,
+ "id": 10,
+ "interval": "60",
+ "latency_ms": 18528,
+ "model": "hermes-agent",
+ "price": {
+  "source": "last closed candle close",
+  "ts": 1792256400000,
+  "value": 2402.96
+ },
+ "raw_output": [
+  "{\"bias\":\"short\",\"long_pct\":38,\"short_pct\":62,\"confidence\":\"low\",\"horizon\":\"4-12 bars of 60m\",\"levels\":[{\"type\":\"resistance\",\"price\":2419.05,\"reason\":\"Bear FVG just above price\",\"source_fields\":[\"fvg.nearest.1.top\"]},{\"type\":\"resistance\",\"price\":2440.88,\"reason\":\"Last swing high / EQH cluster\",\"source_fields\":[\"structure.last_swing_high.price\",\"liquidity.pools.3.price\"]},{\"type\":\"support\",\"price\":2391.51,\"reason\":\"EQL sellside pool strength 5\",\"source_fields\":[\"liquidity.pools.2.price\"]},{\"type\":\"support\",\"price\":2392.14,\"reason\":\"Last swing low, bull FVG top\",\"source_fields\":[\"structure.last_swing_low.price\",\"fvg.nearest.0.top\"]},{\"type\":\"entry\",\"price\":2413.0,\"reason\":\"Sell into bear FVG retest\",\"source_fields\":[\"fvg.nearest.1.bottom\"]},{\"type\":\"stop\",\"price\":2433.0,\"reason\":\"Above bear FVG 2432.63\",\"source_fields\":[\"fvg.nearest.2.top\"]},{\"type\":\"target\",\"price\":2355.54,\"reason\":\"Bull FVG bottom / OB zone\",\"source_fields\":[\"fvg.nearest.0.bottom\",\"order_blocks.unmitigated.4.high\"]},{\"type\":\"liquidity\",\"price\":2400.0,\"reason\":\"Round number + footprint POC\",\"source_fields\":[\"liquidity.pools.1.price\",\"footprint.bars.0.poc\"]}],\"scenarios\":[{\"name\":\"Continuation down\",\"trigger\":\"Hourly close below 2391.51\",\"target\":\"2355.54 then 2348.29\",\"invalidation\":\"Reclaim and hold above 2419.05\"},{\"name\":\"FVG retest short\",\"trigger\":\"Tag 2413-2419 then rejection wick\",\"target\":\"2392 then 2375\",\"invalidation\":\"Close above 2432.63\"},{\"name\":\"Discount bounce\",\"trigger\":\"Sweep 2391.51 then reclaim 2406.75\",\"target\":\"2432-2440\",\"invalidation\":\"Close below 2384.4\"}],\"key_factors\":[{\"text\":\"EMA stack bearish, price under EMA200\",\"source_fields\":[\"indicators.ema_stack_7_14_28\",\"indicators.ema200\"]},{\"text\":\"Structure bear, latest CHOCH bear 2423\",\"source_fields\":[\"structure.trend\",\"structure.recent_events.4.level\"]},{\"text\":\"CVD 1h down with price, no divergence\",\"source_fields\":[\"flow.cvd_1h.trend\",\"flow.cvd_1h.divergence\"]},{\"text\":\"Negative footprint delta on last bar\",\"source_fields\":[\"footprint.bars.0.delta\"]},{\"text\":\"HTF bias long, D/4H in discount\",\"source_fields\":[\"htf_bias.direction\",\"htf_bias.zones.D\"]},{\"text\":\"RSI 34 near oversold, range compressing\",\"source_fields\":[\"indicators.rsi14\",\"regime.range_state\"]}],\"risks\":[\"HTF discount bias opposes short\",\"Bid imbalance 0.24 favors buyers\",\"RSI 34 risks mean-reversion squeeze\",\"Outside killzone, thin liquidity\"],\"summary_ru\":\"1H структура медвежья: EMA-стек вниз, цена под EMA200, CHOCH bear 2423, CVD и дельта футпринта отрицательные. Приоритет — шорт от bear FVG 2413-2419 со стопом выше 2433, цели 2392 и 2355. Против идеи: HTF-bias long, D/4H в дискаунте, RSI 34 и перевес бидов в стакане, поэтому уверенность низкая. Отмена при закрытии выше 2432.63.\"}"
+ ],
+ "snapshot_hash": "54777e1bf6cc1f1a",
+ "snapshot_ms": 14503,
+ "source": "hermes",
+ "status": "ok",
+ "symbol": "ETHUSDT",
+ "warnings": []
+}

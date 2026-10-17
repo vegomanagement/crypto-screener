@@ -1,0 +1,326 @@
+{
+ "when": "2026-10-17T18:35:13.893Z",
+ "checks": {
+  "long_short_created": {
+   "ok": true,
+   "detail": [
+    [
+     "81586.1",
+     "82097.77",
+     "81330.27"
+    ],
+    [
+     "81756.65",
+     "81244.98",
+     "82012.48"
+    ]
+   ]
+  },
+  "select_click": {
+   "ok": true
+  },
+  "mini_toolbar_visible": {
+   "ok": true
+  },
+  "dialog_open": {
+   "ok": true
+  },
+  "dialog_applied": {
+   "ok": true,
+   "detail": {
+    "visibility": {
+     "seconds": true,
+     "minutes": false,
+     "hours": true,
+     "days": true,
+     "weeks": true
+    },
+    "riskPct": 2
+   }
+  },
+  "hidden_on_15m": {
+   "ok": true,
+   "detail": 1
+  },
+  "alt_t_trend": {
+   "ok": true
+  },
+  "drag_moves": {
+   "ok": true,
+   "detail": {
+    "before": [
+     {
+      "time": 1792174500000,
+      "price": "80733.32"
+     },
+     {
+      "time": 1792199700000,
+      "price": "80972.09"
+     }
+    ],
+    "after": [
+     {
+      "time": 1792180800000,
+      "price": "80951.98"
+     },
+     {
+      "time": 1792206000000,
+      "price": "81190.75"
+     }
+    ]
+   }
+  },
+  "ctrl_z_undo_drag": {
+   "ok": true
+  },
+  "shift_z_redo": {
+   "ok": true
+  },
+  "del_removes": {
+   "ok": true
+  },
+  "meta_z_restores": {
+   "ok": true
+  },
+  "level_sync": {
+   "ok": true,
+   "detail": {
+    "hl": [
+     {
+      "time": 1792212300000,
+      "price": "82268.32"
+     }
+    ],
+    "lv": [
+     "82268.32"
+    ]
+   }
+  },
+  "template_default_applied": {
+   "ok": true,
+   "detail": {
+    "color": "#ff00aa",
+    "width": 3,
+    "dash": "solid",
+    "fill": null,
+    "fillAlpha": 0.12,
+    "textColor": null,
+    "fontSize": 12
+   }
+  },
+  "tree_rename_and_zorder": {
+   "ok": true,
+   "detail": [
+    [
+     "long",
+     ""
+    ],
+    [
+     "short",
+     ""
+    ],
+    [
+     "trend",
+     ""
+    ],
+    [
+     "trend",
+     "My trend"
+    ],
+    [
+     "hline",
+     ""
+    ]
+   ]
+  },
+  "tree_hide": {
+   "ok": true
+  },
+  "interval_1h_same_drawings": {
+   "ok": true,
+   "detail": {
+    "interval": "60"
+   }
+  },
+  "minutes_hidden_object_visible_on_1h": {
+   "ok": true,
+   "detail": {
+    "frame15": 4,
+    "frame1h": 5
+   }
+  },
+  "reload_persists": {
+   "ok": true,
+   "detail": {
+    "count": 5
+   }
+  },
+  "reload_rendered": {
+   "ok": true,
+   "detail": 5
+  }
+ },
+ "frame15": 4,
+ "frame1h": 5,
+ "final": [
+  {
+   "type": "long",
+   "points": [
+    {
+     "time": 1792187100000,
+     "price": "81586.1"
+    },
+    {
+     "time": 1792206000000,
+     "price": "82097.77"
+    },
+    {
+     "time": 1792206000000,
+     "price": "81330.27"
+    }
+   ],
+   "style": {
+    "color": "#4f8cff",
+    "width": 1,
+    "dash": "solid",
+    "fill": null,
+    "fillAlpha": 0.12,
+    "textColor": null,
+    "fontSize": 12
+   },
+   "visibility": {
+    "seconds": true,
+    "minutes": false,
+    "hours": true,
+    "days": true,
+    "weeks": true
+   },
+   "name": "",
+   "levelId": null
+  },
+  {
+   "type": "short",
+   "points": [
+    {
+     "time": 1792218600000,
+     "price": "81756.65"
+    },
+    {
+     "time": 1792239300000,
+     "price": "81244.98"
+    },
+    {
+     "time": 1792239300000,
+     "price": "82012.48"
+    }
+   ],
+   "style": {
+    "color": "#4f8cff",
+    "width": 1,
+    "dash": "solid",
+    "fill": null,
+    "fillAlpha": 0.12,
+    "textColor": null,
+    "fontSize": 12
+   },
+   "visibility": {
+    "seconds": true,
+    "minutes": true,
+    "hours": true,
+    "days": true,
+    "weeks": true
+   },
+   "name": "",
+   "levelId": null
+  },
+  {
+   "type": "trend",
+   "points": [
+    {
+     "time": 1792180800000,
+     "price": "80951.98"
+    },
+    {
+     "time": 1792206000000,
+     "price": "81190.75"
+    }
+   ],
+   "style": {
+    "color": "#ff00aa",
+    "width": 3,
+    "dash": "solid",
+    "fill": null,
+    "fillAlpha": 0.12,
+    "textColor": null,
+    "fontSize": 12
+   },
+   "visibility": {
+    "seconds": true,
+    "minutes": true,
+    "hours": true,
+    "days": true,
+    "weeks": true
+   },
+   "name": "",
+   "levelId": null
+  },
+  {
+   "type": "trend",
+   "points": [
+    {
+     "time": 1792224900000,
+     "price": "80562.76"
+    },
+    {
+     "time": 1792243800000,
+     "price": "80835.65"
+    }
+   ],
+   "style": {
+    "color": "#ff00aa",
+    "width": 3,
+    "dash": "solid",
+    "fill": null,
+    "fillAlpha": 0.12,
+    "textColor": null,
+    "fontSize": 12
+   },
+   "visibility": {
+    "seconds": true,
+    "minutes": true,
+    "hours": true,
+    "days": true,
+    "weeks": true
+   },
+   "name": "My trend",
+   "levelId": null
+  },
+  {
+   "type": "hline",
+   "points": [
+    {
+     "time": 1792212300000,
+     "price": "82268.32"
+    }
+   ],
+   "style": {
+    "color": "#f0b429",
+    "width": 1,
+    "dash": "solid",
+    "fill": null,
+    "fillAlpha": 0.12,
+    "textColor": null,
+    "fontSize": 12
+   },
+   "visibility": {
+    "seconds": true,
+    "minutes": true,
+    "hours": true,
+    "days": true,
+    "weeks": true
+   },
+   "name": "",
+   "levelId": "lmvcql97705185"
+  }
+ ]
+}

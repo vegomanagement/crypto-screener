@@ -1,0 +1,140 @@
+{
+ "a": {
+  "runs": 8,
+  "p_long_min": 28.887,
+  "p_long_max": 44.496,
+  "p_long_mean": 33.97,
+  "p_long_std": 4.72,
+  "distinct_long_pct": 6,
+  "long_pct": [
+   34,
+   31,
+   31,
+   38,
+   44,
+   29,
+   33,
+   31
+  ],
+  "computed_bias": {
+   "long": 0,
+   "short": 8,
+   "neutral": 0
+  },
+  "agent_bias": {
+   "long": 0,
+   "short": 8,
+   "neutral": 0
+  },
+  "factors_mean": 11.88,
+  "factors_min": 11,
+  "factors_long_total": 27,
+  "factors_short_total": 68,
+  "runs_citing_funding": 8,
+  "funding_factors_total": 9,
+  "latency_s_min": 19.716,
+  "latency_s_max": 22.427,
+  "latency_s_median": 22.0,
+  "attempts_gt1": 0,
+  "disagreements": {
+   "opposite": 0,
+   "neutral_mismatch": 0
+  },
+  "warnings": [
+   "levels[6]: dropped, unknown source_fields ['candles.recent.22.l']",
+   "levels[5]: dropped, unknown source_fields ['candles.recent.23.h']",
+   "factor_scores[3]: dropped, unknown source_fields ['candles.recent.21.v', 'candles.recent.20.v']"
+  ]
+ },
+ "gainer": {
+  "runs": 3,
+  "p_long_min": 21.343,
+  "p_long_max": 38.755,
+  "p_long_mean": 29.28,
+  "p_long_std": 7.19,
+  "distinct_long_pct": 3,
+  "long_pct": [
+   28,
+   21,
+   39
+  ],
+  "computed_bias": {
+   "long": 0,
+   "short": 3,
+   "neutral": 0
+  },
+  "agent_bias": {
+   "long": 2,
+   "short": 0,
+   "neutral": 1
+  },
+  "factors_mean": 12,
+  "factors_min": 12,
+  "factors_long_total": 19,
+  "factors_short_total": 17,
+  "runs_citing_funding": 3,
+  "funding_factors_total": 3,
+  "latency_s_min": 19.908,
+  "latency_s_max": 25.499,
+  "latency_s_median": 21.9,
+  "attempts_gt1": 0,
+  "disagreements": {
+   "opposite": 2,
+   "neutral_mismatch": 1
+  },
+  "warnings": [
+   "disagreement: Agent says long, but its scored evidence + baseline compute short (28/72)",
+   "disagreement: Agent says neutral, but its scored evidence + baseline compute short (21/79)",
+   "disagreement: Agent says long, but its scored evidence + baseline compute short (39/61)"
+  ]
+ },
+ "b": {
+  "runs": 11,
+  "p_long_min": 10.778,
+  "p_long_max": 48.965,
+  "p_long_mean": 29.6,
+  "p_long_std": 11.11,
+  "distinct_long_pct": 10,
+  "long_pct": [
+   25,
+   22,
+   38,
+   45,
+   31,
+   31,
+   33,
+   26,
+   15,
+   11,
+   49
+  ],
+  "computed_bias": {
+   "long": 0,
+   "short": 9,
+   "neutral": 2
+  },
+  "agent_bias": {
+   "long": 1,
+   "short": 9,
+   "neutral": 1
+  },
+  "factors_mean": 12,
+  "factors_min": 12,
+  "factors_long_total": 41,
+  "factors_short_total": 91,
+  "runs_citing_funding": 11,
+  "funding_factors_total": 13,
+  "latency_s_min": 19.915,
+  "latency_s_max": 25.592,
+  "latency_s_median": 22.9,
+  "attempts_gt1": 0,
+  "disagreements": {
+   "opposite": 0,
+   "neutral_mismatch": 1
+  },
+  "warnings": [
+   "levels[2]: price 103.64 is not near any cited value; flagged",
+   "disagreement: Agent says long, but its scored evidence + baseline compute neutral (49/51)"
+  ]
+ }
+}

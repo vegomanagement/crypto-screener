@@ -229,3 +229,30 @@ def test_chart_module_exists():
     path = Path(__file__).parents[1] / "chart_data.py"
     assert path.is_file(), "chart_data aggregation module is missing"
     assert importlib.util.spec_from_file_location("chart_data", path)
+
+
+def test_hyperliquid_weeks_are_monday_weeks_built_from_complete_days():
+    """HL 1w candles open Thursday 00:00 UTC; the chart's W is Monday-based like Binance/Bybit."""
+    from chart_data import build_chart_snapshot
+    day = 86_400_000
+    monday = int(datetime(2026, 9, 28, tzinfo=UTC).timestamp() * 1000)
+    rows = []
+    for i in range(-3, 16):          # Thu 24 Sep .. Mon 12 Oct (that week incomplete)
+        ts = monday + i * day
+        rows.append({"ts": ts, "close_ts": ts + day, "o": 100 + i, "h": 110 + i, "l": 90 + i, "c": 101 + i,
+                     "v": 1, "source": "hyperliquid", "symbol": "BTC", "interval": "D", "closed": True})
+    calls = []
+
+    def fetch(symbol, base_interval, count):
+        calls.append(base_interval)
+        return rows
+
+    out = build_chart_snapshot("BTC", "W", 10, fetch, as_of_ms=monday + 16 * day, exchange="hyperliquid")
+    assert calls == ["D"]
+    assert [c["ts"] for c in out["candles"]] == [monday, monday + 7 * day]
+    first = out["candles"][0]
+    assert (first["o"], first["h"], first["l"], first["c"], first["v"]) == (100, 116, 90, 107, 7)
+    assert "Thursday" in out["warnings"][0]
+    # Other venues keep the native weekly request.
+    snap, venue_calls = snapshot([], interval="W", limit=10)
+    assert venue_calls[0][1] == "W"

@@ -1,0 +1,46 @@
+{
+ "dailyReady": true,
+ "daily": {
+  "interval": "D",
+  "sessionsHidden": true,
+  "sessionsCount": 0,
+  "opensTfs": [
+   "W",
+   "M",
+   "Y",
+   "PWH",
+   "PWL",
+   "PMH",
+   "PML"
+  ],
+  "warnings": "Market Sessions: Sessions are intraday-only and are hidden on daily and higher intervals",
+  "fvgZones": 10
+ },
+ "secondsReady": true,
+ "seconds": {
+  "interval": "5s",
+  "bars": 150,
+  "sessions": 1,
+  "opensCurrent": [
+   "D 81578.3",
+   "W 83723.1",
+   "M 83576.8",
+   "Y 87608.3",
+   "PDH 82900.5",
+   "PDL 80780",
+   "PWH 86976.1",
+   "PWL 80344.8",
+   "PMH 87385.1",
+   "PML 74909.4"
+  ],
+  "status": "Backfilled from Binance aggTrades since 17:40:30 UTC (4999 trades, 5 requests) · live since 17:53:01 UTC · seconds without trades have no candle"
+ },
+ "other": {
+  "footprintPressed": "true",
+  "footprintStatus": "Footprint: loading real trades…",
+  "drawingsToolbar": false,
+  "localAlerts": true,
+  "fvg": 15
+ },
+ "exceptions": []
+}

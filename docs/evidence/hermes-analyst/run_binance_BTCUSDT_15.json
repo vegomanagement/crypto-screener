@@ -1,0 +1,227 @@
+{
+ "age_s": 0.0,
+ "analysis": {
+  "bias": "short",
+  "confidence": "medium",
+  "horizon": "4-12 bars of 15m",
+  "key_factors": [
+   {
+    "source_fields": [
+     "indicators.ema_stack_7_14_28",
+     "indicators.ema200"
+    ],
+    "text": "EMA stack 7<14<28<200 bearish"
+   },
+   {
+    "source_fields": [
+     "structure.trend",
+     "structure.recent_events.4.kind"
+    ],
+    "text": "Structure bear, last CHOCH bear"
+   },
+   {
+    "source_fields": [
+     "orderbook.imbalance"
+    ],
+    "text": "Orderbook ask-heavy -0.59"
+   },
+   {
+    "source_fields": [
+     "flow.cvd_1h.trend",
+     "flow.cvd_1h.divergence"
+    ],
+    "text": "CVD 1h down, no divergence"
+   },
+   {
+    "source_fields": [
+     "footprint.bars.3.delta",
+     "footprint.bars.4.delta"
+    ],
+    "text": "Footprint deltas mostly negative"
+   },
+   {
+    "source_fields": [
+     "indicators.rsi14"
+    ],
+    "text": "RSI 30.6 near oversold limits downside"
+   }
+  ],
+  "levels": [
+   {
+    "price": 81424.0,
+    "reason": "Bear OB base, unmitigated",
+    "source_fields": [
+     "order_blocks.unmitigated.2.low"
+    ],
+    "type": "resistance"
+   },
+   {
+    "price": 81416.8,
+    "reason": "Nearest bear FVG top",
+    "source_fields": [
+     "fvg.nearest.0.top"
+    ],
+    "type": "resistance"
+   },
+   {
+    "price": 81520.0,
+    "reason": "Bear CHOCH level",
+    "source_fields": [
+     "structure.recent_events.4.level"
+    ],
+    "type": "resistance"
+   },
+   {
+    "price": 81349.0,
+    "reason": "Retrace to ema7/FVG edge",
+    "source_fields": [
+     "indicators.ema7"
+    ],
+    "type": "entry"
+   },
+   {
+    "price": 81534.0,
+    "reason": "Above swing high + buffer",
+    "source_fields": [
+     "structure.last_swing_high.price",
+     "indicators.atr14"
+    ],
+    "type": "stop"
+   },
+   {
+    "price": 81067.0,
+    "reason": "2 ATR extension down",
+    "source_fields": [
+     "price.value",
+     "indicators.atr14"
+    ],
+    "type": "target"
+   },
+   {
+    "price": 81000.0,
+    "reason": "Round sellside pool",
+    "source_fields": [
+     "liquidity.pools.0.price"
+    ],
+    "type": "liquidity"
+   },
+   {
+    "price": 80755.9,
+    "reason": "EQL sellside, strength 5",
+    "source_fields": [
+     "liquidity.pools.2.price"
+    ],
+    "type": "liquidity"
+   }
+  ],
+  "long_pct": 38,
+  "risks": [
+   "HTF bias long moderate, 240/60 discount",
+   "RSI oversold bounce risk",
+   "Regime compressing, chop both stops",
+   "Orderbook is one sampled snapshot"
+  ],
+  "scenarios": [
+   {
+    "invalidation": "15m close above 81424",
+    "name": "Continuation down",
+    "target": "81067 then 81000 round pool",
+    "trigger": "Close below 81149.8 low"
+   },
+   {
+    "invalidation": "Accept above 81520",
+    "name": "FVG retest short",
+    "target": "81157 prior low",
+    "trigger": "Tap 81412-81434 bear FVGs, rejection"
+   },
+   {
+    "invalidation": "Fail back under 81349",
+    "name": "Oversold bounce",
+    "target": "81583 VAL / 81575 swing",
+    "trigger": "RSI 30.6 reclaim of 81424"
+   }
+  ],
+  "short_pct": 62,
+  "summary_ru": "15m нисходящий: цена 81255 под всеми EMA, стек медвежий, структура bear с последним CHOCH вниз на 81520. Стакан перевешен в аск (-0.59), CVD вниз, дельты отрицательные. Шорт от 81349-81424 (FVG/OB), стоп 81534, цель 81067 и пул 81000/80756. Риск: RSI 30.6 и HTF bias long из дискаунта могут дать отскок к 81583."
+ },
+ "attempts": 1,
+ "baseline": {
+  "long_confidence": 69,
+  "long_factors": [
+   "CVD ⚪ нейтрально",
+   "VP ⚪ вне VA | POC $82,538",
+   "Session 🗽 NY Session [4/5]",
+   "Book ❌ стакан против сигнала",
+   "F&G 🤑 Greed [55]",
+   "TZ 1H ⚪ Нейтральная [-0.9% от mean]",
+   "TZ 4H ⚪ Нейтральная [-2.8% от mean]",
+   "RSI ⚪ [38]"
+  ],
+  "long_pct": 52,
+  "long_score": 74,
+  "long_verdict": "WAIT",
+  "short_confidence": 54,
+  "short_factors": [
+   "CVD ✅ подтверждает направление",
+   "VP ⚪ вне VA | POC $82,538",
+   "Session 🗽 NY Session [4/5]",
+   "Book ✅ ask>bid",
+   "F&G 🤑 Greed [55]",
+   "TZ 1H ⚪ Нейтральная [-0.9% от mean]",
+   "TZ 4H ⚪ Нейтральная [-2.8% от mean]",
+   "RSI ⚪ [38]"
+  ],
+  "short_pct": 48,
+  "short_score": 68,
+  "short_verdict": "WAIT",
+  "source": "screener.compute_confluence_score + decision.make_decision over screener.fetch_market (Bybit-first USDT aggregate, not venue-pinned)",
+  "ts": 1792258144856
+ },
+ "cached": false,
+ "evaluation": {
+  "horizon_bars": 12,
+  "rule": "±1 ATR from the analysis price, bias side first"
+ },
+ "exchange": "binance",
+ "freshness": {
+  "last_close_ts": 1792257300000,
+  "missing": {},
+  "sections": {
+   "baseline": 1792258144856,
+   "candles": 1792257300000,
+   "derivatives": 1792258144857,
+   "flow": 1792258144856,
+   "footprint": 1792258144858,
+   "funding": 1792258122587,
+   "fvg": 1792257300000,
+   "htf_bias": 1792258144856,
+   "indicators": 1792257300000,
+   "liquidity": 1792258144856,
+   "order_blocks": 1792257300000,
+   "orderbook": 1792258145077,
+   "price": 1792257300000,
+   "regime": 1792258144856,
+   "session": 1792258144856,
+   "structure": 1792257300000
+  }
+ },
+ "generated_at": 1792258144856,
+ "id": 9,
+ "interval": "15",
+ "latency_ms": 17189,
+ "model": "hermes-agent",
+ "price": {
+  "source": "last closed candle close",
+  "ts": 1792257300000,
+  "value": 81255.0
+ },
+ "raw_output": [
+  "{\"bias\":\"short\",\"long_pct\":38,\"short_pct\":62,\"confidence\":\"medium\",\"horizon\":\"4-12 bars of 15m\",\"levels\":[{\"type\":\"resistance\",\"price\":81424.0,\"reason\":\"Bear OB base, unmitigated\",\"source_fields\":[\"order_blocks.unmitigated.2.low\"]},{\"type\":\"resistance\",\"price\":81416.8,\"reason\":\"Nearest bear FVG top\",\"source_fields\":[\"fvg.nearest.0.top\"]},{\"type\":\"resistance\",\"price\":81520.0,\"reason\":\"Bear CHOCH level\",\"source_fields\":[\"structure.recent_events.4.level\"]},{\"type\":\"entry\",\"price\":81349.0,\"reason\":\"Retrace to ema7/FVG edge\",\"source_fields\":[\"indicators.ema7\"]},{\"type\":\"stop\",\"price\":81534.0,\"reason\":\"Above swing high + buffer\",\"source_fields\":[\"structure.last_swing_high.price\",\"indicators.atr14\"]},{\"type\":\"target\",\"price\":81067.0,\"reason\":\"2 ATR extension down\",\"source_fields\":[\"price.value\",\"indicators.atr14\"]},{\"type\":\"liquidity\",\"price\":81000.0,\"reason\":\"Round sellside pool\",\"source_fields\":[\"liquidity.pools.0.price\"]},{\"type\":\"liquidity\",\"price\":80755.9,\"reason\":\"EQL sellside, strength 5\",\"source_fields\":[\"liquidity.pools.2.price\"]}],\"scenarios\":[{\"name\":\"Continuation down\",\"trigger\":\"Close below 81149.8 low\",\"target\":\"81067 then 81000 round pool\",\"invalidation\":\"15m close above 81424\"},{\"name\":\"FVG retest short\",\"trigger\":\"Tap 81412-81434 bear FVGs, rejection\",\"target\":\"81157 prior low\",\"invalidation\":\"Accept above 81520\"},{\"name\":\"Oversold bounce\",\"trigger\":\"RSI 30.6 reclaim of 81424\",\"target\":\"81583 VAL / 81575 swing\",\"invalidation\":\"Fail back under 81349\"}],\"key_factors\":[{\"text\":\"EMA stack 7<14<28<200 bearish\",\"source_fields\":[\"indicators.ema_stack_7_14_28\",\"indicators.ema200\"]},{\"text\":\"Structure bear, last CHOCH bear\",\"source_fields\":[\"structure.trend\",\"structure.recent_events.4.kind\"]},{\"text\":\"Orderbook ask-heavy -0.59\",\"source_fields\":[\"orderbook.imbalance\"]},{\"text\":\"CVD 1h down, no divergence\",\"source_fields\":[\"flow.cvd_1h.trend\",\"flow.cvd_1h.divergence\"]},{\"text\":\"Footprint deltas mostly negative\",\"source_fields\":[\"footprint.bars.3.delta\",\"footprint.bars.4.delta\"]},{\"text\":\"RSI 30.6 near oversold limits downside\",\"source_fields\":[\"indicators.rsi14\"]}],\"risks\":[\"HTF bias long moderate, 240/60 discount\",\"RSI oversold bounce risk\",\"Regime compressing, chop both stops\",\"Orderbook is one sampled snapshot\"],\"summary_ru\":\"15m нисходящий: цена 81255 под всеми EMA, стек медвежий, структура bear с последним CHOCH вниз на 81520. Стакан перевешен в аск (-0.59), CVD вниз, дельты отрицательные. Шорт от 81349-81424 (FVG/OB), стоп 81534, цель 81067 и пул 81000/80756. Риск: RSI 30.6 и HTF bias long из дискаунта могут дать отскок к 81583.\"}"
+ ],
+ "snapshot_hash": "8cea474d4dbd42cb",
+ "snapshot_ms": 5306,
+ "source": "hermes",
+ "status": "ok",
+ "symbol": "BTCUSDT",
+ "warnings": []
+}

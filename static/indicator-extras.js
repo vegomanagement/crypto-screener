@@ -1,7 +1,7 @@
 /* This source code is subject to the terms of the Mozilla Public License 2.0
  * at https://mozilla.org/MPL/2.0/
  * Turtle Zone © declarative; Ehlers_Super_Smoother/2 © KevanoTrades.
- * JavaScript port and independent calendar/session helpers: project contributors.
+ * JavaScript port and independent calendar (VWAP) helpers: project contributors.
  * twoPole credits: John Ehlers; original library thanks Alex Orekhov (everget).
  * See docs/INDICATOR_EXTRAS.md for source provenance and port limitations.
  */
@@ -134,69 +134,6 @@
     }
     return result;
   }
-  function computePreviousLevel(candles, settings = {}) {
-    validateCandles(candles);
-    const anchor = settings.anchor || 'day', field = settings.field || 'high';
-    const size = periodSeconds(anchor), step = barSeconds(candles, settings);
-    if (field !== 'high' && field !== 'low') throw new RangeError('previous level field must be high or low');
-    if (!step || step > size || size % step !== 0) return [];
-    const result = [], complete = new Map();
-    for (const g of calendarGroups(candles, anchor, step)) {
-      const value = complete.get(g.start - size);
-      for (const {c} of g.bars) result.push(value === undefined ? {time:c.time} : {time:c.time,value});
-      if (g.valid && g.next === g.end) {
-        const level = g.bars.reduce((v,{c}) => field === 'high' ? Math.max(v,c.high) : Math.min(v,c.low),field === 'high' ? -Infinity : Infinity);
-        complete.set(g.start, level);
-      }
-    }
-    return result;
-  }
-  function computeSession(candles, settings = {}) {
-    validateCandles(candles);
-    const {timezone = 'Asia/Tokyo', startHour = 9, endHour = 18} = settings;
-    if (![startHour,endHour].every(h => Number.isInteger(h) && h >= 0 && h <= 23) || startHour === endHour) throw new RangeError('session start/end hours must be distinct integers from 0 to 23 (end <= start means overnight)');
-    const formatter = new Intl.DateTimeFormat('en-GB', {timeZone:timezone,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'});
-    const localParts = seconds => {
-      const p = {};
-      formatter.formatToParts(new Date(seconds*1000)).forEach(x => { if (x.type !== 'literal') p[x.type] = Number(x.value); });
-      return p;
-    };
-    const localEpoch = seconds => {
-      const p=localParts(seconds);
-      return Date.UTC(p.year,p.month-1,p.day,p.hour,p.minute,p.second)/1000;
-    };
-    // Try both sides of any offset transition. Earliest matching instant wins
-    // for repeated local hours; nonexistent local hours are never fabricated.
-    const localToUTC = target => {
-      const offsets = new Set([-DAY-43200,0,DAY+43200].map(d => localEpoch(target+d)-(target+d)));
-      const matches = [...offsets].map(offset => target-offset).filter(t => localEpoch(t) === target);
-      if (!matches.length) throw new RangeError(`Session boundary falls in a nonexistent local DST hour in ${timezone}`);
-      return Math.min(...matches);
-    };
-    const result = {upper:[],lower:[],segments:[],timeCoordinates:'edges'};
-    const step = barSeconds(candles, settings);
-    if (!candles.length || !step || step >= DAY) return result;
-    const first = candles[0].time, last = candles.at(-1).time+step;
-    const top = candles.reduce((v,c)=>Math.max(v,c.high),-Infinity), bottom = candles.reduce((v,c)=>Math.min(v,c.low),Infinity);
-    for (let day = Math.floor(first/DAY)*DAY-2*DAY; day <= last+DAY; day += DAY) {
-      const start = localToUTC(day+startHour*3600);
-      const end = localToUTC(day+(endHour <= startHour ? DAY : 0)+endHour*3600);
-      if (end <= first || start >= last) continue;
-      const spans = [];
-      for (const c of candles) {
-        const left=Math.max(start,c.time), right=Math.min(end,c.time+step);
-        if (left >= right) continue;
-        const previous=spans.at(-1);
-        if (previous && previous[1] === left) previous[1]=right;
-        else spans.push([left,right]);
-      }
-      for (const [left,right] of spans) result.segments.push({
-        upper:[{time:left,value:top},{time:right,value:top}],
-        lower:[{time:left,value:bottom},{time:right,value:bottom}]
-      });
-    }
-    return result;
-  }
   function computeemaBias(candles, periods = [7,14,28]) {
     validateCandles(candles);
     if (!Array.isArray(periods) || periods.length !== 3) throw new RangeError('EMA bias needs three increasing periods');
@@ -217,42 +154,17 @@
     return 'mixed';
   }
   const colorField = color => ({key:'color',label:'Color',type:'color',default:color});
-  const opacityField = {key:'opacity',label:'Fill opacity',type:'number',default:0.1,min:0,max:1,step:0.01};
   function definition(id, label, kind, settingsSchema, compute) {
-    return {id,label,kind,defaultEnabled:false,...(id.startsWith('prev-') ? {stepLine:true} : {}),settingsSchema,compute,
+    return {id,label,kind,defaultEnabled:false,settingsSchema,compute,
       warnings:(candles,settings) => getWarnings(id,candles,settings)};
   }
-  function turtleDefinition(side, color) {
-    return {...definition(`turtle-${side}`,`Turtle Zone ${side}`, 'band',[
-      {key:'length',label:'Lookback period (minimum 200 bars warmup)',type:'number',default:200,min:1,max:1000,step:1},
-      {key:'inner',label:'Inner amplitude',type:'number',default:5.6,min:0,max:100,step:0.1},
-      {key:'outer',label:'Outer amplitude (>= inner)',type:'number',default:9.6,min:0,max:100,step:0.1},
-      {key:'source',label:'Price source',type:'select',default:'hlc3',options:SOURCES.slice()},colorField(color),{...opacityField},
-      {key:'showOuter',label:'Show outer boundary',type:'boolean',default:false}
-    ],(candles,settings) => computeTurtleZone(candles,settings)[side]), innerBoundary:side === 'upper' ? 'lower' : 'upper'};
-  }
-  function sessionDefinition(id,label,timezone,startHour,endHour,color) {
-    return definition(id,label,'band',[
-      {key:'timezone',label:'Session timezone (DST-aware)',type:'select',default:timezone,options:['Asia/Tokyo','Europe/London','America/New_York']},
-      {key:'startHour',label:'Start hour (local, inclusive)',type:'number',default:startHour,min:0,max:23,step:1},
-      {key:'endHour',label:'End hour (local, exclusive)',type:'number',default:endHour,min:0,max:23,step:1},
-      colorField(color),{...opacityField,default:0.08}
-    ],(candles,settings = {})=>computeSession(candles,{timezone,startHour,endHour,...settings}));
-  }
-  const definitions = [
-    turtleDefinition('upper','#ef4444'),turtleDefinition('lower','#22c55e'),
-    ...['day','week'].map(anchor => definition(`vwap-${anchor === 'day' ? 'daily' : 'weekly'}`,`VWAP ${anchor === 'day' ? 'daily' : 'weekly'} (UTC)`,'line',[
+  // Only the VWAPs are still registered from this module; Turtle Zone, previous
+  // day/week levels and sessions moved to static/indicators/ (groups.js,
+  // opens.js, sessions.js), whose migration maps the old split ids.
+  const definitions = ['day','week'].map(anchor => definition(`vwap-${anchor === 'day' ? 'daily' : 'weekly'}`,`VWAP ${anchor === 'day' ? 'daily' : 'weekly'} (UTC)`,'line',[
       colorField(anchor === 'day' ? '#fbbf24' : '#c084fc'),
       {key:'width',label:'Line width',type:'number',default:2,min:1,max:5,step:1}
-    ],(candles,settings = {})=>computeVWAP(candles,{...settings,anchor}))),
-    ...['day','week'].flatMap(anchor => ['high','low'].map(field => definition(`prev-${anchor}-${field}`,`Previous ${anchor} ${field} (UTC)`,'line',[
-      colorField(field === 'high' ? '#fb7185' : '#34d399'),
-      {key:'width',label:'Line width',type:'number',default:1,min:1,max:5,step:1}
-    ],(candles,settings = {})=>computePreviousLevel(candles,{...settings,anchor,field})))),
-    sessionDefinition('session-asia','Asia session (Tokyo 09–18)','Asia/Tokyo',9,18,'#60a5fa'),
-    sessionDefinition('session-london','London session (08–17 local)','Europe/London',8,17,'#fbbf24'),
-    sessionDefinition('session-ny','New York session (08–17 local)','America/New_York',8,17,'#c084fc')
-  ];
+    ],(candles,settings = {})=>computeVWAP(candles,{...settings,anchor})));
   function getWarnings(id, candles, settings = {}) {
     const def=definitions.find(d=>d.id===id);
     if (!def) return [`Unknown indicator: ${id}`];
@@ -261,26 +173,16 @@
     try {
       validateCandles(candles);
       if (!candles.length) return ['Insufficient closed candle history'];
-      if (id.startsWith('turtle-')) {
-        def.compute(candles,config);
-        const required=Math.max(200,config.length);
-        return candles.length < required ? [`Insufficient history: Turtle Zone requires ${required} closed bars; received ${candles.length}`] : [];
-      }
       const step=barSeconds(candles,config);
       if (!step) return ['Insufficient history to determine bar duration; pass intervalSeconds explicitly'];
-      if (id.startsWith('session-')) {
-        if (step >= DAY) return ['Source timeframe is too coarse for intraday session shading; use intraday closed bars'];
-        def.compute(candles,config);
-        return [];
-      }
       const anchor=id.includes('week') ? 'week' : 'day', size=periodSeconds(anchor);
       if (step > size || size % step !== 0) return ['Source bars are too coarse or cross an anchor boundary; lower-timeframe data is required'];
       const groups=calendarGroups(candles,anchor,step), warnings=[];
       if (groups.some((g,i)=>!g.valid || (i > 0 && g.start !== groups[i-1].end))) warnings.push('Partial or gapped calendar period omitted; fetch earlier contiguous bars from the UTC anchor boundary');
       const output=def.compute(candles,config);
-      if (!output.some(p=>Number.isFinite(p.value))) warnings.push(id.startsWith('prev-') ? 'Insufficient history: no prior complete UTC calendar period' : 'No complete anchored history with positive volume');
+      if (!output.some(p=>Number.isFinite(p.value))) warnings.push('No complete anchored history with positive volume');
       return warnings;
     } catch (error) { return [error.message]; }
   }
-  return {definitions, computeTurtleZone, twoPole, logTrueRange, validateCandles, computeVWAP, computePreviousLevel, computeSession, computeemaBias, computeEMABias:computeemaBias, getWarnings, warningsFor:getWarnings};
+  return {definitions, computeTurtleZone, twoPole, logTrueRange, validateCandles, computeVWAP, computeemaBias, computeEMABias:computeemaBias, getWarnings, warningsFor:getWarnings};
 }));

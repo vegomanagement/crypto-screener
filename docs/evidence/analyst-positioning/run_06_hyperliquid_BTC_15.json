@@ -1,0 +1,338 @@
+{
+ "age_s": 0.0,
+ "analysis": {
+  "agent_bias": "long",
+  "bias": "long",
+  "confidence": "low",
+  "disagreement": null,
+  "factor_scores": [
+   {
+    "direction": "long",
+    "factor": "Price reclaimed above ema7/ema14 after bounce",
+    "source_fields": [
+     "indicators.ema7",
+     "indicators.ema14",
+     "indicators.close"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "long",
+    "factor": "Three strong impulse candles off 81148 low",
+    "source_fields": [
+     "candles.recent.21.4",
+     "candles.recent.22.4",
+     "candles.recent.23.4"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "long",
+    "factor": "RSI 58.9 rising, no overbought cap yet",
+    "source_fields": [
+     "indicators.rsi14"
+    ],
+    "strength": 1
+   },
+   {
+    "direction": "long",
+    "factor": "Bull FVG 81357-81477 left open below as support",
+    "source_fields": [
+     "fvg.nearest.0.top",
+     "fvg.nearest.0.bottom"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "long",
+    "factor": "HTF bias long, 4H in discount zone",
+    "source_fields": [
+     "htf_bias.direction",
+     "htf_bias.zones.240"
+    ],
+    "strength": 1
+   },
+   {
+    "direction": "long",
+    "factor": "Buyside EQH 81765 strength 5 magnet above",
+    "source_fields": [
+     "liquidity.pools.1.price",
+     "liquidity.pools.1.strength"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "short",
+    "factor": "Price below ema200, bear structure trend",
+    "source_fields": [
+     "indicators.ema200",
+     "structure.trend"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "short",
+    "factor": "Fresh bear BOS at 81415 not yet reversed",
+    "source_fields": [
+     "structure.recent_events.4.kind",
+     "structure.recent_events.4.level"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "short",
+    "factor": "HL ema bias bearish on 60 and 240",
+    "source_fields": [
+     "derivatives.ema_bias.60",
+     "derivatives.ema_bias.240"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "short",
+    "factor": "1h CVD down confirms seller pressure",
+    "source_fields": [
+     "flow.cvd_1h.trend"
+    ],
+    "strength": 1
+   },
+   {
+    "direction": "short",
+    "factor": "Funding positive all 10 settles: longs pay",
+    "source_fields": [
+     "funding.predicted.rate",
+     "funding.annualized_predicted",
+     "funding.trend_last_settlements.positive"
+    ],
+    "strength": 1
+   },
+   {
+    "direction": "short",
+    "factor": "HL top-50 whales net short, long share tiny",
+    "source_fields": [
+     "positioning.whales.aggregate.net_notional",
+     "positioning.whales.aggregate.long_share",
+     "positioning.signals.whale_bias.state"
+    ],
+    "strength": 2
+   }
+  ],
+  "horizon": "4-12 bars of 15m",
+  "levels": [
+   {
+    "price": 81415.0,
+    "reason": "BOS level and bull FVG upper edge",
+    "source_fields": [
+     "structure.recent_events.4.level"
+    ],
+    "type": "support"
+   },
+   {
+    "price": 81157.0,
+    "reason": "Bull order block low / swing low",
+    "source_fields": [
+     "order_blocks.unmitigated.5.low",
+     "structure.last_swing_low.price"
+    ],
+    "type": "support"
+   },
+   {
+    "price": 81577.0,
+    "reason": "Last swing high",
+    "source_fields": [
+     "structure.last_swing_high.price"
+    ],
+    "type": "resistance"
+   },
+   {
+    "price": 81765.5,
+    "reason": "EQH buyside pool strength 5",
+    "source_fields": [
+     "liquidity.pools.1.price"
+    ],
+    "type": "resistance"
+   },
+   {
+    "price": 81440.0,
+    "reason": "Retest of FVG/BOS zone",
+    "source_fields": [
+     "fvg.nearest.0.bottom",
+     "structure.recent_events.4.level"
+    ],
+    "type": "entry"
+   },
+   {
+    "price": 81145.0,
+    "reason": "Below swing low, ~1 ATR risk buffer",
+    "source_fields": [
+     "structure.last_swing_low.price",
+     "indicators.atr14"
+    ],
+    "type": "stop"
+   },
+   {
+    "price": 81612.0,
+    "reason": "Bear FVG base above swing high",
+    "source_fields": [
+     "fvg.nearest.1.bottom"
+    ],
+    "type": "target"
+   },
+   {
+    "price": 81583.0,
+    "reason": "VAL buyside pool just overhead",
+    "source_fields": [
+     "liquidity.pools.0.price"
+    ],
+    "type": "liquidity"
+   }
+  ],
+  "long_pct": 62,
+  "risks": [
+   "Range compressing, low regime confidence 40",
+   "Outside killzone, thin liquidity",
+   "Whale/funding data venue-skewed, includes MMs",
+   "Orderbook ask-heavy, one snapshot only"
+  ],
+  "scenarios": [
+   {
+    "invalidation": "Close back under 81415",
+    "name": "Continuation up",
+    "target": "81612 then 81765",
+    "trigger": "15m close above 81577"
+   },
+   {
+    "invalidation": "Close under 81357",
+    "name": "FVG retest long",
+    "target": "81583-81612",
+    "trigger": "Tap 81440 and hold with wick"
+   },
+   {
+    "invalidation": "Reclaim 81477",
+    "name": "Bear BOS resumes",
+    "target": "81157 then 81000",
+    "trigger": "Close under 81357"
+   }
+  ],
+  "short_pct": 38,
+  "split": {
+   "agent_long_points": 10,
+   "agent_net": 0.0,
+   "agent_short_points": 10,
+   "baseline_net": 0.4507,
+   "bias": "long",
+   "k": 3.0,
+   "long_pct": 62,
+   "method": "p_long = logistic(k * (w_a*agent_net + w_b*baseline_net)/(w_a+w_b))",
+   "net": 0.1577,
+   "neutral_band": 5.0,
+   "p_long": 61.615,
+   "short_pct": 38,
+   "weights": {
+    "agent": 0.65,
+    "baseline": 0.35
+   }
+  },
+  "summary_ru": "BTC 15m: отбой от 81148 вернул цену выше ema7/14, открыт бычий FVG 81357-81477 и магнит EQH 81765. Против: цена ниже ema200, свежий медвежий BOS 81415, CVD вниз, киты HL в нетто-шорте, фандинг платят лонги. Лонг от ретеста 81440-81477 со стопом под 81145, цель 81583-81612. Пробой вниз 81357 отменяет план."
+ },
+ "attempts": 1,
+ "baseline": {
+  "long_confidence": 79,
+  "long_factors": [
+   "CVD ⚪ нейтрально",
+   "VP ✅ у VAL $81,583",
+   "Session 🗽 NY Session [4/5]",
+   "Book ❌ стакан против сигнала",
+   "F&G 🤑 Greed [55]",
+   "TZ 1H ⚪ Нейтральная [-0.8% от mean]",
+   "TZ 4H ⚪ Нейтральная [-2.8% от mean]",
+   "RSI ⚪ [42]"
+  ],
+  "long_pct": 61,
+  "long_score": 87,
+  "long_verdict": "WAIT",
+  "short_confidence": 55,
+  "short_factors": [
+   "CVD ✅ подтверждает направление",
+   "VP ❌ у VAL — против сигнала",
+   "Session 🗽 NY Session [4/5]",
+   "Book ✅ ask>bid",
+   "F&G 🤑 Greed [55]",
+   "TZ 1H ⚪ Нейтральная [-0.8% от mean]",
+   "TZ 4H ⚪ Нейтральная [-2.8% от mean]",
+   "RSI ⚪ [42]"
+  ],
+  "short_pct": 39,
+  "short_score": 55,
+  "short_verdict": "WAIT",
+  "source": "screener.compute_confluence_score + decision.make_decision over screener.fetch_market (Bybit-first USDT aggregate, not venue-pinned)",
+  "ts": 1792261888309
+ },
+ "cached": false,
+ "evaluation": {
+  "horizon_bars": 12,
+  "rule": "±1 ATR from the analysis price, bias side first"
+ },
+ "exchange": "hyperliquid",
+ "freshness": {
+  "last_close_ts": 1792261800000,
+  "missing": {
+   "footprint": "ValueError: no closed footprint bars"
+  },
+  "positioning_missing": {
+   "crowd": "Hyperliquid publishes no long/short ratio",
+   "liquidations": "Hyperliquid has no public liquidation stream",
+   "open_interest.change_1h": "Hyperliquid has no public OI history endpoint",
+   "open_interest.change_24h": "Hyperliquid has no public OI history endpoint",
+   "open_interest.change_4h": "Hyperliquid has no public OI history endpoint",
+   "signals.crowd_extreme": "no global account ratio for this venue",
+   "signals.liquidation_imbalance": "Hyperliquid has no public liquidation stream",
+   "signals.oi_price_4h": "needs 4h OI history and price at the same stamps",
+   "signals.taker_flow": "no taker ratio for this venue",
+   "signals.top_vs_crowd": "needs Binance top-position and global ratios",
+   "taker": "Hyperliquid has no public taker ratio endpoint",
+   "top_traders.account": "venue publishes no top-trader ratio (only Binance does)",
+   "top_traders.position": "venue publishes no top-trader ratio (only Binance does)"
+  },
+  "sections": {
+   "baseline": 1792261888309,
+   "candles": 1792261800000,
+   "derivatives": 1792261888310,
+   "flow": 1792261888309,
+   "funding": 1792261888314,
+   "fvg": 1792261800000,
+   "htf_bias": 1792261888309,
+   "indicators": 1792261800000,
+   "liquidity": 1792261888309,
+   "order_blocks": 1792261800000,
+   "orderbook": 1792261887800,
+   "positioning": 1792261890157,
+   "price": 1792261800000,
+   "regime": 1792261888309,
+   "session": 1792261888309,
+   "structure": 1792261800000
+  }
+ },
+ "generated_at": 1792261888309,
+ "id": 6,
+ "interval": "15",
+ "latency_ms": 23324,
+ "model": "hermes-agent",
+ "positioning_bytes": 4804,
+ "price": {
+  "source": "last closed candle close",
+  "ts": 1792261800000,
+  "value": 81528.0
+ },
+ "raw_output": [
+  "{\"bias\":\"long\",\"confidence\":\"low\",\"horizon\":\"4-12 bars of 15m\",\"factor_scores\":[{\"factor\":\"Price reclaimed above ema7/ema14 after bounce\",\"direction\":\"long\",\"strength\":2,\"source_fields\":[\"indicators.ema7\",\"indicators.ema14\",\"indicators.close\"]},{\"factor\":\"Three strong impulse candles off 81148 low\",\"direction\":\"long\",\"strength\":2,\"source_fields\":[\"candles.recent.21.4\",\"candles.recent.22.4\",\"candles.recent.23.4\"]},{\"factor\":\"RSI 58.9 rising, no overbought cap yet\",\"direction\":\"long\",\"strength\":1,\"source_fields\":[\"indicators.rsi14\"]},{\"factor\":\"Bull FVG 81357-81477 left open below as support\",\"direction\":\"long\",\"strength\":2,\"source_fields\":[\"fvg.nearest.0.top\",\"fvg.nearest.0.bottom\"]},{\"factor\":\"HTF bias long, 4H in discount zone\",\"direction\":\"long\",\"strength\":1,\"source_fields\":[\"htf_bias.direction\",\"htf_bias.zones.240\"]},{\"factor\":\"Buyside EQH 81765 strength 5 magnet above\",\"direction\":\"long\",\"strength\":2,\"source_fields\":[\"liquidity.pools.1.price\",\"liquidity.pools.1.strength\"]},{\"factor\":\"Price below ema200, bear structure trend\",\"direction\":\"short\",\"strength\":2,\"source_fields\":[\"indicators.ema200\",\"structure.trend\"]},{\"factor\":\"Fresh bear BOS at 81415 not yet reversed\",\"direction\":\"short\",\"strength\":2,\"source_fields\":[\"structure.recent_events.4.kind\",\"structure.recent_events.4.level\"]},{\"factor\":\"HL ema bias bearish on 60 and 240\",\"direction\":\"short\",\"strength\":2,\"source_fields\":[\"derivatives.ema_bias.60\",\"derivatives.ema_bias.240\"]},{\"factor\":\"1h CVD down confirms seller pressure\",\"direction\":\"short\",\"strength\":1,\"source_fields\":[\"flow.cvd_1h.trend\"]},{\"factor\":\"Funding positive all 10 settles: longs pay\",\"direction\":\"short\",\"strength\":1,\"source_fields\":[\"funding.predicted.rate\",\"funding.annualized_predicted\",\"funding.trend_last_settlements.positive\"]},{\"factor\":\"HL top-50 whales net short, long share tiny\",\"direction\":\"short\",\"strength\":2,\"source_fields\":[\"positioning.whales.aggregate.net_notional\",\"positioning.whales.aggregate.long_share\",\"positioning.signals.whale_bias.state\"]}],\"levels\":[{\"type\":\"support\",\"price\":81415.0,\"reason\":\"BOS level and bull FVG upper edge\",\"source_fields\":[\"structure.recent_events.4.level\"]},{\"type\":\"support\",\"price\":81157.0,\"reason\":\"Bull order block low / swing low\",\"source_fields\":[\"order_blocks.unmitigated.5.low\",\"structure.last_swing_low.price\"]},{\"type\":\"resistance\",\"price\":81577.0,\"reason\":\"Last swing high\",\"source_fields\":[\"structure.last_swing_high.price\"]},{\"type\":\"resistance\",\"price\":81765.5,\"reason\":\"EQH buyside pool strength 5\",\"source_fields\":[\"liquidity.pools.1.price\"]},{\"type\":\"entry\",\"price\":81440.0,\"reason\":\"Retest of FVG/BOS zone\",\"source_fields\":[\"fvg.nearest.0.bottom\",\"structure.recent_events.4.level\"]},{\"type\":\"stop\",\"price\":81145.0,\"reason\":\"Below swing low, ~1 ATR risk buffer\",\"source_fields\":[\"structure.last_swing_low.price\",\"indicators.atr14\"]},{\"type\":\"target\",\"price\":81612.0,\"reason\":\"Bear FVG base above swing high\",\"source_fields\":[\"fvg.nearest.1.bottom\"]},{\"type\":\"liquidity\",\"price\":81583.0,\"reason\":\"VAL buyside pool just overhead\",\"source_fields\":[\"liquidity.pools.0.price\"]}],\"scenarios\":[{\"name\":\"Continuation up\",\"trigger\":\"15m close above 81577\",\"target\":\"81612 then 81765\",\"invalidation\":\"Close back under 81415\"},{\"name\":\"FVG retest long\",\"trigger\":\"Tap 81440 and hold with wick\",\"target\":\"81583-81612\",\"invalidation\":\"Close under 81357\"},{\"name\":\"Bear BOS resumes\",\"trigger\":\"Close under 81357\",\"target\":\"81157 then 81000\",\"invalidation\":\"Reclaim 81477\"}],\"risks\":[\"Range compressing, low regime confidence 40\",\"Outside killzone, thin liquidity\",\"Whale/funding data venue-skewed, includes MMs\",\"Orderbook ask-heavy, one snapshot only\"],\"summary_ru\":\"BTC 15m: отбой от 81148 вернул цену выше ema7/14, открыт бычий FVG 81357-81477 и магнит EQH 81765. Против: цена ниже ema200, свежий медвежий BOS 81415, CVD вниз, киты HL в нетто-шорте, фандинг платят лонги. Лонг от ретеста 81440-81477 со стопом под 81145, цель 81583-81612. Пробой вниз 81357 отменяет план.\"}"
+ ],
+ "snapshot_bytes": 14018,
+ "snapshot_hash": "5bad561054e73764",
+ "snapshot_ms": 1855,
+ "source": "hermes",
+ "status": "ok",
+ "symbol": "BTC",
+ "warnings": [],
+ "_wall_s": 25.2
+}

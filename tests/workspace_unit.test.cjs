@@ -163,7 +163,7 @@ test('browser: complete venue catalogs, native pane selection, persistence and s
       await page.locator('#layout-select').selectOption(layout);
       assert.equal(await page.locator('.chart-pane').count(), { '1': 1, '2cols': 2, '2rows': 2, '3cols': 3, '4grid': 4, '6grid': 6 }[layout]);
     }
-    await page.locator('#ema200-toggle').check();
+    await page.locator('[data-indicator-toggle="ema200"]').check();
     await page.locator('#fvg-toggle').uncheck();
     await page.setViewportSize({ width: 390, height: 844 });
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
@@ -171,9 +171,9 @@ test('browser: complete venue catalogs, native pane selection, persistence and s
     assert.equal(requests.some(url => url.includes('exchange=hyperliquid') && url.includes('symbol=kBONK')), true);
     assert.deepEqual(errors, []);
     await page.evaluate(() => {
-      const saved = JSON.parse(localStorage.getItem('crypto-screener.workspace.v4'));
-      if (saved.version !== 4 || saved.panes[0].exchange !== 'hyperliquid') throw new Error('v4 pane venue was not persisted');
-      localStorage.removeItem('crypto-screener.workspace.v4');
+      const saved = JSON.parse(localStorage.getItem('crypto-screener.workspace.v5'));
+      if (saved.version !== 5 || saved.panes[0].exchange !== 'hyperliquid') throw new Error('v5 pane venue was not persisted');
+      localStorage.removeItem('crypto-screener.workspace.v5');
       localStorage.setItem('crypto-screener.workspace.v1', JSON.stringify({ version: 1, layout: '2cols', active: 1, panes: [{ symbol: 'SOLUSDT', interval: '240' }, { symbol: 'ETHUSDT', interval: 'D' }], fvg: false }));
     });
     await page.reload();
@@ -364,24 +364,27 @@ test('MA20 high/low SMA has no fake warm-up and tracks only its own OHLC field',
 function settingsHarness(saved, inputs = []) {
   const storage = new Map([['crypto-screener.workspace.v3', JSON.stringify(saved)]]);
   const extras = require('../static/indicator-extras.js');
+  const groups = require('../static/indicators/groups.js'), opens = require('../static/indicators/opens.js'), sessions = require('../static/indicators/sessions.js');
   let saves = 0, redraws = 0;
   const code = source.slice(source.indexOf('  const STORAGE_KEY'), source.indexOf('  const $ =')) +
     source.slice(source.indexOf('  const defaultPanes'), source.indexOf('  function resetIndicatorSettings')) +
-    `\nconst settingsPopoverId = 'ema7', settingsPopover = {}; const $all = () => inputs; const panes = new Map([[0, {applyIndicators() { redraw(); }}]]);\n` +
+    source.slice(source.indexOf('  function isIndicatorEnabled('), source.indexOf('  function readFavorites(')) +
+    `\nconst settingsPopoverId = 'ema200', settingsPopover = {}; const $all = () => inputs; const panes = new Map([[0, {applyIndicators() { redraw(); }}]]);\n` +
     source.slice(source.indexOf('  function applySettingsPopover()'), source.indexOf('  function resetSettingsPopover()')) +
-    '\n({state, sanitizeFieldValue, setIndicatorSettings, applySettingsPopover, emaData, smaData})';
-  const api = vm.runInNewContext(code, { window: { WorkspaceIndicatorExtras: extras }, inputs,
+    '\n({state, migrationNotes, sanitizeFieldValue, setIndicatorSettings, applySettingsPopover, emaData, smaData, INDICATOR_DEFS, isIndicatorEnabled, getIndicatorSettings})';
+  const api = vm.runInNewContext(code, { window: { WorkspaceIndicatorExtras: extras, WorkspaceIndicatorGroups: groups, WorkspaceOpens: opens, WorkspaceSessions: sessions }, inputs,
     redraw: () => redraws++, localStorage: { getItem: k => storage.get(k), setItem: (k,v) => { saves++; storage.set(k,v); } } });
   return { api, storage, counts: () => [saves, redraws] };
 }
 
 test('integer settings sanitize and migrate fractional periods to documented defaults without truncating fractional fields', () => {
-  const h = settingsHarness({ version: 3, layout: '1', indicatorSettings: { ema7: { period: 7.5 }, fvg: { minGapPct: 0.01 }, 'turtle-upper': { inner: 5.6 } } });
-  assert.equal(h.api.state.indicatorSettings.ema7.period, 7);
+  const h = settingsHarness({ version: 3, layout: '1', indicatorSettings: { ema200: { period: 7.5 }, ema7: { period: 7.5 }, fvg: { minGapPct: 0.01 }, 'turtle-upper': { inner: 5.6 } } });
+  assert.equal(h.api.state.indicatorSettings.ema200.period, 200);
+  assert.equal(h.api.state.indicatorSettings['ema-ribbon'].period1, 7, 'fractional legacy EMA 7 period → ribbon default');
   assert.equal(h.api.state.indicatorSettings.fvg.minGapPct, 0.01);
-  assert.equal(h.api.state.indicatorSettings['turtle-upper'].inner, 5.6);
-  h.api.setIndicatorSettings('ema7', { period: 7.5 });
-  assert.equal(JSON.parse(h.storage.get('crypto-screener.workspace.v4')).indicatorSettings.ema7.period, 7);
+  assert.equal(h.api.state.indicatorSettings['turtle-zone'].inner, 5.6);
+  h.api.setIndicatorSettings('ema200', { period: 7.5 });
+  assert.equal(JSON.parse(h.storage.get('crypto-screener.workspace.v5')).indicatorSettings.ema200.period, 200);
 });
 
 test('Apply rejects invalid fractional integer drafts before saving or recomputing', () => {
@@ -390,12 +393,12 @@ test('Apply rejects invalid fractional integer drafts before saving or recomputi
   const h = settingsHarness({ version:4, layout:'1' }, [input]);
   h.api.applySettingsPopover();
   assert.deepEqual(h.counts(), [0, 0]);
-  assert.equal(h.api.state.indicatorSettings.ema7.period, 7);
+  assert.equal(h.api.state.indicatorSettings.ema200.period, 200);
   assert.equal(reported, 1);
   input.value = '10'; input.checkValidity = () => true;
   h.api.applySettingsPopover();
   assert.deepEqual(h.counts(), [1, 1]);
-  assert.equal(JSON.parse(h.storage.get('crypto-screener.workspace.v4')).indicatorSettings.ema7.period, 10);
+  assert.equal(JSON.parse(h.storage.get('crypto-screener.workspace.v5')).indicatorSettings.ema200.period, 10);
 });
 
 test('EMA and SMA defensively reject nonpositive, nonfinite and fractional periods', () => {
@@ -405,6 +408,51 @@ test('EMA and SMA defensively reject nonpositive, nonfinite and fractional perio
     assert.equal(h.api.emaData(candles, period).length, 0, `EMA ${period}`);
     assert.equal(h.api.smaData(candles, period, 'high').length, 0, `SMA ${period}`);
   }
+});
+
+test('readState migrates a v4 save with split overlays into grouped indicators (one id each)', () => {
+  const h = settingsHarness({ version: 4, layout: '1', ema: { 7: true, 14: true, 28: true, 200: false }, ma20hl: { high: true, low: true },
+    indicatorEnabled: { 'turtle-upper': true, 'turtle-lower': true, 'prev-day-high': true, 'prev-day-low': true, 'session-london': true, 'vwap-weekly': true },
+    indicatorSettings: { ema28: { period: 30, color: '#abcdef' }, ma20low: { period: 20, source: 'close' } } });
+  const { state, isIndicatorEnabled, getIndicatorSettings } = h.api;
+  assert.equal(state.version, 5);
+  for (const id of ['ema-ribbon', 'ma-channel', 'turtle-zone', 'opens', 'sessions', 'vwap-weekly']) assert.equal(isIndicatorEnabled(id), true, id);
+  assert.equal(isIndicatorEnabled('ema200'), false);
+  const ribbon = getIndicatorSettings('ema-ribbon');
+  assert.deepEqual([ribbon.period1, ribbon.period2, ribbon.period3, ribbon.color3], [7, 14, 30, '#abcdef'], 'custom EMA 28 period kept');
+  assert.equal(getIndicatorSettings('ma-channel').lowSource, 'close');
+  assert.equal(getIndicatorSettings('opens').pdhShow, true);
+  assert.equal(getIndicatorSettings('sessions').s1Show, true);
+  assert.equal('ema' in state, false); assert.equal('ma20hl' in state, false);
+  for (const id of ['ema7', 'ema14', 'ema28', 'ma20high', 'ma20low', 'turtle-upper', 'turtle-lower', 'prev-day-high', 'session-london', 'session-asia']) {
+    assert.equal(id in state.indicatorEnabled, false, id); assert.equal(id in state.indicatorSettings, false, id);
+  }
+  assert.ok(h.api.migrationNotes.some(note => /custom period 30/.test(note)));
+  // A fresh (no save) workspace: ribbon on with 7/14/21, everything else grouped and off.
+  const fresh = settingsHarness(null).api;
+  assert.equal(fresh.isIndicatorEnabled('ema-ribbon'), true);
+  assert.deepEqual([1, 2, 3].map(n => fresh.getIndicatorSettings('ema-ribbon')[`period${n}`]), [7, 14, 21]);
+});
+
+test('overlay list renders exactly one toggle + one settings button per indicator', () => {
+  const template = fs.readFileSync(path.join(__dirname, '../templates/workspace.html'), 'utf8');
+  for (const legacy of ['ema7-toggle', 'ema14-toggle', 'ema28-toggle', 'ema200-toggle', 'ma20-high-toggle', 'ma20-low-toggle']) assert.equal(template.includes(legacy), false, legacy);
+  for (const script of ['indicators/groups.js', 'indicators/opens.js', 'indicators/sessions.js']) assert.ok(template.indexOf(script) < template.indexOf('workspace.js'), script);
+  const h = settingsHarness(null);
+  const made = [];
+  const element = tag => { const el = { tag, dataset: {}, children: [], className: '', append(...kids) { this.children.push(...kids); }, setAttribute() {}, addEventListener() {}, matches: () => false };
+    made.push(el); return el; };
+  const group = element('span');
+  const code = source.slice(source.indexOf('  function indicatorLabel(def)'), source.indexOf('  function initSettingsPopovers()')) + '\ninitGenericIndicators();';
+  vm.runInNewContext(code, { INDICATOR_DEFS: h.api.INDICATOR_DEFS, getIndicatorSettings: h.api.getIndicatorSettings, isIndicatorEnabled: h.api.isIndicatorEnabled,
+    setIndicatorEnabled() {}, panes: new Map(), document: { createElement: element },
+    $: selector => selector === '#extra-indicator-controls' ? group : selector.includes('data-indicator="fvg"') ? { setAttribute() {}, previousElementSibling: null } : null });
+  const toggles = group.children.filter(el => el.tag === 'label').map(el => el.children[0].dataset.indicatorToggle);
+  const buttons = group.children.filter(el => el.tag === 'button').map(el => el.dataset.indicator);
+  assert.deepEqual(toggles, ['ema-ribbon', 'ema200', 'ma-channel', 'turtle-zone', 'vwap-daily', 'vwap-weekly', 'opens', 'sessions', 'liquidity']);
+  assert.deepEqual(buttons, toggles);
+  assert.equal(group.children.find(el => el.dataset.indicatorChip === 'ema-ribbon').children[1].textContent, 'EMA 7/14/21');
+  assert.equal(group.children.find(el => el.dataset.indicatorChip === 'ma-channel').children[1].textContent, 'MA 20 H/L');
 });
 
 function resyncHarness() {
@@ -531,15 +579,14 @@ test('browser: no cached ticker relabelled live, MA20 H/L overlay, favorites and
     assert.equal(tickerRequests.length, 0);
     assert.equal(await page.locator('.chart-pane[data-pane-id="0"] .pane-live-price').innerText(), '', 'no manufactured price from the cached ticker fixture');
 
-    // 2) Dual MA20 H/L overlay: off by default, togglable independently.
-    assert.equal(await page.locator('#ma20-high-toggle').isChecked(), false);
-    assert.equal(await page.locator('#ma20-low-toggle').isChecked(), false);
-    await page.locator('#ma20-high-toggle').check();
-    assert.equal(await page.evaluate(() => document.querySelector('#ma20-high-toggle').checked), true);
+    // 2) MA 20 H/L channel: ONE toggle (off by default); its lines are settings of that indicator.
+    const channel = page.locator('[data-indicator-toggle="ma-channel"]');
+    assert.equal(await channel.isChecked(), false);
+    await channel.check();
     await page.reload();
     await page.waitForFunction(() => document.querySelectorAll('.watchlist-row').length === 4);
-    assert.equal(await page.locator('#ma20-high-toggle').isChecked(), true, 'ma20hl toggle persists across reload (v4 schema)');
-    assert.equal(await page.locator('#ma20-low-toggle').isChecked(), false);
+    assert.equal(await page.locator('[data-indicator-toggle="ma-channel"]').isChecked(), true, 'channel toggle persists across reload (v5 schema)');
+    assert.deepEqual(await page.evaluate(() => { const s = window.__workspaceDebug.getIndicatorSettings('ma-channel'); return [s.showHigh, s.showLow]; }), [true, true]);
 
     // 3) Favorites: star toggles without selecting the row; persists; pins to top.
     const ethRow = page.locator('.watchlist-row[data-symbol="ETHUSDT"]');
@@ -593,7 +640,7 @@ test('browser: real forming REST bootstrap + shared WS intrabar, rollover separa
         close() { this.readyState = 3; this.onclose?.(); }
         message(data) { this.onmessage?.({ data: JSON.stringify(data) }); }
       };
-      localStorage.setItem('crypto-screener.workspace.v4', JSON.stringify({ version: 4, layout: '2cols', panes: [{ exchange: 'bybit', symbol: 'BTCUSDT', interval: '1' }, { exchange: 'bybit', symbol: 'BTCUSDT', interval: '1' }] }));
+      localStorage.setItem('crypto-screener.workspace.v5', JSON.stringify({ version: 5, layout: '2cols', panes: [{ exchange: 'bybit', symbol: 'BTCUSDT', interval: '1' }, { exchange: 'bybit', symbol: 'BTCUSDT', interval: '1' }] }));
     });
     await page.route('http://workspace.test/**', route => {
       const url = new URL(route.request().url());
@@ -624,20 +671,20 @@ test('browser: real forming REST bootstrap + shared WS intrabar, rollover separa
     await page.waitForFunction(() => window.__workspaceDebug.panes.get(0).candles.length === 4);
     assert.equal(await page.evaluate(() => window.__workspaceDebug.panes.get(0).forming.time), (start + 60000) / 1000);
     assert.equal(requests, 4, 'once per pane snapshot on rollover, no ticker polling');
-    const generic = await page.evaluate(() => window.__workspaceDebug.INDICATOR_DEFS.find(d => !d.hidden && !['fvg','ema7','ema14','ema28','ema200','ma20high','ma20low'].includes(d.id))?.id);
+    const generic = await page.evaluate(() => window.__workspaceDebug.INDICATOR_DEFS.find(d => !d.hidden && !['fvg','ema-ribbon','ema200','ma-channel'].includes(d.id))?.id);
     assert.ok(generic, 'real extras module appended to registry');
     const control = page.locator(`input[data-indicator-toggle="${generic}"]`);
     assert.equal(await control.isChecked(), false); await control.check();
-    assert.equal(await page.evaluate(id => JSON.parse(localStorage.getItem('crypto-screener.workspace.v4')).indicatorEnabled[id], generic), true);
-    await page.locator('.indicator-settings-btn[data-indicator="ema7"]').click();
-    const savedBeforeInvalid = await page.evaluate(() => localStorage.getItem('crypto-screener.workspace.v4'));
-    await page.locator('input[data-key="period"]').fill('7.5');
-    assert.equal(await page.locator('input[data-key="period"]').evaluate(input => input.validity.stepMismatch), true);
+    assert.equal(await page.evaluate(id => JSON.parse(localStorage.getItem('crypto-screener.workspace.v5')).indicatorEnabled[id], generic), true);
+    await page.locator('.indicator-settings-btn[data-indicator="ema-ribbon"]').click();
+    const savedBeforeInvalid = await page.evaluate(() => localStorage.getItem('crypto-screener.workspace.v5'));
+    await page.locator('input[data-key="period1"]').fill('7.5');
+    assert.equal(await page.locator('input[data-key="period1"]').evaluate(input => input.validity.stepMismatch), true);
     await page.locator('.indicator-settings-apply').click();
-    assert.equal(await page.evaluate(() => localStorage.getItem('crypto-screener.workspace.v4')), savedBeforeInvalid, 'invalid Apply never persists the draft');
-    assert.equal(await page.evaluate(() => window.__workspaceDebug.getIndicatorSettings('ema7').period), 7);
-    await page.locator('input[data-key="period"]').fill('10'); await page.locator('.indicator-settings-apply').click(); await page.keyboard.press('Escape');
-    assert.equal(await page.locator('label:has(#ema7-toggle) span').innerText(), 'EMA 10');
+    assert.equal(await page.evaluate(() => localStorage.getItem('crypto-screener.workspace.v5')), savedBeforeInvalid, 'invalid Apply never persists the draft');
+    assert.equal(await page.evaluate(() => window.__workspaceDebug.getIndicatorSettings('ema-ribbon').period1), 7);
+    await page.locator('input[data-key="period1"]').fill('10'); await page.locator('.indicator-settings-apply').click(); await page.keyboard.press('Escape');
+    assert.equal(await page.locator('label[data-indicator-chip="ema-ribbon"] span').innerText(), 'EMA 10/14/21');
     assert.equal(await page.locator('#local-alerts-toggle').isChecked(), false); await page.locator('#local-alerts-toggle').check();
     assert.equal(await page.locator('#local-alerts-count').innerText(), '0');
     closedExtra.push({ ts: start + 60000, o: 122, h: 125, l: 120, c: 122, v: 5 });
@@ -694,7 +741,7 @@ test('browser: failed and stale gap history retries autonomously until the actua
     await page.goto('http://workspace.test/');
     await page.waitForSelector('.chart-pane[data-state="ready"]', {timeout:5000}).catch(async error => { throw new Error(`${error.message}\n${JSON.stringify(await page.locator('.chart-pane').allTextContents())}\n${JSON.stringify(errors)}`); });
     assert.deepEqual(await page.evaluate(() => {
-      const d=window.__workspaceDebug; return [d.getIndicatorSettings('ema7').period,d.getIndicatorSettings('fvg').minGapPct,d.getIndicatorSettings('turtle-upper').inner];
+      const d=window.__workspaceDebug; return [d.getIndicatorSettings('ema-ribbon').period1,d.getIndicatorSettings('fvg').minGapPct,d.getIndicatorSettings('turtle-zone').inner];
     }), [7,0.01,5.6], 'real page migrates fractions without damaging decimal schemas');
     await page.clock.install();
     await page.evaluate(() => window.__workspaceDebug.panes.get(0).acceptForming({time:43200,open:105,high:110,low:100,close:108,volume:2},'WS'));
@@ -887,7 +934,7 @@ test('browser: FVG box touches the real candle (pixel scan), band renderer, sett
     assert.equal(await page.locator('.indicator-settings-btn[data-indicator="fvg"]').getAttribute('aria-expanded'), 'false');
 
     // Outside click also closes it.
-    await page.locator('.indicator-settings-btn[data-indicator="ema7"]').click();
+    await page.locator('.indicator-settings-btn[data-indicator="ema-ribbon"]').click();
     await page.waitForSelector('.indicator-settings-popover:not([hidden])');
     await page.locator('.topbar').click();
     await page.waitForSelector('.indicator-settings-popover[hidden]', { state: 'attached' });
@@ -906,8 +953,9 @@ test('browser: FVG box touches the real candle (pixel scan), band renderer, sett
     await page.waitForSelector('.chart-pane[data-pane-id="0"][data-state="ready"]');
     const migrated = await page.evaluate(() => window.__workspaceDebug.getIndicatorSettings('fvg'));
     assert.deepEqual(migrated, { minGapPct: 0, fillPolicy: 'wick', bullColor: '#00c087', bearColor: '#f5a623', opacity: 1 }, 'v3 blob (no indicatorSettings) must migrate to documented v4 defaults');
-    const versionAfterSave = await page.evaluate(() => JSON.parse(localStorage.getItem('crypto-screener.workspace.v4')).version);
-    assert.equal(versionAfterSave, 4, 'subsequent saves upgrade storage to the v4 key');
+    const versionAfterSave = await page.evaluate(() => JSON.parse(localStorage.getItem('crypto-screener.workspace.v5')).version);
+    assert.equal(versionAfterSave, 5, 'subsequent saves upgrade storage to the v5 key');
+    assert.deepEqual(await page.evaluate(() => [window.__workspaceDebug.state.indicatorEnabled['ema-ribbon'], 'ema' in window.__workspaceDebug.state]), [true, false], 'v3 EMA flags migrate to the ribbon');
 
     // Corrupt/out-of-range saved indicatorSettings must be sanitized per field, not crash.
     await page.evaluate(() => {
@@ -921,7 +969,7 @@ test('browser: FVG box touches the real candle (pixel scan), band renderer, sett
     });
     await page.reload();
     await page.waitForSelector('.chart-pane[data-pane-id="0"][data-state="ready"]');
-    const sanitized = await page.evaluate(() => ({ fvg: window.__workspaceDebug.getIndicatorSettings('fvg'), ema7: window.__workspaceDebug.getIndicatorSettings('ema7') }));
+    const sanitized = await page.evaluate(() => ({ fvg: window.__workspaceDebug.getIndicatorSettings('fvg'), ema7: { period: window.__workspaceDebug.getIndicatorSettings('ema-ribbon').period1 } }));
     assert.equal(sanitized.fvg.minGapPct, 50, 'out-of-range number clamps to the schema max, does not crash');
     assert.equal(sanitized.fvg.fillPolicy, 'wick', 'invalid select value falls back to the documented default');
     assert.equal(sanitized.fvg.bullColor, '#00c087', 'invalid color falls back to the documented default');
@@ -943,4 +991,37 @@ test('seconds intervals: intervalSeconds steps and pixel edges on a 5s pane with
     assert.equal(pane.edgeCoordinate(1792195200 + 35), 100 + 4 * 15 - 7.5);
     assert.equal(pane.edgeCoordinate(1792195200 + 40), 100 + 5 * 15 - 7.5, 'right edge of the last 5s bar');
   } finally { coordinates.state.panes[0].interval = '2D'; }
+});
+
+test('legend EMA: closed-bar value, provisional live value on the forming bar, warming up only before the first period', () => {
+  const line = source.split('\n').find(value => value.trim().startsWith('const legendEmaValue ='));
+  assert.ok(line, 'legendEmaValue must remain testable');
+  const legendEmaValue = vm.runInNewContext(`${line}\nlegendEmaValue`);
+  // 300 closed 4h bars with an EMA 7 value at every bar from index 6.
+  const closed = Array.from({ length: 300 }, (_, i) => ({ time: 1_790_000_000 + i * 14400, close: 100 + i }));
+  const values = new Map(closed.slice(6).map((c, i) => [c.time, 200 + i]));
+  const last = closed.at(-1), forming = { time: last.time + 14400, close: 410 };
+  const own = legendEmaValue(values, last, last, 7);
+  assert.equal(own.value, values.get(last.time)); assert.equal(own.live, false);
+  const live = legendEmaValue(values, forming, last, 7);
+  assert.equal(live.live, true, 'the forming bar (4h panes always have one) no longer reads warming up');
+  assert.ok(Math.abs(live.value - (0.25 * 410 + 0.75 * values.get(last.time))) < 1e-9, 'alpha = 2 / (7 + 1)');
+  assert.equal(legendEmaValue(values, closed[3], last, 7), null, 'genuine warm-up bar');
+  assert.equal(legendEmaValue(new Map(), forming, last, 7), null, 'no closed EMA yet → warming up');
+  assert.equal(legendEmaValue(values, null, last, 7), null);
+});
+
+test('venue tick: fixed tickSize from Binance/Bybit metadata, Hyperliquid szDecimals price rule, null without metadata', () => {
+  const line = source.split('\n').find(value => value.trim().startsWith('const venueTick ='));
+  assert.ok(line, 'venueTick must remain testable');
+  const venueTick = vm.runInNewContext(`${line}\nvenueTick`);
+  assert.equal(venueTick({ tick_size: '0.10', sz_decimals: null, tick_rule: 'fixed' }, 81500), 0.1);
+  assert.equal(venueTick({ tick_size: '0.10' }, null), 0.1, 'fixed ticks do not need a price');
+  // Hyperliquid BTC: szDecimals 5 → ≤ 1 decimal, but 5 significant figures at 81 500 → tick 1.
+  assert.equal(venueTick({ tick_size: null, sz_decimals: 5 }, 81500), 1);
+  assert.equal(venueTick({ tick_size: null, sz_decimals: 4 }, 2400.5), 0.1, 'ETH: 5 sig figs → 0.1');
+  assert.equal(venueTick({ tick_size: null, sz_decimals: 0 }, 0.012345), 0.000001, 'max decimals 6 − 0');
+  assert.equal(venueTick({ tick_size: null, sz_decimals: 2 }, 0.5), 0.0001, '6 − 2 = 4 decimals beat 5 sig figs');
+  assert.equal(venueTick({ tick_size: null, sz_decimals: 5 }, null), null);
+  assert.equal(venueTick(null, 100), null);
 });

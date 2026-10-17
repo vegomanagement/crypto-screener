@@ -1,0 +1,139 @@
+{
+ "binance:BTCUSDT": {
+  "instrument": {
+   "exchange": "binance",
+   "symbol": "BTCUSDT",
+   "sz_decimals": null,
+   "tick_rule": "fixed",
+   "tick_size": "0.1"
+  },
+  "tickSize": 0.1,
+  "tickSource": "binance tickSize",
+  "precision": 2,
+  "viewTick": 0.1,
+  "points": [
+   "81509.5",
+   "81529.5",
+   "81499.5"
+  ],
+  "labels": [
+   "Target 81529.5 (+0.02%)\n200 ticks · P&L +20.00",
+   "Stop 81499.5 (-0.01%)\n100 ticks · P&L -10.00",
+   "Long 81509.5 · R:R 2.00\nqty 1.00 · risk 10.00 (1%)"
+  ],
+  "toolbars": [
+   {
+    "dwToolbar": 1,
+    "favs": 1,
+    "oldDrawToolbar": 0,
+    "toolbarRect": {
+     "left": 9,
+     "top": 217,
+     "width": 42,
+     "height": 679
+    },
+    "paneLeft": 4
+   }
+  ]
+ },
+ "bybit:BTCUSDT": {
+  "instrument": {
+   "exchange": "bybit",
+   "symbol": "BTCUSDT",
+   "sz_decimals": null,
+   "tick_rule": "fixed",
+   "tick_size": "0.1"
+  },
+  "tickSize": 0.1,
+  "tickSource": "bybit tickSize",
+  "precision": 2,
+  "viewTick": 0.1,
+  "points": [
+   "81518.8",
+   "81538.8",
+   "81508.8"
+  ],
+  "labels": [
+   "Target 81538.8 (+0.02%)\n200 ticks · P&L +20.00",
+   "Stop 81508.8 (-0.01%)\n100 ticks · P&L -10.00",
+   "Long 81518.8 · R:R 2.00\nqty 1.00 · risk 10.00 (1%)"
+  ],
+  "toolbars": [
+   {
+    "dwToolbar": 1,
+    "favs": 1,
+    "oldDrawToolbar": 0,
+    "toolbarRect": {
+     "left": 9,
+     "top": 217,
+     "width": 42,
+     "height": 679
+    },
+    "paneLeft": 4
+   }
+  ]
+ },
+ "hyperliquid:BTC": {
+  "instrument": {
+   "exchange": "hyperliquid",
+   "symbol": "BTC",
+   "sz_decimals": 5,
+   "tick_rule": "min(1, max(10^(floor(log10(price))-4), 10^-(6-szDecimals)))",
+   "tick_size": null
+  },
+  "tickSize": 1,
+  "tickSource": "hyperliquid szDecimals rule",
+  "precision": 2,
+  "viewTick": 1,
+  "points": [
+   "81507",
+   "81707",
+   "81407"
+  ],
+  "labels": [
+   "Target 81707 (+0.25%)\n200 ticks · P&L +20.00",
+   "Stop 81407 (-0.12%)\n100 ticks · P&L -10.00",
+   "Long 81507 · R:R 2.00\nqty 0.100 · risk 10.00 (1%)"
+  ],
+  "toolbars": [
+   {
+    "dwToolbar": 1,
+    "favs": 1,
+    "oldDrawToolbar": 0,
+    "toolbarRect": {
+     "left": 9,
+     "top": 217,
+     "width": 42,
+     "height": 679
+    },
+    "paneLeft": 4
+   }
+  ]
+ },
+ "layout4": [
+  {
+   "dwToolbar": 1,
+   "favs": 1,
+   "oldDrawToolbar": 0,
+   "vertical": true
+  },
+  {
+   "dwToolbar": 1,
+   "favs": 1,
+   "oldDrawToolbar": 0,
+   "vertical": true
+  },
+  {
+   "dwToolbar": 1,
+   "favs": 1,
+   "oldDrawToolbar": 0,
+   "vertical": true
+  },
+  {
+   "dwToolbar": 1,
+   "favs": 1,
+   "oldDrawToolbar": 0,
+   "vertical": true
+  }
+ ]
+}

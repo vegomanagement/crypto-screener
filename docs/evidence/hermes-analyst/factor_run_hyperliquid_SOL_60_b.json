@@ -1,0 +1,321 @@
+{
+ "age_s": 0.0,
+ "analysis": {
+  "agent_bias": "short",
+  "bias": "short",
+  "confidence": "medium",
+  "disagreement": null,
+  "factor_scores": [
+   {
+    "direction": "short",
+    "factor": "EMA stack 7<14<28 bearish, price under all",
+    "source_fields": [
+     "indicators.ema_stack_7_14_28",
+     "indicators.ema7",
+     "indicators.ema28"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "short",
+    "factor": "Price far below EMA200 108.01",
+    "source_fields": [
+     "indicators.ema200",
+     "indicators.close"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "short",
+    "factor": "Structure bear, last CHOCH bear at 104.53",
+    "source_fields": [
+     "structure.trend",
+     "structure.recent_events.4.level"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "short",
+    "factor": "Last 3 candles red, close at session low",
+    "source_fields": [
+     "candles.recent.23.4",
+     "candles.recent.21.1",
+     "candles.recent.23.3"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "short",
+    "factor": "Bear FVG 103.85-103.89 just overhead",
+    "source_fields": [
+     "fvg.nearest.0.top",
+     "fvg.nearest.0.bottom"
+    ],
+    "strength": 1
+   },
+   {
+    "direction": "short",
+    "factor": "Unmitigated bear OB 103.89-104.39 caps upside",
+    "source_fields": [
+     "order_blocks.unmitigated.2.high",
+     "order_blocks.unmitigated.2.low"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "short",
+    "factor": "Book ask>bid, imbalance -0.11, ask wall 103.43",
+    "source_fields": [
+     "orderbook.imbalance",
+     "orderbook.ask_wall"
+    ],
+    "strength": 1
+   },
+   {
+    "direction": "short",
+    "factor": "CVD 1h down confirming price down",
+    "source_fields": [
+     "flow.cvd_1h.trend",
+     "flow.cvd_1h.price_trend"
+    ],
+    "strength": 1
+   },
+   {
+    "direction": "short",
+    "factor": "Derivative EMA bias bearish on 60/240/D",
+    "source_fields": [
+     "derivatives.ema_bias.60",
+     "derivatives.ema_bias.D"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "long",
+    "factor": "HTF bias long, all TFs in discount zone",
+    "source_fields": [
+     "htf_bias.direction",
+     "htf_bias.strength",
+     "htf_bias.zones.D"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "long",
+    "factor": "RSI14 34.8 near oversold, downside stretched",
+    "source_fields": [
+     "indicators.rsi14"
+    ],
+    "strength": 1
+   },
+   {
+    "direction": "long",
+    "factor": "Negative funding: shorts pay, mild short crowding",
+    "source_fields": [
+     "funding.last_settled.rate",
+     "funding.predicted.rate",
+     "funding.annualized_predicted"
+    ],
+    "strength": 1
+   }
+  ],
+  "horizon": "6-12 bars of 60m",
+  "levels": [
+   {
+    "price": 103.89,
+    "reason": "Bear FVG top + OB low",
+    "source_fields": [
+     "fvg.nearest.0.top",
+     "order_blocks.unmitigated.2.low"
+    ],
+    "type": "resistance"
+   },
+   {
+    "price": 104.39,
+    "reason": "Bear OB high",
+    "source_fields": [
+     "order_blocks.unmitigated.2.high"
+    ],
+    "type": "resistance"
+   },
+   {
+    "price": 103.6,
+    "reason": "Retest into bear FVG zone",
+    "source_fields": [
+     "fvg.nearest.0.bottom",
+     "price.value"
+    ],
+    "type": "entry"
+   },
+   {
+    "price": 104.55,
+    "reason": "Above bear OB and CHOCH level",
+    "source_fields": [
+     "structure.recent_events.4.level",
+     "order_blocks.unmitigated.2.high"
+    ],
+    "type": "stop"
+   },
+   {
+    "price": 102.64,
+    "reason": "VAL sellside pool",
+    "source_fields": [
+     "liquidity.pools.0.price"
+    ],
+    "type": "support"
+   },
+   {
+    "price": 102.43,
+    "reason": "EQL cluster strength 5",
+    "source_fields": [
+     "liquidity.pools.1.price"
+    ],
+    "type": "target"
+   },
+   {
+    "price": 101.74,
+    "reason": "S1 sellside pool",
+    "source_fields": [
+     "liquidity.pools.2.price"
+    ],
+    "type": "liquidity"
+   },
+   {
+    "price": 102.4,
+    "reason": "Bull FVG + last swing low",
+    "source_fields": [
+     "fvg.nearest.1.top",
+     "structure.last_swing_low.price"
+    ],
+    "type": "poi"
+   }
+  ],
+  "long_pct": 26,
+  "risks": [
+   "HTF bias long vs LTF short: conflict",
+   "Negative funding may fuel short squeeze",
+   "Footprint missing, no trade-level confirmation",
+   "Range compressing; chop can stop both sides"
+  ],
+  "scenarios": [
+   {
+    "invalidation": "Close above 104.39",
+    "name": "Continuation down",
+    "target": "102.64 then 102.43",
+    "trigger": "Hourly close below 102.99"
+   },
+   {
+    "invalidation": "Close above 104.55",
+    "name": "FVG retest short",
+    "target": "102.40 swing low",
+    "trigger": "Tag 103.85-103.89 and reject"
+   },
+   {
+    "invalidation": "Close back below 103.43",
+    "name": "Discount bounce",
+    "target": "105.22 swing high",
+    "trigger": "Reclaim 103.89 with volume"
+   }
+  ],
+  "short_pct": 74,
+  "split": {
+   "agent_long_points": 4,
+   "agent_net": -0.5789,
+   "agent_short_points": 15,
+   "baseline_net": 0.0845,
+   "bias": "short",
+   "k": 3.0,
+   "long_pct": 26,
+   "method": "p_long = logistic(k * (w_a*agent_net + w_b*baseline_net)/(w_a+w_b))",
+   "net": -0.3467,
+   "neutral_band": 5.0,
+   "p_long": 26.111,
+   "short_pct": 74,
+   "weights": {
+    "agent": 0.65,
+    "baseline": 0.35
+   }
+  },
+  "summary_ru": "1H SOL в нисходящем тренде: EMA-стек медвежий, цена 103.13 под EMA200, структура bear после CHOCH 104.53. Книга с перевесом ask, CVD вниз. Приоритет — шорт от 103.85-104.39 к 102.64/102.43. Контраргументы: HTF-биас long, дисконт на всех ТФ, RSI 34.8 и отрицательный фандинг (платят шорты) — риск отскока. Инвалидация выше 104.55."
+ },
+ "attempts": 1,
+ "baseline": {
+  "long_confidence": 69,
+  "long_factors": [
+   "CVD ⚪ нейтрально",
+   "VP ⚪ внутри VA | POC $110",
+   "Session 🗽 NY Session [4/5]",
+   "Book ❌ стакан против сигнала",
+   "F&G 🤑 Greed [55]",
+   "TZ 1H ⚪ Нейтральная [-1.7% от mean]",
+   "TZ 4H ⚪ Нейтральная [-8.2% от mean]",
+   "RSI ⚪ [34]"
+  ],
+  "long_pct": 52,
+  "long_score": 74,
+  "long_verdict": "WAIT",
+  "short_confidence": 54,
+  "short_factors": [
+   "CVD ✅ подтверждает направление",
+   "VP ⚪ внутри VA | POC $110",
+   "Session 🗽 NY Session [4/5]",
+   "Book ✅ ask>bid",
+   "F&G 🤑 Greed [55]",
+   "TZ 1H ⚪ Нейтральная [-1.7% от mean]",
+   "TZ 4H ⚪ Нейтральная [-8.2% от mean]",
+   "RSI ⚪ [34]"
+  ],
+  "short_pct": 48,
+  "short_score": 68,
+  "short_verdict": "WAIT",
+  "source": "screener.compute_confluence_score + decision.make_decision over screener.fetch_market (Bybit-first USDT aggregate, not venue-pinned)",
+  "ts": 1792259268325
+ },
+ "cached": false,
+ "evaluation": {
+  "horizon_bars": 12,
+  "rule": "±1 ATR from the analysis price, bias side first"
+ },
+ "exchange": "hyperliquid",
+ "freshness": {
+  "last_close_ts": 1792256400000,
+  "missing": {
+   "footprint": "ValueError: no closed footprint bars"
+  },
+  "sections": {
+   "baseline": 1792259268325,
+   "candles": 1792256400000,
+   "derivatives": 1792259268328,
+   "flow": 1792259268325,
+   "funding": 1792259268334,
+   "fvg": 1792256400000,
+   "htf_bias": 1792259268325,
+   "indicators": 1792256400000,
+   "liquidity": 1792259268325,
+   "order_blocks": 1792256400000,
+   "orderbook": 1792259267999,
+   "price": 1792256400000,
+   "regime": 1792259268325,
+   "session": 1792259268325,
+   "structure": 1792256400000
+  }
+ },
+ "generated_at": 1792259268325,
+ "id": 30,
+ "interval": "60",
+ "latency_ms": 24854,
+ "model": "hermes-agent",
+ "price": {
+  "source": "last closed candle close",
+  "ts": 1792256400000,
+  "value": 103.13
+ },
+ "raw_output": [
+  "{\"bias\":\"short\",\"confidence\":\"medium\",\"horizon\":\"6-12 bars of 60m\",\"factor_scores\":[{\"factor\":\"EMA stack 7<14<28 bearish, price under all\",\"direction\":\"short\",\"strength\":2,\"source_fields\":[\"indicators.ema_stack_7_14_28\",\"indicators.ema7\",\"indicators.ema28\"]},{\"factor\":\"Price far below EMA200 108.01\",\"direction\":\"short\",\"strength\":2,\"source_fields\":[\"indicators.ema200\",\"indicators.close\"]},{\"factor\":\"Structure bear, last CHOCH bear at 104.53\",\"direction\":\"short\",\"strength\":2,\"source_fields\":[\"structure.trend\",\"structure.recent_events.4.level\"]},{\"factor\":\"Last 3 candles red, close at session low\",\"direction\":\"short\",\"strength\":2,\"source_fields\":[\"candles.recent.23.4\",\"candles.recent.21.1\",\"candles.recent.23.3\"]},{\"factor\":\"Bear FVG 103.85-103.89 just overhead\",\"direction\":\"short\",\"strength\":1,\"source_fields\":[\"fvg.nearest.0.top\",\"fvg.nearest.0.bottom\"]},{\"factor\":\"Unmitigated bear OB 103.89-104.39 caps upside\",\"direction\":\"short\",\"strength\":2,\"source_fields\":[\"order_blocks.unmitigated.2.high\",\"order_blocks.unmitigated.2.low\"]},{\"factor\":\"Book ask>bid, imbalance -0.11, ask wall 103.43\",\"direction\":\"short\",\"strength\":1,\"source_fields\":[\"orderbook.imbalance\",\"orderbook.ask_wall\"]},{\"factor\":\"CVD 1h down confirming price down\",\"direction\":\"short\",\"strength\":1,\"source_fields\":[\"flow.cvd_1h.trend\",\"flow.cvd_1h.price_trend\"]},{\"factor\":\"Derivative EMA bias bearish on 60/240/D\",\"direction\":\"short\",\"strength\":2,\"source_fields\":[\"derivatives.ema_bias.60\",\"derivatives.ema_bias.D\"]},{\"factor\":\"HTF bias long, all TFs in discount zone\",\"direction\":\"long\",\"strength\":2,\"source_fields\":[\"htf_bias.direction\",\"htf_bias.strength\",\"htf_bias.zones.D\"]},{\"factor\":\"RSI14 34.8 near oversold, downside stretched\",\"direction\":\"long\",\"strength\":1,\"source_fields\":[\"indicators.rsi14\"]},{\"factor\":\"Negative funding: shorts pay, mild short crowding\",\"direction\":\"long\",\"strength\":1,\"source_fields\":[\"funding.last_settled.rate\",\"funding.predicted.rate\",\"funding.annualized_predicted\"]}],\"levels\":[{\"type\":\"resistance\",\"price\":103.89,\"reason\":\"Bear FVG top + OB low\",\"source_fields\":[\"fvg.nearest.0.top\",\"order_blocks.unmitigated.2.low\"]},{\"type\":\"resistance\",\"price\":104.39,\"reason\":\"Bear OB high\",\"source_fields\":[\"order_blocks.unmitigated.2.high\"]},{\"type\":\"entry\",\"price\":103.6,\"reason\":\"Retest into bear FVG zone\",\"source_fields\":[\"fvg.nearest.0.bottom\",\"price.value\"]},{\"type\":\"stop\",\"price\":104.55,\"reason\":\"Above bear OB and CHOCH level\",\"source_fields\":[\"structure.recent_events.4.level\",\"order_blocks.unmitigated.2.high\"]},{\"type\":\"support\",\"price\":102.64,\"reason\":\"VAL sellside pool\",\"source_fields\":[\"liquidity.pools.0.price\"]},{\"type\":\"target\",\"price\":102.43,\"reason\":\"EQL cluster strength 5\",\"source_fields\":[\"liquidity.pools.1.price\"]},{\"type\":\"liquidity\",\"price\":101.74,\"reason\":\"S1 sellside pool\",\"source_fields\":[\"liquidity.pools.2.price\"]},{\"type\":\"poi\",\"price\":102.4,\"reason\":\"Bull FVG + last swing low\",\"source_fields\":[\"fvg.nearest.1.top\",\"structure.last_swing_low.price\"]}],\"scenarios\":[{\"name\":\"Continuation down\",\"trigger\":\"Hourly close below 102.99\",\"target\":\"102.64 then 102.43\",\"invalidation\":\"Close above 104.39\"},{\"name\":\"FVG retest short\",\"trigger\":\"Tag 103.85-103.89 and reject\",\"target\":\"102.40 swing low\",\"invalidation\":\"Close above 104.55\"},{\"name\":\"Discount bounce\",\"trigger\":\"Reclaim 103.89 with volume\",\"target\":\"105.22 swing high\",\"invalidation\":\"Close back below 103.43\"}],\"risks\":[\"HTF bias long vs LTF short: conflict\",\"Negative funding may fuel short squeeze\",\"Footprint missing, no trade-level confirmation\",\"Range compressing; chop can stop both sides\"],\"summary_ru\":\"1H SOL в нисходящем тренде: EMA-стек медвежий, цена 103.13 под EMA200, структура bear после CHOCH 104.53. Книга с перевесом ask, CVD вниз. Приоритет — шорт от 103.85-104.39 к 102.64/102.43. Контраргументы: HTF-биас long, дисконт на всех ТФ, RSI 34.8 и отрицательный фандинг (платят шорты) — риск отскока. Инвалидация выше 104.55.\"}"
+ ],
+ "snapshot_hash": "edbd8e0bf6850477",
+ "snapshot_ms": 1547,
+ "source": "hermes",
+ "status": "ok",
+ "symbol": "SOL",
+ "warnings": []
+}

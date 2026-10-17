@@ -1,0 +1,71 @@
+{
+    "by_conviction": {
+        "50-60": {
+            "ambiguous": 0,
+            "hit_rate": null,
+            "loss": 0,
+            "n": 0,
+            "timeout": 0,
+            "win": 0
+        },
+        "60-70": {
+            "ambiguous": 0,
+            "hit_rate": null,
+            "loss": 0,
+            "n": 0,
+            "timeout": 0,
+            "win": 0
+        },
+        "70-100": {
+            "ambiguous": 0,
+            "hit_rate": null,
+            "loss": 0,
+            "n": 0,
+            "timeout": 0,
+            "win": 0
+        }
+    },
+    "by_source": {},
+    "evaluated": 0,
+    "evaluated_now": 0,
+    "filters": {
+        "exchange": null,
+        "interval": null,
+        "symbol": null
+    },
+    "neutral": 3,
+    "overall": {
+        "ambiguous": 0,
+        "hit_rate": null,
+        "loss": 0,
+        "n": 0,
+        "timeout": 0,
+        "win": 0
+    },
+    "pending": 33,
+    "rule": "win = +1 ATR in bias direction before -1 ATR against, within horizon_bars",
+    "split": {
+        "disagreements": {
+            "neutral_mismatch": 3,
+            "opposite": 2
+        },
+        "distinct_long_pct": 18,
+        "factors_per_hermes_run": 11.96,
+        "hermes_runs": 25,
+        "hermes_runs_citing_funding": 25,
+        "histogram": {
+            "10-20": 2,
+            "20-30": 7,
+            "30-40": 12,
+            "40-50": 3,
+            "50-60": 1
+        },
+        "legacy_without_p_long": 11,
+        "n": 25,
+        "p_long_max": 50.38,
+        "p_long_mean": 31.6,
+        "p_long_min": 10.78,
+        "p_long_std": 9.43
+    },
+    "total": 36
+}
