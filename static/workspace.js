@@ -44,6 +44,11 @@
     }
     return result;
   }
+  // Legend value of an EMA computed over closed bars. The forming bar has no
+  // closed-bar value, so it gets the provisional live EMA from the last closed
+  // value and the forming close ({live: true}); 'warming up' is only for bars
+  // before the first `period` closed candles.
+  const legendEmaValue = (values, candle, lastClosed, period) => { if (!candle || !values) return null; if (values.has(candle.time)) return { value: values.get(candle.time), live: false }; if (!lastClosed || candle.time <= lastClosed.time || !values.has(lastClosed.time) || !Number.isFinite(candle.close)) return null; const alpha = 2 / (period + 1); return { value: alpha * candle.close + (1 - alpha) * values.get(lastClosed.time), live: true }; };
   // Rolling SMA of a single OHLC component (no 0-padding warm-up: callers get
   // nothing before `period` closed candles exist).
   function smaData(candles, period, source) {
@@ -1115,8 +1120,9 @@
         element.hidden = isRibbon ? !(isIndicatorEnabled('ema-ribbon') && ribbon[`show${n}`]) : !isIndicatorEnabled('ema200');
         const effectivePeriod = isRibbon ? ribbon[`period${n}`] : getIndicatorSettings('ema200').period;
         if (isRibbon) element.style.color = ribbon[`color${n}`];
-        const value = candle ? this.emaValues[key]?.get(candle.time) : undefined;
-        element.textContent = `EMA ${effectivePeriod} ${value === undefined ? '· warming up' : formatPrice(value)}`;
+        const point = legendEmaValue(this.emaValues[key], candle, this.candles.at(-1), effectivePeriod);
+        element.textContent = `EMA ${effectivePeriod} ${point === null ? '· warming up' : `${formatPrice(point.value)}${point.live ? ' (live)' : ''}`}`;
+        element.title = point?.live ? 'Provisional EMA including the forming bar; the plotted line uses closed bars only' : '';
       });
     }
     applyIndicators() {

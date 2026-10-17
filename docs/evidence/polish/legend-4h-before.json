@@ -1,0 +1,38 @@
+{
+ "bars": 300,
+ "lastClosed": 1792238400,
+ "forming": {
+  "time": 1792252800,
+  "close": 81506
+ },
+ "emaLastClosed": {
+  "200": [
+   1792238400,
+   82104.40445002644
+  ],
+  "r0": [
+   1792238400,
+   81589.82876859249
+  ],
+  "r1": [
+   1792238400,
+   81780.81065608692
+  ],
+  "r2": [
+   1792238400,
+   81957.72513891893
+  ]
+ },
+ "emaAtForming": {
+  "200": null,
+  "r0": null,
+  "r1": null,
+  "r2": null
+ },
+ "legend": [
+  "EMA 7 · warming up",
+  "EMA 14 · warming up",
+  "EMA 21 · warming up",
+  "EMA 200 · warming up"
+ ]
+}
