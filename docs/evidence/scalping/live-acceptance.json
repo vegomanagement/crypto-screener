@@ -1,0 +1,1316 @@
+{
+  "captured_at": "2026-10-17T15:35:37.992Z",
+  "runs": {
+    "1col": {
+      "synced_at": 1792251341304,
+      "perf_before_reset": {
+        "paints": 457,
+        "sampled": 457,
+        "avgMs": 1.1833698003505981,
+        "p50Ms": 1.1999998092651367,
+        "p95Ms": 2.299999952316284,
+        "maxMs": 5.1000001430511475
+      },
+      "raf": {
+        "frames": 300,
+        "p50": 16.69999999999709,
+        "p95": 16.799999999999272,
+        "max": 16.80000000000291,
+        "over50ms": 0
+      },
+      "perf": {
+        "paints": 554,
+        "sampled": 97,
+        "avgMs": 1.6329897089102834,
+        "p50Ms": 1.5,
+        "p95Ms": 2.700000047683716,
+        "maxMs": 3
+      },
+      "columns": [
+        {
+          "venue": "binance",
+          "symbol": "BTCUSDT",
+          "status": "synced",
+          "tick": 0.1,
+          "rowN": 1,
+          "ladder": {
+            "rows": 47,
+            "withVolume": 31,
+            "unknown": 0,
+            "scale": 1281503.2525000002,
+            "bestBidRow": 814324,
+            "bestAskRow": 814325,
+            "aged": 1
+          },
+          "feed": {
+            "drawn": 197,
+            "hidden": 0,
+            "trades": 197,
+            "labels": 2
+          },
+          "clusters": {
+            "columns": 2,
+            "cells": 19,
+            "marked": 0
+          },
+          "trades": {
+            "received": 197,
+            "rejected": 0,
+            "clusterRejected": 0,
+            "idGaps": 0,
+            "disconnects": 0,
+            "firstAt": 1792251340477,
+            "lastAt": 1792251365038
+          },
+          "sync": {
+            "events": 256,
+            "applied": 247,
+            "dropped": 4,
+            "gaps": 0,
+            "resyncs": 0,
+            "crossed": 0,
+            "lastEventTime": 1792251366137,
+            "reanchors": 0
+          },
+          "counters": {
+            "connects": 1,
+            "snapshots": 1,
+            "snapshotErrors": 0,
+            "reconnects": 0,
+            "messages": 251
+          },
+          "market": {
+            "mark": 81435,
+            "funding": 0.00004101,
+            "nextFunding": 1792252800000,
+            "basis": "premiumIndex"
+          },
+          "marketError": null,
+          "header": "Bid 81432.4 · Ask 81432.5 · Spread 0.1 (0.0001%) · Mark 81435.0 (Δ +2.5) · Funding 0.0041% · in 00:23:53",
+          "status_line": "syncedREST 1000 + diff · resyncs 0 · gaps 0 · trades live · 197 prints · density ≥$500K: 19"
+        }
+      ],
+      "book_vs_rest_binance": {
+        "samples": [
+          {
+            "L": 11845740115882,
+            "mode": "bracket",
+            "event": {
+              "U": 11845740113806,
+              "u": 11845740122968,
+              "pu": 11845740113281,
+              "touched": 52
+            },
+            "bids": {
+              "compared": 50,
+              "mismatched": 0,
+              "unexplained": 0,
+              "examples": []
+            },
+            "asks": {
+              "compared": 50,
+              "mismatched": 5,
+              "unexplained": 0,
+              "examples": []
+            },
+            "restBest": [
+              [
+                "81432.40",
+                "0.244"
+              ],
+              [
+                "81432.50",
+                "17.188"
+              ]
+            ],
+            "localBest": [
+              [
+                81432.4,
+                0.244
+              ],
+              [
+                81432.5,
+                15.773
+              ]
+            ]
+          },
+          {
+            "L": 11845740341784,
+            "mode": "bracket",
+            "event": {
+              "U": 11845740335904,
+              "u": 11845740346093,
+              "pu": 11845740335735,
+              "touched": 58
+            },
+            "bids": {
+              "compared": 50,
+              "mismatched": 0,
+              "unexplained": 0,
+              "examples": []
+            },
+            "asks": {
+              "compared": 52,
+              "mismatched": 5,
+              "unexplained": 1,
+              "examples": [
+                {
+                  "p": 81440.1,
+                  "rest": 0.033,
+                  "local": 0
+                }
+              ]
+            },
+            "restBest": [
+              [
+                "81432.40",
+                "5.726"
+              ],
+              [
+                "81432.50",
+                "12.361"
+              ]
+            ],
+            "localBest": [
+              [
+                81432.4,
+                5.726
+              ],
+              [
+                81432.5,
+                12.336
+              ]
+            ]
+          },
+          {
+            "L": 11845740617489,
+            "mode": "bracket",
+            "event": {
+              "U": 11845740616429,
+              "u": 11845740629867,
+              "pu": 11845740616169,
+              "touched": 109
+            },
+            "bids": {
+              "compared": 51,
+              "mismatched": 10,
+              "unexplained": 1,
+              "examples": [
+                {
+                  "p": 81426,
+                  "rest": 0.008,
+                  "local": 0
+                }
+              ]
+            },
+            "asks": {
+              "compared": 50,
+              "mismatched": 17,
+              "unexplained": 0,
+              "examples": []
+            },
+            "restBest": [
+              [
+                "81432.40",
+                "4.100"
+              ],
+              [
+                "81432.50",
+                "6.270"
+              ]
+            ],
+            "localBest": [
+              [
+                81432.4,
+                4.325
+              ],
+              [
+                81432.5,
+                7.27
+              ]
+            ]
+          },
+          {
+            "L": 11845740790643,
+            "mode": "bracket",
+            "event": {
+              "U": 11845740786295,
+              "u": 11845740794059,
+              "pu": 11845740786088,
+              "touched": 72
+            },
+            "bids": {
+              "compared": 50,
+              "mismatched": 0,
+              "unexplained": 0,
+              "examples": []
+            },
+            "asks": {
+              "compared": 50,
+              "mismatched": 1,
+              "unexplained": 0,
+              "examples": []
+            },
+            "restBest": [
+              [
+                "81432.40",
+                "5.131"
+              ],
+              [
+                "81432.50",
+                "7.539"
+              ]
+            ],
+            "localBest": [
+              [
+                81432.4,
+                5.131
+              ],
+              [
+                81432.5,
+                7.535
+              ]
+            ]
+          },
+          {
+            "L": 11845741037436,
+            "mode": "exact",
+            "event": {
+              "U": 11845741026088,
+              "u": 11845741037436,
+              "pu": 11845741025822,
+              "touched": 100
+            },
+            "bids": {
+              "compared": 50,
+              "mismatched": 0,
+              "unexplained": 0,
+              "examples": []
+            },
+            "asks": {
+              "compared": 50,
+              "mismatched": 0,
+              "unexplained": 0,
+              "examples": []
+            },
+            "restBest": [
+              [
+                "81432.40",
+                "9.939"
+              ],
+              [
+                "81432.50",
+                "2.915"
+              ]
+            ],
+            "localBest": [
+              [
+                81432.4,
+                9.939
+              ],
+              [
+                81432.5,
+                2.915
+              ]
+            ]
+          },
+          {
+            "L": 11845741310687,
+            "mode": "bracket",
+            "event": {
+              "U": 11845741307461,
+              "u": 11845741316618,
+              "pu": 11845741307227,
+              "touched": 94
+            },
+            "bids": {
+              "compared": 50,
+              "mismatched": 5,
+              "unexplained": 0,
+              "examples": []
+            },
+            "asks": {
+              "compared": 50,
+              "mismatched": 1,
+              "unexplained": 0,
+              "examples": []
+            },
+            "restBest": [
+              [
+                "81439.80",
+                "14.094"
+              ],
+              [
+                "81439.90",
+                "3.761"
+              ]
+            ],
+            "localBest": [
+              [
+                81439.8,
+                14.095
+              ],
+              [
+                81439.9,
+                3.704
+              ]
+            ]
+          },
+          {
+            "L": 11845741548255,
+            "mode": "bracket",
+            "event": {
+              "U": 11845741540569,
+              "u": 11845741551358,
+              "pu": 11845741540416,
+              "touched": 93
+            },
+            "bids": {
+              "compared": 51,
+              "mismatched": 4,
+              "unexplained": 1,
+              "examples": [
+                {
+                  "p": 81434.3,
+                  "rest": 0.003,
+                  "local": 0
+                }
+              ]
+            },
+            "asks": {
+              "compared": 50,
+              "mismatched": 2,
+              "unexplained": 0,
+              "examples": []
+            },
+            "restBest": [
+              [
+                "81441.80",
+                "17.786"
+              ],
+              [
+                "81441.90",
+                "4.557"
+              ]
+            ],
+            "localBest": [
+              [
+                81441.8,
+                17.748
+              ],
+              [
+                81441.9,
+                3.993
+              ]
+            ]
+          },
+          {
+            "L": 11845741716016,
+            "mode": "bracket",
+            "event": {
+              "U": 11845741715265,
+              "u": 11845741727705,
+              "pu": 11845741715170,
+              "touched": 52
+            },
+            "bids": {
+              "compared": 50,
+              "mismatched": 1,
+              "unexplained": 0,
+              "examples": []
+            },
+            "asks": {
+              "compared": 51,
+              "mismatched": 3,
+              "unexplained": 1,
+              "examples": [
+                {
+                  "p": 81449.4,
+                  "rest": 0.002,
+                  "local": 0
+                }
+              ]
+            },
+            "restBest": [
+              [
+                "81441.80",
+                "18.988"
+              ],
+              [
+                "81441.90",
+                "0.840"
+              ]
+            ],
+            "localBest": [
+              [
+                81441.8,
+                19.1
+              ],
+              [
+                81441.9,
+                0.85
+              ]
+            ]
+          },
+          {
+            "L": 11845741951924,
+            "mode": "bracket",
+            "event": {
+              "U": 11845741947211,
+              "u": 11845741956221,
+              "pu": 11845741947116,
+              "touched": 52
+            },
+            "bids": {
+              "compared": 50,
+              "mismatched": 1,
+              "unexplained": 0,
+              "examples": []
+            },
+            "asks": {
+              "compared": 50,
+              "mismatched": 1,
+              "unexplained": 0,
+              "examples": []
+            },
+            "restBest": [
+              [
+                "81441.80",
+                "19.539"
+              ],
+              [
+                "81441.90",
+                "1.615"
+              ]
+            ],
+            "localBest": [
+              [
+                81441.8,
+                19.539
+              ],
+              [
+                81441.9,
+                1.615
+              ]
+            ]
+          },
+          {
+            "L": 11845742112751,
+            "mode": "bracket",
+            "event": {
+              "U": 11845742112649,
+              "u": 11845742118897,
+              "pu": 11845742112493,
+              "touched": 58
+            },
+            "bids": {
+              "compared": 50,
+              "mismatched": 3,
+              "unexplained": 0,
+              "examples": []
+            },
+            "asks": {
+              "compared": 50,
+              "mismatched": 3,
+              "unexplained": 0,
+              "examples": []
+            },
+            "restBest": [
+              [
+                "81441.80",
+                "19.696"
+              ],
+              [
+                "81441.90",
+                "1.452"
+              ]
+            ],
+            "localBest": [
+              [
+                81441.8,
+                19.661
+              ],
+              [
+                81441.9,
+                1.45
+              ]
+            ]
+          },
+          {
+            "L": 11845742315852,
+            "mode": "bracket",
+            "event": {
+              "U": 11845742314149,
+              "u": 11845742320829,
+              "pu": 11845742313997,
+              "touched": 73
+            },
+            "bids": {
+              "compared": 50,
+              "mismatched": 6,
+              "unexplained": 0,
+              "examples": []
+            },
+            "asks": {
+              "compared": 50,
+              "mismatched": 1,
+              "unexplained": 0,
+              "examples": []
+            },
+            "restBest": [
+              [
+                "81444.50",
+                "29.576"
+              ],
+              [
+                "81444.60",
+                "2.465"
+              ]
+            ],
+            "localBest": [
+              [
+                81444.5,
+                29.285
+              ],
+              [
+                81444.6,
+                2.467
+              ]
+            ]
+          },
+          {
+            "L": 11845742546411,
+            "mode": "bracket",
+            "event": {
+              "U": 11845742540982,
+              "u": 11845742547806,
+              "pu": 11845742540837,
+              "touched": 104
+            },
+            "bids": {
+              "compared": 50,
+              "mismatched": 1,
+              "unexplained": 0,
+              "examples": []
+            },
+            "asks": {
+              "compared": 50,
+              "mismatched": 0,
+              "unexplained": 0,
+              "examples": []
+            },
+            "restBest": [
+              [
+                "81448.00",
+                "18.542"
+              ],
+              [
+                "81448.10",
+                "1.013"
+              ]
+            ],
+            "localBest": [
+              [
+                81448,
+                18.542
+              ],
+              [
+                81448.1,
+                1.013
+              ]
+            ]
+          }
+        ],
+        "matched_samples": 8,
+        "total": 12,
+        "unexplained_levels_repeated_across_samples": [],
+        "unexplained_levels_total": 4,
+        "levels_compared": 1205
+      },
+      "feed_vs_rest_binance": {
+        "window": [
+          1792251342310,
+          1792251402309
+        ],
+        "local": 392,
+        "rest": 392,
+        "missing_locally": 0,
+        "extra_locally": 0,
+        "feed_counts": {
+          "received": 392,
+          "receivedUsd": 2040495.6741000016,
+          "feedTrades": 392,
+          "feedUsd": 2040495.6741000016,
+          "feedPrints": 392
+        },
+        "idGaps": 0,
+        "rejected": 0
+      },
+      "ruler": {
+        "scaleIndex": 2,
+        "rowN": 5,
+        "label": "×5 ticks · $",
+        "ruler": {
+          "anchorRow": 162896,
+          "hoverRow": 162910
+        },
+        "persisted": 2
+      },
+      "checked_until": 1792251406819,
+      "report": {
+        "console_errors": [],
+        "exceptions": [],
+        "failed_requests": []
+      }
+    },
+    "3col": {
+      "synced_at": 1792251411494,
+      "perf_before_reset": {
+        "paints": 878,
+        "sampled": 878,
+        "avgMs": 1.4313211823921812,
+        "p50Ms": 1.1000001430511475,
+        "p95Ms": 3.5,
+        "maxMs": 6
+      },
+      "raf": {
+        "frames": 301,
+        "p50": 16.700000000000728,
+        "p95": 16.700000000000728,
+        "max": 16.80000000000291,
+        "over50ms": 0
+      },
+      "perf": {
+        "paints": 1056,
+        "sampled": 178,
+        "avgMs": 2.2634831385666065,
+        "p50Ms": 2.1000001430511475,
+        "p95Ms": 4.799999952316284,
+        "maxMs": 6.5
+      },
+      "columns": [
+        {
+          "venue": "binance",
+          "symbol": "BTCUSDT",
+          "status": "synced",
+          "tick": 0.1,
+          "rowN": 1,
+          "ladder": {
+            "rows": 49,
+            "withVolume": 30,
+            "unknown": 0,
+            "scale": 1004598.2078,
+            "bestBidRow": 814231,
+            "bestAskRow": 814232,
+            "aged": 1
+          },
+          "feed": {
+            "drawn": 285,
+            "hidden": 0,
+            "trades": 285,
+            "labels": 12,
+            "labelsSkipped": 1
+          },
+          "clusters": {
+            "columns": 2,
+            "cells": 39,
+            "marked": 0
+          },
+          "trades": {
+            "received": 285,
+            "rejected": 0,
+            "clusterRejected": 0,
+            "idGaps": 0,
+            "disconnects": 0,
+            "firstAt": 1792251410706,
+            "lastAt": 1792251435973
+          },
+          "sync": {
+            "events": 256,
+            "applied": 246,
+            "dropped": 5,
+            "gaps": 0,
+            "resyncs": 0,
+            "crossed": 0,
+            "lastEventTime": 1792251436313,
+            "reanchors": 0
+          },
+          "counters": {
+            "connects": 1,
+            "snapshots": 1,
+            "snapshotErrors": 0,
+            "reconnects": 0,
+            "messages": 251
+          },
+          "market": {
+            "mark": 81430.17853623,
+            "funding": 0.00004061,
+            "nextFunding": 1792252800000,
+            "basis": "premiumIndex"
+          },
+          "marketError": null,
+          "header": "Bid 81423.1 · Ask 81423.2 · Spread 0.1 (0.0001%) · Mark 81430.2 (Δ +7.0) · Funding 0.0041% · in 00:22:43",
+          "status_line": "syncedREST 1000 + diff · resyncs 0 · gaps 0 · trades live · 285 prints · density ≥$500K: 17"
+        },
+        {
+          "venue": "binance",
+          "symbol": "ETHUSDT",
+          "status": "synced",
+          "tick": 0.01,
+          "rowN": 1,
+          "ladder": {
+            "rows": 49,
+            "withVolume": 38,
+            "unknown": 0,
+            "scale": 396539.33759999997,
+            "bestBidRow": 241247,
+            "bestAskRow": 241248,
+            "aged": 0
+          },
+          "feed": {
+            "drawn": 863,
+            "hidden": 0,
+            "trades": 863,
+            "labels": 27,
+            "labelsSkipped": 5
+          },
+          "clusters": {
+            "columns": 2,
+            "cells": 79,
+            "marked": 0
+          },
+          "trades": {
+            "received": 863,
+            "rejected": 0,
+            "clusterRejected": 0,
+            "idGaps": 0,
+            "disconnects": 0,
+            "firstAt": 1792251409851,
+            "lastAt": 1792251436176
+          },
+          "sync": {
+            "events": 263,
+            "applied": 253,
+            "dropped": 5,
+            "gaps": 0,
+            "resyncs": 0,
+            "crossed": 0,
+            "lastEventTime": 1792251436382,
+            "reanchors": 0
+          },
+          "counters": {
+            "connects": 1,
+            "snapshots": 1,
+            "snapshotErrors": 0,
+            "reconnects": 0,
+            "messages": 258
+          },
+          "market": {
+            "mark": 2412.59,
+            "funding": 0.00007003,
+            "nextFunding": 1792252800000,
+            "basis": "premiumIndex"
+          },
+          "marketError": null,
+          "header": "Bid 2412.47 · Ask 2412.48 · Spread 0.01 (0.0004%) · Mark 2412.59 (Δ +0.11) · Funding 0.0070% · in 00:22:43",
+          "status_line": "syncedREST 1000 + diff · resyncs 0 · gaps 0 · trades live · 863 prints · density ≥$500K: 47"
+        },
+        {
+          "venue": "binance",
+          "symbol": "SOLUSDT",
+          "status": "synced",
+          "tick": 0.01,
+          "rowN": 1,
+          "ladder": {
+            "rows": 49,
+            "withVolume": 49,
+            "unknown": 0,
+            "scale": 734525.6992,
+            "bestBidRow": 10377,
+            "bestAskRow": 10378,
+            "aged": 6
+          },
+          "feed": {
+            "drawn": 93,
+            "hidden": 0,
+            "trades": 93,
+            "labels": 1,
+            "labelsSkipped": 1
+          },
+          "clusters": {
+            "columns": 2,
+            "cells": 13,
+            "marked": 0
+          },
+          "trades": {
+            "received": 93,
+            "rejected": 0,
+            "clusterRejected": 0,
+            "idGaps": 0,
+            "disconnects": 0,
+            "firstAt": 1792251409815,
+            "lastAt": 1792251436292
+          },
+          "sync": {
+            "events": 263,
+            "applied": 254,
+            "dropped": 4,
+            "gaps": 0,
+            "resyncs": 0,
+            "crossed": 0,
+            "lastEventTime": 1792251436303,
+            "reanchors": 0
+          },
+          "counters": {
+            "connects": 1,
+            "snapshots": 1,
+            "snapshotErrors": 0,
+            "reconnects": 0,
+            "messages": 258
+          },
+          "market": {
+            "mark": 103.77,
+            "funding": -0.00000957,
+            "nextFunding": 1792252800000,
+            "basis": "premiumIndex"
+          },
+          "marketError": null,
+          "header": "Bid 103.77 · Ask 103.78 · Spread 0.01 (0.0096%) · Mark 103.77 (Δ -0.01) · Funding -0.0010% · in 00:22:43",
+          "status_line": "syncedREST 1000 + diff · resyncs 0 · gaps 0 · trades live · 92 prints · density ≥$500K: 81"
+        }
+      ],
+      "checked_until": 1792251436703,
+      "report": {
+        "console_errors": [],
+        "exceptions": [],
+        "failed_requests": []
+      }
+    },
+    "bybit": {
+      "synced_at": 1792251439227,
+      "book_vs_rest_bybit": {
+        "samples": [
+          {
+            "seq": 827667946370,
+            "mode": "between",
+            "pushes": [
+              827667946207,
+              827667946412
+            ],
+            "changed": 21,
+            "bids": {
+              "compared": 50,
+              "mismatched": 3,
+              "unexplained": 0,
+              "examples": []
+            },
+            "asks": {
+              "compared": 56,
+              "mismatched": 18,
+              "unexplained": 2,
+              "examples": [
+                {
+                  "p": 81448.1,
+                  "rest": 0.002,
+                  "local": 0
+                },
+                {
+                  "p": 81449.2,
+                  "rest": 0.004,
+                  "local": 0
+                }
+              ]
+            }
+          },
+          {
+            "seq": 827667949218,
+            "mode": "between",
+            "pushes": [
+              827667949115,
+              827667949258
+            ],
+            "changed": 4,
+            "bids": {
+              "compared": 50,
+              "mismatched": 1,
+              "unexplained": 0,
+              "examples": []
+            },
+            "asks": {
+              "compared": 51,
+              "mismatched": 3,
+              "unexplained": 0,
+              "examples": []
+            }
+          },
+          {
+            "seq": 827667954870,
+            "mode": "between",
+            "pushes": [
+              827667954760,
+              827667955025
+            ],
+            "changed": 20,
+            "bids": {
+              "compared": 51,
+              "mismatched": 6,
+              "unexplained": 3,
+              "examples": [
+                {
+                  "p": 81433.3,
+                  "rest": 0.698,
+                  "local": 0.696
+                },
+                {
+                  "p": 81432.9,
+                  "rest": 0.002,
+                  "local": 0
+                },
+                {
+                  "p": 81432.4,
+                  "rest": 0.002,
+                  "local": 0
+                }
+              ]
+            },
+            "asks": {
+              "compared": 52,
+              "mismatched": 7,
+              "unexplained": 1,
+              "examples": [
+                {
+                  "p": 81447.8,
+                  "rest": 0.282,
+                  "local": 0.28
+                }
+              ]
+            }
+          },
+          {
+            "seq": 827667993816,
+            "mode": "between",
+            "pushes": [
+              827667993094,
+              827667994296
+            ],
+            "changed": 13,
+            "bids": {
+              "compared": 52,
+              "mismatched": 9,
+              "unexplained": 1,
+              "examples": [
+                {
+                  "p": 81422.1,
+                  "rest": 0.181,
+                  "local": 0.179
+                }
+              ]
+            },
+            "asks": {
+              "compared": 52,
+              "mismatched": 5,
+              "unexplained": 0,
+              "examples": []
+            }
+          },
+          {
+            "seq": 827668009316,
+            "mode": "between",
+            "pushes": [
+              827668009184,
+              827668009377
+            ],
+            "changed": 13,
+            "bids": {
+              "compared": 51,
+              "mismatched": 2,
+              "unexplained": 0,
+              "examples": []
+            },
+            "asks": {
+              "compared": 51,
+              "mismatched": 8,
+              "unexplained": 2,
+              "examples": [
+                {
+                  "p": 81436.8,
+                  "rest": 0.002,
+                  "local": 0
+                },
+                {
+                  "p": 81441.1,
+                  "rest": 1.228,
+                  "local": 0.001
+                }
+              ]
+            }
+          },
+          {
+            "seq": 827668012399,
+            "mode": "between",
+            "pushes": [
+              827668012304,
+              827668012433
+            ],
+            "changed": 4,
+            "bids": {
+              "compared": 50,
+              "mismatched": 0,
+              "unexplained": 0,
+              "examples": []
+            },
+            "asks": {
+              "compared": 50,
+              "mismatched": 1,
+              "unexplained": 0,
+              "examples": []
+            }
+          },
+          {
+            "seq": 827668018773,
+            "mode": "between",
+            "pushes": [
+              827668018362,
+              827668018986
+            ],
+            "changed": 7,
+            "bids": {
+              "compared": 51,
+              "mismatched": 4,
+              "unexplained": 1,
+              "examples": [
+                {
+                  "p": 81418.3,
+                  "rest": 0.198,
+                  "local": 0
+                }
+              ]
+            },
+            "asks": {
+              "compared": 50,
+              "mismatched": 0,
+              "unexplained": 0,
+              "examples": []
+            }
+          },
+          {
+            "seq": 827668023452,
+            "mode": "between",
+            "pushes": [
+              827668023347,
+              827668023496
+            ],
+            "changed": 9,
+            "bids": {
+              "compared": 50,
+              "mismatched": 0,
+              "unexplained": 0,
+              "examples": []
+            },
+            "asks": {
+              "compared": 52,
+              "mismatched": 5,
+              "unexplained": 0,
+              "examples": []
+            }
+          },
+          {
+            "seq": 827668030852,
+            "mode": "between",
+            "pushes": [
+              827668030552,
+              827668031010
+            ],
+            "changed": 5,
+            "bids": {
+              "compared": 50,
+              "mismatched": 0,
+              "unexplained": 0,
+              "examples": []
+            },
+            "asks": {
+              "compared": 52,
+              "mismatched": 5,
+              "unexplained": 0,
+              "examples": []
+            }
+          },
+          {
+            "seq": 827668081849,
+            "mode": "between",
+            "pushes": [
+              827668079494,
+              827668082993
+            ],
+            "changed": 7,
+            "bids": {
+              "compared": 50,
+              "mismatched": 0,
+              "unexplained": 0,
+              "examples": []
+            },
+            "asks": {
+              "compared": 51,
+              "mismatched": 5,
+              "unexplained": 0,
+              "examples": []
+            }
+          },
+          {
+            "seq": 827668114234,
+            "mode": "between",
+            "pushes": [
+              827668114065,
+              827668114357
+            ],
+            "changed": 55,
+            "bids": {
+              "compared": 57,
+              "mismatched": 19,
+              "unexplained": 0,
+              "examples": []
+            },
+            "asks": {
+              "compared": 53,
+              "mismatched": 12,
+              "unexplained": 2,
+              "examples": [
+                {
+                  "p": 81450.6,
+                  "rest": 3.088,
+                  "local": 0
+                },
+                {
+                  "p": 81450.7,
+                  "rest": 2.585,
+                  "local": 0
+                }
+              ]
+            }
+          },
+          {
+            "seq": 827668117923,
+            "mode": "between",
+            "pushes": [
+              827668117790,
+              827668117987
+            ],
+            "changed": 15,
+            "bids": {
+              "compared": 51,
+              "mismatched": 4,
+              "unexplained": 1,
+              "examples": [
+                {
+                  "p": 81428,
+                  "rest": 0.021,
+                  "local": 0
+                }
+              ]
+            },
+            "asks": {
+              "compared": 50,
+              "mismatched": 4,
+              "unexplained": 0,
+              "examples": []
+            }
+          }
+        ],
+        "matched_samples": 5,
+        "unexplained_levels_repeated_across_samples": [],
+        "unexplained_levels_total": 13,
+        "levels_compared": 1233,
+        "compared_samples": 12,
+        "total": 12
+      },
+      "feed_vs_rest_bybit": {
+        "window": [
+          1792251438919,
+          1792251496819
+        ],
+        "rest_window_limited_by_1000_rows": false,
+        "local": 377,
+        "rest": 377,
+        "missing_locally": 0,
+        "extra_locally": 0,
+        "feed_counts": {
+          "received": 377,
+          "receivedUsd": 394552.95280000044,
+          "feedTrades": 377,
+          "feedUsd": 394552.95280000044,
+          "feedPrints": 377
+        }
+      },
+      "columns": [
+        {
+          "venue": "bybit",
+          "symbol": "BTCUSDT",
+          "status": "synced",
+          "tick": 0.1,
+          "rowN": 1,
+          "ladder": {
+            "rows": 47,
+            "withVolume": 15,
+            "unknown": 0,
+            "scale": 154572.74039999998,
+            "bestBidRow": 814397,
+            "bestAskRow": 814398,
+            "aged": 0
+          },
+          "feed": {
+            "drawn": 383,
+            "hidden": 0,
+            "trades": 383,
+            "labels": 0
+          },
+          "clusters": {
+            "columns": 2,
+            "cells": 30,
+            "marked": 0
+          },
+          "trades": {
+            "received": 387,
+            "rejected": 0,
+            "clusterRejected": 0,
+            "idGaps": 0,
+            "disconnects": 0,
+            "firstAt": 1792251438992,
+            "lastAt": 1792251499478
+          },
+          "sync": {
+            "events": 616,
+            "applied": 616,
+            "snapshots": 1,
+            "gaps": 0,
+            "resyncs": 0,
+            "crossed": 0,
+            "restarts": 0,
+            "lastEventTime": 1792251499995
+          },
+          "counters": {
+            "connects": 1,
+            "snapshots": 0,
+            "snapshotErrors": 0,
+            "reconnects": 0,
+            "messages": 620
+          },
+          "market": {
+            "mark": 81439.7,
+            "funding": 0.00006974,
+            "nextFunding": 1792252800000,
+            "basis": "tickers"
+          },
+          "marketError": null,
+          "header": "Bid 81439.7 · Ask 81439.8 · Spread 0.1 (0.0001%) · Mark 81439.7 (Δ -0.1) · Funding 0.0070% · in 00:21:40",
+          "status_line": "synced200/side capupdates 615 · resyncs 0 · trades live · 387 prints · density ≥$500K: 3"
+        }
+      ],
+      "checked_until": 1792251500191,
+      "report": {
+        "console_errors": [],
+        "exceptions": [],
+        "failed_requests": []
+      }
+    }
+  }
+}
