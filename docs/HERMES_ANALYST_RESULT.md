@@ -109,3 +109,86 @@ Same launcher on :5090, `docs/evidence/hermes-analyst/live_factor_runs.py` (POST
 - Binance symbols missing from `/fapi/v1/fundingInfo` default to 8 h, and the source says so.
 - The `1000X → kX` coin mapping for the cross-venue table is a heuristic.
 - The auto-refresh toggle (≥ 2 min) is unit-tested but was not observed live over time.
+
+## Positioning in the analyst (branch `claude/analyst-positioning`)
+
+**What changed**
+- `analyst_positioning.py` (new, pure) builds a compact `snapshot.positioning` block from one
+  `PositioningService.snapshot` for the pane's venue/symbol. The period follows the chart
+  interval: 1/3/5→5m, 15→15m, 30→30m, 60/120/180→1h, 240/480/720→4h, D/W/M→1d. Seconds charts
+  and HIP-3 symbols give `missing.positioning` with a reason. The block contains: top-trader
+  account and position ratio with long/short shares, crowd (global account) ratio, taker ratio
+  with buy/sell volume, current OI plus 1h/4h/24h change (each with price %), basis, the
+  descriptive signals, liquidation windows (label, `lower_bound`, covered_min/window_min,
+  complete_coverage, top-3 largest, collector state) and the HL whale aggregate (long/short
+  notional, counts, long share, average entries, poll, up to 5 recent changes, counts by kind).
+  Every metric keeps `source`/`ts`/`period`. A null value carries its `reason` and is listed in
+  `positioning.missing`. Series, addresses and coverage spans are dropped, so the block is
+  4.1–4.9 KB live (whole snapshot 13.4–14.0 KB). The `funding` signal and `basis.funding_rate`
+  are left out because `snapshot.funding` already has them (no double counting).
+- **Collectors are never started by an analysis.** `agent_api.app_positioning` calls
+  `snapshot(..., owner='analyst', watch=False)`. Cold collectors give null plus "collector is
+  cold and is not started by an analysis (open the Positioning panel)". Opening the panel
+  starts them through the normal leases.
+- Validator: `positioning.*` paths are accepted like any other snapshot path. A factor citing a
+  **null** `positioning.*` value is dropped with a warning. Prompt: look for positioning
+  evidence on BOTH sides, cite leaf fields (examples listed), never cite nulls. Caveats:
+  liquidations are a LOWER BOUND (strength 1 when coverage is partial), and HL whales are top-N
+  accounts including vaults and market makers (strength ≤ 2).
+- Response: `snapshot_bytes`, `positioning_bytes`, `freshness.positioning_missing`. Stats:
+  `hermes_runs_citing_positioning`. Card: dotted chips for positioning factors and a
+  "positioning cited x/n" line in the calibration footer.
+- Card: a collapsible **Positioning** `<details>` mounts `static/positioning-panel.js`
+  (`owner=analyst-card`) only while open. It follows the active pane (exchange/symbol/period,
+  refetching only when that key changes) and polls every 60 s only while it is open and the
+  tab is visible. It is destroyed when closed, for unsupported panes and on destroy. Narrow-
+  column CSS hides the whale entry/liq. columns (still on `/positioning`). `/positioning` is
+  unchanged. `static/workspace.js` was not edited: the card picks up `window.PositioningPanel`,
+  which `templates/workspace.html` loads before `analyst-panel.js`.
+
+**Live (2026-10-17 ~18:25–18:36 UTC, :5094, Hermes gateway, 9 analyses, all `status ok`, source hermes)**
+
+| # | Market | p_long | bias (agent) | pos. factors (L/S) | latency s | snapshot ms | snap / pos bytes | positioning missing |
+|---|---|---|---|---|---|---|---|---|
+| 1 | Binance BTCUSDT 15m, collectors **cold** | 71.9 | long (long) | 3 (1/2) | 22.0 | 15015 | 13827 / 4186 | liquidations, whales (cold, not started) |
+| 2 | Binance BTCUSDT 15m, warm | 72.8 | long (long) | 3 (1/2) | 21.0 | 6937 | 13866 / 4144 | — |
+| 3 | Binance BTCUSDT 1h | 31.7 | short (short) | 4 (1/3) | 21.7 | 14206 | 13412 / 4138 | — |
+| 4 | Binance ETHUSDT 15m | 53.9 | neutral (long) | 3 (1/2) | 23.4 | 7837 | 14010 / 4443 | liquidations (ETH not subscribed) |
+| 5 | Bybit SOLUSDT 15m, Bybit collector cold | 44.1 | short (short) | 2 (0/2) | 22.8 | 1203 | 13895 / 4694 | liquidations, taker, top traders (venue) |
+| 6 | Hyperliquid BTC 15m | 61.6 | long (long) | 1 (0/1) | 23.3 | 1855 | 14018 / 4804 | crowd, taker, OI history, liquidations (venue) |
+| 7 | Bybit SOLUSDT 15m (UI) | 42.6 | short (short) | 3 (0/3) | 21.9 | — | — | — |
+| 8 | Binance ETHUSDT 4h (UI) | 29.4 | short (short) | 4 (1/3) | 22.9 | — | — | — |
+| 9 | Binance BTCUSDT 15m (UI) | 81.4 | long (long) | 2 (0/2) | 22.0 | — | — | — |
+
+- **Positioning was cited in 9/9 runs** (25 of 108 factors). Funding was cited in 8/9. Cited
+  groups: crowd 8, signals 8, whales 6, basis 5, taker 5, open_interest 4, top_traders 4,
+  liquidations 0. No run cited a null field (0 "cites null" warnings). In #1 Hermes did not
+  cite the cold whales or liquidations. On Hyperliquid it cited only whales, at strength 2 with
+  "(incl. MMs)".
+- p_long 29.4–81.4 (mean 54.4, std 17.7, 9 distinct values; histogram 20–30:1, 30–40:1,
+  40–50:2, 50–60:1, 60–70:1, 70–80:2, 80–90:1). Latency 21.0–23.4 s (median 22.0 s), no repair
+  turns. Warnings: only run 4 had any (one unanchored level and one partial disagreement:
+  agent long, computed neutral). The UI runs' warnings were not saved; run 9's card showed none.
+- The positioning endpoint alone took 0.7–1.1 s uncached. The 14–15 s Binance `snapshot_ms`
+  comes from the existing market/chart providers, as before.
+- Screenshots: `card_btc15_positioning_open_cold.png` (section open, whales warming up, no
+  liquidation coverage yet), `card_binance_BTCUSDT_15_analysis_positioning.png`,
+  `card_bybit_SOLUSDT_15_analysis_positioning.png` and
+  `card_binance_ETHUSDT_240_analysis_positioning.png` (dotted positioning chips with the
+  section open), `positioning_section_*.png` (section only, after the narrow-column CSS fix).
+  Evidence is in `docs/evidence/analyst-positioning/`: `run_0*.json` (full responses),
+  `store_summary.json` (all 9 from the store) and `live_positioning_block_*.json` (the exact
+  block, Binance and HL).
+
+**Limitations**
+- Positioning factors skewed short: 20 short vs 5 long. Hermes reads "crowd long-heavy"
+  contrarian (bearish) almost every time (crowd long share was 0.63–0.76 on every Binance and
+  Bybit market). Only 5/9 runs had positioning evidence on both sides. Whether that is
+  justified is unknown until outcomes are scored.
+- Liquidations were never cited. The Binance collector had only ~7 minutes of coverage, with 0
+  BTC events, and Bybit was cold. Not observed: a factor on a non-zero liquidation window.
+- The HL whale tracker covers the top-50 by account value. In this window it was net short on
+  BTC, ETH and SOL, driven by a few large accounts (vaults/MMs possible). The prompt caps them
+  at strength 2.
+- The 60 s card refresh is unit-tested (`visible()` gate). Over time, only the initial load and
+  the target switches were observed live.

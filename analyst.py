@@ -296,8 +296,12 @@ def market_symbol(exchange, symbol):
     return symbol if re.fullmatch(r"[A-Z0-9]{2,30}USDT", symbol) else None
 
 
-def default_providers(*, market=None, confluence=None, funding=None):
-    """Real providers. ``market``/``confluence`` come from screener (passed in, no import cycle)."""
+def default_providers(*, market=None, confluence=None, funding=None, positioning=None):
+    """Real providers. ``market``/``confluence`` come from screener (passed in, no import cycle).
+
+    ``positioning(exchange, symbol, period)`` returns a positioning_api snapshot; it must not
+    start the liquidation collector or the whale tracker (agent_api passes ``watch=False``).
+    """
     import time
 
     def chart(exchange, symbol, interval):
@@ -329,7 +333,7 @@ def default_providers(*, market=None, confluence=None, funding=None):
 
     return {"chart": chart, "market": market, "context": context, "footprint": footprint,
             "depth": depth, "confluence": confluence, "funding": funding or funding_default,
-            "clock": lambda: int(time.time() * 1000)}
+            "positioning": positioning, "clock": lambda: int(time.time() * 1000)}
 
 
 def _reason(exc):
@@ -350,6 +354,16 @@ def build_snapshot(exchange, symbol, interval, providers):
         jobs["footprint"] = (providers.get("footprint"), (exchange, symbol, interval))
     else:
         missing["footprint"] = f"footprint is only built for {', '.join(FOOTPRINT_INTERVALS)}m"
+    from analyst_positioning import period_for
+    from positioning_api import valid_query
+    period = period_for(interval)
+    if not providers.get("positioning"):
+        missing["positioning"] = "positioning provider not configured"
+    elif period is None or not valid_query(exchange, symbol, period):
+        missing["positioning"] = (f"no positioning period for interval {interval}" if period is None
+                                  else "positioning has no data for this venue symbol")
+    else:
+        jobs["positioning"] = (providers["positioning"], (exchange, symbol, period))
     if msym and providers.get("market"):
         jobs["market"] = (providers["market"], (msym,))
     else:
@@ -412,6 +426,11 @@ def build_snapshot(exchange, symbol, interval, providers):
         else:
             snap[name] = None
             missing.setdefault(name, missing.get(key, "not requested"))
+    if "positioning" in results:
+        from analyst_positioning import positioning_section
+        section("positioning", positioning_section, results["positioning"], interval)
+    else:
+        snap["positioning"] = None
     if market and providers.get("confluence"):
         section("baseline", baseline_section, market, providers["confluence"], now)
     else:

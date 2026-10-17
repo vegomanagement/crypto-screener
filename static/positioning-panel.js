@@ -150,9 +150,10 @@
       (vm.warnings.length ? `<div class="pp-warn">${vm.warnings.map(esc).join('<br>')}</div>` : '');
   }
 
-  /** Mount into `el`; polls the API. Returns {refresh, update(opts), destroy}. */
+  /** Mount into `el`; polls the API. Returns {refresh, update(opts), destroy}.
+   *  opts.visible() (optional): timer ticks are skipped while it returns false (hidden tab, closed section). */
   function mount(el, opts) {
-    const o = Object.assign({ exchange: 'binance', symbol: 'BTCUSDT', period: '1h', owner: 'positioning', intervalMs: 30000, fetch: (typeof fetch !== 'undefined' ? fetch.bind(globalThis) : null) }, opts || {});
+    const o = Object.assign({ exchange: 'binance', symbol: 'BTCUSDT', period: '1h', owner: 'positioning', intervalMs: 30000, visible: null, fetch: (typeof fetch !== 'undefined' ? fetch.bind(globalThis) : null) }, opts || {});
     const doc = el.ownerDocument; ensureCss(doc);
     const box = doc.createElement('div'); box.className = 'pp'; el.appendChild(box);
     let timer = null, alive = true, seq = 0;
@@ -167,8 +168,9 @@
         if (alive && my === seq) box.innerHTML = renderHtml(viewModel(snap, whales && !whales.error ? whales : null, Date.now()));
       } catch (err) { if (alive && my === seq) box.innerHTML = renderHtml({ error: `positioning unavailable: ${err.message || err}` }); }
     }
-    refresh(); timer = setInterval(refresh, o.intervalMs);
-    return { refresh, update(next) { Object.assign(o, next); refresh(); }, destroy() { alive = false; clearInterval(timer); box.remove(); } };
+    refresh(); timer = setInterval(() => { if (!o.visible || o.visible()) refresh(); }, o.intervalMs);
+    return { refresh, update(next) { Object.assign(o, next); if (!('coin' in (next || {}))) delete o.coin; box.innerHTML = '<div class="pp-muted">Loading…</div>'; refresh(); },
+      destroy() { alive = false; seq += 1; clearInterval(timer); box.remove(); } };
   }
 
   return { viewModel, renderHtml, mount, fmtUsd, fmtPct, fmtSigned, fmtPx };

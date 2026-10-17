@@ -5,6 +5,7 @@ global sliding-window rate limit on fresh analyses.
 """
 from __future__ import annotations
 
+import json
 import threading
 import time
 from collections import deque
@@ -154,10 +155,14 @@ class AnalystService:
             "latency_ms": hermes["latency_ms"] if hermes else None,
             "attempts": hermes["attempts"] if hermes else 0,
             "snapshot_ms": snapshot_ms, "snapshot_hash": snapshot_hash(snap),
+            "snapshot_bytes": len(json.dumps(snap, separators=(",", ":"), default=str)),
+            "positioning_bytes": (len(json.dumps(snap["positioning"], separators=(",", ":"), default=str))
+                                  if snap.get("positioning") else 0),
             "freshness": {"last_close_ts": snap["candles"]["last_close_ts"],
                           "sections": {k: (v or {}).get("ts") for k, v in snap.items()
                                        if isinstance(v, dict) and "source" in v},
-                          "missing": snap["missing"]},
+                          "missing": snap["missing"],
+                          "positioning_missing": (snap.get("positioning") or {}).get("missing")},
             "raw_output": [r[:RAW_KEEP_CHARS] for r in (hermes or {}).get("raw", [])],
             "evaluation": {"horizon_bars": EVAL_HORIZON_BARS,
                            "rule": "±1 ATR from the analysis price, bias side first"},

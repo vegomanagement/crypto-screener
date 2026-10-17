@@ -9,6 +9,8 @@ import analyst
 import funding
 
 FUNDING_RAW = json.loads((Path(__file__).parent / "fixtures" / "funding" / "live_raw.json").read_text())
+POSITIONING_SNAP = json.loads((Path(__file__).parent / "fixtures" / "positioning" /
+                               "snapshot_binance_BTCUSDT.json").read_text())
 
 START = 1_700_000_000_000
 STEP = 900_000
@@ -56,6 +58,7 @@ def providers(**over):
             "BTCUSDT", FUNDING_RAW["binance_premiumIndex_BTCUSDT"], FUNDING_RAW["binance_fundingRate_BTCUSDT"],
             FUNDING_RAW["binance_fundingInfo_subset"], START),
             "cross_venue": funding.cross_venue(FUNDING_RAW["hl_predictedFundings_subset"], "BTC", START)},
+        "positioning": lambda e, s, p: {**POSITIONING_SNAP, "exchange": e, "symbol": s, "period": p},
     }
     base.update(over)
     return base
@@ -73,7 +76,7 @@ def test_full_snapshot_has_sources_and_no_missing():
     assert snap["missing"] == {}
     for name in ("candles", "indicators", "structure", "fvg", "order_blocks", "session",
                  "liquidity", "htf_bias", "regime", "flow", "derivatives", "footprint",
-                 "orderbook", "baseline", "funding"):
+                 "orderbook", "baseline", "funding", "positioning"):
         assert snap[name] is not None, name
         assert snap[name]["source"] and snap[name]["ts"], name
     assert snap["orderbook"]["imbalance"] == pytest.approx((4 - 2) / 6, rel=1e-3)

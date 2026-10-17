@@ -43,7 +43,8 @@
     const factors = (result && result.analysis && result.analysis.factor_scores) || [];
     return factors.map(f => ({ label: f.factor, direction: f.direction, strength: f.strength,
       cls: f.direction === 'long' ? 'is-long' : 'is-short', sign: f.direction === 'long' ? '+' : '−',
-      sources: f.source_fields || [], funding: (f.source_fields || []).some(x => x.startsWith('funding.')) }));
+      sources: f.source_fields || [], funding: (f.source_fields || []).some(x => x.startsWith('funding.')),
+      positioning: (f.source_fields || []).some(x => x.startsWith('positioning.')) }));
   }
 
   function signed(x) { return !Number.isFinite(x) ? '—' : `${x >= 0 ? '+' : '−'}${Math.abs(x).toFixed(2)}`; }
@@ -106,7 +107,8 @@
   function splitStats(stats) {
     const sp = stats && stats.split;
     if (!sp || !sp.n) return '';
-    const fund = sp.hermes_runs ? ` · funding cited ${sp.hermes_runs_citing_funding}/${sp.hermes_runs}` : '';
+    const fund = sp.hermes_runs ? ` · funding cited ${sp.hermes_runs_citing_funding}/${sp.hermes_runs}` +
+      (Number.isFinite(sp.hermes_runs_citing_positioning) ? ` · positioning cited ${sp.hermes_runs_citing_positioning}/${sp.hermes_runs}` : '') : '';
     return ` · p_long ${sp.p_long_min}–${sp.p_long_max} over ${sp.n} (${sp.distinct_long_pct} distinct)${fund}`;
   }
   function statsLine(stats) {
@@ -131,13 +133,28 @@
       color: TYPE_COLORS[level.type] || '#9aa7bd', note: 'hermes' };
   }
 
+  // Chart interval → positioning period (mirrors analyst_positioning.PERIOD_FOR_INTERVAL).
+  const POSITIONING_PERIOD = { 1: '5m', 3: '5m', 5: '5m', 15: '15m', 30: '30m', 60: '1h', 120: '1h', 180: '1h',
+    240: '4h', 480: '4h', 720: '4h', D: '1d', '2D': '1d', '3D': '1d', W: '1d', M: '1d' };
+  const POSITIONING_SYMBOL = { binance: /^[A-Z0-9]{2,30}$/, bybit: /^[A-Z0-9]{2,30}$/, hyperliquid: /^[A-Za-z0-9]{1,20}$/ };
+  const POSITIONING_REFRESH_MS = 60000; // server caches ratios 60 s / OI 30 s
+  /** Positioning panel target for the active pane, or { error } (seconds chart, HIP-3 symbol, …). */
+  function positioningTarget(active) {
+    if (!active || !EXCHANGES.includes(active.exchange) || typeof active.symbol !== 'string') return { error: 'No active chart' };
+    const period = POSITIONING_PERIOD[active.interval];
+    if (!period) return { error: `No positioning period for interval ${active.interval}` };
+    if (!POSITIONING_SYMBOL[active.exchange].test(active.symbol)) return { error: `Positioning has no data for ${active.symbol}` };
+    const coin = active.exchange === 'hyperliquid' ? active.symbol : active.symbol.replace(/^1000/, '').replace(/(USDT|USDC)$/, '');
+    return { exchange: active.exchange, symbol: active.symbol, period, coin, key: `${active.exchange}:${active.symbol}:${period}` };
+  }
+
   function statusText(result) {
     if (!result) return '';
     return { ok: 'Hermes analysis', hermes_unavailable: 'Hermes unavailable — baseline shown',
       invalid_output: 'Hermes output failed validation — baseline shown' }[result.status] || result.status;
   }
 
-  const model = { AUTO_MIN_MS, TYPE_COLORS, TYPE_LABELS, requestFor, keyOf, gauge, factorChips, splitLine, disagreementText, levelRows, freshness, statsLine,
+  const model = { AUTO_MIN_MS, TYPE_COLORS, TYPE_LABELS, POSITIONING_PERIOD, POSITIONING_REFRESH_MS, positioningTarget, requestFor, keyOf, gauge, factorChips, splitLine, disagreementText, levelRows, freshness, statsLine,
     autoDue, toStoreLevel, statusText, fmtPrice, decimals, ago };
 
   // ── DOM controller ─────────────────────────────────────────────────────────
@@ -161,6 +178,8 @@
       <p class="analyst-status" data-role="status" role="status">Analyze the blue-bordered chart from its real data.</p>
       <div data-role="body"></div>
       <div class="analyst-funding" data-role="funding"></div>
+      <details class="analyst-section analyst-positioning" data-role="positioning"><summary>Positioning <small data-role="posTarget"></small></summary>
+        <p class="analyst-empty">Top traders, crowd, taker flow, OI, liquidations (lower bound), HL whales · refresh 60 s while open</p><div data-role="posBody"></div></details>
       <p class="analyst-stats" data-role="stats"></p>
       <p class="analyst-disclaimer">Not financial advice. Research only — no orders are placed.</p>`;
     const $ = role => el.querySelector(`[data-role="${role}"]`);
@@ -200,7 +219,7 @@
           <p class="analyst-caption">${esc(g.caption)}${a.horizon ? ` · horizon ${esc(a.horizon)}` : ''}</p>
           <p class="analyst-split" title="${esc((a.split && a.split.method) || '')}">${esc(splitLine(r))}</p>
           ${disagreementText(r) ? `<p class="analyst-disagree" role="alert">⚠ ${esc(disagreementText(r))}</p>` : ''}</div>
-        <div class="analyst-factors" aria-label="Scored factors">${chips.length ? chips.map(c => `<span class="analyst-chip ${c.cls}${c.funding ? ' is-funding' : ''}" title="${esc(c.direction)} · strength ${c.strength}\nsource: ${esc(c.sources.join(', '))}"><b>${c.sign}${c.strength}</b> ${esc(c.label)}</span>`).join('') : '<p class="analyst-empty">No scored factors (baseline only)</p>'}</div>
+        <div class="analyst-factors" aria-label="Scored factors">${chips.length ? chips.map(c => `<span class="analyst-chip ${c.cls}${c.funding ? ' is-funding' : ''}${c.positioning ? ' is-positioning' : ''}" title="${esc(c.direction)} · strength ${c.strength}\nsource: ${esc(c.sources.join(', '))}"><b>${c.sign}${c.strength}</b> ${esc(c.label)}</span>`).join('') : '<p class="analyst-empty">No scored factors (baseline only)</p>'}</div>
         ${a.summary_ru ? `<p class="analyst-summary" lang="ru">${esc(a.summary_ru)}</p>` : ''}
         ${r.warnings && r.warnings.length ? `<details class="analyst-warnings"><summary>⚠ ${r.warnings.length} validation note(s)</summary>${list(r.warnings, w => `<li>${esc(w)}</li>`)}</details>` : ''}
         <h3>Levels <small>click to centre · ＋ to save</small><button type="button" data-role="fit" title="Restore normal price autoscale">Fit</button></h3><ul class="analyst-levels">${rows || '<li class="analyst-empty">No levels</li>'}</ul>
@@ -236,7 +255,32 @@
       }
     }
 
+    // Positioning section: static/positioning-panel.js mounted only while the <details> is open;
+    // it follows the active pane and polls every 60 s only while open and the page is visible.
+    let pos = null, posKey = '';
+    function syncPositioning() {
+      const det = $('positioning'), box = $('posBody'), api = deps.positioning || root.PositioningPanel;
+      if (!det || !box) return;
+      if (!det.open) { if (pos) pos.destroy(); pos = null; posKey = ''; return; }
+      const t = positioningTarget(deps.getActive());
+      $('posTarget').textContent = t.error ? '' : `${t.exchange} · ${t.symbol} · ${t.period}`;
+      if (!api || t.error) {
+        if (pos) pos.destroy(); pos = null; posKey = '';
+        box.innerHTML = `<p class="analyst-empty">${esc(t.error || 'positioning-panel.js not loaded')}</p>`;
+        return;
+      }
+      if (pos && posKey === t.key) return;
+      posKey = t.key;
+      const target = { exchange: t.exchange, symbol: t.symbol, period: t.period, coin: t.coin };
+      if (pos) { pos.update(target); return; }
+      box.innerHTML = '';
+      pos = api.mount(box, { ...target, owner: 'analyst-card', intervalMs: POSITIONING_REFRESH_MS, fetch: deps.fetch,
+        visible: () => !!det.open && (!deps.visible || deps.visible()) });
+    }
+    if ($('positioning') && $('positioning').addEventListener) $('positioning').addEventListener('toggle', syncPositioning);
+
     function activeChanged() {
+      syncPositioning();
       const active = deps.getActive(), key = keyOf(active);
       if (key === st.key && active) {
         $('target').textContent = `${active.exchange} · ${active.symbol} · ${active.interval}`;
@@ -268,7 +312,8 @@
       if (!api || !box) return;
       box.innerHTML = api.sectionHtml(data, at ?? now());
     }
-    return { activeChanged, run, redraw: drawLines, setFunding, destroy() { clearInterval(timer); clearLines(); }, _state: st };
+    return { activeChanged, run, redraw: drawLines, setFunding, syncPositioning, positioning: () => pos,
+      destroy() { clearInterval(timer); clearLines(); if (pos) pos.destroy(); pos = null; }, _state: st };
   }
 
   return Object.assign({ mount, esc }, model);
