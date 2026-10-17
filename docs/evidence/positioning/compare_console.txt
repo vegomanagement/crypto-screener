@@ -1,0 +1,5 @@
+20261017T210909: 48 fields, 47 exact match, 0 mismatch, 1 different sample time
+  {'market': 'binance ETHUSDT', 'field': 'OI now', 'api': '2277946.85', 'raw': '2277946.715', 'api_ts': 1792260542458, 'raw_ts': 1792260537349, 'match': None, 'note': 'different sample time (cache/new datapoint)'}
+20261017T211019: 48 fields, 46 exact match, 0 mismatch, 2 different sample time
+  {'market': 'bybit BTCUSDT', 'field': 'basis mark-index', 'api': '-35.26', 'raw': '-35.23', 'api_ts': 1792260617617, 'raw_ts': 1792260617391, 'match': None, 'note': 'different sample time (cache/new datapoint)'}
+  {'market': 'bybit ETHUSDT', 'field': 'basis mark-index', 'api': '-0.82', 'raw': '-1.09', 'api_ts': 1792260618131, 'raw_ts': 1792260617920, 'match': None, 'note': 'different sample time (cache/new datapoint)'}
