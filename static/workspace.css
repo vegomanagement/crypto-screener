@@ -1231,6 +1231,14 @@ input[type="checkbox"] {
 .analyst-warnings summary { color: #f5a623; }
 .analyst-section .inval { color: #ef6670; }
 .analyst-empty { color: var(--muted); margin: 2px 0; }
+.analyst-split { margin: 2px 0; color: var(--muted); font-size: 10px; font-variant-numeric: tabular-nums; }
+.analyst-disagree { margin: 4px 0; padding: 3px 5px; border: 1px solid #f5a623; border-radius: 3px; color: #f5a623; }
+.analyst-factors { display: flex; flex-wrap: wrap; gap: 3px; margin: 6px 0; }
+.analyst-chip { display: inline-flex; gap: 3px; align-items: baseline; padding: 1px 5px; border-radius: 9px; border: 1px solid; font-size: 10px; line-height: 1.4; cursor: help; max-width: 100%; }
+.analyst-chip b { font-variant-numeric: tabular-nums; }
+.analyst-chip.is-long { color: var(--bull); border-color: var(--bull); background: rgba(0, 192, 135, .08); }
+.analyst-chip.is-short { color: #ef6670; border-color: #ef6670; background: rgba(239, 102, 112, .08); }
+.analyst-chip.is-funding { border-style: dashed; }
 
 /* Funding chip (pane header) and analyst Funding section (static/funding.js). */
 .pane-funding { font-size: 10px; font-variant-numeric: tabular-nums; padding: 1px 5px; border-radius: 3px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; cursor: help; }

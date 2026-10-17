@@ -24,16 +24,45 @@
   }
   function keyOf(active) { return active ? `${active.exchange}:${active.symbol}:${active.interval}` : ''; }
 
-  /** Gauge model; percentages are clamped integers summing to 100. */
+  /** Gauge model. The split is computed server-side from the scored factors + baseline. */
   function gauge(result, stats) {
     const a = result && result.analysis;
     if (!a) return null;
     const long = Math.max(0, Math.min(100, Math.round(Number(a.long_pct) || 0)));
     const calibrated = !!(stats && stats.overall && stats.overall.n >= 20);
+    const n = (a.factor_scores || []).length;
     return { long, short: 100 - long, bias: a.bias, confidence: a.confidence,
       source: result.source, calibrated,
-      caption: result.source === 'baseline' ? 'Deterministic confluence baseline (Hermes did not answer)'
-        : calibrated ? 'Agent estimate · see hit rate below' : 'Agent estimate, not a calibrated probability' };
+      caption: result.source === 'baseline' ? 'Deterministic confluence baseline only (Hermes did not answer)'
+        : `Computed from ${n} scored factor${n === 1 ? '' : 's'} + baseline` +
+          (calibrated ? ' · see hit rate below' : ' · not a calibrated probability') };
+  }
+
+  /** One chip per validated factor: green long / red short, strength 1-3, cited fields. */
+  function factorChips(result) {
+    const factors = (result && result.analysis && result.analysis.factor_scores) || [];
+    return factors.map(f => ({ label: f.factor, direction: f.direction, strength: f.strength,
+      cls: f.direction === 'long' ? 'is-long' : 'is-short', sign: f.direction === 'long' ? '+' : '−',
+      sources: f.source_fields || [], funding: (f.source_fields || []).some(x => x.startsWith('funding.')) }));
+  }
+
+  function signed(x) { return !Number.isFinite(x) ? '—' : `${x >= 0 ? '+' : '−'}${Math.abs(x).toFixed(2)}`; }
+  /** "agent +0.33 (L 7 · S 3) ×0.65 · baseline −0.10 ×0.35 → net +0.18 → p_long 63.1" */
+  function splitLine(result) {
+    const sp = result && result.analysis && result.analysis.split;
+    if (!sp) return '';
+    const parts = [];
+    if (sp.agent_net !== null && sp.agent_net !== undefined) parts.push(`factors ${signed(sp.agent_net)} (L ${sp.agent_long_points} · S ${sp.agent_short_points}) ×${sp.weights.agent}`);
+    if (sp.baseline_net !== null && sp.baseline_net !== undefined) parts.push(`baseline ${signed(sp.baseline_net)} ×${sp.weights.baseline}`);
+    if (!parts.length) parts.push('no evidence');
+    return `${parts.join(' · ')} → net ${signed(sp.net)} → p_long ${Number(sp.p_long).toFixed(1)} (k ${sp.k}, neutral ±${sp.neutral_band})`;
+  }
+
+  /** Warning when the agent's own bias disagrees with the computed split, else ''. */
+  function disagreementText(result) {
+    const d = result && result.analysis && result.analysis.disagreement;
+    if (!d) return '';
+    return `${d.severity === 'opposite' ? 'Disagreement' : 'Partial disagreement'}: agent says ${d.agent_bias}, scored evidence computes ${d.computed_bias}`;
   }
 
   function decimals(price) {
@@ -74,11 +103,17 @@
     return parts.join(' · ');
   }
 
+  function splitStats(stats) {
+    const sp = stats && stats.split;
+    if (!sp || !sp.n) return '';
+    const fund = sp.hermes_runs ? ` · funding cited ${sp.hermes_runs_citing_funding}/${sp.hermes_runs}` : '';
+    return ` · p_long ${sp.p_long_min}–${sp.p_long_max} over ${sp.n} (${sp.distinct_long_pct} distinct)${fund}`;
+  }
   function statsLine(stats) {
     if (!stats || !stats.overall) return 'Calibration: no data yet';
     const o = stats.overall;
-    if (!o.n) return `Calibration: ${stats.total || 0} logged, ${stats.pending || 0} pending — no outcomes scored yet`;
-    return `Calibration: hit rate ${(o.hit_rate * 100).toFixed(0)}% over n=${o.n} (win ${o.win} · loss ${o.loss} · timeout ${o.timeout} · ambiguous ${o.ambiguous})${o.n < 20 ? ' · small sample' : ''}`;
+    if (!o.n) return `Calibration: ${stats.total || 0} logged, ${stats.pending || 0} pending — no outcomes scored yet${splitStats(stats)}`;
+    return `Calibration: hit rate ${(o.hit_rate * 100).toFixed(0)}% over n=${o.n} (win ${o.win} · loss ${o.loss} · timeout ${o.timeout} · ambiguous ${o.ambiguous})${o.n < 20 ? ' · small sample' : ''}${splitStats(stats)}`;
   }
 
   /** Auto refresh is allowed only when enabled, visible and ≥ 2 min since the last run. */
@@ -102,7 +137,7 @@
       invalid_output: 'Hermes output failed validation — baseline shown' }[result.status] || result.status;
   }
 
-  const model = { AUTO_MIN_MS, TYPE_COLORS, TYPE_LABELS, requestFor, keyOf, gauge, levelRows, freshness, statsLine,
+  const model = { AUTO_MIN_MS, TYPE_COLORS, TYPE_LABELS, requestFor, keyOf, gauge, factorChips, splitLine, disagreementText, levelRows, freshness, statsLine,
     autoDue, toStoreLevel, statusText, fmtPrice, decimals, ago };
 
   // ── DOM controller ─────────────────────────────────────────────────────────
@@ -151,7 +186,7 @@
       $('stats').textContent = statsLine(st.stats);
       const r = st.result, g = gauge(r, st.stats);
       if (!r || !g) { $('body').innerHTML = ''; return; }
-      const a = r.analysis, precision = active && keyOf(active) === st.key ? active.precision : undefined;
+      const a = r.analysis, chips = factorChips(r), precision = active && keyOf(active) === st.key ? active.precision : undefined;
       const rows = levelRows(r).map(row => `<li class="analyst-level${row.unanchored ? ' is-unanchored' : ''}">
           <button type="button" class="analyst-level-go" data-price="${row.price}" title="${esc(row.reason)}\nsource: ${esc(row.sources.join(', '))}">
             <i style="background:${row.color}"></i><span>${esc(row.label)}</span><b>${esc(fmtPrice(row.price, precision))}</b>
@@ -162,13 +197,15 @@
         <div class="analyst-gauge" role="img" aria-label="Long ${g.long}%, short ${g.short}%">
           <div class="analyst-bar"><span class="long" style="width:${g.long}%"></span><span class="short" style="width:${g.short}%"></span></div>
           <div class="analyst-pcts"><span class="long">LONG ${g.long}%</span><span class="analyst-bias bias-${esc(g.bias)}">${esc(g.bias)} · ${esc(g.confidence)}</span><span class="short">${g.short}% SHORT</span></div>
-          <p class="analyst-caption">${esc(g.caption)}${a.horizon ? ` · horizon ${esc(a.horizon)}` : ''}</p></div>
+          <p class="analyst-caption">${esc(g.caption)}${a.horizon ? ` · horizon ${esc(a.horizon)}` : ''}</p>
+          <p class="analyst-split" title="${esc((a.split && a.split.method) || '')}">${esc(splitLine(r))}</p>
+          ${disagreementText(r) ? `<p class="analyst-disagree" role="alert">⚠ ${esc(disagreementText(r))}</p>` : ''}</div>
+        <div class="analyst-factors" aria-label="Scored factors">${chips.length ? chips.map(c => `<span class="analyst-chip ${c.cls}${c.funding ? ' is-funding' : ''}" title="${esc(c.direction)} · strength ${c.strength}\nsource: ${esc(c.sources.join(', '))}"><b>${c.sign}${c.strength}</b> ${esc(c.label)}</span>`).join('') : '<p class="analyst-empty">No scored factors (baseline only)</p>'}</div>
         ${a.summary_ru ? `<p class="analyst-summary" lang="ru">${esc(a.summary_ru)}</p>` : ''}
         ${r.warnings && r.warnings.length ? `<details class="analyst-warnings"><summary>⚠ ${r.warnings.length} validation note(s)</summary>${list(r.warnings, w => `<li>${esc(w)}</li>`)}</details>` : ''}
         <h3>Levels <small>click to centre · ＋ to save</small><button type="button" data-role="fit" title="Restore normal price autoscale">Fit</button></h3><ul class="analyst-levels">${rows || '<li class="analyst-empty">No levels</li>'}</ul>
-        <details class="analyst-section"><summary>Scenarios · ${a.scenarios.length}</summary>${list(a.scenarios, s => `<li><b>${esc(s.name)}</b>: ${esc(s.trigger)}${s.target ? ` → ${esc(s.target)}` : ''}${s.invalidation ? ` <span class="inval">✕ ${esc(s.invalidation)}</span>` : ''}</li>`)}</details>
-        <details class="analyst-section"><summary>Key factors · ${a.key_factors.length}</summary>${list(a.key_factors, f => `<li title="${esc(f.source_fields.join(', '))}">${esc(f.text)}</li>`)}</details>
-        <details class="analyst-section"><summary>Risks · ${a.risks.length}</summary>${list(a.risks, x => `<li>${esc(x)}</li>`)}</details>
+        <details class="analyst-section"><summary>Scenarios · ${(a.scenarios || []).length}</summary>${list(a.scenarios || [], s => `<li><b>${esc(s.name)}</b>: ${esc(s.trigger)}${s.target ? ` → ${esc(s.target)}` : ''}${s.invalidation ? ` <span class="inval">✕ ${esc(s.invalidation)}</span>` : ''}</li>`)}</details>
+        <details class="analyst-section"><summary>Risks · ${(a.risks || []).length}</summary>${list(a.risks || [], x => `<li>${esc(x)}</li>`)}</details>
         <p class="analyst-fresh">${esc(freshness(r, now()))}</p>`;
     }
 
