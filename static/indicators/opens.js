@@ -218,7 +218,14 @@
       line(x1, x2, y, level.color, level.kind === 'prev' ? s.prevWidth : 1, level.dash);
       if (s.labels && level.current && Number.isFinite(y) && Number.isFinite(x2)) {
         context.save(); context.fillStyle = level.color; context.font = '10px SFMono-Regular, Consolas, monospace'; context.textBaseline = 'middle';
-        context.fillText(s.labelPrice ? `${level.name} ${view.format(level.price)}` : level.name, x2 + 3, y);
+        const label = s.labelPrice ? `${level.name} ${view.format(level.price)}` : level.name;
+        const width = context.measureText ? context.measureText(label).width : label.length * 6;
+        let labelX = x2 + 3, labelY = y;
+        // The script's offset assumes empty space right of the last bar; when the
+        // label would leave the plot, pin it inside the edge (one label width per
+        // overlapping level) just above its line instead of losing it.
+        if (Number.isFinite(view.plotWidth) && labelX + width > view.plotWidth) { labelX = view.plotWidth - width - 2 - level.padding * (width + 6); labelY = y - 7; }
+        context.fillText(label, labelX, labelY);
         context.restore();
       }
     });

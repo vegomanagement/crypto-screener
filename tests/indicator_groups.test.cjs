@@ -159,6 +159,10 @@ test('labels of overlapping current opens are padded right like the script', () 
   const view = { x: t => (t - chart.candles[0].time) / 3600 * 10, lastX: 495, barSpacing: 10, y: p => 1000 - p + 100, format: p => String(p) };
   O.draw(ctx, view, m, O.settingsDefaults());
   assert.deepEqual(calls.filter(c => c[0] === 't').map(c => [c[1], c[2]]), [['D', 698], ['W', 738], ['M', 778], ['PDH', 698], ['PDL', 698]]);
+  // Labels that would leave the plot are pinned inside its right edge, one label width per overlap.
+  calls.length = 0;
+  O.draw({ ...ctx, measureText: () => ({ width: 10 }) }, { ...view, plotWidth: 720 }, m, O.settingsDefaults());
+  assert.deepEqual(calls.filter(c => c[0] === 't').map(c => [c[1], c[2]]), [['D', 698], ['W', 692], ['M', 676], ['PDH', 698], ['PDL', 698]]);
 });
 
 test('HTF loader fetches each timeframe once per TTL and appends the forming bar', async () => {
