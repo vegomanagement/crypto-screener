@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>DOM · Scalping view · Crypto Screener</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/static/scalp.css">
+  <script defer src="/static/market-stream.js"></script>
+  <script defer src="/static/footprint.js"></script>
+  <script defer src="/static/orderbook.js"></script>
+  <script defer src="/static/scalp-render.js"></script>
+  <script defer src="/static/scalp-settings.js"></script>
+  <script defer src="/static/scalp-column.js"></script>
+  <script defer src="/static/scalp-dom.js"></script>
+  <script defer src="/static/scalp.js"></script>
+</head>
+<body>
+<div id="scalp-root" class="scalp">
+  <header class="scalp-top">
+    <a class="wordmark" href="/ui" title="Back to the research workspace"><span class="brand-mark" aria-hidden="true">◫</span><span>SCREENER<span class="brand-sub"> / DOM</span></span></a>
+    <span class="view-only" title="Public market data only. No orders, API keys or accounts."><span class="dot" aria-hidden="true"></span>VIEW ONLY · NO ORDERS</span>
+    <label class="cols-control">Columns
+      <select id="scalp-columns" aria-label="Number of DOM columns">
+        <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
+      </select>
+    </label>
+    <button id="scalp-help-toggle" type="button" aria-expanded="false" aria-controls="scalp-help" title="View hotkeys">⌨ Hotkeys</button>
+    <a class="top-link" href="/ui">Charts ↗</a>
+  </header>
+  <div id="scalp-help" class="scalp-help" hidden>
+    <strong>View hotkeys</strong> (apply to the highlighted column):
+    <kbd>C</kbd> center &amp; resume autocenter · <kbd>+</kbd>/<kbd>−</kbd> row height ·
+    <kbd>1</kbd>–<kbd>5</kbd> price scale · <kbd>P</kbd> ticks / % scale · <kbd>U</kbd> $ / coin volumes ·
+    <kbd>Esc</kbd> clear ruler · wheel scrolls · <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+wheel zooms · click a price sets the % ruler.
+  </div>
+  <main id="scalp-grid" class="scalp-grid" data-columns="1" aria-label="Order book columns"></main>
+  <footer class="scalp-footer"><span id="scalp-status" role="status">Public venue data · book rows outside the venue's depth window are greyed (unknown, never filled in) · density age counts only since this page saw the level</span><span class="footer-utc">UTC</span></footer>
+</div>
+<noscript><p class="fatal">JavaScript is required for the live order book. No market data is generated locally.</p></noscript>
+</body>
+</html>

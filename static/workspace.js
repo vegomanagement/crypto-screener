@@ -279,6 +279,13 @@
     return fallback;
   }
   const state = readState();
+  // Deep link from the /scalp DOM ("chart ↗"): ?exchange=…&symbol=… retargets the active pane only.
+  try {
+    const deep = new URLSearchParams(location.search), deepExchange = deep.get('exchange'), deepSymbol = deep.get('symbol');
+    if (deepExchange && deepSymbol && Object.hasOwn(EXCHANGES, deepExchange) && validSymbol(deepSymbol, deepExchange)) {
+      state.panes[state.active] = { ...state.panes[state.active], symbol: deepSymbol, exchange: deepExchange };
+    }
+  } catch (_) { /* malformed deep links leave the saved layout untouched */ }
   function saveState() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
     catch (_) { footer.textContent = 'Browser storage unavailable · settings last for this session'; }
