@@ -23,7 +23,7 @@ def test_workspace_interval_menu_is_explicit_about_unsupported_seconds():
     intervals = response.get_json()['intervals']
     available = {i['value'] for i in intervals if i['available']}
     assert {'1', '3', '10', '12', '45', '240', '480', '720', 'D', '2D', '3D', 'W', 'M'} <= available
-    assert any(not i['available'] and i['label'] == '30s' for i in intervals)
+    assert {i['value'] for i in intervals if i.get('source') == 'trades'} == {'1s', '5s', '15s', '30s'}
     labels = {i['value']: i['label'] for i in intervals}
     assert labels['240'] == '4h'
     assert labels['720'] == '12h'

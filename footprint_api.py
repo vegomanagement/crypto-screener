@@ -43,6 +43,9 @@ def register_footprint_routes(app, *, service_factory=None):
                     state['service'] = FootprintService()
             return state['service']
 
+    # Seconds-candle backfill shares this service, so both obey one aggTrades rate window.
+    app.extensions['footprint'] = {'get_service': get_service}
+
     def key_lock(key):
         with lock:
             if len(state['locks']) > 512:
