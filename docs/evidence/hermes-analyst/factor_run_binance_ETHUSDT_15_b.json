@@ -1,0 +1,320 @@
+{
+ "age_s": 0.0,
+ "analysis": {
+  "agent_bias": "short",
+  "bias": "short",
+  "confidence": "medium",
+  "disagreement": null,
+  "factor_scores": [
+   {
+    "direction": "short",
+    "factor": "EMA 7<14<28 bearish stack, close under EMA200",
+    "source_fields": [
+     "indicators.ema_stack_7_14_28",
+     "indicators.ema200",
+     "indicators.close"
+    ],
+    "strength": 3
+   },
+   {
+    "direction": "short",
+    "factor": "Bear CHOCH at 2432.01, structure trend bear",
+    "source_fields": [
+     "structure.trend",
+     "structure.recent_events.4.level"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "short",
+    "factor": "Lower highs/lows last 10 bars, steady markdown",
+    "source_fields": [
+     "candles.recent.14.4",
+     "candles.recent.23.4"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "short",
+    "factor": "Binance EMA bias bearish on 1H/4H/D",
+    "source_fields": [
+     "derivatives.ema_bias.60",
+     "derivatives.ema_bias.240",
+     "derivatives.ema_bias.D"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "short",
+    "factor": "1h CVD down confirms selling into lower price",
+    "source_fields": [
+     "flow.cvd_1h.trend",
+     "flow.cvd_1h.price_trend"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "short",
+    "factor": "Unfilled bear FVG 2418.57-2421 caps bounces",
+    "source_fields": [
+     "fvg.nearest.0.top",
+     "fvg.nearest.0.bottom"
+    ],
+    "strength": 1
+   },
+   {
+    "direction": "short",
+    "factor": "Positive, rising funding: longs still pay",
+    "source_fields": [
+     "funding.predicted.rate",
+     "funding.last_settled.rate",
+     "funding.trend_last_settlements.direction",
+     "funding.annualized_predicted"
+    ],
+    "strength": 1
+   },
+   {
+    "direction": "short",
+    "factor": "Sellside EQL cluster 2391.5 pulls price lower",
+    "source_fields": [
+     "liquidity.pools.2.price",
+     "liquidity.pools.2.strength"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "long",
+    "factor": "RSI14 28.2 oversold, bounce risk",
+    "source_fields": [
+     "indicators.rsi14"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "long",
+    "factor": "HTF bias long, D/4H in discount",
+    "source_fields": [
+     "htf_bias.direction",
+     "htf_bias.zones.D",
+     "htf_bias.zones.240"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "long",
+    "factor": "Bull OB 2397-2407.88 and VAL 2406.75 support",
+    "source_fields": [
+     "order_blocks.unmitigated.2.low",
+     "order_blocks.unmitigated.2.high",
+     "liquidity.pools.0.price"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "long",
+    "factor": "Bid-heavy book, last bar delta positive at POC 2406.4",
+    "source_fields": [
+     "orderbook.imbalance",
+     "footprint.bars.4.delta",
+     "footprint.bars.4.poc"
+    ],
+    "strength": 1
+   }
+  ],
+  "horizon": "4-12 bars of 15m",
+  "levels": [
+   {
+    "price": 2421.0,
+    "reason": "Bear FVG top",
+    "source_fields": [
+     "fvg.nearest.0.top"
+    ],
+    "type": "resistance"
+   },
+   {
+    "price": 2428.22,
+    "reason": "Last swing high",
+    "source_fields": [
+     "structure.last_swing_high.price"
+    ],
+    "type": "resistance"
+   },
+   {
+    "price": 2406.75,
+    "reason": "VAL sellside pool",
+    "source_fields": [
+     "liquidity.pools.0.price"
+    ],
+    "type": "support"
+   },
+   {
+    "price": 2397.11,
+    "reason": "Bull OB low",
+    "source_fields": [
+     "order_blocks.unmitigated.2.low"
+    ],
+    "type": "support"
+   },
+   {
+    "price": 2412.0,
+    "reason": "Retrace into EMA14 zone",
+    "source_fields": [
+     "indicators.ema14"
+    ],
+    "type": "entry"
+   },
+   {
+    "price": 2422.0,
+    "reason": "Above FVG/EMA200",
+    "source_fields": [
+     "indicators.ema200",
+     "fvg.nearest.0.top"
+    ],
+    "type": "stop"
+   },
+   {
+    "price": 2391.51,
+    "reason": "EQL sellside magnet",
+    "source_fields": [
+     "liquidity.pools.2.price"
+    ],
+    "type": "target"
+   },
+   {
+    "price": 2400.0,
+    "reason": "Round-number sellside pool",
+    "source_fields": [
+     "liquidity.pools.1.price"
+    ],
+    "type": "liquidity"
+   }
+  ],
+  "long_pct": 38,
+  "risks": [
+   "RSI 28 oversold: squeeze into FVG likely",
+   "HTF discount bias opposes the short",
+   "Outside killzone, thin liquidity",
+   "One orderbook snapshot, bid-heavy"
+  ],
+  "scenarios": [
+   {
+    "invalidation": "Close above 2421",
+    "name": "Continuation down",
+    "target": "2397.1 then 2391.5",
+    "trigger": "15m close below 2402"
+   },
+   {
+    "invalidation": "15m close above 2428.2",
+    "name": "FVG retest short",
+    "target": "2400 area",
+    "trigger": "Tap 2418.6-2421 and reject"
+   },
+   {
+    "invalidation": "Loss of 2402",
+    "name": "Oversold reversal",
+    "target": "2421-2428",
+    "trigger": "Reclaim 2412 with positive delta"
+   }
+  ],
+  "short_pct": 62,
+  "split": {
+   "agent_long_points": 7,
+   "agent_net": -0.3636,
+   "agent_short_points": 15,
+   "baseline_net": 0.2105,
+   "bias": "short",
+   "k": 3.0,
+   "long_pct": 38,
+   "method": "p_long = logistic(k * (w_a*agent_net + w_b*baseline_net)/(w_a+w_b))",
+   "net": -0.1627,
+   "neutral_band": 5.0,
+   "p_long": 38.036,
+   "short_pct": 62,
+   "weights": {
+    "agent": 0.65,
+    "baseline": 0.35
+   }
+  },
+  "summary_ru": "15m ETHUSDT в нисходящем движении: EMA-стек медвежий, цена под EMA200, bear CHOCH 2432, CVD вниз, фандинг положительный и растёт — лонги платят. Цель — сельсайд ликвидность 2400/2391.5. Против: RSI 28, HTF-дискаунт, бычий OB 2397-2407.9 и перевес бидов. Шорт предпочтителен от отката в 2418.6-2421, стоп выше 2422."
+ },
+ "attempts": 1,
+ "baseline": {
+  "long_confidence": 76,
+  "long_factors": [
+   "CVD ⚪ нейтрально",
+   "VP ✅ у VAL $2,407",
+   "Session 🗽 NY Session [4/5]",
+   "Book ❌ стакан против сигнала",
+   "F&G 🤑 Greed [55]",
+   "TZ 1H ⚪ Нейтральная [-1.4% от mean]",
+   "TZ 4H ⚪ Нейтральная [-5.9% от mean]",
+   "RSI ⚪ [34]"
+  ],
+  "long_pct": 55,
+  "long_score": 84,
+  "long_verdict": "WAIT",
+  "short_confidence": 68,
+  "short_factors": [
+   "CVD ✅ подтверждает направление",
+   "VP ❌ у VAL — против сигнала",
+   "Session 🗽 NY Session [4/5]",
+   "Book ✅ ask>bid",
+   "F&G 🤑 Greed [55]",
+   "TZ 1H ⚪ Нейтральная [-1.4% от mean]",
+   "TZ 4H ⚪ Нейтральная [-5.9% от mean]",
+   "RSI ⚪ [34]"
+  ],
+  "short_pct": 45,
+  "short_score": 68,
+  "short_verdict": "WAIT",
+  "source": "screener.compute_confluence_score + decision.make_decision over screener.fetch_market (Bybit-first USDT aggregate, not venue-pinned)",
+  "ts": 1792259129195
+ },
+ "cached": false,
+ "evaluation": {
+  "horizon_bars": 12,
+  "rule": "±1 ATR from the analysis price, bias side first"
+ },
+ "exchange": "binance",
+ "freshness": {
+  "last_close_ts": 1792259100000,
+  "missing": {},
+  "sections": {
+   "baseline": 1792259129195,
+   "candles": 1792259100000,
+   "derivatives": 1792259129196,
+   "flow": 1792259129195,
+   "footprint": 1792259129198,
+   "funding": 1792259129198,
+   "fvg": 1792259100000,
+   "htf_bias": 1792259129195,
+   "indicators": 1792259100000,
+   "liquidity": 1792259129195,
+   "order_blocks": 1792259100000,
+   "orderbook": 1792259129478,
+   "price": 1792259100000,
+   "regime": 1792259129195,
+   "session": 1792259129195,
+   "structure": 1792259100000
+  }
+ },
+ "generated_at": 1792259129195,
+ "id": 25,
+ "interval": "15",
+ "latency_ms": 25221,
+ "model": "hermes-agent",
+ "price": {
+  "source": "last closed candle close",
+  "ts": 1792259100000,
+  "value": 2405.6
+ },
+ "raw_output": [
+  "{\"bias\":\"short\",\"confidence\":\"medium\",\"horizon\":\"4-12 bars of 15m\",\"factor_scores\":[{\"factor\":\"EMA 7<14<28 bearish stack, close under EMA200\",\"direction\":\"short\",\"strength\":3,\"source_fields\":[\"indicators.ema_stack_7_14_28\",\"indicators.ema200\",\"indicators.close\"]},{\"factor\":\"Bear CHOCH at 2432.01, structure trend bear\",\"direction\":\"short\",\"strength\":2,\"source_fields\":[\"structure.trend\",\"structure.recent_events.4.level\"]},{\"factor\":\"Lower highs/lows last 10 bars, steady markdown\",\"direction\":\"short\",\"strength\":2,\"source_fields\":[\"candles.recent.14.4\",\"candles.recent.23.4\"]},{\"factor\":\"Binance EMA bias bearish on 1H/4H/D\",\"direction\":\"short\",\"strength\":2,\"source_fields\":[\"derivatives.ema_bias.60\",\"derivatives.ema_bias.240\",\"derivatives.ema_bias.D\"]},{\"factor\":\"1h CVD down confirms selling into lower price\",\"direction\":\"short\",\"strength\":2,\"source_fields\":[\"flow.cvd_1h.trend\",\"flow.cvd_1h.price_trend\"]},{\"factor\":\"Unfilled bear FVG 2418.57-2421 caps bounces\",\"direction\":\"short\",\"strength\":1,\"source_fields\":[\"fvg.nearest.0.top\",\"fvg.nearest.0.bottom\"]},{\"factor\":\"Positive, rising funding: longs still pay\",\"direction\":\"short\",\"strength\":1,\"source_fields\":[\"funding.predicted.rate\",\"funding.last_settled.rate\",\"funding.trend_last_settlements.direction\",\"funding.annualized_predicted\"]},{\"factor\":\"Sellside EQL cluster 2391.5 pulls price lower\",\"direction\":\"short\",\"strength\":2,\"source_fields\":[\"liquidity.pools.2.price\",\"liquidity.pools.2.strength\"]},{\"factor\":\"RSI14 28.2 oversold, bounce risk\",\"direction\":\"long\",\"strength\":2,\"source_fields\":[\"indicators.rsi14\"]},{\"factor\":\"HTF bias long, D/4H in discount\",\"direction\":\"long\",\"strength\":2,\"source_fields\":[\"htf_bias.direction\",\"htf_bias.zones.D\",\"htf_bias.zones.240\"]},{\"factor\":\"Bull OB 2397-2407.88 and VAL 2406.75 support\",\"direction\":\"long\",\"strength\":2,\"source_fields\":[\"order_blocks.unmitigated.2.low\",\"order_blocks.unmitigated.2.high\",\"liquidity.pools.0.price\"]},{\"factor\":\"Bid-heavy book, last bar delta positive at POC 2406.4\",\"direction\":\"long\",\"strength\":1,\"source_fields\":[\"orderbook.imbalance\",\"footprint.bars.4.delta\",\"footprint.bars.4.poc\"]}],\"levels\":[{\"type\":\"resistance\",\"price\":2421.0,\"reason\":\"Bear FVG top\",\"source_fields\":[\"fvg.nearest.0.top\"]},{\"type\":\"resistance\",\"price\":2428.22,\"reason\":\"Last swing high\",\"source_fields\":[\"structure.last_swing_high.price\"]},{\"type\":\"support\",\"price\":2406.75,\"reason\":\"VAL sellside pool\",\"source_fields\":[\"liquidity.pools.0.price\"]},{\"type\":\"support\",\"price\":2397.11,\"reason\":\"Bull OB low\",\"source_fields\":[\"order_blocks.unmitigated.2.low\"]},{\"type\":\"entry\",\"price\":2412.0,\"reason\":\"Retrace into EMA14 zone\",\"source_fields\":[\"indicators.ema14\"]},{\"type\":\"stop\",\"price\":2422.0,\"reason\":\"Above FVG/EMA200\",\"source_fields\":[\"indicators.ema200\",\"fvg.nearest.0.top\"]},{\"type\":\"target\",\"price\":2391.51,\"reason\":\"EQL sellside magnet\",\"source_fields\":[\"liquidity.pools.2.price\"]},{\"type\":\"liquidity\",\"price\":2400.0,\"reason\":\"Round-number sellside pool\",\"source_fields\":[\"liquidity.pools.1.price\"]}],\"scenarios\":[{\"name\":\"Continuation down\",\"trigger\":\"15m close below 2402\",\"target\":\"2397.1 then 2391.5\",\"invalidation\":\"Close above 2421\"},{\"name\":\"FVG retest short\",\"trigger\":\"Tap 2418.6-2421 and reject\",\"target\":\"2400 area\",\"invalidation\":\"15m close above 2428.2\"},{\"name\":\"Oversold reversal\",\"trigger\":\"Reclaim 2412 with positive delta\",\"target\":\"2421-2428\",\"invalidation\":\"Loss of 2402\"}],\"risks\":[\"RSI 28 oversold: squeeze into FVG likely\",\"HTF discount bias opposes the short\",\"Outside killzone, thin liquidity\",\"One orderbook snapshot, bid-heavy\"],\"summary_ru\":\"15m ETHUSDT в нисходящем движении: EMA-стек медвежий, цена под EMA200, bear CHOCH 2432, CVD вниз, фандинг положительный и растёт — лонги платят. Цель — сельсайд ликвидность 2400/2391.5. Против: RSI 28, HTF-дискаунт, бычий OB 2397-2407.9 и перевес бидов. Шорт предпочтителен от отката в 2418.6-2421, стоп выше 2422.\"}"
+ ],
+ "snapshot_hash": "9fde5961a3a88ffd",
+ "snapshot_ms": 14715,
+ "source": "hermes",
+ "status": "ok",
+ "symbol": "ETHUSDT",
+ "warnings": []
+}

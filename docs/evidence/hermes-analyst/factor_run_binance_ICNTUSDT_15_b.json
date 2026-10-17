@@ -1,0 +1,321 @@
+{
+ "age_s": 0.0,
+ "analysis": {
+  "agent_bias": "short",
+  "bias": "short",
+  "confidence": "low",
+  "disagreement": null,
+  "factor_scores": [
+   {
+    "direction": "long",
+    "factor": "EMA 7>14>28 stack above EMA200",
+    "source_fields": [
+     "indicators.ema_stack_7_14_28",
+     "indicators.ema200"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "long",
+    "factor": "Bull CHOCH at 0.2145 holds",
+    "source_fields": [
+     "structure.recent_events.4.kind",
+     "structure.recent_events.4.level"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "long",
+    "factor": "Unfilled bull FVG 0.1947-0.206 below",
+    "source_fields": [
+     "fvg.nearest.0.top",
+     "fvg.nearest.0.bottom"
+    ],
+    "strength": 1
+   },
+   {
+    "direction": "short",
+    "factor": "HTF 60/240/D all premium, short bias",
+    "source_fields": [
+     "htf_bias.direction",
+     "htf_bias.zones.D"
+    ],
+    "strength": 3
+   },
+   {
+    "direction": "short",
+    "factor": "CVD 1h down while price up: divergence",
+    "source_fields": [
+     "flow.cvd_1h.trend",
+     "flow.cvd_1h.divergence"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "short",
+    "factor": "Price rejected 0.2739 spike, far below high",
+    "source_fields": [
+     "structure.last_swing_high.price",
+     "candles.recent.18.2"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "short",
+    "factor": "OI falling while price up: no new longs",
+    "source_fields": [
+     "flow.bybit_oi_change_pct",
+     "derivatives.open_interest"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "short",
+    "factor": "Last bar delta -460k on 8.8M volume",
+    "source_fields": [
+     "footprint.bars.2.delta",
+     "footprint.bars.2.total"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "short",
+    "factor": "Price stalls under VAH 0.22 buyside pool",
+    "source_fields": [
+     "liquidity.pools.0.price",
+     "liquidity.pools.0.strength"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "short",
+    "factor": "Funding flips neg to ~flat, no short squeeze fuel",
+    "source_fields": [
+     "funding.last_settled.rate",
+     "funding.predicted.rate",
+     "funding.annualized_predicted"
+    ],
+    "strength": 1
+   },
+   {
+    "direction": "short",
+    "factor": "+38.7% 24h, pos_in_range 0.71 premium",
+    "source_fields": [
+     "flow.change_24h_pct",
+     "regime.pos_in_range",
+     "regime.zone"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "short",
+    "factor": "Ask wall 0.2204 caps, book balanced",
+    "source_fields": [
+     "orderbook.ask_wall",
+     "orderbook.imbalance"
+    ],
+    "strength": 1
+   }
+  ],
+  "horizon": "4-12 bars of 15m",
+  "levels": [
+   {
+    "price": 0.2204,
+    "reason": "ask wall + VAH cluster",
+    "source_fields": [
+     "orderbook.ask_wall",
+     "liquidity.pools.0.price"
+    ],
+    "type": "resistance"
+   },
+   {
+    "price": 0.2299,
+    "reason": "post-spike swing high",
+    "source_fields": [
+     "candles.recent.19.2"
+    ],
+    "type": "resistance"
+   },
+   {
+    "price": 0.2195,
+    "reason": "fade under VAH",
+    "source_fields": [
+     "orderbook.best_bid",
+     "price.value"
+    ],
+    "type": "entry"
+   },
+   {
+    "price": 0.2312,
+    "reason": "above 0.2299 reclaim, ~1 ATR",
+    "source_fields": [
+     "candles.recent.19.2",
+     "indicators.atr14"
+    ],
+    "type": "stop"
+   },
+   {
+    "price": 0.206,
+    "reason": "top of bull FVG / 1 ATR down",
+    "source_fields": [
+     "fvg.nearest.0.top",
+     "indicators.atr14"
+    ],
+    "type": "target"
+   },
+   {
+    "price": 0.2114,
+    "reason": "recent bar low",
+    "source_fields": [
+     "candles.recent.19.3"
+    ],
+    "type": "support"
+   },
+   {
+    "price": 0.1947,
+    "reason": "bull OB high / FVG base",
+    "source_fields": [
+     "order_blocks.unmitigated.1.high",
+     "fvg.nearest.0.bottom"
+    ],
+    "type": "poi"
+   },
+   {
+    "price": 0.2,
+    "reason": "POC magnet below",
+    "source_fields": [
+     "liquidity.pools.4.price",
+     "liquidity.pools.4.kind"
+    ],
+    "type": "liquidity"
+   }
+  ],
+  "long_pct": 11,
+  "risks": [
+   "Bull EMA stack and CHOCH oppose the short",
+   "Post-pump volatility: ATR stop may be too tight",
+   "CVD is estimated from candles, not trades",
+   "Liquidity map is non-venue-pinned aggregate"
+  ],
+  "scenarios": [
+   {
+    "invalidation": "15m close above 0.2299",
+    "name": "Fade premium",
+    "target": "0.206 then 0.200",
+    "trigger": "Rejection under 0.2204 with negative delta"
+   },
+   {
+    "invalidation": "Back under 0.2204",
+    "name": "Breakout continuation",
+    "target": "0.2739 retest",
+    "trigger": "Close above 0.2299 with rising OI"
+   },
+   {
+    "invalidation": "Close below 0.1892 OB low",
+    "name": "FVG retest bounce",
+    "target": "0.2204",
+    "trigger": "Tap 0.1947-0.206 and hold"
+   }
+  ],
+  "short_pct": 89,
+  "split": {
+   "agent_long_points": 5,
+   "agent_net": -0.5455,
+   "agent_short_points": 17,
+   "baseline_net": -1.0,
+   "bias": "short",
+   "k": 3.0,
+   "long_pct": 11,
+   "method": "p_long = logistic(k * (w_a*agent_net + w_b*baseline_net)/(w_a+w_b))",
+   "net": -0.7045,
+   "neutral_band": 5.0,
+   "p_long": 10.778,
+   "short_pct": 89,
+   "weights": {
+    "agent": 0.65,
+    "baseline": 0.35
+   }
+  },
+  "summary_ru": "Цена 0.2172 после импульса +38.7%, в премиум-зоне всех HTF. Структура 15m бычья (EMA 7>14>28, CHOCH 0.2145), но поток слабеет: CVD-дивергенция, OI -1.19%, дельта последнего бара -460k, упор в VAH 0.22 и ask-wall 0.2204. Приоритет — фейд под 0.2204 с целями 0.206/0.200. Пробой 0.2299 отменяет."
+ },
+ "attempts": 1,
+ "baseline": {
+  "long_confidence": 0,
+  "long_factors": [
+   "CVD ⚠️ дивергенция: цена и поток расходятся",
+   "VP ❌ у VAH — против сигнала",
+   "Session 🗽 NY Session [4/5]",
+   "F&G 🤑 Greed [55]",
+   "OI ❌ -1.19% позиции закрываются",
+   "TZ 1H ❌ 🔴 Цена перегрета [+67.7%]",
+   "TZ 4H ❌ 🚨 Цена перегрета [+81.1%]",
+   "RSI ⚪ [66]"
+  ],
+  "long_pct": 0,
+  "long_score": 0,
+  "long_verdict": "WAIT",
+  "short_confidence": 100,
+  "short_factors": [
+   "CVD ✅ подтверждает направление",
+   "VP ✅ у VAH $0",
+   "Session 🗽 NY Session [4/5]",
+   "F&G 🤑 Greed [55]",
+   "OI ✅ -1.19% позиции открываются",
+   "TZ 1H ✅ 🔴 Верхняя зона (перекупленность) [+67.7%]",
+   "TZ 4H ✅ 🚨 Экстремальная перекупленность [+81.1%]",
+   "RSI ⚪ [66]"
+  ],
+  "short_pct": 100,
+  "short_score": 100,
+  "short_verdict": "WAIT",
+  "source": "screener.compute_confluence_score + decision.make_decision over screener.fetch_market (Bybit-first USDT aggregate, not venue-pinned)",
+  "ts": 1792259335501
+ },
+ "cached": false,
+ "evaluation": {
+  "horizon_bars": 12,
+  "rule": "±1 ATR from the analysis price, bias side first"
+ },
+ "exchange": "binance",
+ "freshness": {
+  "last_close_ts": 1792259100000,
+  "missing": {},
+  "sections": {
+   "baseline": 1792259335501,
+   "candles": 1792259100000,
+   "derivatives": 1792259335506,
+   "flow": 1792259335501,
+   "footprint": 1792259335511,
+   "funding": 1792259335508,
+   "fvg": 1792259100000,
+   "htf_bias": 1792259335501,
+   "indicators": 1792259100000,
+   "liquidity": 1792259335501,
+   "order_blocks": 1792259100000,
+   "orderbook": 1792259335829,
+   "price": 1792259100000,
+   "regime": 1792259335501,
+   "session": 1792259335501,
+   "structure": 1792259100000
+  }
+ },
+ "generated_at": 1792259335501,
+ "id": 32,
+ "interval": "15",
+ "latency_ms": 22351,
+ "model": "hermes-agent",
+ "price": {
+  "source": "last closed candle close",
+  "ts": 1792259100000,
+  "value": 0.2172
+ },
+ "raw_output": [
+  "{\"bias\":\"short\",\"confidence\":\"low\",\"horizon\":\"4-12 bars of 15m\",\"factor_scores\":[{\"factor\":\"EMA 7>14>28 stack above EMA200\",\"direction\":\"long\",\"strength\":2,\"source_fields\":[\"indicators.ema_stack_7_14_28\",\"indicators.ema200\"]},{\"factor\":\"Bull CHOCH at 0.2145 holds\",\"direction\":\"long\",\"strength\":2,\"source_fields\":[\"structure.recent_events.4.kind\",\"structure.recent_events.4.level\"]},{\"factor\":\"Unfilled bull FVG 0.1947-0.206 below\",\"direction\":\"long\",\"strength\":1,\"source_fields\":[\"fvg.nearest.0.top\",\"fvg.nearest.0.bottom\"]},{\"factor\":\"HTF 60/240/D all premium, short bias\",\"direction\":\"short\",\"strength\":3,\"source_fields\":[\"htf_bias.direction\",\"htf_bias.zones.D\"]},{\"factor\":\"CVD 1h down while price up: divergence\",\"direction\":\"short\",\"strength\":2,\"source_fields\":[\"flow.cvd_1h.trend\",\"flow.cvd_1h.divergence\"]},{\"factor\":\"Price rejected 0.2739 spike, far below high\",\"direction\":\"short\",\"strength\":2,\"source_fields\":[\"structure.last_swing_high.price\",\"candles.recent.18.2\"]},{\"factor\":\"OI falling while price up: no new longs\",\"direction\":\"short\",\"strength\":2,\"source_fields\":[\"flow.bybit_oi_change_pct\",\"derivatives.open_interest\"]},{\"factor\":\"Last bar delta -460k on 8.8M volume\",\"direction\":\"short\",\"strength\":2,\"source_fields\":[\"footprint.bars.2.delta\",\"footprint.bars.2.total\"]},{\"factor\":\"Price stalls under VAH 0.22 buyside pool\",\"direction\":\"short\",\"strength\":2,\"source_fields\":[\"liquidity.pools.0.price\",\"liquidity.pools.0.strength\"]},{\"factor\":\"Funding flips neg to ~flat, no short squeeze fuel\",\"direction\":\"short\",\"strength\":1,\"source_fields\":[\"funding.last_settled.rate\",\"funding.predicted.rate\",\"funding.annualized_predicted\"]},{\"factor\":\"+38.7% 24h, pos_in_range 0.71 premium\",\"direction\":\"short\",\"strength\":2,\"source_fields\":[\"flow.change_24h_pct\",\"regime.pos_in_range\",\"regime.zone\"]},{\"factor\":\"Ask wall 0.2204 caps, book balanced\",\"direction\":\"short\",\"strength\":1,\"source_fields\":[\"orderbook.ask_wall\",\"orderbook.imbalance\"]}],\"levels\":[{\"type\":\"resistance\",\"price\":0.2204,\"reason\":\"ask wall + VAH cluster\",\"source_fields\":[\"orderbook.ask_wall\",\"liquidity.pools.0.price\"]},{\"type\":\"resistance\",\"price\":0.2299,\"reason\":\"post-spike swing high\",\"source_fields\":[\"candles.recent.19.2\"]},{\"type\":\"entry\",\"price\":0.2195,\"reason\":\"fade under VAH\",\"source_fields\":[\"orderbook.best_bid\",\"price.value\"]},{\"type\":\"stop\",\"price\":0.2312,\"reason\":\"above 0.2299 reclaim, ~1 ATR\",\"source_fields\":[\"candles.recent.19.2\",\"indicators.atr14\"]},{\"type\":\"target\",\"price\":0.206,\"reason\":\"top of bull FVG / 1 ATR down\",\"source_fields\":[\"fvg.nearest.0.top\",\"indicators.atr14\"]},{\"type\":\"support\",\"price\":0.2114,\"reason\":\"recent bar low\",\"source_fields\":[\"candles.recent.19.3\"]},{\"type\":\"poi\",\"price\":0.1947,\"reason\":\"bull OB high / FVG base\",\"source_fields\":[\"order_blocks.unmitigated.1.high\",\"fvg.nearest.0.bottom\"]},{\"type\":\"liquidity\",\"price\":0.2,\"reason\":\"POC magnet below\",\"source_fields\":[\"liquidity.pools.4.price\",\"liquidity.pools.4.kind\"]}],\"scenarios\":[{\"name\":\"Fade premium\",\"trigger\":\"Rejection under 0.2204 with negative delta\",\"target\":\"0.206 then 0.200\",\"invalidation\":\"15m close above 0.2299\"},{\"name\":\"Breakout continuation\",\"trigger\":\"Close above 0.2299 with rising OI\",\"target\":\"0.2739 retest\",\"invalidation\":\"Back under 0.2204\"},{\"name\":\"FVG retest bounce\",\"trigger\":\"Tap 0.1947-0.206 and hold\",\"target\":\"0.2204\",\"invalidation\":\"Close below 0.1892 OB low\"}],\"risks\":[\"Bull EMA stack and CHOCH oppose the short\",\"Post-pump volatility: ATR stop may be too tight\",\"CVD is estimated from candles, not trades\",\"Liquidity map is non-venue-pinned aggregate\"],\"summary_ru\":\"Цена 0.2172 после импульса +38.7%, в премиум-зоне всех HTF. Структура 15m бычья (EMA 7>14>28, CHOCH 0.2145), но поток слабеет: CVD-дивергенция, OI -1.19%, дельта последнего бара -460k, упор в VAH 0.22 и ask-wall 0.2204. Приоритет — фейд под 0.2204 с целями 0.206/0.200. Пробой 0.2299 отменяет.\"}"
+ ],
+ "snapshot_hash": "4b784f2b59bdebde",
+ "snapshot_ms": 7354,
+ "source": "hermes",
+ "status": "ok",
+ "symbol": "ICNTUSDT",
+ "warnings": []
+}

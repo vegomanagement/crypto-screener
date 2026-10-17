@@ -1,0 +1,322 @@
+{
+ "age_s": 0.0,
+ "analysis": {
+  "agent_bias": "long",
+  "bias": "neutral",
+  "confidence": "medium",
+  "disagreement": {
+   "agent_bias": "long",
+   "computed_bias": "neutral",
+   "severity": "neutral_mismatch",
+   "text": "Agent says long, but its scored evidence + baseline compute neutral (49/51)"
+  },
+  "factor_scores": [
+   {
+    "direction": "long",
+    "factor": "EMA stack 7>14>28>200 bullish",
+    "source_fields": [
+     "indicators.ema_stack_7_14_28",
+     "indicators.ema200"
+    ],
+    "strength": 3
+   },
+   {
+    "direction": "long",
+    "factor": "Bull CHOCH at 2.0778 flipped structure",
+    "source_fields": [
+     "structure.recent_events.4.level",
+     "structure.trend"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "long",
+    "factor": "Markup phase, trapped shorts, expanding",
+    "source_fields": [
+     "regime.phase",
+     "regime.positioning",
+     "regime.range_state"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "long",
+    "factor": "Price above all EMAs, impulsive close 2.3788",
+    "source_fields": [
+     "indicators.close",
+     "indicators.ema28"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "long",
+    "factor": "Volume expansion on up bars",
+    "source_fields": [
+     "candles.recent.21.5",
+     "candles.recent.22.5"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "long",
+    "factor": "CVD 1h up, no divergence vs price",
+    "source_fields": [
+     "flow.cvd_1h.trend",
+     "flow.cvd_1h.divergence"
+    ],
+    "strength": 1
+   },
+   {
+    "direction": "long",
+    "factor": "Negative last funding: shorts pay, squeeze fuel",
+    "source_fields": [
+     "funding.last_settled.rate",
+     "funding.annualized_last_settled"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "long",
+    "factor": "Buyside EQH cluster 2.685-2.76 as magnet",
+    "source_fields": [
+     "liquidity.pools.8.price",
+     "liquidity.pools.9.price"
+    ],
+    "strength": 1
+   },
+   {
+    "direction": "short",
+    "factor": "RSI 72.57 overbought, exhaustion risk",
+    "source_fields": [
+     "indicators.rsi14"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "short",
+    "factor": "HTF bias short, premium on D/240/60",
+    "source_fields": [
+     "htf_bias.direction",
+     "htf_bias.zones.D"
+    ],
+    "strength": 3
+   },
+   {
+    "direction": "short",
+    "factor": "Footprint delta negative into highs",
+    "source_fields": [
+     "footprint.bars.0.delta",
+     "footprint.bars.0.poc"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "short",
+    "factor": "+34% in 24h with flat OI change",
+    "source_fields": [
+     "flow.change_24h_pct",
+     "flow.bybit_oi_change_pct"
+    ],
+    "strength": 1
+   }
+  ],
+  "horizon": "4-12 bars of 60m",
+  "levels": [
+   {
+    "price": 2.089,
+    "reason": "Nearest bull FVG top",
+    "source_fields": [
+     "fvg.nearest.0.top"
+    ],
+    "type": "support"
+   },
+   {
+    "price": 1.909,
+    "reason": "Last swing low",
+    "source_fields": [
+     "structure.last_swing_low.price"
+    ],
+    "type": "support"
+   },
+   {
+    "price": 2.3,
+    "reason": "Pullback toward prior breakout shelf",
+    "source_fields": [
+     "candles.recent.22.4",
+     "candles.recent.21.3"
+    ],
+    "type": "entry"
+   },
+   {
+    "price": 2.0738,
+    "reason": "Below FVG bottom, invalidates CHOCH",
+    "source_fields": [
+     "fvg.nearest.0.bottom"
+    ],
+    "type": "stop"
+   },
+   {
+    "price": 2.4252,
+    "reason": "Recent session high wick",
+    "source_fields": [
+     "candles.recent.21.2"
+    ],
+    "type": "resistance"
+   },
+   {
+    "price": 2.47787,
+    "reason": "Strong sellside EQH liquidity",
+    "source_fields": [
+     "liquidity.pools.1.price"
+    ],
+    "type": "target"
+   },
+   {
+    "price": 2.685,
+    "reason": "Buyside EQH pool",
+    "source_fields": [
+     "liquidity.pools.7.price"
+    ],
+    "type": "target"
+   },
+   {
+    "price": 2.5,
+    "reason": "Round-number pool near mark",
+    "source_fields": [
+     "liquidity.pools.0.price",
+     "derivatives.mark_price"
+    ],
+    "type": "liquidity"
+   }
+  ],
+  "long_pct": 49,
+  "risks": [
+   "RSI 72 overbought; 1 ATR adverse move easy",
+   "HTF premium conflicts with 1h trend",
+   "Funding predicted flipped positive, crowding",
+   "Cross-venue funding missing for BTW"
+  ],
+  "scenarios": [
+   {
+    "invalidation": "Close back under 2.30",
+    "name": "Continuation squeeze",
+    "target": "2.47787 then 2.685",
+    "trigger": "Hourly close above 2.4252"
+   },
+   {
+    "invalidation": "Hourly close below 2.0738",
+    "name": "FVG retest long",
+    "target": "2.4252",
+    "trigger": "Tap 2.089-2.0738 and reclaim"
+   },
+   {
+    "invalidation": "Reclaim above 2.43",
+    "name": "Premium rejection",
+    "target": "2.2175 / 2.089",
+    "trigger": "Failure at 2.4252 with negative delta"
+   }
+  ],
+  "short_pct": 51,
+  "split": {
+   "agent_long_points": 15,
+   "agent_net": 0.3043,
+   "agent_short_points": 8,
+   "baseline_net": -0.6047,
+   "bias": "neutral",
+   "k": 3.0,
+   "long_pct": 49,
+   "method": "p_long = logistic(k * (w_a*agent_net + w_b*baseline_net)/(w_a+w_b))",
+   "net": -0.0138,
+   "neutral_band": 5.0,
+   "p_long": 48.965,
+   "short_pct": 51,
+   "weights": {
+    "agent": 0.65,
+    "baseline": 0.35
+   }
+  },
+  "summary_ru": "1H тренд бычий: EMA-стек вверх, bull CHOCH 2.0778, фаза markup с запертыми шортами, отрицательный фандинг даёт топливо для сквиза. Против — RSI 72, премиум-зона по HTF и отрицательная дельта футпринта у хаёв. Предпочтение лонга от откатов к 2.30 или FVG 2.089, цели 2.478 и 2.685, стоп под 2.0738."
+ },
+ "attempts": 1,
+ "baseline": {
+  "long_confidence": 45,
+  "long_factors": [
+   "CVD ✅ подтверждает направление",
+   "VP ⚪ вне VA | POC $2",
+   "Session 🗽 NY Session [4/5]",
+   "F&G 🤑 Greed [55]",
+   "TZ 1H ⚪ Нейтральная [+16.2% от mean]",
+   "TZ 4H ⚪ Нейтральная [+42.5% от mean]",
+   "RSI ❌ перекуплен [72] — рискованный лонг",
+   "MACD 🟡 бычий тренд"
+  ],
+  "long_pct": 35,
+  "long_score": 45,
+  "long_verdict": "WAIT",
+  "short_confidence": 51,
+  "short_factors": [
+   "CVD ⚪ нейтрально",
+   "VP ⚪ вне VA | POC $2",
+   "Session 🗽 NY Session [4/5]",
+   "F&G 🤑 Greed [55]",
+   "TZ 1H ⚪ Нейтральная [+16.2% от mean]",
+   "TZ 4H ⚪ Нейтральная [+42.5% от mean]",
+   "RSI ✅ перекуплен [72] — хороший шорт",
+   "MACD ❌ бычий при шорте"
+  ],
+  "short_pct": 65,
+  "short_score": 84,
+  "short_verdict": "WAIT",
+  "source": "screener.compute_confluence_score + decision.make_decision over screener.fetch_market (Bybit-first USDT aggregate, not venue-pinned)",
+  "ts": 1792259365228
+ },
+ "cached": false,
+ "evaluation": {
+  "horizon_bars": 12,
+  "rule": "±1 ATR from the analysis price, bias side first"
+ },
+ "exchange": "binance",
+ "freshness": {
+  "last_close_ts": 1792256400000,
+  "missing": {},
+  "sections": {
+   "baseline": 1792259365228,
+   "candles": 1792256400000,
+   "derivatives": 1792259365229,
+   "flow": 1792259365228,
+   "footprint": 1792259365231,
+   "funding": 1792259365231,
+   "fvg": 1792256400000,
+   "htf_bias": 1792259365228,
+   "indicators": 1792256400000,
+   "liquidity": 1792259365228,
+   "order_blocks": 1792256400000,
+   "orderbook": 1792259365514,
+   "price": 1792256400000,
+   "regime": 1792259365228,
+   "session": 1792259365228,
+   "structure": 1792256400000
+  }
+ },
+ "generated_at": 1792259365228,
+ "id": 33,
+ "interval": "60",
+ "latency_ms": 25592,
+ "model": "hermes-agent",
+ "price": {
+  "source": "last closed candle close",
+  "ts": 1792256400000,
+  "value": 2.3788
+ },
+ "raw_output": [
+  "{\"bias\":\"long\",\"confidence\":\"medium\",\"horizon\":\"4-12 bars of 60m\",\"factor_scores\":[{\"factor\":\"EMA stack 7>14>28>200 bullish\",\"direction\":\"long\",\"strength\":3,\"source_fields\":[\"indicators.ema_stack_7_14_28\",\"indicators.ema200\"]},{\"factor\":\"Bull CHOCH at 2.0778 flipped structure\",\"direction\":\"long\",\"strength\":2,\"source_fields\":[\"structure.recent_events.4.level\",\"structure.trend\"]},{\"factor\":\"Markup phase, trapped shorts, expanding\",\"direction\":\"long\",\"strength\":2,\"source_fields\":[\"regime.phase\",\"regime.positioning\",\"regime.range_state\"]},{\"factor\":\"Price above all EMAs, impulsive close 2.3788\",\"direction\":\"long\",\"strength\":2,\"source_fields\":[\"indicators.close\",\"indicators.ema28\"]},{\"factor\":\"Volume expansion on up bars\",\"direction\":\"long\",\"strength\":2,\"source_fields\":[\"candles.recent.21.5\",\"candles.recent.22.5\"]},{\"factor\":\"CVD 1h up, no divergence vs price\",\"direction\":\"long\",\"strength\":1,\"source_fields\":[\"flow.cvd_1h.trend\",\"flow.cvd_1h.divergence\"]},{\"factor\":\"Negative last funding: shorts pay, squeeze fuel\",\"direction\":\"long\",\"strength\":2,\"source_fields\":[\"funding.last_settled.rate\",\"funding.annualized_last_settled\"]},{\"factor\":\"Buyside EQH cluster 2.685-2.76 as magnet\",\"direction\":\"long\",\"strength\":1,\"source_fields\":[\"liquidity.pools.8.price\",\"liquidity.pools.9.price\"]},{\"factor\":\"RSI 72.57 overbought, exhaustion risk\",\"direction\":\"short\",\"strength\":2,\"source_fields\":[\"indicators.rsi14\"]},{\"factor\":\"HTF bias short, premium on D/240/60\",\"direction\":\"short\",\"strength\":3,\"source_fields\":[\"htf_bias.direction\",\"htf_bias.zones.D\"]},{\"factor\":\"Footprint delta negative into highs\",\"direction\":\"short\",\"strength\":2,\"source_fields\":[\"footprint.bars.0.delta\",\"footprint.bars.0.poc\"]},{\"factor\":\"+34% in 24h with flat OI change\",\"direction\":\"short\",\"strength\":1,\"source_fields\":[\"flow.change_24h_pct\",\"flow.bybit_oi_change_pct\"]}],\"levels\":[{\"type\":\"support\",\"price\":2.089,\"reason\":\"Nearest bull FVG top\",\"source_fields\":[\"fvg.nearest.0.top\"]},{\"type\":\"support\",\"price\":1.909,\"reason\":\"Last swing low\",\"source_fields\":[\"structure.last_swing_low.price\"]},{\"type\":\"entry\",\"price\":2.3,\"reason\":\"Pullback toward prior breakout shelf\",\"source_fields\":[\"candles.recent.22.4\",\"candles.recent.21.3\"]},{\"type\":\"stop\",\"price\":2.0738,\"reason\":\"Below FVG bottom, invalidates CHOCH\",\"source_fields\":[\"fvg.nearest.0.bottom\"]},{\"type\":\"resistance\",\"price\":2.4252,\"reason\":\"Recent session high wick\",\"source_fields\":[\"candles.recent.21.2\"]},{\"type\":\"target\",\"price\":2.47787,\"reason\":\"Strong sellside EQH liquidity\",\"source_fields\":[\"liquidity.pools.1.price\"]},{\"type\":\"target\",\"price\":2.685,\"reason\":\"Buyside EQH pool\",\"source_fields\":[\"liquidity.pools.7.price\"]},{\"type\":\"liquidity\",\"price\":2.5,\"reason\":\"Round-number pool near mark\",\"source_fields\":[\"liquidity.pools.0.price\",\"derivatives.mark_price\"]}],\"scenarios\":[{\"name\":\"Continuation squeeze\",\"trigger\":\"Hourly close above 2.4252\",\"target\":\"2.47787 then 2.685\",\"invalidation\":\"Close back under 2.30\"},{\"name\":\"FVG retest long\",\"trigger\":\"Tap 2.089-2.0738 and reclaim\",\"target\":\"2.4252\",\"invalidation\":\"Hourly close below 2.0738\"},{\"name\":\"Premium rejection\",\"trigger\":\"Failure at 2.4252 with negative delta\",\"target\":\"2.2175 / 2.089\",\"invalidation\":\"Reclaim above 2.43\"}],\"risks\":[\"RSI 72 overbought; 1 ATR adverse move easy\",\"HTF premium conflicts with 1h trend\",\"Funding predicted flipped positive, crowding\",\"Cross-venue funding missing for BTW\"],\"summary_ru\":\"1H тренд бычий: EMA-стек вверх, bull CHOCH 2.0778, фаза markup с запертыми шортами, отрицательный фандинг даёт топливо для сквиза. Против — RSI 72, премиум-зона по HTF и отрицательная дельта футпринта у хаёв. Предпочтение лонга от откатов к 2.30 или FVG 2.089, цели 2.478 и 2.685, стоп под 2.0738.\"}"
+ ],
+ "snapshot_hash": "e9f02e0f592acb90",
+ "snapshot_ms": 14788,
+ "source": "hermes",
+ "status": "ok",
+ "symbol": "BTWUSDT",
+ "warnings": [
+  "disagreement: Agent says long, but its scored evidence + baseline compute neutral (49/51)"
+ ]
+}

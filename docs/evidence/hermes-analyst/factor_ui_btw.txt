@@ -1,0 +1,38 @@
+{
+ "ui_wait_s": 35.609,
+ "status": "Hermes analysis",
+ "lines": 8,
+ "target": "binance · BTWUSDT · 60",
+ "gauge": "LONG 50%neutral · medium50% SHORT",
+ "levels": [
+  "Liquidity2.7536 +15.76%",
+  "Target2.685 +12.87%",
+  "Target2.6 +9.30%",
+  "Resistance2.4779 +4.16%",
+  "POI2.368 -0.45%",
+  "Support2.089 -12.18%",
+  "Support2.0778 -12.65%",
+  "Stop1.909 -19.75%"
+ ],
+ "fresh": "last closed bar 52m ago · hermes-agent 20.0 s · snapshot 13.2 s",
+ "stats": "Calibration: 3 logged, 1 pending — no outcomes scored yet · p_long 38.76–50.38 over 3 (3 distinct) · funding cited 3/3",
+ "split": "factors +0.33 (L 16 · S 8) ×0.65 · baseline −0.60 ×0.35 → net +0.01 → p_long 50.4 (k 3, neutral ±5)",
+ "disagree": "⚠ Partial disagreement: agent says long, scored evidence computes neutral",
+ "chips": [
+  "L +3 EMA 7>14>28>200 bullish stack",
+  "L +2 Bull CHOCH at 2.0778 flips structure up",
+  "L +2 Impulsive expansion, markup phase",
+  "L +2 Price well above last swing low 1.909",
+  "L +2 CVD up confirms price, no divergence",
+  "L$ +2 Negative settled funding: shorts pay",
+  "L +2 Trapped shorts above mid-range",
+  "L +1 Buyside pools 2.60/2.65 as magnets",
+  "S −2 RSI14 72.6 overbought, exhaustion risk",
+  "S −3 HTF bias strong short, all premium",
+  "S −2 Negative delta + ask-heavy book",
+  "S −1 +37% 24h move, flat OI change"
+ ]
+}
+errors 1 [
+  '{"entry":{"source":"network","level":"error","text":"Failed to load resource: the server responded with a status of 404 (NOT FOUND)","timestamp":1792259437172.052,"url":"http://127.0.0.1:5090/favicon.ico","networkRequestId":"68684.37"}}'
+]
