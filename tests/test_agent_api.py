@@ -52,7 +52,8 @@ def test_ok_and_logged(tmp_path):
     client = make_app(tmp_path, lambda m, deadline=None: (json.dumps(good(snap)), "hermes-agent"))
     r = post(client, {"exchange": "binance", "symbol": "BTCUSDT", "interval": "15"})
     assert r.status_code == 200
-    assert r.json["status"] == "ok" and r.json["analysis"]["long_pct"] == 62
+    assert r.json["status"] == "ok" and r.json["analysis"]["long_pct"] + r.json["analysis"]["short_pct"] == 100
+    assert r.json["analysis"]["split"]["weights"]["agent"] > 0
     stats = client.get("/api/agent/stats?exchange=binance&symbol=BTCUSDT&interval=15").json
     assert stats["total"] == 1 and stats["pending"] == 1 and stats["overall"]["hit_rate"] is None
 

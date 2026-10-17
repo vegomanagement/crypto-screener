@@ -9,7 +9,13 @@ import threading
 import time
 from collections import deque
 
-from analyst import EVAL_HORIZON_BARS, build_snapshot, snapshot_hash
+from analyst import (
+    EVAL_HORIZON_BARS,
+    build_snapshot,
+    compute_split,
+    disagreement,
+    snapshot_hash,
+)
 from analyst_hermes import HermesUnavailable, ask_hermes
 
 CACHE_TTL_S = 60
@@ -34,8 +40,6 @@ def _level(kind, price, reason, field):
 def baseline_analysis(snapshot):
     """Deterministic analysis from the confluence baseline and snapshot levels only."""
     base = snapshot.get("baseline") or {}
-    long_pct = base.get("long_pct", 50)
-    bias = "long" if long_pct >= 55 else "short" if long_pct <= 45 else "neutral"
     levels = []
     st = snapshot.get("structure") or {}
     if st.get("last_swing_high"):
@@ -55,17 +59,22 @@ def baseline_analysis(snapshot):
     for i, z in enumerate(((snapshot.get("fvg") or {}).get("nearest") or [])[:1]):
         levels.append(_level("poi", (z["top"] + z["bottom"]) / 2,
                              f"midpoint of nearest {z['direction']} FVG", f"fvg.nearest.{i}"))
-    side = "long" if bias != "short" else "short"
-    factors = [{"text": f, "source_fields": [f"baseline.{side}_factors"]}
-               for f in base.get(f"{side}_factors", [])[:6]]
     summary = (f"Детерминированная оценка (без Hermes): confluence long {base.get('long_score')} "
                f"/ short {base.get('short_score')}.") if base else \
         "Детерминированная оценка недоступна: нет данных fetch_market."
-    return {"bias": bias, "long_pct": long_pct, "short_pct": 100 - long_pct,
-            "confidence": "low", "horizon": f"{EVAL_HORIZON_BARS} bars of {snapshot['interval']}",
-            "levels": levels, "scenarios": [], "key_factors": factors,
+    return {"agent_bias": None, "confidence": "low",
+            "horizon": f"{EVAL_HORIZON_BARS} bars of {snapshot['interval']}",
+            "levels": levels, "scenarios": [], "factor_scores": [],
             "risks": ["Baseline only: the language-model analyst did not answer."],
             "summary_ru": summary[:400]}
+
+
+def apply_split(analysis, snapshot):
+    """Attach the server-computed split (and the agent cross-check) to a validated analysis."""
+    split = compute_split(analysis.get("factor_scores") or [], snapshot.get("baseline"))
+    clash = disagreement(analysis.get("agent_bias"), split)
+    return {**analysis, "bias": split["bias"], "long_pct": split["long_pct"],
+            "short_pct": split["short_pct"], "split": split, "disagreement": clash}
 
 
 class AnalystService:
@@ -129,7 +138,9 @@ class AnalystService:
             except HermesUnavailable as exc:
                 status = "hermes_unavailable"
                 warnings.append(f"Hermes unavailable: {exc}; baseline shown")
-        analysis = hermes["analysis"] if status == "ok" else baseline_analysis(snap)
+        analysis = apply_split(hermes["analysis"] if status == "ok" else baseline_analysis(snap), snap)
+        if analysis["disagreement"]:
+            warnings.append("disagreement: " + analysis["disagreement"]["text"])
         source = "hermes" if status == "ok" else "baseline"
         if snap.get("baseline") is None and source == "baseline":
             warnings.append("Deterministic baseline unavailable: " +
@@ -161,5 +172,8 @@ class AnalystService:
                 "bias": analysis["bias"], "confidence": analysis["confidence"],
                 "source": source, "status": status, "levels": analysis["levels"],
                 "model": result["model"], "latency_ms": result["latency_ms"],
-                "snapshot_hash": result["snapshot_hash"], "horizon_bars": EVAL_HORIZON_BARS})
+                "snapshot_hash": result["snapshot_hash"], "horizon_bars": EVAL_HORIZON_BARS,
+                "p_long": analysis["split"]["p_long"], "net": analysis["split"]["net"],
+                "factors": analysis["factor_scores"], "agent_bias": analysis["agent_bias"],
+                "disagreement": (analysis["disagreement"] or {}).get("severity")})
         return result

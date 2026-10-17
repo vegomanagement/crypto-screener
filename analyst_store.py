@@ -39,6 +39,10 @@ CREATE TABLE IF NOT EXISTS agent_analyses (
 CREATE INDEX IF NOT EXISTS agent_analyses_pending ON agent_analyses(outcome, ts);
 """
 
+# Columns added with the factor-scored split; older files are migrated in place.
+EXTRA_COLUMNS = (("p_long", "REAL"), ("net", "REAL"), ("factors_json", "TEXT"),
+                 ("agent_bias", "TEXT"), ("disagreement", "TEXT"))
+
 OUTCOMES = ("win", "loss", "ambiguous", "timeout")
 
 
@@ -81,6 +85,40 @@ def summarize(rows):
     return out
 
 
+def split_stats(rows):
+    """Distribution of the computed p_long and factor usage (rows from AnalysisStore.stats).
+
+    Rows logged before the factor-scored split have p_long NULL and are counted as legacy.
+    """
+    scored = [r for r in rows if r[5] is not None]
+    ps = sorted(r[5] for r in scored)
+    factor_lists = []
+    for r in scored:
+        try:
+            factor_lists.append(json.loads(r[6] or "[]"))
+        except ValueError:
+            factor_lists.append([])
+    hermes = [f for r, f in zip(scored, factor_lists) if r[0] == "hermes"]
+    with_funding = sum(1 for fs in hermes
+                       if any(s.startswith("funding.") for f in fs for s in f.get("source_fields", [])))
+    n = len(ps)
+    mean = sum(ps) / n if n else None
+    hist = {f"{lo}-{lo + 10}": sum(1 for p in ps if lo <= p < lo + 10 or (lo == 90 and p == 100))
+            for lo in range(0, 100, 10)}
+    return {
+        "n": n, "legacy_without_p_long": len(rows) - n,
+        "p_long_min": round(ps[0], 2) if ps else None, "p_long_max": round(ps[-1], 2) if ps else None,
+        "p_long_mean": round(mean, 2) if ps else None,
+        "p_long_std": round((sum((p - mean) ** 2 for p in ps) / n) ** 0.5, 2) if ps else None,
+        "distinct_long_pct": len({r[2] for r in scored}),
+        "histogram": {k: v for k, v in hist.items() if v},
+        "hermes_runs": len(hermes),
+        "factors_per_hermes_run": round(sum(len(f) for f in hermes) / len(hermes), 2) if hermes else None,
+        "hermes_runs_citing_funding": with_funding,
+        "disagreements": {s: sum(1 for r in scored if r[7] == s) for s in ("opposite", "neutral_mismatch")},
+    }
+
+
 class AnalysisStore:
     def __init__(self, path):
         self.path = Path(path) if str(path) != ":memory:" else path
@@ -90,14 +128,20 @@ class AnalysisStore:
         self._lock = threading.Lock()
         with self._lock:
             self._conn.executescript(SCHEMA)
+            have = {r[1] for r in self._conn.execute("PRAGMA table_info(agent_analyses)")}
+            for name, kind in EXTRA_COLUMNS:
+                if name not in have:
+                    self._conn.execute(f"ALTER TABLE agent_analyses ADD COLUMN {name} {kind}")
             self._conn.commit()
 
     def record(self, row):
         cols = ("ts", "exchange", "symbol", "interval", "price", "atr", "bar_close_ts",
                 "long_pct", "short_pct", "bias", "confidence", "source", "status",
-                "levels_json", "model", "latency_ms", "snapshot_hash", "horizon_bars")
+                "levels_json", "model", "latency_ms", "snapshot_hash", "horizon_bars",
+                "p_long", "net", "factors_json", "agent_bias", "disagreement")
         values = [row.get(c) for c in cols]
         values[cols.index("levels_json")] = json.dumps(row.get("levels") or [])
+        values[cols.index("factors_json")] = json.dumps(row.get("factors") or [], ensure_ascii=False)
         with self._lock:
             cur = self._conn.execute(
                 f"INSERT INTO agent_analyses ({','.join(cols)}) VALUES ({','.join('?' * len(cols))})",
@@ -136,13 +180,15 @@ class AnalysisStore:
                 args.append(val)
         clause = f" WHERE {' AND '.join(where)}" if where else ""
         with self._lock:
-            rows = self._conn.execute(
-                f"SELECT source, bias, long_pct, short_pct, outcome FROM agent_analyses{clause}",
-                args).fetchall()
-            pending = sum(1 for r in rows if r[4] is None and r[1] in ("long", "short"))
+            full = self._conn.execute(
+                "SELECT source, bias, long_pct, short_pct, outcome, p_long, factors_json, "
+                f"disagreement FROM agent_analyses{clause}", args).fetchall()
+        rows = [r[:5] for r in full]
+        pending = sum(1 for r in rows if r[4] is None and r[1] in ("long", "short"))
         out = summarize(rows)
         out.update(total=len(rows), pending=pending,
-                   neutral=sum(1 for r in rows if r[1] == "neutral"))
+                   neutral=sum(1 for r in rows if r[1] == "neutral"),
+                   split=split_stats(full))
         return out
 
 

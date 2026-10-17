@@ -455,3 +455,92 @@ def price_bounds(snapshot):
     if lo is None or hi is None:
         return None
     return lo - 3 * a, hi + 3 * a
+
+
+# ── deterministic long/short split ─────────────────────────────────────────
+# The model never outputs percentages. It returns evidence factors (direction +
+# strength 1-3 + cited snapshot fields); the server turns them into a split:
+#   agent_net    = Σ sign·strength / max(Σ strength, agent_min_total)          ∈ [-1, 1]
+#   baseline_net = clip(score_gain·(L−S)/(L+S) + verdict_bonus·(LONG?) − verdict_bonus·(SHORT?))
+#                  from snapshot.baseline (confluence scores + decision verdicts) ∈ [-1, 1]
+#   net          = w_agent·agent_net + w_baseline·baseline_net (weights renormalised over the
+#                  components that exist)
+#   p_long       = 100 / (1 + exp(−k·net)); neutral when |p_long − 50| < neutral_band
+SPLIT_CONFIG = {
+    "k": 3.0,                 # logistic slope; |net| ≤ 1 keeps p_long within [4.7, 95.3]
+    "w_agent": 0.65,          # weight of the validated evidence factors
+    "w_baseline": 0.35,       # weight of the deterministic confluence/decision baseline
+    "agent_min_total": 6,     # one strength-3 factor alone moves agent_net by at most 0.5
+    "score_gain": 2.0,        # confluence score difference ratio → baseline_net
+    "verdict_bonus": 0.5,     # decision.make_decision verdict LONG / SHORT
+    "neutral_band": 5.0,      # |p_long − 50| below this → neutral
+}
+
+
+def _clip(x, lo=-1.0, hi=1.0):
+    return max(lo, min(hi, x))
+
+
+def baseline_net(baseline, cfg=SPLIT_CONFIG):
+    """[-1, 1] lean of the deterministic baseline, or None when it is unavailable."""
+    if not baseline:
+        return None
+    lo, sh = _f(baseline.get("long_score")), _f(baseline.get("short_score"))
+    if lo is None or sh is None:
+        return None
+    lo, sh = max(lo, 0.0), max(sh, 0.0)
+    ratio = (lo - sh) / (lo + sh) if lo + sh else 0.0
+    verdict = (cfg["verdict_bonus"] * (baseline.get("long_verdict") == "LONG")
+               - cfg["verdict_bonus"] * (baseline.get("short_verdict") == "SHORT"))
+    return _clip(cfg["score_gain"] * ratio + verdict)
+
+
+def agent_net(factors, cfg=SPLIT_CONFIG):
+    """[-1, 1] lean of validated factors, or None when there are none."""
+    if not factors:
+        return None
+    signed = sum((1 if f["direction"] == "long" else -1) * f["strength"] for f in factors)
+    total = sum(f["strength"] for f in factors)
+    return _clip(signed / max(total, cfg["agent_min_total"]))
+
+
+def round_split(p_long):
+    """Integers summing to 100, rounded half away from 50 so p and 100−p mirror exactly."""
+    d = p_long - 50.0
+    step = math.floor(abs(d) + 0.5)
+    long_pct = int(50 + (step if d >= 0 else -step))
+    long_pct = max(0, min(100, long_pct))
+    return long_pct, 100 - long_pct
+
+
+def compute_split(factors, baseline, cfg=SPLIT_CONFIG):
+    """Deterministic split from validated factors + snapshot baseline (documented in SPLIT_CONFIG)."""
+    a, b = agent_net(factors, cfg), baseline_net(baseline, cfg)
+    parts = [(cfg["w_agent"], a), (cfg["w_baseline"], b)]
+    weight = sum(w for w, v in parts if v is not None)
+    net = sum(w * v for w, v in parts if v is not None) / weight if weight else 0.0
+    p_long = 100.0 / (1.0 + math.exp(-cfg["k"] * net))
+    long_pct, short_pct = round_split(p_long)
+    bias = ("neutral" if abs(p_long - 50.0) < cfg["neutral_band"]
+            else "long" if p_long > 50 else "short")
+    long_pts = sum(f["strength"] for f in factors or [] if f["direction"] == "long")
+    short_pts = sum(f["strength"] for f in factors or [] if f["direction"] == "short")
+    return {"long_pct": long_pct, "short_pct": short_pct, "p_long": round(p_long, 3), "bias": bias,
+            "net": round(net, 4), "agent_net": None if a is None else round(a, 4),
+            "baseline_net": None if b is None else round(b, 4),
+            "agent_long_points": long_pts, "agent_short_points": short_pts,
+            "weights": {"agent": cfg["w_agent"] if a is not None else 0.0,
+                        "baseline": cfg["w_baseline"] if b is not None else 0.0},
+            "k": cfg["k"], "neutral_band": cfg["neutral_band"],
+            "method": "p_long = logistic(k * (w_a*agent_net + w_b*baseline_net)/(w_a+w_b))"}
+
+
+def disagreement(agent_bias, split):
+    """None when the agent's own bias matches the computed one, else a warning dict."""
+    if agent_bias not in ("long", "short", "neutral") or agent_bias == split["bias"]:
+        return None
+    opposite = {agent_bias, split["bias"]} == {"long", "short"}
+    return {"agent_bias": agent_bias, "computed_bias": split["bias"],
+            "severity": "opposite" if opposite else "neutral_mismatch",
+            "text": (f"Agent says {agent_bias}, but its scored evidence + baseline compute "
+                     f"{split['bias']} ({split['long_pct']}/{split['short_pct']})")}

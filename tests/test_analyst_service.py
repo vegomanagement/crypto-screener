@@ -11,6 +11,7 @@ from analyst_service import (
     AnalystService,
     RateLimited,
     SnapshotUnavailable,
+    apply_split,
     baseline_analysis,
 )
 from analyst_store import AnalysisStore, evaluate_outcome, evaluate_pending, summarize
@@ -24,12 +25,17 @@ def snap():
 
 def good(snap, **over):
     price = snap["fvg"]["nearest"][0]["top"]
-    raw = {"bias": "long", "long_pct": 62, "short_pct": 38, "confidence": "medium",
+    raw = {"bias": "long", "confidence": "medium",
            "horizon": "4-12 bars of 15m",
            "levels": [{"type": "support", "price": price, "reason": "fvg",
                        "source_fields": ["fvg.nearest.0.top"]}],
            "scenarios": [{"name": "up", "trigger": "hold", "target": "x", "invalidation": "y"}],
-           "key_factors": [{"text": "rsi", "source_fields": ["indicators.rsi14"]}],
+           "factor_scores": [
+               {"factor": "rsi", "direction": "long", "strength": 2, "source_fields": ["indicators.rsi14"]},
+               {"factor": "ema stack", "direction": "long", "strength": 3,
+                "source_fields": ["indicators.ema_stack_7_14_28"]},
+               {"factor": "book", "direction": "short", "strength": 1,
+                "source_fields": ["orderbook.imbalance"]}],
            "risks": ["chop"], "summary_ru": "Лонг"}
     raw.update(over)
     return raw
@@ -38,12 +44,13 @@ def good(snap, **over):
 def test_validate_accepts_good_output(snap):
     out, warnings = ah.validate(good(snap), snap)
     assert warnings == []
-    assert out["long_pct"] == 62 and out["levels"][0]["type"] == "support"
+    assert out["agent_bias"] == "long" and out["levels"][0]["type"] == "support"
+    assert "long_pct" not in out and len(out["factor_scores"]) == 3
 
 
-@pytest.mark.parametrize("over", [{"long_pct": 60, "short_pct": 30}, {"long_pct": 60.5, "short_pct": 39.5},
-                                  {"long_pct": True, "short_pct": 99}, {"bias": "up"},
-                                  {"long_pct": 110, "short_pct": -10}])
+@pytest.mark.parametrize("over", [{"bias": "up"}, {"factor_scores": []}, {"factor_scores": None},
+                                  {"factor_scores": [{"factor": "x", "direction": "long", "strength": 2,
+                                                      "source_fields": ["made.up"]}]}])
 def test_validate_rejects_bad_core(snap, over):
     with pytest.raises(ValueError):
         ah.validate(good(snap, **over), snap)
@@ -57,10 +64,9 @@ def test_validate_drops_bad_items(snap):
         {"type": "support", "price": snap["indicators"]["close"], "source_fields": ["made.up"]},
         {"type": "moon", "price": snap["indicators"]["close"], "source_fields": ["indicators.close"]},
         {"type": "target", "price": snap["indicators"]["close"], "source_fields": ["indicators.close"]},
-    ], key_factors=[{"text": "x", "source_fields": ["nope.field"]}], summary_ru="я" * 500)
+    ], summary_ru="я" * 500)
     out, warnings = ah.validate(raw, snap)
     assert [lv["type"] for lv in out["levels"]] == ["target"]
-    assert out["key_factors"] == []
     assert len(out["summary_ru"]) == 400
     joined = " ".join(warnings)
     assert "outside snapshot window" in joined and "finite" in joined
@@ -89,7 +95,7 @@ def test_repair_retry(snap):
         calls.append(messages)
         return next(replies), "hermes-agent"
     out = ah.ask_hermes(snap, send)
-    assert out["attempts"] == 2 and out["analysis"]["bias"] == "long"
+    assert out["attempts"] == 2 and out["analysis"]["agent_bias"] == "long"
     assert "invalid" in calls[1][-1]["content"]
 
 
@@ -183,10 +189,14 @@ def test_fallback_when_hermes_down(snap):
     store = AnalysisStore(":memory:")
     out = service(send, store=store).analyze("binance", "BTCUSDT", "15")
     assert out["status"] == "hermes_unavailable" and out["source"] == "baseline"
-    assert out["analysis"]["long_pct"] == snap["baseline"]["long_pct"]
+    split = analyst.compute_split([], snap["baseline"])
+    assert out["analysis"]["long_pct"] == split["long_pct"] and out["analysis"]["split"]["weights"]["agent"] == 0
+    assert out["analysis"]["factor_scores"] == [] and out["analysis"]["disagreement"] is None
     assert out["analysis"]["confidence"] == "low"
     assert store.stats()["total"] == 1 and out["id"] == 1
-    _, warnings = ah.validate(out["analysis"], snap)  # baseline levels pass the same validator
+    baseline_like = {**out["analysis"], "bias": "neutral", "factor_scores": [
+        {"factor": "x", "direction": "long", "strength": 1, "source_fields": ["indicators.close"]}]}
+    _, warnings = ah.validate(baseline_like, snap)  # baseline levels pass the same validator
     assert not [w for w in warnings if "dropped" in w]
 
 
@@ -211,8 +221,8 @@ def test_snapshot_failure_raises():
 
 def test_baseline_without_market_is_neutral(snap):
     snap = dict(snap, baseline=None, liquidity=None)
-    out = baseline_analysis(snap)
-    assert out["long_pct"] == 50 and out["bias"] == "neutral"
+    out = apply_split(baseline_analysis(snap), snap)
+    assert out["long_pct"] == 50 and out["bias"] == "neutral" and out["split"]["net"] == 0
 
 
 def test_evaluate_outcome_maths():
@@ -254,7 +264,7 @@ def test_summarize_empty():
 def test_truncated_reply_is_closed_once(snap):
     text = json.dumps(good(snap))[:-1]  # cut off the final brace, like the live gateway did
     out = ah.ask_hermes(snap, lambda m, deadline=None: (text, "m"))
-    assert out["analysis"]["bias"] == "long" and out["attempts"] == 1
+    assert out["analysis"]["agent_bias"] == "long" and out["attempts"] == 1
     assert "truncated" in out["warnings"][0]
 
 

@@ -37,7 +37,9 @@ DEFAULT_MODEL = "hermes-agent"
 BIASES = ("long", "short", "neutral")
 CONFIDENCES = ("low", "medium", "high")
 LEVEL_TYPES = ("support", "resistance", "entry", "stop", "target", "liquidity", "poi")
-MAX_LEVELS, MAX_SCENARIOS, MAX_FACTORS, MAX_RISKS = 12, 4, 8, 6
+MAX_LEVELS, MAX_SCENARIOS, MAX_FACTORS, MAX_RISKS = 12, 4, 12, 6
+DIRECTIONS = ("long", "short")
+STRENGTHS = (1, 2, 3)
 
 
 class HermesUnavailable(RuntimeError):
@@ -53,30 +55,41 @@ SYSTEM_PROMPT = (
 )
 
 SCHEMA_TEXT = """Return exactly this JSON shape:
-{"bias":"long|short|neutral","long_pct":<int>,"short_pct":<int>,
- "confidence":"low|medium|high","horizon":"<e.g. 4-12 bars of 15m>",
+{"bias":"long|short|neutral","confidence":"low|medium|high","horizon":"<e.g. 4-12 bars of 15m>",
+ "factor_scores":[{"factor":"<short evidence>","direction":"long|short","strength":1|2|3,
+                   "source_fields":["<dotted path in snapshot>"]}],
  "levels":[{"type":"support|resistance|entry|stop|target|liquidity|poi","price":<number>,
             "reason":"<short>","source_fields":["<dotted path in snapshot>"]}],
  "scenarios":[{"name":"<short>","trigger":"<text>","target":"<text>","invalidation":"<text>"}],
- "key_factors":[{"text":"<short>","source_fields":["<dotted path>"]}],
  "risks":["<short>"],
  "summary_ru":"<Russian, at most 400 characters>"}
-Rules: long_pct and short_pct are integers 0-100 that sum to 100 (your estimate, not a
-calibrated probability). Every source_fields entry must be an existing dotted path in the
-snapshot, e.g. "indicators.rsi14", "structure.last_swing_high.price", "fvg.nearest.0.top",
-"liquidity.pools.2.price", "orderbook.imbalance", "funding.predicted.rate".
-funding.predicted is a live estimate that changes until settlement; funding.last_settled is final. Level prices must come from snapshot
-values or be derived from them (within the candle window +/- 3 ATR). Keep the whole reply
-under 2500 characters: at most 8 levels, 3 scenarios, 6 key_factors, 4 risks, every text
-field under 90 characters."""
+Rules:
+- Do NOT output any percentage, probability or long/short split anywhere (no long_pct, no
+  short_pct, no "%" odds). The server computes the split from your factor_scores.
+- factor_scores: 6-12 separate pieces of evidence. Look for evidence on BOTH sides and list
+  every real one, bullish and bearish; do not pad either side. strength 1 = weak, 2 = clear,
+  3 = strong/decisive. Each factor cites its own fields; never cite the same field set twice.
+- Funding: when snapshot.funding is present, add a factor (or say in risks why it is neutral)
+  from funding.last_settled.rate vs funding.predicted.rate, funding.annualized_predicted and
+  funding.cross_venue / funding.cross_venue_annualized_spread. Positive funding = longs pay
+  (crowded longs), negative = shorts pay. funding.predicted is a live estimate that changes until
+  settlement; funding.last_settled is final.
+- bias is your own reading and is used only as a cross-check against the computed split.
+- Every source_fields entry must be an existing dotted path in the snapshot, e.g.
+  "indicators.rsi14", "structure.last_swing_high.price", "fvg.nearest.0.top",
+  "liquidity.pools.2.price", "orderbook.imbalance", "funding.predicted.rate".
+- Level prices must come from snapshot values or be derived from them (within the candle
+  window +/- 3 ATR).
+Keep the whole reply under 3000 characters: at most 12 factor_scores, 8 levels, 3 scenarios,
+4 risks, every text field under 80 characters."""
 
 
 def build_messages(snapshot):
     data = json.dumps(snapshot, separators=(",", ":"), default=str)
     user = (f"Analyse {snapshot['exchange']} {snapshot['symbol']} interval {snapshot['interval']} "
             f"(minutes unless D/W/M). Outcomes are later scored over "
-            f"{snapshot.get('evaluation_horizon_bars')} bars by whether price moves 1 ATR in your "
-            f"bias direction before 1 ATR against.\n{SCHEMA_TEXT}\nSNAPSHOT:\n{data}")
+            f"{snapshot.get('evaluation_horizon_bars')} bars by whether price moves 1 ATR in the "
+            f"direction computed from your factor_scores before 1 ATR against.\n{SCHEMA_TEXT}\nSNAPSHOT:\n{data}")
     return [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": user}]
 
 
@@ -200,15 +213,58 @@ def _sources(item, snapshot, where, warnings):
     return [str(s) for s in raw[:6]]
 
 
+def validate_factors(items, snapshot, warnings):
+    """Keep factors with a known direction, integer strength 1-3 and resolvable source_fields.
+
+    A factor whose source_fields set equals one already kept is a duplicate (the same
+    evidence counted twice) and is dropped, whatever its direction or wording.
+    """
+    if not isinstance(items, list):
+        warnings.append("factor_scores missing or not a list")
+        return []
+    out, seen = [], set()
+    for i, item in enumerate(items[:MAX_FACTORS * 2]):
+        where = f"factor_scores[{i}]"
+        if not isinstance(item, dict):
+            warnings.append(f"{where}: dropped, not an object")
+            continue
+        name = _text(item.get("factor"), 120)
+        direction, strength = item.get("direction"), item.get("strength")
+        if name is None or direction not in DIRECTIONS:
+            warnings.append(f"{where}: dropped, needs factor text and direction long|short")
+            continue
+        if type(strength) is not int or strength not in STRENGTHS:
+            warnings.append(f"{where}: dropped, strength must be integer 1-3")
+            continue
+        sources = _sources(item, snapshot, where, warnings)
+        if sources is None:
+            continue
+        key = frozenset(sources)
+        if key in seen:
+            warnings.append(f"{where}: dropped, duplicate of an earlier factor citing {sorted(key)[:3]}")
+            continue
+        if len(out) >= MAX_FACTORS:
+            warnings.append(f"{where}: dropped, more than {MAX_FACTORS} factors")
+            continue
+        seen.add(key)
+        out.append({"factor": name, "direction": direction, "strength": strength,
+                    "source_fields": sources})
+    return out
+
+
 def validate(raw, snapshot):
-    """Return (analysis, warnings). Raises ValueError when the core verdict is unusable."""
+    """Return (analysis, warnings). Raises ValueError when the bias or every factor is unusable.
+
+    The analysis has no percentages: ``analyst.compute_split`` derives them from
+    ``factor_scores`` plus the snapshot baseline (see analyst_service).
+    """
     warnings = []
     bias = raw.get("bias")
     if bias not in BIASES:
         raise ValueError(f"bias must be one of {BIASES}")
-    lp, sp = raw.get("long_pct"), raw.get("short_pct")
-    if not all(type(v) is int and 0 <= v <= 100 for v in (lp, sp)) or lp + sp != 100:
-        raise ValueError("long_pct/short_pct must be integers 0-100 summing to 100")
+    ignored = [k for k in ("long_pct", "short_pct", "probability", "p_long") if k in raw]
+    if ignored:
+        warnings.append(f"model sent {ignored}; ignored, the split is computed server-side")
     confidence = raw.get("confidence") if raw.get("confidence") in CONFIDENCES else None
     if confidence is None:
         warnings.append("confidence missing or invalid; set to low")
@@ -242,16 +298,10 @@ def validate(raw, snapshot):
                 level["unanchored"] = True
                 warnings.append(f"{where}: price {price} is not near any cited value; flagged")
             levels.append(level)
-    factors = []
-    for i, item in enumerate((raw.get("key_factors") or [])[:MAX_FACTORS * 2]):
-        where = f"key_factors[{i}]"
-        text = _text(item.get("text"), 200) if isinstance(item, dict) else None
-        if text is None:
-            warnings.append(f"{where}: dropped, no text")
-            continue
-        sources = _sources(item, snapshot, where, warnings)
-        if sources is not None and len(factors) < MAX_FACTORS:
-            factors.append({"text": text, "source_fields": sources})
+    factors = validate_factors(raw.get("factor_scores"), snapshot, warnings)
+    if not factors:
+        raise ValueError("factor_scores must contain at least one valid factor "
+                         "{factor, direction long|short, strength 1-3, source_fields}")
     scenarios = []
     for i, item in enumerate((raw.get("scenarios") or [])[:MAX_SCENARIOS * 2]):
         fields = {k: _text(item.get(k), 200) if isinstance(item, dict) else None
@@ -265,9 +315,9 @@ def validate(raw, snapshot):
     if len(summary) > 400:
         warnings.append(f"summary_ru truncated from {len(summary)} to 400 chars")
         summary = summary[:400]
-    return {"bias": bias, "long_pct": lp, "short_pct": sp, "confidence": confidence,
+    return {"agent_bias": bias, "confidence": confidence,
             "horizon": _text(raw.get("horizon"), 60) or "", "levels": levels,
-            "scenarios": scenarios, "key_factors": factors, "risks": risks,
+            "scenarios": scenarios, "factor_scores": factors, "risks": risks,
             "summary_ru": summary}, warnings
 
 
