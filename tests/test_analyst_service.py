@@ -249,3 +249,18 @@ def test_store_evaluate_and_stats():
 
 def test_summarize_empty():
     assert summarize([])["overall"]["hit_rate"] is None
+
+
+def test_truncated_reply_is_closed_once(snap):
+    text = json.dumps(good(snap))[:-1]  # cut off the final brace, like the live gateway did
+    out = ah.ask_hermes(snap, lambda m, deadline=None: (text, "m"))
+    assert out["analysis"]["bias"] == "long" and out["attempts"] == 1
+    assert "truncated" in out["warnings"][0]
+
+
+def test_close_truncated_refuses_mid_string():
+    assert ah.close_truncated('{"a":"unfinished') is None
+    assert ah.close_truncated('{"a":[1,2') == '{"a":[1,2]}'
+    assert ah.close_truncated('{"a":"x\\"y"') == '{"a":"x\\"y"}'
+    assert ah.close_truncated('{"a":1}') is None
+    assert ah.close_truncated('{"a":1]') is None

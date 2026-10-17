@@ -65,8 +65,9 @@ Rules: long_pct and short_pct are integers 0-100 that sum to 100 (your estimate,
 calibrated probability). Every source_fields entry must be an existing dotted path in the
 snapshot, e.g. "indicators.rsi14", "structure.last_swing_high.price", "fvg.nearest.0.top",
 "liquidity.pools.2.price", "orderbook.imbalance". Level prices must come from snapshot
-values or be derived from them (within the candle window +/- 3 ATR). At most 12 levels,
-4 scenarios, 8 key_factors, 6 risks."""
+values or be derived from them (within the candle window +/- 3 ATR). Keep the whole reply
+under 2500 characters: at most 8 levels, 3 scenarios, 6 key_factors, 4 risks, every text
+field under 90 characters."""
 
 
 def build_messages(snapshot):
@@ -133,6 +134,53 @@ def extract_json(text):
     if not isinstance(value, dict):
         raise ValueError("reply JSON is not an object")  # noqa: TRY004
     return value
+
+
+def close_truncated(text):
+    """Append missing ``]``/``}`` when a JSON object was cut off between tokens.
+
+    Returns None when the cut happened inside a string or the text is not an
+    unfinished object — those are not repaired (the model is asked again).
+    """
+    start = text.find("{")
+    if start < 0:
+        return None
+    stack, in_str, escape = [], False, False
+    for ch in text[start:]:
+        if in_str:
+            if escape:
+                escape = False
+            elif ch == "\\":
+                escape = True
+            elif ch == '"':
+                in_str = False
+        elif ch == '"':
+            in_str = True
+        elif ch in "{[":
+            stack.append("}" if ch == "{" else "]")
+        elif ch in "}]" and (not stack or stack.pop() != ch):
+            return None
+    if in_str or not stack:
+        return None
+    body = text[start:].rstrip().rstrip(",")
+    return body + "".join(reversed(stack))
+
+
+def parse_reply(text):
+    """(object, notes): strict parse first, then one bracket-closing repair for truncation."""
+    try:
+        return extract_json(text), []
+    except ValueError as exc:
+        closed = close_truncated(re.sub(r"^```(?:json)?\s*", "", (text or "").strip()))
+        if closed is None:
+            raise
+        try:
+            value = json.loads(closed)
+        except ValueError:
+            raise exc from None
+        if not isinstance(value, dict):
+            raise exc from None
+        return value, ["reply was truncated; missing closing brackets were added before validation"]
 
 
 def _text(value, limit):
@@ -236,7 +284,9 @@ def ask_hermes(snapshot, send, *, timeout=TIMEOUT_S, clock=time.monotonic):
         text, model = send(messages, deadline=deadline)
         raws.append(text)
         try:
-            analysis, warnings = validate(extract_json(text), snapshot)
+            raw_obj, notes = parse_reply(text)
+            analysis, warnings = validate(raw_obj, snapshot)
+            warnings = notes + warnings
             return {"analysis": analysis, "warnings": warnings, "raw": raws, "model": model,
                     "attempts": attempt + 1, "latency_ms": int((clock() - started) * 1000)}
         except ValueError as exc:
@@ -246,8 +296,9 @@ def ask_hermes(snapshot, send, *, timeout=TIMEOUT_S, clock=time.monotonic):
                 break
             messages = messages + [
                 {"role": "assistant", "content": text[:4000]},
-                {"role": "user", "content": f"Your reply was invalid: {error}. Reply again with "
-                                            "ONLY the corrected strict JSON object."}]
+                {"role": "user", "content": f"Your reply was invalid: {error}. It may have been cut "
+                                            "off: reply again with ONLY the corrected strict JSON "
+                                            "object and keep every text field short."}]
     return {"analysis": None, "warnings": [f"model output invalid after repair: {error}"],
             "raw": raws, "model": model, "attempts": len(raws), "error": error,
             "latency_ms": int((clock() - started) * 1000)}

@@ -1,0 +1,55 @@
+[
+ {
+  "exchange": "binance",
+  "symbol": "BTCUSDT",
+  "interval": "15",
+  "status": "ok",
+  "wall_s": 41.6,
+  "model_latency_ms": 27215,
+  "snapshot_ms": 14332,
+  "attempts": 1,
+  "bias": "short",
+  "long_pct": 38,
+  "short_pct": 62,
+  "confidence": "medium",
+  "levels": 12,
+  "warnings": [],
+  "missing": {}
+ },
+ {
+  "exchange": "binance",
+  "symbol": "ETHUSDT",
+  "interval": "60",
+  "status": "ok",
+  "wall_s": 32.0,
+  "model_latency_ms": 24834,
+  "snapshot_ms": 7152,
+  "attempts": 1,
+  "bias": "short",
+  "long_pct": 38,
+  "short_pct": 62,
+  "confidence": "medium",
+  "levels": 11,
+  "warnings": [],
+  "missing": {}
+ },
+ {
+  "exchange": "bybit",
+  "symbol": "SOLUSDT",
+  "interval": "15",
+  "status": "ok",
+  "wall_s": 25.9,
+  "model_latency_ms": 24371,
+  "snapshot_ms": 1507,
+  "attempts": 1,
+  "bias": "short",
+  "long_pct": 38,
+  "short_pct": 62,
+  "confidence": "medium",
+  "levels": 12,
+  "warnings": [],
+  "missing": {
+   "footprint": "ValueError: no closed footprint bars"
+  }
+ }
+]
