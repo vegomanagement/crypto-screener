@@ -82,7 +82,8 @@ register_scalp_routes(app)
 register_funding_routes(app)
 # Late-bound: fetch_market/compute_confluence_score are defined further down this module.
 register_agent_routes(app, market=lambda symbol: fetch_market(symbol),
-                      confluence=lambda *args: compute_confluence_score(*args))
+                      confluence=lambda *args: compute_confluence_score(*args),
+                      funding=lambda exchange, symbol: app.extensions['funding']['get_service']().get(exchange, symbol))
 ai  = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
 # ─── SIGNAL LABELS ────────────────────────────────────────────────────────────

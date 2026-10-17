@@ -43,7 +43,7 @@ def default_fetch_bars(exchange, symbol, interval, after_ms, count):
     return [c for c in chart["candles"] if c["ts"] >= after_ms]
 
 
-def register_agent_routes(app, *, market=None, confluence=None, service_factory=None,
+def register_agent_routes(app, *, market=None, confluence=None, funding=None, service_factory=None,
                           store_path=None, fetch_bars=None, env=None):
     """``market``/``confluence`` are screener callables (late-bound lambdas are fine)."""
     blueprint = Blueprint('agent', __name__)
@@ -71,7 +71,7 @@ def register_agent_routes(app, *, market=None, confluence=None, service_factory=
                         from analyst_service import AnalystService
                         config = config_from_env(env)
                         state['service'] = AnalystService(
-                            default_providers(market=market, confluence=confluence),
+                            default_providers(market=market, confluence=confluence, funding=funding),
                             make_transport(config), store, configured=config is not None)
         return state['service']
 

@@ -64,7 +64,8 @@ SCHEMA_TEXT = """Return exactly this JSON shape:
 Rules: long_pct and short_pct are integers 0-100 that sum to 100 (your estimate, not a
 calibrated probability). Every source_fields entry must be an existing dotted path in the
 snapshot, e.g. "indicators.rsi14", "structure.last_swing_high.price", "fvg.nearest.0.top",
-"liquidity.pools.2.price", "orderbook.imbalance". Level prices must come from snapshot
+"liquidity.pools.2.price", "orderbook.imbalance", "funding.predicted.rate".
+funding.predicted is a live estimate that changes until settlement; funding.last_settled is final. Level prices must come from snapshot
 values or be derived from them (within the candle window +/- 3 ATR). Keep the whole reply
 under 2500 characters: at most 8 levels, 3 scenarios, 6 key_factors, 4 risks, every text
 field under 90 characters."""

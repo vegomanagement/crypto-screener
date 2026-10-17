@@ -1,9 +1,14 @@
 """analyst.py: snapshot assembly with injected fakes (no network)."""
+import json
 import math
+from pathlib import Path
 
 import pytest
 
 import analyst
+import funding
+
+FUNDING_RAW = json.loads((Path(__file__).parent / "fixtures" / "funding" / "live_raw.json").read_text())
 
 START = 1_700_000_000_000
 STEP = 900_000
@@ -47,6 +52,10 @@ def providers(**over):
         "depth": lambda e, s: {"exchange": e, "time": START, "bids": [[104.9, 3.0], [104.8, 1.0]],
                                "asks": [[105.0, 1.0], [105.1, 1.0]]},
         "confluence": lambda sig, m, mtf: (40, ["f1"]) if "BULL" in sig else (20, ["f2"]),
+        "funding": lambda e, s: {**funding.binance(
+            "BTCUSDT", FUNDING_RAW["binance_premiumIndex_BTCUSDT"], FUNDING_RAW["binance_fundingRate_BTCUSDT"],
+            FUNDING_RAW["binance_fundingInfo_subset"], START),
+            "cross_venue": funding.cross_venue(FUNDING_RAW["hl_predictedFundings_subset"], "BTC", START)},
     }
     base.update(over)
     return base
@@ -64,13 +73,20 @@ def test_full_snapshot_has_sources_and_no_missing():
     assert snap["missing"] == {}
     for name in ("candles", "indicators", "structure", "fvg", "order_blocks", "session",
                  "liquidity", "htf_bias", "regime", "flow", "derivatives", "footprint",
-                 "orderbook", "baseline"):
+                 "orderbook", "baseline", "funding"):
         assert snap[name] is not None, name
         assert snap[name]["source"] and snap[name]["ts"], name
     assert snap["orderbook"]["imbalance"] == pytest.approx((4 - 2) / 6, rel=1e-3)
     assert snap["baseline"]["long_pct"] + snap["baseline"]["short_pct"] == 100
     assert snap["baseline"]["long_pct"] == 67
     assert snap["candles"]["closed_only"] is True
+    fund = snap["funding"]
+    assert fund["predicted"]["rate"] == funding.fmt(funding.dec(
+        FUNDING_RAW["binance_premiumIndex_BTCUSDT"]["lastFundingRate"]))
+    assert fund["last_settled"]["rate"] and fund["interval_hours"] == 8
+    assert {r["venue"] for r in fund["cross_venue"]} == {"binance", "bybit", "hyperliquid"}
+    assert analyst.resolve_path(snap, "funding.predicted.rate")
+    assert "funding_rate" not in snap["derivatives"]
     assert snap["price"]["value"] == pytest.approx(make_candles()[-1]["c"])
 
 
@@ -78,9 +94,9 @@ def test_failed_providers_are_null_with_reason():
     def boom(*a):
         raise RuntimeError("venue down")
     snap = analyst.build_snapshot("binance", "BTCUSDT", "240",
-                                  providers(market=boom, depth=boom, context=boom))
+                                  providers(market=boom, depth=boom, context=boom, funding=boom))
     for name in ("liquidity", "htf_bias", "regime", "flow", "orderbook", "derivatives",
-                 "baseline", "footprint"):
+                 "baseline", "footprint", "funding"):
         assert snap[name] is None
         assert snap["missing"][name]
     assert "venue down" in snap["missing"]["orderbook"]

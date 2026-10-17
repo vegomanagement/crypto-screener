@@ -195,13 +195,37 @@ def market_sections(market, now_ms):
 
 def derivatives_section(ctx):
     """Venue-native funding/OI from exchange_markets.get_exchange_context."""
+    # Funding lives in the dedicated ``funding`` section (settled vs predicted).
     return {"source": f"exchange_markets.get_exchange_context ({ctx.get('exchange')})",
-            "ts": ctx.get("as_of"), "funding_rate": _f(ctx.get("funding_rate")),
-            "funding_interval_hours": ctx.get("funding_interval_hours"),
+            "ts": ctx.get("as_of"),
             "open_interest": _f(ctx.get("open_interest")),
             "open_interest_unit": ctx.get("open_interest_unit"),
             "mark_price": _f(ctx.get("mark_price")), "index_price": _f(ctx.get("index_price")),
             "ema_bias": ctx.get("ema_bias"), "warnings": list(ctx.get("warnings") or [])[:4]}
+
+
+def funding_section(fd):
+    """Settled vs predicted funding from funding_data.FundingService (exact decimal strings)."""
+    def block(name, *keys):
+        b = fd.get(name)
+        return {k: b.get(k) for k in keys} if b else None
+    ann = fd.get("annualized") or {}
+    cv = fd.get("cross_venue") or {}
+    return {"source": f"funding_data.FundingService ({fd.get('exchange')} public endpoints)",
+            "ts": fd.get("as_of"),
+            "last_settled": block("last_settled", "rate", "time"),
+            "predicted": block("predicted", "rate", "settles_at", "note"),
+            "interval_hours": (fd.get("interval_hours") or {}).get("value"),
+            "annualized_last_settled": ann.get("last_settled"),
+            "annualized_predicted": ann.get("predicted"),
+            "annualized_formula": ann.get("formula"),
+            "cap": (fd.get("cap") or {}).get("value"), "floor": (fd.get("floor") or {}).get("value"),
+            "premium": (fd.get("premium") or {}).get("value"),
+            "trend_last_settlements": fd.get("trend"),
+            "cross_venue": [{k: r.get(k) for k in ("venue", "rate", "interval_hours", "annualized", "stale")}
+                            for r in cv.get("rows") or []] or None,
+            "cross_venue_annualized_spread": cv.get("annualized_spread"),
+            "missing": fd.get("missing") or {}}
 
 
 def footprint_section(fp, bars=6):
@@ -272,7 +296,7 @@ def market_symbol(exchange, symbol):
     return symbol if re.fullmatch(r"[A-Z0-9]{2,30}USDT", symbol) else None
 
 
-def default_providers(*, market=None, confluence=None):
+def default_providers(*, market=None, confluence=None, funding=None):
     """Real providers. ``market``/``confluence`` come from screener (passed in, no import cycle)."""
     import time
 
@@ -298,8 +322,14 @@ def default_providers(*, market=None, confluence=None):
         from liquidity_data import fetch_depth_snapshot
         return fetch_depth_snapshot(exchange, symbol, 50)
 
+    def funding_default(exchange, symbol):
+        from funding_data import FundingService
+        state.setdefault("funding", FundingService())
+        return state["funding"].get(exchange, symbol)
+
     return {"chart": chart, "market": market, "context": context, "footprint": footprint,
-            "depth": depth, "confluence": confluence, "clock": lambda: int(time.time() * 1000)}
+            "depth": depth, "confluence": confluence, "funding": funding or funding_default,
+            "clock": lambda: int(time.time() * 1000)}
 
 
 def _reason(exc):
@@ -314,7 +344,8 @@ def build_snapshot(exchange, symbol, interval, providers):
     msym = market_symbol(exchange, symbol)
     jobs = {"chart": (providers["chart"], (exchange, symbol, interval)),
             "context": (providers.get("context"), (exchange, symbol)),
-            "depth": (providers.get("depth"), (exchange, symbol))}
+            "depth": (providers.get("depth"), (exchange, symbol)),
+            "funding": (providers.get("funding"), (exchange, symbol))}
     if interval in FOOTPRINT_INTERVALS:
         jobs["footprint"] = (providers.get("footprint"), (exchange, symbol, interval))
     else:
@@ -374,7 +405,7 @@ def build_snapshot(exchange, symbol, interval, providers):
             snap[n] = None
             missing[n] = f"market data unavailable: {missing.get('market', 'empty response')}"
     for name, fn in (("derivatives", derivatives_section), ("footprint", footprint_section),
-                     ("orderbook", orderbook_section)):
+                     ("orderbook", orderbook_section), ("funding", funding_section)):
         key = {"derivatives": "context", "orderbook": "depth"}.get(name, name)
         if key in results:
             section(name, fn, results[key])
