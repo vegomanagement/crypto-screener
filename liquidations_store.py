@@ -122,6 +122,7 @@ class LiquidationStore:
                 os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
             self._db = sqlite3.connect(str(path), check_same_thread=False, timeout=5)
             self._db.execute("PRAGMA journal_mode=WAL")
+            self._db.execute("PRAGMA journal_size_limit=4194304")   # keep the WAL bounded too
             self._db.executescript(SCHEMA)
             self._db.commit()
             self._load(self._clock())
