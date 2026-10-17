@@ -70,6 +70,8 @@ test('settings migration from the old split ids', () => {
   assert.deepEqual(saved.indicatorSettings['turtle-zone'], { length: 300, inner: 4, showUpper: true, showLower: false });
   assert.equal(saved.indicatorEnabled.opens, true); assert.equal(saved.indicatorSettings.opens.pdhShow, true); assert.equal(saved.indicatorSettings.opens.pwlShow, false);
   assert.equal(saved.indicatorEnabled.sessions, true); assert.equal(saved.indicatorSettings.sessions.s3Show, true); assert.equal(saved.indicatorSettings.sessions.s2Show, false);
+  assert.equal(saved.indicatorSettings.sessions.s1Show, false, 'London id absent from the save → off (old default)');
+  assert.equal(saved.indicatorSettings.opens.pdlShow, false); assert.equal(saved.indicatorSettings.opens.pmhShow, undefined, 'new PMH/PML keep their defaults');
   assert.equal(saved.indicatorEnabled['vwap-daily'], true, 'unrelated ids untouched');
   for (const id of ['ema7', 'ema28', 'ma20high', 'turtle-upper', 'prev-day-high', 'session-asia']) { assert.equal(id in saved.indicatorEnabled, false); assert.equal(id in saved.indicatorSettings, false); }
   assert.equal('ema' in saved, false); assert.equal('ma20hl' in saved, false);

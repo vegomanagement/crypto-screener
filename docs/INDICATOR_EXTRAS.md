@@ -9,6 +9,12 @@ and finite nonnegative `volume`. The library cannot determine whether an
 exchange candle is closed without timeframe/current-time context, and does not
 pretend to do so.
 
+> **/ui since the indicator-groups change:** the split definitions `turtle-upper`/`turtle-lower`,
+> `prev-day-*`/`prev-week-*` and `session-asia`/`-london`/`-ny` are still exported by this library
+> (and still tested), but `/ui` no longer registers them. They are replaced by the grouped
+> indicators *Turtle Zone* (uses `computeTurtleZone`), *Key levels / Opens* and *Market Sessions*
+> — see docs/INDICATOR_GROUPS_RESULT.md. VWAP daily/weekly are unchanged.
+
 ## Definitions
 
 All 11 entries are disabled by default. Each has `settingsSchema`, `compute`,

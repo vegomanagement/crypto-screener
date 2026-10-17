@@ -175,7 +175,8 @@
     const prev = { 'prev-day-high': 'pdh', 'prev-day-low': 'pdl', 'prev-week-high': 'pwh', 'prev-week-low': 'pwl' };
     if (Object.keys(prev).some(id => typeof enabled[id] === 'boolean')) {
       const opens = isObj(settings.opens) ? { ...settings.opens } : {};
-      Object.entries(prev).forEach(([id, key]) => { if (typeof enabled[id] === 'boolean' && opens[`${key}Show`] === undefined) opens[`${key}Show`] = enabled[id]; });
+      // Old split ids defaulted to off, so an id missing from the save means off.
+      Object.entries(prev).forEach(([id, key]) => { if (opens[`${key}Show`] === undefined) opens[`${key}Show`] = enabled[id] === true; });
       settings.opens = opens;
       if (typeof enabled.opens !== 'boolean') {
         enabled.opens = Object.keys(prev).some(id => enabled[id] === true);
@@ -186,7 +187,7 @@
     const sess = { 'session-asia': 3, 'session-london': 1, 'session-ny': 2 };
     if (Object.keys(sess).some(id => typeof enabled[id] === 'boolean')) {
       const sessions = isObj(settings.sessions) ? { ...settings.sessions } : {};
-      Object.entries(sess).forEach(([id, n]) => { if (typeof enabled[id] === 'boolean' && sessions[`s${n}Show`] === undefined) sessions[`s${n}Show`] = enabled[id]; });
+      Object.entries(sess).forEach(([id, n]) => { if (sessions[`s${n}Show`] === undefined) sessions[`s${n}Show`] = enabled[id] === true; });
       settings.sessions = sessions;
       if (typeof enabled.sessions !== 'boolean') {
         enabled.sessions = Object.keys(sess).some(id => enabled[id] === true);
