@@ -1,0 +1,326 @@
+{
+ "age_s": 0.0,
+ "analysis": {
+  "agent_bias": "short",
+  "bias": "short",
+  "confidence": "medium",
+  "disagreement": null,
+  "factor_scores": [
+   {
+    "direction": "short",
+    "factor": "EMA 7/14/28 stacked bearish, close under all",
+    "source_fields": [
+     "indicators.ema_stack_7_14_28",
+     "indicators.ema7",
+     "indicators.ema28",
+     "indicators.close"
+    ],
+    "strength": 3
+   },
+   {
+    "direction": "short",
+    "factor": "Fresh bear BOS at 103.76 confirms downtrend",
+    "source_fields": [
+     "structure.recent_events.4.kind",
+     "structure.recent_events.4.level",
+     "structure.trend"
+    ],
+    "strength": 3
+   },
+   {
+    "direction": "short",
+    "factor": "Price far below EMA200, no swing low formed",
+    "source_fields": [
+     "indicators.ema200",
+     "structure.last_swing_low"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "short",
+    "factor": "Bear OB 103.53-103.85 caps rebounds",
+    "source_fields": [
+     "order_blocks.unmitigated.2.high",
+     "order_blocks.unmitigated.2.low"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "short",
+    "factor": "Nearest unfilled bear FVG 103.48-103.53 overhead",
+    "source_fields": [
+     "fvg.nearest.0.top",
+     "fvg.nearest.0.bottom"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "short",
+    "factor": "1h CVD down with price down, sellers in control",
+    "source_fields": [
+     "flow.cvd_1h.trend",
+     "flow.cvd_1h.price_trend"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "short",
+    "factor": "Derivative EMA bias bearish on 60/240/D",
+    "source_fields": [
+     "derivatives.ema_bias.60",
+     "derivatives.ema_bias.240",
+     "derivatives.ema_bias.D"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "short",
+    "factor": "Trapped longs with OI rising into decline",
+    "source_fields": [
+     "regime.positioning",
+     "flow.bybit_oi_change_pct"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "short",
+    "factor": "Dense sellside pools 102.64/102.43 as magnet",
+    "source_fields": [
+     "liquidity.pools.0.price",
+     "liquidity.pools.1.price",
+     "liquidity.pools.1.strength"
+    ],
+    "strength": 1
+   },
+   {
+    "direction": "long",
+    "factor": "Negative funding: shorts pay, mild squeeze risk",
+    "source_fields": [
+     "funding.last_settled.rate",
+     "funding.predicted.rate",
+     "funding.annualized_predicted"
+    ],
+    "strength": 1
+   },
+   {
+    "direction": "long",
+    "factor": "RSI14 31 oversold, bounce risk from discount",
+    "source_fields": [
+     "indicators.rsi14",
+     "regime.zone"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "long",
+    "factor": "HTF bias long strong, all TFs in discount",
+    "source_fields": [
+     "htf_bias.direction",
+     "htf_bias.strength",
+     "htf_bias.zones.D"
+    ],
+    "strength": 2
+   }
+  ],
+  "horizon": "4-12 bars of 15m",
+  "levels": [
+   {
+    "price": 103.53,
+    "reason": "Bear FVG top and OB low",
+    "source_fields": [
+     "fvg.nearest.0.top",
+     "order_blocks.unmitigated.2.low"
+    ],
+    "type": "resistance"
+   },
+   {
+    "price": 103.4,
+    "reason": "Retest into ask wall zone",
+    "source_fields": [
+     "orderbook.ask_wall",
+     "price.value"
+    ],
+    "type": "entry"
+   },
+   {
+    "price": 103.9,
+    "reason": "Above bear OB high + ATR buffer",
+    "source_fields": [
+     "order_blocks.unmitigated.2.high",
+     "indicators.atr14"
+    ],
+    "type": "stop"
+   },
+   {
+    "price": 102.64,
+    "reason": "VAL sellside pool",
+    "source_fields": [
+     "liquidity.pools.0.price"
+    ],
+    "type": "target"
+   },
+   {
+    "price": 102.43,
+    "reason": "EQL strength 5 and bull FVG top",
+    "source_fields": [
+     "liquidity.pools.1.price",
+     "fvg.nearest.1.top"
+    ],
+    "type": "target"
+   },
+   {
+    "price": 103.25,
+    "reason": "Bid wall in book",
+    "source_fields": [
+     "orderbook.bid_wall"
+    ],
+    "type": "support"
+   },
+   {
+    "price": 104.41,
+    "reason": "Last swing high",
+    "source_fields": [
+     "structure.last_swing_high.price"
+    ],
+    "type": "resistance"
+   },
+   {
+    "price": 100.48,
+    "reason": "PWL/PDL cluster, window low",
+    "source_fields": [
+     "liquidity.pools.6.price",
+     "candles.window_low"
+    ],
+    "type": "liquidity"
+   }
+  ],
+  "long_pct": 29,
+  "risks": [
+   "RSI oversold near discount HTF support",
+   "Negative funding across venues aids squeeze",
+   "Compressing range, low regime confidence 40",
+   "Outside killzone, thin liquidity moves"
+  ],
+  "scenarios": [
+   {
+    "invalidation": "Reclaim and hold above 103.85",
+    "name": "Continuation down",
+    "target": "102.64 then 102.43",
+    "trigger": "15m close below 103.00"
+   },
+   {
+    "invalidation": "Close above 103.90",
+    "name": "FVG retest short",
+    "target": "102.64",
+    "trigger": "Tag 103.48-103.53 and reject"
+   },
+   {
+    "invalidation": "Back below 103.40",
+    "name": "Oversold squeeze",
+    "target": "104.41-104.60",
+    "trigger": "Close above 103.85 with volume"
+   }
+  ],
+  "short_pct": 71,
+  "split": {
+   "agent_long_points": 5,
+   "agent_net": -0.5833,
+   "agent_short_points": 19,
+   "baseline_net": 0.2254,
+   "bias": "short",
+   "k": 3.0,
+   "long_pct": 29,
+   "method": "p_long = logistic(k * (w_a*agent_net + w_b*baseline_net)/(w_a+w_b))",
+   "net": -0.3003,
+   "neutral_band": 5.0,
+   "p_long": 28.887,
+   "short_pct": 71,
+   "weights": {
+    "agent": 0.65,
+    "baseline": 0.35
+   }
+  },
+  "summary_ru": "SOLUSDT 15m: тренд вниз, EMA медвежьи, свежий BOS 103.76, цена 103.16 под FVG 103.48-103.53 и OB 103.53-103.85. CVD вниз, OI растёт при падении — зажатые лонги. Цели 102.64 и 102.43. Против: RSI 31, HTF discount и отрицательный фандинг дают риск отскока. Инвалидация — закрытие выше 103.90."
+ },
+ "attempts": 1,
+ "baseline": {
+  "long_confidence": 74,
+  "long_factors": [
+   "CVD ⚪ нейтрально",
+   "VP ⚪ внутри VA | POC $110",
+   "Session 🗽 NY Session [4/5]",
+   "F&G 🤑 Greed [55]",
+   "TZ 1H ⚪ Нейтральная [-1.7% от mean]",
+   "TZ 4H ⚪ Нейтральная [-8.2% от mean]",
+   "RSI ⚪ [34]",
+   "MACD ❌ медвежий при лонге"
+  ],
+  "long_pct": 56,
+  "long_score": 79,
+  "long_verdict": "WAIT",
+  "short_confidence": 49,
+  "short_factors": [
+   "CVD ✅ подтверждает направление",
+   "VP ⚪ внутри VA | POC $110",
+   "Session 🗽 NY Session [4/5]",
+   "F&G 🤑 Greed [55]",
+   "TZ 1H ⚪ Нейтральная [-1.7% от mean]",
+   "TZ 4H ⚪ Нейтральная [-8.2% от mean]",
+   "RSI ⚪ [34]",
+   "MACD 🟡 медвежий тренд"
+  ],
+  "short_pct": 44,
+  "short_score": 63,
+  "short_verdict": "WAIT",
+  "source": "screener.compute_confluence_score + decision.make_decision over screener.fetch_market (Bybit-first USDT aggregate, not venue-pinned)",
+  "ts": 1792258812128
+ },
+ "cached": false,
+ "evaluation": {
+  "horizon_bars": 12,
+  "rule": "±1 ATR from the analysis price, bias side first"
+ },
+ "exchange": "bybit",
+ "freshness": {
+  "last_close_ts": 1792258200000,
+  "missing": {
+   "footprint": "ValueError: no closed footprint bars"
+  },
+  "sections": {
+   "baseline": 1792258812128,
+   "candles": 1792258200000,
+   "derivatives": 1792258812129,
+   "flow": 1792258812128,
+   "funding": 1792258812130,
+   "fvg": 1792258200000,
+   "htf_bias": 1792258812128,
+   "indicators": 1792258200000,
+   "liquidity": 1792258812128,
+   "order_blocks": 1792258200000,
+   "orderbook": 1792258812120,
+   "price": 1792258200000,
+   "regime": 1792258812128,
+   "session": 1792258812128,
+   "structure": 1792258200000
+  }
+ },
+ "generated_at": 1792258812128,
+ "id": 17,
+ "interval": "15",
+ "latency_ms": 22075,
+ "model": "hermes-agent",
+ "price": {
+  "source": "last closed candle close",
+  "ts": 1792258200000,
+  "value": 103.16
+ },
+ "raw_output": [
+  "{\"bias\":\"short\",\"confidence\":\"medium\",\"horizon\":\"4-12 bars of 15m\",\"factor_scores\":[{\"factor\":\"EMA 7/14/28 stacked bearish, close under all\",\"direction\":\"short\",\"strength\":3,\"source_fields\":[\"indicators.ema_stack_7_14_28\",\"indicators.ema7\",\"indicators.ema28\",\"indicators.close\"]},{\"factor\":\"Fresh bear BOS at 103.76 confirms downtrend\",\"direction\":\"short\",\"strength\":3,\"source_fields\":[\"structure.recent_events.4.kind\",\"structure.recent_events.4.level\",\"structure.trend\"]},{\"factor\":\"Price far below EMA200, no swing low formed\",\"direction\":\"short\",\"strength\":2,\"source_fields\":[\"indicators.ema200\",\"structure.last_swing_low\"]},{\"factor\":\"Bear OB 103.53-103.85 caps rebounds\",\"direction\":\"short\",\"strength\":2,\"source_fields\":[\"order_blocks.unmitigated.2.high\",\"order_blocks.unmitigated.2.low\"]},{\"factor\":\"Nearest unfilled bear FVG 103.48-103.53 overhead\",\"direction\":\"short\",\"strength\":2,\"source_fields\":[\"fvg.nearest.0.top\",\"fvg.nearest.0.bottom\"]},{\"factor\":\"1h CVD down with price down, sellers in control\",\"direction\":\"short\",\"strength\":2,\"source_fields\":[\"flow.cvd_1h.trend\",\"flow.cvd_1h.price_trend\"]},{\"factor\":\"Derivative EMA bias bearish on 60/240/D\",\"direction\":\"short\",\"strength\":2,\"source_fields\":[\"derivatives.ema_bias.60\",\"derivatives.ema_bias.240\",\"derivatives.ema_bias.D\"]},{\"factor\":\"Trapped longs with OI rising into decline\",\"direction\":\"short\",\"strength\":2,\"source_fields\":[\"regime.positioning\",\"flow.bybit_oi_change_pct\"]},{\"factor\":\"Dense sellside pools 102.64/102.43 as magnet\",\"direction\":\"short\",\"strength\":1,\"source_fields\":[\"liquidity.pools.0.price\",\"liquidity.pools.1.price\",\"liquidity.pools.1.strength\"]},{\"factor\":\"Negative funding: shorts pay, mild squeeze risk\",\"direction\":\"long\",\"strength\":1,\"source_fields\":[\"funding.last_settled.rate\",\"funding.predicted.rate\",\"funding.annualized_predicted\"]},{\"factor\":\"RSI14 31 oversold, bounce risk from discount\",\"direction\":\"long\",\"strength\":2,\"source_fields\":[\"indicators.rsi14\",\"regime.zone\"]},{\"factor\":\"HTF bias long strong, all TFs in discount\",\"direction\":\"long\",\"strength\":2,\"source_fields\":[\"htf_bias.direction\",\"htf_bias.strength\",\"htf_bias.zones.D\"]}],\"levels\":[{\"type\":\"resistance\",\"price\":103.53,\"reason\":\"Bear FVG top and OB low\",\"source_fields\":[\"fvg.nearest.0.top\",\"order_blocks.unmitigated.2.low\"]},{\"type\":\"entry\",\"price\":103.4,\"reason\":\"Retest into ask wall zone\",\"source_fields\":[\"orderbook.ask_wall\",\"price.value\"]},{\"type\":\"stop\",\"price\":103.9,\"reason\":\"Above bear OB high + ATR buffer\",\"source_fields\":[\"order_blocks.unmitigated.2.high\",\"indicators.atr14\"]},{\"type\":\"target\",\"price\":102.64,\"reason\":\"VAL sellside pool\",\"source_fields\":[\"liquidity.pools.0.price\"]},{\"type\":\"target\",\"price\":102.43,\"reason\":\"EQL strength 5 and bull FVG top\",\"source_fields\":[\"liquidity.pools.1.price\",\"fvg.nearest.1.top\"]},{\"type\":\"support\",\"price\":103.25,\"reason\":\"Bid wall in book\",\"source_fields\":[\"orderbook.bid_wall\"]},{\"type\":\"resistance\",\"price\":104.41,\"reason\":\"Last swing high\",\"source_fields\":[\"structure.last_swing_high.price\"]},{\"type\":\"liquidity\",\"price\":100.48,\"reason\":\"PWL/PDL cluster, window low\",\"source_fields\":[\"liquidity.pools.6.price\",\"candles.window_low\"]}],\"scenarios\":[{\"name\":\"Continuation down\",\"trigger\":\"15m close below 103.00\",\"target\":\"102.64 then 102.43\",\"invalidation\":\"Reclaim and hold above 103.85\"},{\"name\":\"FVG retest short\",\"trigger\":\"Tag 103.48-103.53 and reject\",\"target\":\"102.64\",\"invalidation\":\"Close above 103.90\"},{\"name\":\"Oversold squeeze\",\"trigger\":\"Close above 103.85 with volume\",\"target\":\"104.41-104.60\",\"invalidation\":\"Back below 103.40\"}],\"risks\":[\"RSI oversold near discount HTF support\",\"Negative funding across venues aids squeeze\",\"Compressing range, low regime confidence 40\",\"Outside killzone, thin liquidity moves\"],\"summary_ru\":\"SOLUSDT 15m: тренд вниз, EMA медвежьи, свежий BOS 103.76, цена 103.16 под FVG 103.48-103.53 и OB 103.53-103.85. CVD вниз, OI растёт при падении — зажатые лонги. Цели 102.64 и 102.43. Против: RSI 31, HTF discount и отрицательный фандинг дают риск отскока. Инвалидация — закрытие выше 103.90.\"}"
+ ],
+ "snapshot_hash": "7f9c0a7c15805516",
+ "snapshot_ms": 1302,
+ "source": "hermes",
+ "status": "ok",
+ "symbol": "SOLUSDT",
+ "warnings": []
+}

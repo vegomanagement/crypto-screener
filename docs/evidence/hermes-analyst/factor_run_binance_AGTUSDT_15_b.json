@@ -1,0 +1,320 @@
+{
+ "age_s": 0.0,
+ "analysis": {
+  "agent_bias": "short",
+  "bias": "short",
+  "confidence": "low",
+  "disagreement": null,
+  "factor_scores": [
+   {
+    "direction": "long",
+    "factor": "EMA 7>14>28 stack bullish over EMA200",
+    "source_fields": [
+     "indicators.ema_stack_7_14_28",
+     "indicators.ema7",
+     "indicators.ema200"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "long",
+    "factor": "Bull CHOCH at 0.0797, structure trend bull",
+    "source_fields": [
+     "structure.trend",
+     "structure.recent_events.4.level"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "short",
+    "factor": "HTF 60/240/D all premium, strong short bias",
+    "source_fields": [
+     "htf_bias.direction",
+     "htf_bias.strength",
+     "htf_bias.zones.D"
+    ],
+    "strength": 3
+   },
+   {
+    "direction": "short",
+    "factor": "Funding positive and rising, longs pay 116% ann.",
+    "source_fields": [
+     "funding.predicted.rate",
+     "funding.annualized_predicted",
+     "funding.trend_last_settlements.direction"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "short",
+    "factor": "Footprint delta negative two bars into highs",
+    "source_fields": [
+     "footprint.bars.0.delta",
+     "footprint.bars.1.delta"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "short",
+    "factor": "+99% 24h move, exhaustion risk",
+    "source_fields": [
+     "flow.change_24h_pct",
+     "flow.fear_greed.value"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "short",
+    "factor": "RSI 59 neutral, no momentum confirmation",
+    "source_fields": [
+     "indicators.rsi14"
+    ],
+    "strength": 1
+   },
+   {
+    "direction": "short",
+    "factor": "Price below swing high 0.084052 after 0.067 wick",
+    "source_fields": [
+     "structure.last_swing_high.price",
+     "structure.last_swing_low.price"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "long",
+    "factor": "CVD 1h up with price up, no divergence",
+    "source_fields": [
+     "flow.cvd_1h.trend",
+     "flow.cvd_1h.divergence"
+    ],
+    "strength": 1
+   },
+   {
+    "direction": "long",
+    "factor": "Bid-side book imbalance mildly positive",
+    "source_fields": [
+     "orderbook.imbalance",
+     "orderbook.bid_qty"
+    ],
+    "strength": 1
+   },
+   {
+    "direction": "long",
+    "factor": "Unfilled bull FVG 0.0765-0.0771 under price",
+    "source_fields": [
+     "fvg.nearest.0.top",
+     "fvg.nearest.0.bottom"
+    ],
+    "strength": 1
+   },
+   {
+    "direction": "short",
+    "factor": "Pos in range 0.708 premium, range compressing",
+    "source_fields": [
+     "regime.pos_in_range",
+     "regime.zone",
+     "regime.range_state"
+    ],
+    "strength": 2
+   }
+  ],
+  "horizon": "4-12 bars of 15m",
+  "levels": [
+   {
+    "price": 0.084052,
+    "reason": "Last swing high",
+    "source_fields": [
+     "structure.last_swing_high.price"
+    ],
+    "type": "resistance"
+   },
+   {
+    "price": 0.082,
+    "reason": "Round buyside pool",
+    "source_fields": [
+     "liquidity.pools.1.price"
+    ],
+    "type": "liquidity"
+   },
+   {
+    "price": 0.08,
+    "reason": "R3 sellside pool",
+    "source_fields": [
+     "liquidity.pools.2.price"
+    ],
+    "type": "support"
+   },
+   {
+    "price": 0.076824,
+    "reason": "Bull FVG midpoint",
+    "source_fields": [
+     "fvg.nearest.0.top",
+     "fvg.nearest.0.bottom"
+    ],
+    "type": "poi"
+   },
+   {
+    "price": 0.08255,
+    "reason": "Fade into 0.082-0.0835 supply",
+    "source_fields": [
+     "candles.recent.22.2",
+     "liquidity.pools.1.price"
+    ],
+    "type": "entry"
+   },
+   {
+    "price": 0.08505,
+    "reason": "Above swing high + buffer",
+    "source_fields": [
+     "structure.last_swing_high.price",
+     "indicators.atr14"
+    ],
+    "type": "stop"
+   },
+   {
+    "price": 0.07678,
+    "reason": "1 ATR down into FVG",
+    "source_fields": [
+     "indicators.close",
+     "indicators.atr14"
+    ],
+    "type": "target"
+   },
+   {
+    "price": 0.071537,
+    "reason": "Recent bar low cluster",
+    "source_fields": [
+     "candles.recent.17.3"
+    ],
+    "type": "support"
+   }
+  ],
+  "long_pct": 15,
+  "risks": [
+   "Bull structure vs short HTF bias conflict",
+   "Volatility: ATR ~6% of price, wide stops",
+   "Orderbook is one snapshot, easily spoofed",
+   "cross_venue funding missing, no venue spread"
+  ],
+  "scenarios": [
+   {
+    "invalidation": "15m close above 0.0845",
+    "name": "Premium fade",
+    "target": "0.0768 FVG, then 0.0715",
+    "trigger": "Rejection 0.082-0.0840 with negative delta"
+   },
+   {
+    "invalidation": "Back below 0.0797 CHOCH",
+    "name": "Breakout continuation",
+    "target": "0.0888 / EQH 0.0958",
+    "trigger": "15m close above 0.084052 on volume"
+   },
+   {
+    "invalidation": "Break of either edge",
+    "name": "Range chop",
+    "target": "No 1 ATR resolution in 12 bars",
+    "trigger": "Price held 0.0790-0.0825"
+   }
+  ],
+  "short_pct": 85,
+  "split": {
+   "agent_long_points": 7,
+   "agent_net": -0.3333,
+   "agent_short_points": 14,
+   "baseline_net": -1.0,
+   "bias": "short",
+   "k": 3.0,
+   "long_pct": 15,
+   "method": "p_long = logistic(k * (w_a*agent_net + w_b*baseline_net)/(w_a+w_b))",
+   "net": -0.5667,
+   "neutral_band": 5.0,
+   "p_long": 15.447,
+   "short_pct": 85,
+   "weights": {
+    "agent": 0.65,
+    "baseline": 0.35
+   }
+  },
+  "summary_ru": "Локально бычья структура (EMA-стек, CHOCH 0.0797), но HTF 60/240/D в премиуме, фандинг положительный и растёт, дельта футпринта отрицательная на хаях после +99% за сутки. Предпочтение — фейд в зону 0.082-0.0840 с целью 0.0768 (FVG). Отмена: закрытие 15m выше 0.0845."
+ },
+ "attempts": 1,
+ "baseline": {
+  "long_confidence": 0,
+  "long_factors": [
+   "CVD ✅ подтверждает направление",
+   "VP ⚪ вне VA | POC $0",
+   "Session 🗽 NY Session [4/5]",
+   "FR ❌ лонги перегреты",
+   "F&G 🤑 Greed [55]",
+   "TZ 1H ❌ 🚨 Цена перегрета [+181.4%]",
+   "TZ 4H ❌ 🚨 Цена перегрета [+227.1%]",
+   "RSI ⚪ [64]"
+  ],
+  "long_pct": 20,
+  "long_score": 25,
+  "long_verdict": "WAIT",
+  "short_confidence": 100,
+  "short_factors": [
+   "CVD ⚪ нейтрально",
+   "VP ⚪ вне VA | POC $0",
+   "Session 🗽 NY Session [4/5]",
+   "FR ✅ лонги переплачивают",
+   "F&G 🤑 Greed [55]",
+   "TZ 1H ✅ 🚨 Экстремальная перекупленность [+181.4%]",
+   "TZ 4H ✅ 🚨 Экстремальная перекупленность [+227.1%]",
+   "RSI ⚪ [64]"
+  ],
+  "short_pct": 80,
+  "short_score": 100,
+  "short_verdict": "WAIT",
+  "source": "screener.compute_confluence_score + decision.make_decision over screener.fetch_market (Bybit-first USDT aggregate, not venue-pinned)",
+  "ts": 1792259294757
+ },
+ "cached": false,
+ "evaluation": {
+  "horizon_bars": 12,
+  "rule": "±1 ATR from the analysis price, bias side first"
+ },
+ "exchange": "binance",
+ "freshness": {
+  "last_close_ts": 1792259100000,
+  "missing": {},
+  "sections": {
+   "baseline": 1792259294757,
+   "candles": 1792259100000,
+   "derivatives": 1792259294765,
+   "flow": 1792259294757,
+   "footprint": 1792259294771,
+   "funding": 1792259294766,
+   "fvg": 1792259100000,
+   "htf_bias": 1792259294757,
+   "indicators": 1792259100000,
+   "liquidity": 1792259294757,
+   "order_blocks": 1792259100000,
+   "orderbook": 1792259295080,
+   "price": 1792259100000,
+   "regime": 1792259294757,
+   "session": 1792259294757,
+   "structure": 1792259100000
+  }
+ },
+ "generated_at": 1792259294757,
+ "id": 31,
+ "interval": "15",
+ "latency_ms": 25415,
+ "model": "hermes-agent",
+ "price": {
+  "source": "last closed candle close",
+  "ts": 1792259100000,
+  "value": 0.080837
+ },
+ "raw_output": [
+  "{\"bias\":\"short\",\"confidence\":\"low\",\"horizon\":\"4-12 bars of 15m\",\"factor_scores\":[{\"factor\":\"EMA 7>14>28 stack bullish over EMA200\",\"direction\":\"long\",\"strength\":2,\"source_fields\":[\"indicators.ema_stack_7_14_28\",\"indicators.ema7\",\"indicators.ema200\"]},{\"factor\":\"Bull CHOCH at 0.0797, structure trend bull\",\"direction\":\"long\",\"strength\":2,\"source_fields\":[\"structure.trend\",\"structure.recent_events.4.level\"]},{\"factor\":\"HTF 60/240/D all premium, strong short bias\",\"direction\":\"short\",\"strength\":3,\"source_fields\":[\"htf_bias.direction\",\"htf_bias.strength\",\"htf_bias.zones.D\"]},{\"factor\":\"Funding positive and rising, longs pay 116% ann.\",\"direction\":\"short\",\"strength\":2,\"source_fields\":[\"funding.predicted.rate\",\"funding.annualized_predicted\",\"funding.trend_last_settlements.direction\"]},{\"factor\":\"Footprint delta negative two bars into highs\",\"direction\":\"short\",\"strength\":2,\"source_fields\":[\"footprint.bars.0.delta\",\"footprint.bars.1.delta\"]},{\"factor\":\"+99% 24h move, exhaustion risk\",\"direction\":\"short\",\"strength\":2,\"source_fields\":[\"flow.change_24h_pct\",\"flow.fear_greed.value\"]},{\"factor\":\"RSI 59 neutral, no momentum confirmation\",\"direction\":\"short\",\"strength\":1,\"source_fields\":[\"indicators.rsi14\"]},{\"factor\":\"Price below swing high 0.084052 after 0.067 wick\",\"direction\":\"short\",\"strength\":2,\"source_fields\":[\"structure.last_swing_high.price\",\"structure.last_swing_low.price\"]},{\"factor\":\"CVD 1h up with price up, no divergence\",\"direction\":\"long\",\"strength\":1,\"source_fields\":[\"flow.cvd_1h.trend\",\"flow.cvd_1h.divergence\"]},{\"factor\":\"Bid-side book imbalance mildly positive\",\"direction\":\"long\",\"strength\":1,\"source_fields\":[\"orderbook.imbalance\",\"orderbook.bid_qty\"]},{\"factor\":\"Unfilled bull FVG 0.0765-0.0771 under price\",\"direction\":\"long\",\"strength\":1,\"source_fields\":[\"fvg.nearest.0.top\",\"fvg.nearest.0.bottom\"]},{\"factor\":\"Pos in range 0.708 premium, range compressing\",\"direction\":\"short\",\"strength\":2,\"source_fields\":[\"regime.pos_in_range\",\"regime.zone\",\"regime.range_state\"]}],\"levels\":[{\"type\":\"resistance\",\"price\":0.084052,\"reason\":\"Last swing high\",\"source_fields\":[\"structure.last_swing_high.price\"]},{\"type\":\"liquidity\",\"price\":0.082,\"reason\":\"Round buyside pool\",\"source_fields\":[\"liquidity.pools.1.price\"]},{\"type\":\"support\",\"price\":0.08,\"reason\":\"R3 sellside pool\",\"source_fields\":[\"liquidity.pools.2.price\"]},{\"type\":\"poi\",\"price\":0.076824,\"reason\":\"Bull FVG midpoint\",\"source_fields\":[\"fvg.nearest.0.top\",\"fvg.nearest.0.bottom\"]},{\"type\":\"entry\",\"price\":0.08255,\"reason\":\"Fade into 0.082-0.0835 supply\",\"source_fields\":[\"candles.recent.22.2\",\"liquidity.pools.1.price\"]},{\"type\":\"stop\",\"price\":0.08505,\"reason\":\"Above swing high + buffer\",\"source_fields\":[\"structure.last_swing_high.price\",\"indicators.atr14\"]},{\"type\":\"target\",\"price\":0.07678,\"reason\":\"1 ATR down into FVG\",\"source_fields\":[\"indicators.close\",\"indicators.atr14\"]},{\"type\":\"support\",\"price\":0.071537,\"reason\":\"Recent bar low cluster\",\"source_fields\":[\"candles.recent.17.3\"]}],\"scenarios\":[{\"name\":\"Premium fade\",\"trigger\":\"Rejection 0.082-0.0840 with negative delta\",\"target\":\"0.0768 FVG, then 0.0715\",\"invalidation\":\"15m close above 0.0845\"},{\"name\":\"Breakout continuation\",\"trigger\":\"15m close above 0.084052 on volume\",\"target\":\"0.0888 / EQH 0.0958\",\"invalidation\":\"Back below 0.0797 CHOCH\"},{\"name\":\"Range chop\",\"trigger\":\"Price held 0.0790-0.0825\",\"target\":\"No 1 ATR resolution in 12 bars\",\"invalidation\":\"Break of either edge\"}],\"risks\":[\"Bull structure vs short HTF bias conflict\",\"Volatility: ATR ~6% of price, wide stops\",\"Orderbook is one snapshot, easily spoofed\",\"cross_venue funding missing, no venue spread\"],\"summary_ru\":\"Локально бычья структура (EMA-стек, CHOCH 0.0797), но HTF 60/240/D в премиуме, фандинг положительный и растёт, дельта футпринта отрицательная на хаях после +99% за сутки. Предпочтение — фейд в зону 0.082-0.0840 с целью 0.0768 (FVG). Отмена: закрытие 15m выше 0.0845.\"}"
+ ],
+ "snapshot_hash": "8bbb778c978493fe",
+ "snapshot_ms": 15306,
+ "source": "hermes",
+ "status": "ok",
+ "symbol": "AGTUSDT",
+ "warnings": []
+}

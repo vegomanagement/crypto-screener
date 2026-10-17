@@ -14,6 +14,8 @@
   <script defer src="/static/levels.js"></script>
   <script defer src="/static/seconds-candles.js"></script>
   <script defer src="/static/drawings.js"></script>
+  <script defer src="/static/funding.js"></script>
+  <script defer src="/static/analyst-panel.js"></script>
   <script defer src="/static/workspace.js"></script>
 </head>
 <body>
@@ -67,7 +69,7 @@
       <div id="watchlist-rows" class="watchlist-rows"></div>
       <p id="prices-status" class="prices-status" role="status">Loading market prices…</p>
       <button id="watchlist-retry" type="button" hidden>Retry market catalog</button>
-      <div class="watchlist-note"><span class="note-icon" aria-hidden="true">↖</span><div><strong>One pane. Your focus.</strong><p>Select a market to change only the blue-bordered chart. Charts keep independent intervals and zoom.</p></div></div>
+      <section id="analyst-panel" class="analyst-panel" aria-label="Hermes analyst for the active chart"></section>
       <div class="zone-key"><span><i class="bull-swatch"></i>Bullish FVG</span><span><i class="bear-swatch"></i>Bearish FVG</span><p>Unfilled price gaps · wick mitigation<br>Bounded zones, not trade signals.</p></div>
       <details class="local-alerts"><summary>LOCAL notifications · <span id="local-alerts-count">0</span></summary><p>Opt-in browser-only feed. Closed bars only. No Telegram, push, or payment.</p><ol id="local-alerts-feed" aria-live="polite"></ol></details>
     </aside>

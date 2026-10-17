@@ -1,0 +1,503 @@
+{
+ "captured_at_ms": 1792258054912,
+ "results": [
+  {
+   "exchange": "binance",
+   "symbol": "BTCUSDT",
+   "fields": {
+    "predicted.rate": {
+     "api": "0.00002838",
+     "raw_before": "0.00002838",
+     "raw_after": "0.00002838",
+     "verdict": "match"
+    },
+    "predicted.settles_at": {
+     "api": 1792281600000,
+     "raw_before": 1792281600000,
+     "raw_after": 1792281600000,
+     "verdict": "match"
+    },
+    "last_settled.rate": {
+     "api": "0.00003726",
+     "raw_before": "0.00003726",
+     "raw_after": "0.00003726",
+     "verdict": "match"
+    },
+    "last_settled.time": {
+     "api": 1792252800003,
+     "raw_before": 1792252800003,
+     "raw_after": 1792252800003,
+     "verdict": "match"
+    },
+    "interval_hours": {
+     "api": 8,
+     "raw_before": 8,
+     "raw_after": 8,
+     "verdict": "match"
+    },
+    "cap": {
+     "api": "0.003",
+     "raw_before": "0.00300",
+     "raw_after": "0.00300",
+     "verdict": "match"
+    },
+    "mark_price": {
+     "api": "81239.99865067",
+     "raw_before": "81240.93297101",
+     "raw_after": "81239.99865067",
+     "verdict": "match"
+    }
+   },
+   "annualized": {
+    "formula": "rate \u00d7 24 / interval_hours \u00d7 365",
+    "last_settled": "0.0407997",
+    "predicted": "0.0310761",
+    "source": "computed"
+   },
+   "cross_venue": [
+    {
+     "annualized": "0.03106515",
+     "interval_hours": 8,
+     "rate": "0.00002837",
+     "settles_at": 1792281600000,
+     "stale": false,
+     "venue": "binance"
+    },
+    {
+     "annualized": "0.086248332",
+     "interval_hours": 1,
+     "rate": "0.0000098457",
+     "settles_at": 1792256400000,
+     "stale": true,
+     "venue": "hyperliquid"
+    },
+    {
+     "annualized": "0.068547",
+     "interval_hours": 8,
+     "rate": "0.0000626",
+     "settles_at": 1792281600000,
+     "stale": false,
+     "venue": "bybit"
+    }
+   ],
+   "missing": {},
+   "predicted_note": "live estimate for the current period; changes until it settles"
+  },
+  {
+   "exchange": "binance",
+   "symbol": "SOLUSDT",
+   "fields": {
+    "predicted.rate": {
+     "api": "-0.00005541",
+     "raw_before": "-0.00005541",
+     "raw_after": "-0.00005541",
+     "verdict": "match"
+    },
+    "predicted.settles_at": {
+     "api": 1792281600000,
+     "raw_before": 1792281600000,
+     "raw_after": 1792281600000,
+     "verdict": "match"
+    },
+    "last_settled.rate": {
+     "api": "-0.00001862",
+     "raw_before": "-0.00001862",
+     "raw_after": "-0.00001862",
+     "verdict": "match"
+    },
+    "last_settled.time": {
+     "api": 1792252800003,
+     "raw_before": 1792252800003,
+     "raw_after": 1792252800003,
+     "verdict": "match"
+    },
+    "interval_hours": {
+     "api": 8,
+     "raw_before": 8,
+     "raw_after": 8,
+     "verdict": "match"
+    },
+    "cap": {
+     "api": "0.00375",
+     "raw_before": "0.00375",
+     "raw_after": "0.00375",
+     "verdict": "match"
+    },
+    "mark_price": {
+     "api": "103.19",
+     "raw_before": "103.19000000",
+     "raw_after": "103.18173971",
+     "verdict": "match"
+    }
+   },
+   "annualized": {
+    "formula": "rate \u00d7 24 / interval_hours \u00d7 365",
+    "last_settled": "-0.0203889",
+    "predicted": "-0.06067395",
+    "source": "computed"
+   },
+   "cross_venue": [
+    {
+     "annualized": "-0.0597651",
+     "interval_hours": 8,
+     "rate": "-0.00005458",
+     "settles_at": 1792281600000,
+     "stale": false,
+     "venue": "binance"
+    },
+    {
+     "annualized": "-0.074750832",
+     "interval_hours": 1,
+     "rate": "-0.0000085332",
+     "settles_at": 1792256400000,
+     "stale": true,
+     "venue": "hyperliquid"
+    },
+    {
+     "annualized": "0.0037011",
+     "interval_hours": 8,
+     "rate": "0.00000338",
+     "settles_at": 1792281600000,
+     "stale": false,
+     "venue": "bybit"
+    }
+   ],
+   "missing": {},
+   "predicted_note": "live estimate for the current period; changes until it settles"
+  },
+  {
+   "exchange": "bybit",
+   "symbol": "BTCUSDT",
+   "fields": {
+    "predicted.rate": {
+     "api": "0.00006189",
+     "raw_before": "0.00006189",
+     "raw_after": "0.00006189",
+     "verdict": "match"
+    },
+    "predicted.settles_at": {
+     "api": 1792281600000,
+     "raw_before": 1792281600000,
+     "raw_after": 1792281600000,
+     "verdict": "match"
+    },
+    "last_settled.rate": {
+     "api": "0.00006755",
+     "raw_before": "0.00006755",
+     "raw_after": "0.00006755",
+     "verdict": "match"
+    },
+    "last_settled.time": {
+     "api": 1792252800000,
+     "raw_before": 1792252800000,
+     "raw_after": 1792252800000,
+     "verdict": "match"
+    },
+    "interval_hours": {
+     "api": 8,
+     "raw_before": 8,
+     "raw_after": 8,
+     "verdict": "match"
+    },
+    "cap": {
+     "api": "0.00333",
+     "raw_before": "0.00333",
+     "raw_after": "0.00333",
+     "verdict": "match"
+    },
+    "mark_price": {
+     "api": "81239.72",
+     "raw_before": "81239.72",
+     "raw_after": "81239.72",
+     "verdict": "match"
+    }
+   },
+   "annualized": {
+    "formula": "rate \u00d7 24 / interval_hours \u00d7 365",
+    "last_settled": "0.07396725",
+    "predicted": "0.06776955",
+    "source": "computed"
+   },
+   "cross_venue": [
+    {
+     "annualized": "0.03106515",
+     "interval_hours": 8,
+     "rate": "0.00002837",
+     "settles_at": 1792281600000,
+     "stale": false,
+     "venue": "binance"
+    },
+    {
+     "annualized": "0.086248332",
+     "interval_hours": 1,
+     "rate": "0.0000098457",
+     "settles_at": 1792256400000,
+     "stale": true,
+     "venue": "hyperliquid"
+    },
+    {
+     "annualized": "0.068547",
+     "interval_hours": 8,
+     "rate": "0.0000626",
+     "settles_at": 1792281600000,
+     "stale": false,
+     "venue": "bybit"
+    }
+   ],
+   "missing": {},
+   "predicted_note": "live estimate for the current period; changes until it settles"
+  },
+  {
+   "exchange": "bybit",
+   "symbol": "SOLUSDT",
+   "fields": {
+    "predicted.rate": {
+     "api": "0.00000433",
+     "raw_before": "0.00000433",
+     "raw_after": "0.00000433",
+     "verdict": "match"
+    },
+    "predicted.settles_at": {
+     "api": 1792281600000,
+     "raw_before": 1792281600000,
+     "raw_after": 1792281600000,
+     "verdict": "match"
+    },
+    "last_settled.rate": {
+     "api": "-0.00000826",
+     "raw_before": "-0.00000826",
+     "raw_after": "-0.00000826",
+     "verdict": "match"
+    },
+    "last_settled.time": {
+     "api": 1792252800000,
+     "raw_before": 1792252800000,
+     "raw_after": 1792252800000,
+     "verdict": "match"
+    },
+    "interval_hours": {
+     "api": 8,
+     "raw_before": 8,
+     "raw_after": 8,
+     "verdict": "match"
+    },
+    "cap": {
+     "api": "0.005",
+     "raw_before": "0.005",
+     "raw_after": "0.005",
+     "verdict": "match"
+    },
+    "mark_price": {
+     "api": "103.184",
+     "raw_before": "103.184",
+     "raw_after": "103.181",
+     "verdict": "match"
+    }
+   },
+   "annualized": {
+    "formula": "rate \u00d7 24 / interval_hours \u00d7 365",
+    "last_settled": "-0.0090447",
+    "predicted": "0.00474135",
+    "source": "computed"
+   },
+   "cross_venue": [
+    {
+     "annualized": "-0.0597651",
+     "interval_hours": 8,
+     "rate": "-0.00005458",
+     "settles_at": 1792281600000,
+     "stale": false,
+     "venue": "binance"
+    },
+    {
+     "annualized": "-0.074750832",
+     "interval_hours": 1,
+     "rate": "-0.0000085332",
+     "settles_at": 1792256400000,
+     "stale": true,
+     "venue": "hyperliquid"
+    },
+    {
+     "annualized": "0.0037011",
+     "interval_hours": 8,
+     "rate": "0.00000338",
+     "settles_at": 1792281600000,
+     "stale": false,
+     "venue": "bybit"
+    }
+   ],
+   "missing": {},
+   "predicted_note": "live estimate for the current period; changes until it settles"
+  },
+  {
+   "exchange": "hyperliquid",
+   "symbol": "BTC",
+   "fields": {
+    "predicted.rate": {
+     "api": "0.0000098024",
+     "raw_before": "0.0000098024",
+     "raw_after": "0.0000098024",
+     "verdict": "match"
+    },
+    "predicted.settles_at": {
+     "api": 1792260000000,
+     "raw_before": 1792260000000,
+     "raw_after": 1792260000000,
+     "verdict": "match"
+    },
+    "last_settled.rate": {
+     "api": "0.0000041636",
+     "raw_before": "0.0000041636",
+     "raw_after": "0.0000041636",
+     "verdict": "match"
+    },
+    "last_settled.time": {
+     "api": 1792256400036,
+     "raw_before": 1792256400036,
+     "raw_after": 1792256400036,
+     "verdict": "match"
+    },
+    "interval_hours": {
+     "api": 1,
+     "raw_before": 1,
+     "raw_after": 1,
+     "verdict": "match"
+    },
+    "cap": {
+     "api": null,
+     "raw_before": null,
+     "raw_after": null,
+     "verdict": "match"
+    },
+    "mark_price": {
+     "api": "81245",
+     "raw_before": "81245.0",
+     "raw_after": "81245.0",
+     "verdict": "match"
+    }
+   },
+   "annualized": {
+    "formula": "rate \u00d7 24 / interval_hours \u00d7 365",
+    "last_settled": "0.036473136",
+    "predicted": "0.085869024",
+    "source": "computed"
+   },
+   "cross_venue": [
+    {
+     "annualized": "0.03106515",
+     "interval_hours": 8,
+     "rate": "0.00002837",
+     "settles_at": 1792281600000,
+     "stale": false,
+     "venue": "binance"
+    },
+    {
+     "annualized": "0.086248332",
+     "interval_hours": 1,
+     "rate": "0.0000098457",
+     "settles_at": 1792256400000,
+     "stale": true,
+     "venue": "hyperliquid"
+    },
+    {
+     "annualized": "0.068547",
+     "interval_hours": 8,
+     "rate": "0.0000626",
+     "settles_at": 1792281600000,
+     "stale": false,
+     "venue": "bybit"
+    }
+   ],
+   "missing": {
+    "cap": "not published by the info API",
+    "floor": "not published by the info API"
+   },
+   "predicted_note": "live estimate for the current period; changes until it settles"
+  },
+  {
+   "exchange": "hyperliquid",
+   "symbol": "SOL",
+   "fields": {
+    "predicted.rate": {
+     "api": "-0.0000083767",
+     "raw_before": "-0.0000083767",
+     "raw_after": "-0.0000083767",
+     "verdict": "match"
+    },
+    "predicted.settles_at": {
+     "api": 1792260000000,
+     "raw_before": 1792260000000,
+     "raw_after": 1792260000000,
+     "verdict": "match"
+    },
+    "last_settled.rate": {
+     "api": "-0.0000143795",
+     "raw_before": "-0.0000143795",
+     "raw_after": "-0.0000143795",
+     "verdict": "match"
+    },
+    "last_settled.time": {
+     "api": 1792256400036,
+     "raw_before": 1792256400036,
+     "raw_after": 1792256400036,
+     "verdict": "match"
+    },
+    "interval_hours": {
+     "api": 1,
+     "raw_before": 1,
+     "raw_after": 1,
+     "verdict": "match"
+    },
+    "cap": {
+     "api": null,
+     "raw_before": null,
+     "raw_after": null,
+     "verdict": "match"
+    },
+    "mark_price": {
+     "api": "103.185",
+     "raw_before": "103.185",
+     "raw_after": "103.18",
+     "verdict": "match"
+    }
+   },
+   "annualized": {
+    "formula": "rate \u00d7 24 / interval_hours \u00d7 365",
+    "last_settled": "-0.12596442",
+    "predicted": "-0.073379892",
+    "source": "computed"
+   },
+   "cross_venue": [
+    {
+     "annualized": "-0.0597651",
+     "interval_hours": 8,
+     "rate": "-0.00005458",
+     "settles_at": 1792281600000,
+     "stale": false,
+     "venue": "binance"
+    },
+    {
+     "annualized": "-0.074750832",
+     "interval_hours": 1,
+     "rate": "-0.0000085332",
+     "settles_at": 1792256400000,
+     "stale": true,
+     "venue": "hyperliquid"
+    },
+    {
+     "annualized": "0.0037011",
+     "interval_hours": 8,
+     "rate": "0.00000338",
+     "settles_at": 1792281600000,
+     "stale": false,
+     "venue": "bybit"
+    }
+   ],
+   "missing": {
+    "cap": "not published by the info API",
+    "floor": "not published by the info API"
+   },
+   "predicted_note": "live estimate for the current period; changes until it settles"
+  }
+ ]
+}
