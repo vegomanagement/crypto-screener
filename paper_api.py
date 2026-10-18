@@ -41,14 +41,28 @@ class Worker:
         self.stop = threading.Event()
         self.status = {"running": False, "cycles": 0, "last": None, "next": None}
 
-    def cycle(self, reason):
+    def run_one(self, strat, reason):
         from paper_journal import run_cycle
+        kind = strat.get("kind", "setup")
+        if kind == "portfolio":
+            import paper_portfolio
+            return paper_portfolio.run_cycle(self.store, strat, self.venue.candles, self.venue.funding_rows,
+                                             reason=reason, clock=self.clock)
+        if kind == "observer":
+            return strat["cycle"](self.store, strat, reason=reason, clock=self.clock)
+        return run_cycle(self.store, strat, self.symbols, self.venue.candles, funding=self.venue.funding,
+                         reason=reason, clock=self.clock)
+
+    def cycle(self, reason):
         for strat in self.strategies():
-            res = run_cycle(self.store, strat, self.symbols, self.venue.candles, funding=self.venue.funding,
-                            reason=reason, clock=self.clock)
+            try:
+                res = self.run_one(strat, reason)
+            except Exception:  # noqa: BLE001 — one strategy's failure must not stop the others
+                log.exception("paper journal %s cycle failed", strat["id"])
+                continue
             self.status["last"] = {"ts": int(self.clock() * 1000), "reason": reason, "strategy": strat["id"],
                                    "version": res["version"], "errors": res["errors"],
-                                   "new": sum(r.get("new", 0) for r in res["results"])}
+                                   "new": sum(r.get("new", 0) + r.get("new_days", 0) for r in res["results"])}
         self.status["cycles"] += 1
 
     def run(self):
@@ -164,6 +178,40 @@ def register_paper_routes(app, *, store=None, env=None, start=None):
         rows = st.setups(sid, version) if version else []
         return jsonify({"strategy": sid, "version": version, "paper_only": True,
                         **paper_stats.summarize(rows, (meta or {}).get("expectation"))})
+
+    @bp.get("/api/paper/portfolio")
+    def portfolio():
+        import paper_portfolio_stats
+        sid = request.args.get("strategy")
+        if not sid:
+            return jsonify({"error": "strategy required"}), 400
+        st, version = current(sid, request.args.get("version", type=int))
+        meta = next((r for r in st.strategies() if r["id"] == sid and r["version"] == version), None)
+        if meta is None or meta.get("kind") != "portfolio":
+            return jsonify({"error": "not a portfolio strategy"}), 404
+        days, pos = st.pf_days(sid, version), st.pf_positions(sid, version)
+        return jsonify({"strategy": sid, "version": version, "paper_only": True, "state": st.pf_state(sid, version),
+                        "days": days[-400:], "positions": pos[-500:],
+                        "events": st.events(sid, version, 50),
+                        **paper_portfolio_stats.summarize(days, pos, meta.get("expectation"))})
+
+    @bp.get("/api/paper/observer")
+    def observer():
+        import whale_observer as wo
+        sid = request.args.get("strategy")
+        if not sid:
+            return jsonify({"error": "strategy required"}), 400
+        st, version = current(sid, request.args.get("version", type=int))
+        meta = next((r for r in st.strategies() if r["id"] == sid and r["version"] == version), None)
+        if meta is None or meta.get("kind") != "observer":
+            return jsonify({"error": "not an observer strategy"}), 404
+        has = st.q("SELECT name FROM sqlite_master WHERE type='table' AND name='paper_follow'")
+        rows = st.q("SELECT * FROM paper_follow WHERE strategy_id=? AND version=? ORDER BY knowable_ts DESC, id DESC",
+                    (sid, version)) if has else []
+        return jsonify({"strategy": sid, "version": version, "paper_only": True, "no_edge_claimed": True,
+                        "state": st.symbol_state(sid, version, "*"), "by_horizon": wo.summarize(rows),
+                        "rows": rows[:300], "note": "Hypothetical follow trades for a future pre-registered test "
+                                                    "(docs/WHALE_RECORDER.md). Not a signal; no orders."})
 
     @bp.get("/paper")
     def page():

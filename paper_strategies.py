@@ -28,7 +28,13 @@ hashes the source of the modules/functions listed in ``code``. Any change create
 in the store; old versions and their rows are never edited.
 
 Register a new strategy (e.g. the trend/momentum research) with ``register(...)`` at import time
-of a module listed in ``PLUGIN_MODULES`` (env PAPER_STRATEGY_MODULES, comma-separated).
+of a module listed in ``BUILTIN_PLUGINS`` or in env PAPER_STRATEGY_MODULES (comma-separated).
+
+Kinds (``register(..., kind=...)``, default 'setup' = the interface above):
+    'portfolio'  fn(market, params, start_i) -> object with decide(i, book) (portfolio_engine);
+                 journaled by paper_portfolio.py as daily equity snapshots + positions.
+    'observer'   no fn on candles; ``cycle(store, strategy, version, now_ms)`` logs hypothetical
+                 trades from an external event source (whale_observer.py).
 """
 from __future__ import annotations
 
@@ -73,7 +79,7 @@ def params_hash(params, code_ver):
 
 
 def register(strategy_id, fn, params, *, title, timeframes, lifecycle_tf, code=(), expectation=None,
-             description="", history_start=None):
+             description="", history_start=None, kind="setup", cycle=None):
     """Add (or replace, same process) a strategy. ``timeframes``: the TFs ``fn`` needs;
     ``lifecycle_tf``: the TF whose closed bars drive the cycle (the entry TF)."""
     params = json.loads(canonical(params))          # frozen copy, JSON-normalised
@@ -83,14 +89,23 @@ def register(strategy_id, fn, params, *, title, timeframes, lifecycle_tf, code=(
         "lifecycle_tf": lifecycle_tf, "code_version": cv, "hash": params_hash(params, cv),
         "expectation": expectation, "description": description,
         "history_start": history_start if history_start is not None else params.get("history_start"),
+        "kind": kind, "cycle": cycle,
     }
     return REGISTRY[strategy_id]
 
 
+BUILTIN_PLUGINS = ("paper_portfolio_strategies", "whale_observer")
+
+
 def load_plugins(env=None):
-    raw = (env if env is not None else os.environ).get("PAPER_STRATEGY_MODULES", "")
-    for name in [m.strip() for m in raw.split(",") if m.strip()]:
-        importlib.import_module(name)
+    """Import the built-in plugin modules (portfolio finalists A and D; the whale observer, which
+    registers itself only when WHALE_RECORDER=1) and any module in PAPER_STRATEGY_MODULES."""
+    env = env if env is not None else os.environ
+    raw = env.get("PAPER_STRATEGY_MODULES", "")
+    for name in list(BUILTIN_PLUGINS) + [m.strip() for m in raw.split(",") if m.strip()]:
+        mod = importlib.import_module(name)
+        if hasattr(mod, "register_all"):
+            mod.register_all(env)
 
 
 # ─── SMC swing model: 1d → 4h, resting limit at the POI edge, POI stop, 2 R + break-even ─────────

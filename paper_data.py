@@ -17,6 +17,7 @@ FAPI = "https://fapi.binance.com"
 BINANCE_TF = {"240": "4h", "D": "1d", "60": "1h", "W": "1w"}
 PAGE = 1500
 PAUSE_S = 0.2                         # between pages: keeps a cold start far below the weight limit
+COVER_LAG_MS = 120_000                # a print at the bar close may appear on the endpoint a bit later
 
 
 def _q(**kw):
@@ -72,12 +73,19 @@ class VenueData:
     def funding(self, symbol, a, b):
         """Funding rates with a < time ≤ b from /fapi/v1/fundingRate (cached). Raises
         FundingUnavailable when the venue cannot be reached (the trade's costs are retried later)."""
+        return [r["rate"] for r in self.funding_rows(symbol, a, b)]
+
+    def funding_rows(self, symbol, a, b):
+        """[{time, rate}] with a < time ≤ b (cached; only the uncovered tail is fetched). The cover
+        stops ``COVER_LAG_MS`` before the wall clock so a print published late is fetched again."""
         if b <= a:
             return []
         cov = self.store.funding_cover(symbol)
         if not (cov and cov["start_ms"] <= a and cov["end_ms"] >= b):
             now = int(self.clock() * 1000)
-            rows, cur = [], a + 1
+            tail = cov and cov["start_ms"] <= a <= cov["end_ms"]
+            start = cov["end_ms"] if tail else a
+            rows, cur = [], start + 1
             try:
                 while cur <= b:
                     page = self.http(f"{FAPI}/fapi/v1/fundingRate?{_q(symbol=symbol, startTime=cur, endTime=b, limit=1000)}")
@@ -89,5 +97,5 @@ class VenueData:
                     cur = int(page[-1]["fundingTime"]) + 1
             except FundingError as exc:
                 raise FundingUnavailable(str(exc)) from None
-            self.store.put_funding(symbol, rows, a, min(b, now))
-        return [r["rate"] for r in self.store.funding_rows(symbol, a, b)]
+            self.store.put_funding(symbol, rows, start, max(start, min(b, now - COVER_LAG_MS)))
+        return self.store.funding_rows(symbol, a, b)

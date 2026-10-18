@@ -101,8 +101,11 @@ class Book:
         return sum(abs(self.weight(s)) for s in self.mkt.syms)
 
 
-def run(mkt, strategy, cfg=None, start_i=0, end_i=None):
-    """Simulate ``strategy`` over day indices [start_i, end_i). Returns a result dict."""
+def run(mkt, strategy, cfg=None, start_i=0, end_i=None, decide_last=False):
+    """Simulate ``strategy`` over day indices [start_i, end_i). Returns a result dict.
+
+    ``decide_last`` (paper journal): also call ``decide`` at the close of the last day and return
+    those orders/stops as ``res['next']`` — what the strategy would execute at the next open."""
     cfg = cfg or Config()
     n = len(mkt.days) if end_i is None else end_i
     bk = Book(mkt)
@@ -204,7 +207,7 @@ def run(mkt, strategy, cfg=None, start_i=0, end_i=None):
         out["funding"].append(day["fund"])
         out["turnover"].append(day["turn"])
         out["gross"].append(bk.gross())
-        if i < n - 1:                                      # 6. decide for day i+1
+        if i < n - 1 or decide_last:                       # 6. decide for day i+1
             orders, new_stops = strategy.decide(i, bk)
             for s, st in (new_stops or {}).items():
                 if bk.qty[s]:
@@ -217,4 +220,6 @@ def run(mkt, strategy, cfg=None, start_i=0, end_i=None):
     res = dict(out)
     res["trades"] = trades + list(bk.open.values())
     res["coin_pnl"] = {s: cash[s] + bk.qty[s] * (bk.mark[s] or 0.0) for s in mkt.syms}
+    if decide_last:
+        res["next"] = {"orders": orders, "stops": dict(bk.stops), "qty": dict(bk.qty), "equity": bk.equity}
     return res
