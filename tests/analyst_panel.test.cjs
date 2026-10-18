@@ -101,24 +101,8 @@ test('toStoreLevel produces a valid shared-levels input', () => {
   assert.equal(A.toStoreLevel({ type: 'poi', price: -1 }, { exchange: 'bybit', symbol: 'X' }), null);
 });
 
-test('esc neutralises model text', () => {
-  assert.equal(A.esc('<img onerror="x">'), '&lt;img onerror=&quot;x&quot;&gt;');
-});
-
-// ── controller with a fake DOM ──────────────────────────────────────────────
-function fakeEl() {
-  const roles = {}, listeners = {};
-  const node = () => ({ textContent: '', innerHTML: '', disabled: false, checked: false, classList: { toggle() {} },
-    addEventListener(type, fn) { this[`on${type}`] = fn; } });
-  return {
-    roles, listeners,
-    set innerHTML(html) { for (const m of html.matchAll(/data-role="(\w+)"/g)) roles[m[1]] = roles[m[1]] || node(); },
-    querySelector(sel) { return roles[/data-role="(\w+)"/.exec(sel)[1]]; },
-    addEventListener(type, fn) { listeners[type] = fn; }
-  };
-}
-
-test('controller posts the active pane, draws lines, renders the compact summary and keeps a stale result on symbol change', async () => {
+// ── controller (no DOM: the dashboard renders it, the sidebar is the watchlist only) ──
+test('controller posts the active pane, draws lines, publishes views and keeps a stale result on symbol change', async () => {
   const calls = [], drawn = [], cleared = [], seen = [];
   let active = { id: 1, exchange: 'binance', symbol: 'BTCUSDT', interval: '15', precision: 1 };
   const fetch = async (url, options) => {
@@ -126,8 +110,8 @@ test('controller posts the active pane, draws lines, renders the compact summary
     if (url.startsWith('/api/agent/stats')) return { ok: true, json: async () => ({ total: 1, pending: 1, overall: { n: 0 } }) };
     return { ok: true, status: 200, json: async () => RESULT };
   };
-  const el = fakeEl();
-  const ctl = A.mount(el, { fetch, getActive: () => active, drawLines: (id, rows) => drawn.push([id, rows.length]),
+  assert.equal(A.createController.length, 1, 'controller takes deps only, no sidebar element');
+  const ctl = A.createController({ fetch, getActive: () => active, drawLines: (id, rows) => drawn.push([id, rows.length]),
     clearLines: id => cleared.push(id), centerOn() {}, levels: null, visible: () => true, now: () => 61000 });
   const off = ctl.subscribe(v => seen.push(v));
   try {
@@ -135,42 +119,37 @@ test('controller posts the active pane, draws lines, renders the compact summary
     const post = calls.find(c => c[0] === '/api/agent/analysis');
     assert.deepEqual(post[1], { exchange: 'binance', symbol: 'BTCUSDT', interval: '15', force: true });
     assert.deepEqual(drawn.at(-1), [1, 2]);
-    // Sidebar shows only the split + verdict; the full read is the dashboard's job.
-    assert.match(el.roles.summary.innerHTML, /▲ 38%/);
-    assert.match(el.roles.summary.innerHTML, /Short · /);
-    assert.doesNotMatch(el.roles.summary.innerHTML, /analyst-chip|RSI/);
-    assert.ok(el.roles.open, 'Open full analysis link exists');
+    assert.equal(seen.at(-1).result, RESULT);
     assert.equal(seen.at(-1).stale, false);
+    assert.equal(A.gauge(seen.at(-1).result, null).long, 38);
     active = { ...active, symbol: 'ETHUSDT' };
     ctl.activeChanged();
     assert.ok(cleared.includes(1));
     assert.equal(ctl._state.result, RESULT, 'previous analysis is kept');
     assert.equal(ctl.view().stale, true);
+    assert.equal(seen.at(-1).stale, true, 'subscribers hear about the stale state');
     assert.equal(ctl.view().resultKey, 'binance:BTCUSDT:15');
-    assert.match(el.roles.status.textContent, /BTCUSDT 15m — re-analyze/);
-    assert.match(el.roles.summary.innerHTML, /is-stale/);
     assert.equal(ctl.addLevel(0), false, 'cannot save a stale level onto another symbol');
   } finally { off(); ctl.destroy(); }
   assert.equal(ctl.listenerCount(), 0);
 });
 
-test('controller shows rate-limit and seconds-chart errors without posting', async () => {
-  const el = fakeEl();
+test('controller reports rate-limit and seconds-chart errors in its view without posting', async () => {
   let active = { id: 0, exchange: 'binance', symbol: 'BTCUSDT', interval: '5s' };
   const posts = [];
   const fetch = async url => {
     if (url === '/api/agent/analysis') { posts.push(url); return { ok: false, status: 429, json: async () => ({ retry_after_s: 33 }) }; }
     return { ok: false, json: async () => ({}) };
   };
-  const ctl = A.mount(el, { fetch, getActive: () => active, drawLines() {}, clearLines() {}, centerOn() {}, visible: () => true });
+  const ctl = A.createController({ fetch, getActive: () => active, drawLines() {}, clearLines() {}, centerOn() {}, visible: () => true });
   try {
     await ctl.run(true);
     assert.equal(posts.length, 0);
-    assert.match(el.roles.status.textContent, /Seconds/);
+    assert.match(ctl.view().error, /Seconds/);
     active = { ...active, interval: '15' };
     ctl.activeChanged();
     await ctl.run(true);
-    assert.match(el.roles.status.textContent, /retry in 33s/);
+    assert.match(ctl.view().error, /retry in 33s/);
   } finally { ctl.destroy(); }
 });
 
@@ -185,13 +164,18 @@ test('positioningTarget maps the active pane to venue/symbol/period, rejecting w
   assert.ok(A.positioningTarget(null).error);
 });
 
-test('sidebar card no longer duplicates positioning, funding or factor detail', () => {
-  const el = fakeEl();
-  const ctl = A.mount(el, { fetch: async () => ({ ok: false, json: async () => ({}) }), getActive: () => null,
-    drawLines() {}, clearLines() {}, centerOn() {}, visible: () => true });
-  try {
-    assert.deepEqual(Object.keys(el.roles).sort(), ['open', 'run', 'status', 'summary', 'target']);
-  } finally { ctl.destroy(); }
+test('right sidebar is the watchlist only: no analyst card, no mount API', () => {
+  const fs = require('node:fs'), path = require('node:path');
+  const html = fs.readFileSync(path.join(__dirname, '../templates/workspace.html'), 'utf8');
+  const aside = html.slice(html.indexOf('<aside id="watchlist"'), html.indexOf('</aside>'));
+  assert.ok(aside.includes('id="watchlist-rows"'));
+  assert.doesNotMatch(aside, /analyst|Open full analysis|zone-key/);
+  assert.equal(A.mount, undefined);
+  const css = fs.readFileSync(path.join(__dirname, '../static/workspace.css'), 'utf8');
+  assert.doesNotMatch(css, /\.analyst-|\.zone-key|\.watchlist-rows\s*\{\s*min-height:\s*140px/, 'dead sidebar-card CSS and the 140px row floor are gone');
+  // Analysis entry points that stay: top-bar button and footer link.
+  assert.match(html, /class="analysis-jump" data-jump="analysis"/);
+  assert.match(html, /class="footer-analysis" data-jump="analysis"/);
 });
 
 test('workspace loads positioning-panel.js before the analyst card', () => {

@@ -154,8 +154,6 @@
 .ad-disclaimer { margin: 16px 0 0; padding-top: 12px; border-top: 1px solid var(--line); color: #b39b6a; font-size: 13px; }
 /* Header affordance and sidebar summary */
 .analysis-jump { border: 1px solid #355199; color: #cfdcff; background: #18233d; font-weight: 600; }
-.analyst-mini .analyst-gauge.is-stale { opacity: .45; filter: grayscale(.8); }
-.analyst-open { font-weight: 600; }
 @media (max-width: 1280px) {
   .ad-grid { column-count: 2; }
   .ad-verdict-main { grid-template-columns: minmax(130px, auto) minmax(220px, 1fr); }
