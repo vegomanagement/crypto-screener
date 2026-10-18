@@ -6,7 +6,7 @@
 #   ./deploy/contabo/deploy.sh --status | --logs [N] | --stop | --backup | --install-cron
 #
 # Env overrides: CS_HOST (ssh target, default 173.249.40.103), CS_ROOT (/opt/crypto-screener),
-# DEPLOY_REF (default HEAD). Only the committed tree is shipped (git archive), never local DBs.
+# DEPLOY_REF (default HEAD), FORCE_BUILD=1 (rebuild an existing revision). Only the committed tree is shipped (git archive), never local DBs.
 # Data under $CS_ROOT/data and $CS_ROOT/.env are created once and never overwritten.
 set -euo pipefail
 
@@ -68,7 +68,11 @@ git -C "$REPO" archive --format=tar "$REV" -- . ':(exclude)docs' ':(exclude)test
 
 # 3. Build and (re)start only this project's service.
 remote "set -e; cd \$CS_ROOT; export CS_ROOT=\$CS_ROOT CS_REVISION=$REV;
-        $COMPOSE build app; $COMPOSE up -d app;
+        # Build only when this revision has no image yet (or FORCE_BUILD=1): a rebuild yields a new
+        # image id and would recreate the container. up -d still applies .env changes.
+        if [ \"${FORCE_BUILD:-0}\" = 1 ] || ! docker image inspect crypto-screener-app:$REV >/dev/null 2>&1; then
+          $COMPOSE build app; else echo \"image crypto-screener-app:$REV exists — build skipped\"; fi
+        $COMPOSE up -d app;
         for i in \$(seq 1 30); do
           s=\$(docker inspect -f '{{.State.Health.Status}}' crypto-screener-app-1 2>/dev/null || echo missing)
           [ \"\$s\" = healthy ] && break; sleep 3; done
