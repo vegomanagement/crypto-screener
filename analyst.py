@@ -320,6 +320,17 @@ def baseline_section(market, confluence, now_ms):
 
 # ── assembly ───────────────────────────────────────────────────────────────
 
+def smc_section(candles, interval):
+    """SMC swing structure of the pane TF (smc.py; external 5/5, internal 2/2), bounded."""
+    import mtf
+    v = mtf.smc_view(candles, interval)
+    v.pop("_ext"), v.pop("_int")
+    v["source"] = "smc.py over the chart's closed candles (fractal swings, close-confirmed BOS/CHoCH)"
+    v["ts"] = candles[-1]["close_ts"]
+    v["edge"] = "descriptive: the SMC swing model showed no proven out-of-sample edge"
+    return v
+
+
 def market_symbol(exchange, symbol):
     """USDT symbol for screener.fetch_market, or None when it has no honest mapping."""
     import re
@@ -364,7 +375,11 @@ def default_providers(*, market=None, confluence=None, funding=None, positioning
         state.setdefault("funding", FundingService())
         return state["funding"].get(exchange, symbol)
 
-    return {"chart": chart, "market": market, "context": context, "footprint": footprint,
+    def mtf_default(exchange, symbol, interval, periods):
+        import mtf
+        return mtf.build_block(mtf.default_service(), exchange, symbol, interval, periods)
+
+    return {"chart": chart, "market": market, "context": context, "footprint": footprint, "mtf": mtf_default,
             "depth": depth, "confluence": confluence, "funding": funding or funding_default,
             "positioning": positioning, "clock": lambda: int(time.time() * 1000)}
 
@@ -387,6 +402,10 @@ def build_snapshot(exchange, symbol, interval, providers, *, ema_periods=None):
             "context": (providers.get("context"), (exchange, symbol)),
             "depth": (providers.get("depth"), (exchange, symbol)),
             "funding": (providers.get("funding"), (exchange, symbol))}
+    if providers.get("mtf"):
+        jobs["mtf"] = (providers["mtf"], (exchange, symbol, interval, periods))
+    else:
+        missing["mtf"] = "multi-timeframe provider not configured"
     if interval in FOOTPRINT_INTERVALS:
         jobs["footprint"] = (providers.get("footprint"), (exchange, symbol, interval))
     else:
@@ -448,6 +467,12 @@ def build_snapshot(exchange, symbol, interval, providers, *, ema_periods=None):
     from structure_context import signals_section, wyckoff_section
     section("wyckoff", wyckoff_section, candles, results.get("footprint"))
     section("signals", signals_section, candles, interval)
+    section("smc", smc_section, candles, interval)
+    if "mtf" in results:
+        import mtf_block
+        section("mtf", mtf_block.compact, results["mtf"])
+    else:
+        snap["mtf"] = None
     section("session", session_section, now)
     market = results.get("market")
     names = ("liquidity", "htf_bias", "regime", "flow")

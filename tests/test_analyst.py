@@ -7,6 +7,7 @@ import pytest
 
 import analyst
 import funding
+import mtf
 
 FUNDING_RAW = json.loads((Path(__file__).parent / "fixtures" / "funding" / "live_raw.json").read_text())
 POSITIONING_SNAP = json.loads((Path(__file__).parent / "fixtures" / "positioning" /
@@ -59,6 +60,8 @@ def providers(**over):
             FUNDING_RAW["binance_fundingInfo_subset"], START),
             "cross_venue": funding.cross_venue(FUNDING_RAW["hl_predictedFundings_subset"], "BTC", START)},
         "positioning": lambda e, s, p: {**POSITIONING_SNAP, "exchange": e, "symbol": s, "period": p},
+        "mtf": lambda e, s, i, p: mtf.build_block(
+            mtf.MtfService(lambda e2, s2, tf: {"candles": candles}, clock=lambda: START / 1000), e, s, i, p),
     }
     base.update(over)
     return base
