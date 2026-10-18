@@ -13,7 +13,8 @@
   const section = (id, title, sub, body) => `<section class="ad-section" id="ad-${id}" aria-labelledby="ad-${id}-h"><header class="ad-section-head"><h2 id="ad-${id}-h">${esc(title)}</h2>${sub ? `<p>${sub}</p>` : ''}</header>${body}</section>`;
 
   function verdictHtml(view, now) {
-    const v = M.verdictModel(view.result, view.stats), st = M.staleState(view);
+    // Stale: the loaded calibration stats belong to the active chart, not to this result.
+    const st = M.staleState(view), v = M.verdictModel(view.result, st.stale ? null : view.stats);
     const controls = `<div class="ad-controls"><button type="button" class="ad-run" data-act="run" ${view.busy ? 'disabled' : ''}>${view.busy ? 'Analyzing…' : st.stale ? 'Re-analyze this chart' : 'Analyze'}</button>
       <label title="Re-run at most every 2 minutes while this tab is visible"><input type="checkbox" data-act="auto" ${view.auto ? 'checked' : ''}> Auto-refresh</label>
       <label title="Dashed price lines for the levels on the active chart"><input type="checkbox" data-act="lines" ${view.showLines ? 'checked' : ''}> Levels on chart</label></div>`;
@@ -31,7 +32,7 @@
       </div>
       <p class="ad-how">${esc(v.sentence)}</p>
       <dl class="ad-meta">
-        <div><dt>Calibration</dt><dd class="${v.calibrated ? '' : 'warn'}">${esc(v.calibrationNote)}${v.calibration ? ` · ${esc(v.calibration)}` : ' · no scored outcomes yet'}</dd></div>
+        <div><dt>Calibration</dt><dd><span class="${v.calibrated ? 'up' : 'warn'}">${v.calibrated ? '✓' : '⚠'} ${esc(v.calibrationNote)}</span>${st.stale ? ' · calibration for this result is not loaded — re-analyze' : v.calibration ? ` · ${esc(v.calibration.replace(/^Calibration: /, ''))}` : ' · no scored outcomes yet'}</dd></div>
         <div><dt>Source</dt><dd>${esc(v.status)}</dd></div>
         <div><dt>Generated</dt><dd>${esc(v.timestamp)}</dd></div>
         <div><dt>Latency</dt><dd>${esc([v.latency, v.snapshotTime, v.cached].filter(Boolean).join(' · '))}</dd></div>
@@ -127,10 +128,12 @@
 
   function metricsHtml(input) {
     const cards = FL.metricCards(input);
-    const body = `<div class="ad-grid">${cards.map(c => `<article class="ad-card card-${esc(c.id)}"><h3>${esc(c.title)}</h3>
+    const card = c => `<article class="ad-card card-${esc(c.id)}"><h3>${esc(c.title)}</h3>
       ${c.id === 'liquidations' ? liquidationsBody(c) : c.id === 'whales' ? whalesBody(c) : `${c.id === 'positioning' ? cardExtra(c) : ''}${rowsHtml(c.rows || [])}${c.id === 'positioning' ? '' : cardExtra(c)}`}
       ${c.signals && c.signals.length ? `<div class="ad-chips">${c.signals.map(s => `<span class="ad-chip" title="${esc(s.hint)}">${esc(s.label)}: <b>${esc(s.state)}</b></span>`).join('')}</div>` : ''}
-      ${c.note ? `<p class="ad-note">${esc(c.note)}</p>` : ''}</article>`).join('')}</div>`;
+      ${c.note ? `<p class="ad-note">${esc(c.note)}</p>` : ''}</article>`;
+    // Masonry columns for the compact cards; the whale table needs the full width below them.
+    const body = `<div class="ad-grid">${cards.filter(c => c.id !== 'whales').map(card).join('')}</div>${cards.filter(c => c.id === 'whales').map(card).join('')}`;
     return section('metrics', 'Market metrics', 'Hover any value for its source, venue and age. — means the value is not available, with the reason.', body);
   }
 

@@ -80,7 +80,7 @@
       poolsReason: pools.length ? '' : (snap.missing && snap.missing.liquidity) || 'no pools found near price',
       rows: [
         row('CVD (1h, estimated)', cvd ? word(cvd.trend) : null, { ...sec(snap, 'flow', now), venue: MARKET }, { tone: cvd && /bull|up|rising/.test(cvd.trend) ? 'up' : cvd && /bear|down|falling/.test(cvd.trend) ? 'down' : '',
-          sub: cvd ? `price ${word(cvd.price_trend) || '—'}${cvd.divergence ? ` · divergence ${word(cvd.divergence)}` : ''}` : '', reason: (snap.missing && snap.missing.flow) || 'CVD trend unknown' }),
+          sub: cvd ? `price ${word(cvd.price_trend) || '—'}${cvd.divergence ? ` · divergence: ${cvd.divergence === true ? 'yes' : word(cvd.divergence)}` : ''}` : '', reason: (snap.missing && snap.missing.flow) || 'CVD trend unknown' }),
         row('Order book imbalance', isNum(imb) ? `${signed(imb * 100, 1)}%` : null, sec(snap, 'orderbook', now, venue), { tone: tone(imb), arrow: arrow(imb),
           sub: ob ? `top ${ob.levels_per_side}/side · bid wall ${A.fmtPrice(ob.bid_wall, prec)} · ask wall ${A.fmtPrice(ob.ask_wall, prec)}` : '', reason: (snap.missing && snap.missing.orderbook) || 'no depth snapshot' }),
         row('Footprint delta (last bar)', last && isNum(last.delta) ? signed(last.delta, 2) : null, sec(snap, 'footprint', now, venue), { tone: tone(last && last.delta), arrow: arrow(last && last.delta),

@@ -71,7 +71,7 @@
     if (p[0] === 'candles' && p[1] === 'recent' && p.length === 4) {
       const rows = resolvePath(snapshot, 'candles.recent') || [], fields = resolvePath(snapshot, 'candles.recent_fields') || [];
       const back = rows.length ? rows.length - 1 - Number(p[2]) : null, name = RECENT_NAMES[fields[Number(p[3])]] || `field ${p[3]}`;
-      return back === 0 ? `${name} · last bar` : isNum(back) ? `${name} · ${back} bars ago` : name;
+      return back === 0 ? `${name} · last bar` : isNum(back) ? `${name} · ${back} bar${back === 1 ? '' : 's'} ago` : name;
     }
     const names = p.filter(x => !/^\d+$/.test(x)), last = names[names.length - 1] || '';
     if (names.length < 2 || !GENERIC.has(last)) return last.replace(/_/g, ' ');
@@ -146,26 +146,30 @@
       cached: result.cached ? `cached ${Math.round(result.age_s || 0)} s` : '' };
   }
 
-  function firstNumber(text) {
-    const m = /-?\d[\d,]*(?:\.\d+)?/.exec(String(text || ''));
-    return m ? Number(m[0].replace(/,/g, '')) : null;
+  /** First price-like number in free text: within ±50% of `ref` when given ('No 1 ATR move' → null). */
+  function firstNumber(text, ref) {
+    for (const m of String(text || '').matchAll(/-?\d[\d,]*(?:\.\d+)?/g)) {
+      const n = Number(m[0].replace(/,/g, ''));
+      if (!isNum(ref) || (ref > 0 && Math.abs(n - ref) / ref <= 0.5)) return n;
+    }
+    return null;
   }
   /** Scenario cards ordered bull → base → bear (direction from the target vs the analysed price). */
   function scenarioCards(result) {
     const ref = result && result.price && result.price.value, bias = result && result.analysis && result.analysis.bias;
     const items = ((result && result.analysis && result.analysis.scenarios) || []).map((s, i) => {
-      const t = firstNumber(s.target);
+      const t = firstNumber(s.target, ref);
       const dir = isNum(t) && isNum(ref) ? (t > ref ? 'bull' : t < ref ? 'bear' : 'flat') : 'flat';
       return { i, name: s.name || `Scenario ${i + 1}`, trigger: s.trigger || '', target: s.target || '', invalidation: s.invalidation || '', dir };
     });
     const side = bias === 'long' ? 'bull' : bias === 'short' ? 'bear' : 'flat';
-    const dist = s => (isNum(firstNumber(s.target)) && isNum(ref) ? Math.abs(firstNumber(s.target) - ref) : Infinity);
+    const dist = s => (isNum(firstNumber(s.target, ref)) && isNum(ref) ? Math.abs(firstNumber(s.target, ref) - ref) : Infinity);
     const base = items.filter(s => s.dir === side).sort((a, b) => dist(a) - dist(b) || a.i - b.i)[0];
-    const rank = s => (s === base ? 1 : s.dir === 'bull' ? 0 : s.dir === 'bear' ? 2 : 1.5);
+    const RANK = { bull: 0, base: 1, flat: 1.5, bear: 2 };
     return items.map(s => ({ ...s, kind: s === base ? 'base' : s.dir,
-      kindLabel: s === base ? 'Base case' : s.dir === 'bull' ? 'Bull case' : s.dir === 'bear' ? 'Bear case' : 'Unclear direction',
+      kindLabel: s === base ? 'Base case' : s.dir === 'bull' ? 'Bull case' : s.dir === 'bear' ? 'Bear case' : 'Range / unclear',
       arrow: s.dir === 'bull' ? '▲' : s.dir === 'bear' ? '▼' : '◆' }))
-      .sort((a, b) => rank(a) - rank(b) || a.i - b.i);
+      .sort((a, b) => RANK[a.kind] - RANK[b.kind] || a.i - b.i);
   }
 
   /** Stale = the shown analysis belongs to another venue/symbol/interval than the active pane. */

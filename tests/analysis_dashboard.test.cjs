@@ -85,6 +85,21 @@ test('scenarios: bull / base / bear ordering from targets vs price and the bias'
   // Base = the bias-side scenario with the nearest target; order bull → base → bear.
   assert.deepEqual(cards.map(c => [c.name, c.kind]), [['Squeeze', 'bull'], ['Grind', 'base'], ['Dump', 'bear']]);
   assert.equal(cards.find(c => c.kind === 'bear').arrow, '▼');
+  // Short bias (live ETHUSDT 1h shape): base is the nearer bear target and sits between bull and bear.
+  r.analysis.bias = 'short';
+  assert.deepEqual(M.scenarioCards(r).map(c => [c.name, c.kind]), [['Squeeze', 'bull'], ['Grind', 'bull'], ['Dump', 'base']]);
+  r.analysis.scenarios = [{ name: 'Up', target: '2440.97' }, { name: 'Down', target: '2378 then 2355' }, { name: 'Retest', target: '2391 / 2378' }];
+  r.price.value = 2401.61;
+  assert.deepEqual(M.scenarioCards(r).map(c => [c.name, c.kind]), [['Up', 'bull'], ['Retest', 'base'], ['Down', 'bear']]);
+  r.price.value = 100; r.analysis.bias = 'long';
+  r.analysis.scenarios = [{ name: 'Dump', target: '90 then 85', trigger: 't', invalidation: 'i' },
+    { name: 'Squeeze', target: '120', trigger: 't', invalidation: 'i' }, { name: 'Grind', target: '105 EQH', trigger: 't', invalidation: 'i' }];
+  // A small count in the text ('No 1 ATR move') is not a price target → range / unclear, not bear.
+  r.analysis.scenarios.push({ name: 'Range chop', target: 'No 1 ATR resolution', trigger: 't', invalidation: 'i' });
+  const chop = M.scenarioCards(r).find(c => c.name === 'Range chop');
+  assert.deepEqual([chop.kind, chop.kindLabel, chop.arrow], ['flat', 'Range / unclear', '◆']);
+  assert.equal(M.firstNumber('81000 round then 80766', 81440), 81000);
+  assert.equal(M.firstNumber('No 1 ATR resolution', 81440), null);
 });
 
 test('stale analysis: greyed label and header until the new chart is analysed', () => {
@@ -93,7 +108,9 @@ test('stale analysis: greyed label and header until the new chart is analysed', 
   const h = M.headerModel(view, NOW);
   assert.equal(h.target, 'Bybit · ETHUSDT · 1h');
   assert.match(h.fresh, /showing BTCUSDT 15m — re-analyze/);
-  const html = R.verdictHtml({ ...view, stale: true, added: {} }, NOW);
+  const html = R.verdictHtml({ ...view, stale: true, added: {}, stats: { total: 9, pending: 0, overall: { n: 0 } } }, NOW);
+  assert.doesNotMatch(html, /9 logged/, 'active-chart stats are not shown under a stale result');
+  assert.match(html, /calibration for this result is not loaded/);
   assert.match(html, /ad-verdict is-stale/);
   assert.match(html, /Previous analysis for BTCUSDT 15m — re-analyze/);
   assert.match(R.levelsHtml({ ...view, stale: true, added: {}, now: NOW }, 2), /data-act="center"[^>]*disabled/);

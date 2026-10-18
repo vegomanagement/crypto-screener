@@ -115,7 +115,9 @@
 
     let io = null;
     if (deps.IntersectionObserver) {
-      io = new deps.IntersectionObserver(entries => entries.forEach(e => setVisible(e.isIntersecting)), { rootMargin: '120px 0px' });
+      // The dashboard starts exactly at the fold (charts are 100dvh) and edge-adjacent counts as
+      // intersecting, so require it to be 24 px into the viewport before rendering/polling.
+      io = new deps.IntersectionObserver(entries => entries.forEach(e => setVisible(e.isIntersecting)), { rootMargin: '0px 0px -24px 0px' });
       io.observe(el);
     } else { syncPosKey(); st.funding = deps.getFunding(); render(); refreshPositioning(); startPoll(); }
 

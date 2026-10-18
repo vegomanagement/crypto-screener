@@ -23,7 +23,7 @@ function fakeRoot() {
 function fakeIO() {
   const made = [];
   class IO {
-    constructor(cb) { this.cb = cb; this.observed = []; this.disconnected = false; made.push(this); }
+    constructor(cb, opts) { this.cb = cb; this.opts = opts; this.observed = []; this.disconnected = false; made.push(this); }
     observe(el) { this.observed.push(el); }
     disconnect() { this.disconnected = true; }
     fire(on) { this.cb([{ isIntersecting: on }]); }
@@ -53,6 +53,8 @@ test('off-screen: no render, no fetch, no poll timer; on-screen: render + one po
   const dash = D.mount(root, { analyst, getFunding: () => null, fetch, IntersectionObserver: IO, pageVisible: () => true, now: () => 1e12, ...timers });
   assert.equal(made.length, 1);
   assert.equal(made[0].observed[0], root);
+  // The dashboard begins exactly at the fold; edge-adjacent must not count as on screen.
+  assert.equal(made[0].opts.rootMargin, '0px 0px -24px 0px');
   analyst.notify(); dash.tick();
   assert.equal(dash.debug().renders, 0);
   assert.equal(calls.length, 0);
