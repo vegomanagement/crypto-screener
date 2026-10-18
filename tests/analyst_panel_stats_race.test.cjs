@@ -4,18 +4,6 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const A = require('../static/analyst-panel.js');
 
-function fakeEl() {
-  const roles = {};
-  const node = () => ({ textContent: '', innerHTML: '', disabled: false, checked: false, classList: { toggle() {} },
-    addEventListener(type, fn) { this[`on${type}`] = fn; } });
-  return {
-    roles,
-    set innerHTML(html) { for (const m of html.matchAll(/data-role="(\w+)"/g)) roles[m[1]] = roles[m[1]] || node(); },
-    querySelector(sel) { return roles[/data-role="(\w+)"/.exec(sel)[1]]; },
-    addEventListener() {}
-  };
-}
-
 test('late stats for the previous symbol are dropped', async () => {
   let active = { id: 0, exchange: 'binance', symbol: 'BTCUSDT', interval: '15' };
   const pending = [];
@@ -23,8 +11,7 @@ test('late stats for the previous symbol are dropped', async () => {
     const symbol = new URLSearchParams(url.split('?')[1]).get('symbol');
     pending.push({ symbol, resolve: () => resolve({ ok: true, json: async () => ({ total: symbol === 'BTCUSDT' ? 111 : 222, pending: 0, overall: { n: 0 } }) }) });
   });
-  const el = fakeEl();
-  const ctl = A.mount(el, { fetch, getActive: () => active, drawLines() {}, clearLines() {}, centerOn() {}, visible: () => true });
+  const ctl = A.createController({ fetch, getActive: () => active, drawLines() {}, clearLines() {}, centerOn() {}, visible: () => true });
   try {
     assert.equal(pending.at(-1).symbol, 'BTCUSDT');
     active = { ...active, symbol: 'ETHUSDT' };

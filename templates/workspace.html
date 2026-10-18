@@ -52,7 +52,7 @@
       <input id="symbol-input" name="symbol" list="symbol-suggestions" autocomplete="off" spellcheck="false" maxlength="80" placeholder="Search symbol" value="BTCUSDT">
       <button type="submit" title="Apply symbol to active chart" aria-label="Apply symbol to active chart">↵</button>
     </form>
-    <div class="topbar-end"><button type="button" class="analysis-jump" data-jump="analysis" title="Scroll to the full analysis of the active chart">Analysis ↓</button><a class="dom-link" href="/scalp" title="Live order book ladder, prints and clusters (view only)">DOM ↗</a><span class="research-badge"><span class="status-dot"></span>RESEARCH ONLY</span><button id="watchlist-toggle" type="button" aria-controls="watchlist" aria-expanded="true" title="Toggle watchlist">☷ <span>Watchlist</span></button></div>
+    <div class="topbar-end"><button type="button" class="analysis-jump" data-jump="analysis" title="Scroll to the full analysis of the active chart">Analysis ↓</button><a class="dom-link" href="/scalp" title="Live order book ladder, prints and clusters (view only)">DOM ↗</a><span class="research-badge"><span class="status-dot"></span>RESEARCH ONLY</span><button id="watchlist-toggle" type="button" aria-controls="watchlist" aria-expanded="true" title="Show or hide the watchlist">☷ <span>Watchlist</span></button></div>
   </header>
   <nav class="chart-toolbar" aria-label="Chart controls">
     <div id="favorite-intervals" class="favorite-intervals" role="group" aria-label="Favorite intervals"></div>
@@ -80,8 +80,6 @@
       <div id="watchlist-rows" class="watchlist-rows"></div>
       <p id="prices-status" class="prices-status" role="status">Loading market prices…</p>
       <button id="watchlist-retry" type="button" hidden>Retry market catalog</button>
-      <section id="analyst-panel" class="analyst-panel" aria-label="Hermes analyst for the active chart"></section>
-      <div class="zone-key"><span><i class="bull-swatch"></i>Bullish FVG</span><span><i class="bear-swatch"></i>Bearish FVG</span><p>Unfilled price gaps · wick mitigation<br>Bounded zones, not trade signals.</p></div>
       <details class="local-alerts"><summary>LOCAL notifications · <span id="local-alerts-count">0</span></summary><p>Opt-in browser-only feed. Closed bars only. No Telegram, push, or payment.</p><ol id="local-alerts-feed" aria-live="polite"></ol></details>
     </aside>
   </div>

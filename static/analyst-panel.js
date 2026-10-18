@@ -1,7 +1,8 @@
-/* Hermes analyst card for /ui (right sidebar). View only: no orders, no trading APIs.
+/* Hermes analyst state for /ui. View only: no orders, no trading APIs.
  * The browser talks only to this app's Flask routes (/api/agent/*); the Hermes gateway
  * URL/key never reach the page. Pure model functions are exported for node --test;
- * the DOM controller (mount) is used by workspace.js.
+ * the controller (createController) owns the analysis state and is rendered only by
+ * static/analysis-dashboard.js below the charts — the right sidebar is the watchlist only.
  */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory(root);
@@ -190,30 +191,20 @@
   const model = { AUTO_MIN_MS, TYPE_COLORS, TYPE_LABELS, POSITIONING_PERIOD, POSITIONING_REFRESH_MS, positioningTarget, requestFor, emaPeriods, keyOf, gauge, factorChips, splitLine, disagreementText, levelRows, freshness, statsLine,
     autoDue, toStoreLevel, statusText, fmtPrice, decimals, ago, verdictWord, intervalLabel, keyLabel };
 
-  // ── DOM controller ─────────────────────────────────────────────────────────
-  function esc(value) {
-    return String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-  }
-
+  // ── controller ─────────────────────────────────────────────────────────────
   /**
-   * Owns the analysis state (run, stats, auto refresh, chart lines) and renders the compact
-   * sidebar summary. The full read lives in static/analysis-dashboard.js, which subscribes.
+   * Owns the analysis state (run, stats, auto refresh, chart lines); no DOM of its own.
+   * static/analysis-dashboard.js subscribes and renders the full read.
    * deps: { fetch, getActive(): {id, exchange, symbol, interval, precision} | null,
    *         drawLines(paneId, rows), clearLines(paneId), centerOn(paneId, price),
    *         levels (ScreenerLevels or null), visible(): bool, now(): ms }
    * A result for another pane/symbol/interval is kept (shown greyed as stale) until a new one arrives.
    */
-  function mount(el, deps) {
+  function createController(deps) {
     const now = deps.now || (() => Date.now());
     const st = { key: '', activeKey: '', result: null, stats: null, error: '', busy: false, auto: false, lastRun: NaN,
       showLines: true, linesPane: null, generation: 0, added: {} };
     const listeners = new Set();
-    el.innerHTML = `<div class="analyst-head"><h2>Hermes analyst</h2><span class="analyst-target" data-role="target">—</span></div>
-      <div data-role="summary" class="analyst-mini"></div>
-      <p class="analyst-status" data-role="status" role="status">Analyze the blue-bordered chart from its real data.</p>
-      <div class="analyst-actions"><button type="button" data-role="run">Analyze</button>
-        <a class="analyst-open" data-role="open" href="#analysis-dashboard">Open full analysis ↓</a></div>`;
-    const $ = role => el.querySelector(`[data-role="${role}"]`);
 
     function clearLines() {
       if (st.linesPane !== null) { try { deps.clearLines(st.linesPane); } catch (_) { /* pane gone */ } }
@@ -234,18 +225,8 @@
     }
 
     function render() {
-      const active = deps.getActive(), v = view();
-      $('target').textContent = active ? `${active.exchange} · ${active.symbol} · ${intervalLabel(active.interval)}` : '—';
-      $('run').disabled = st.busy;
-      $('run').textContent = st.busy ? 'Analyzing…' : 'Analyze';
-      $('status').textContent = st.busy ? 'Building snapshot and asking Hermes (up to ~60 s)…'
-        : st.error || (v.stale ? `Shown: ${keyLabel(st.key)} — re-analyze for this chart` : statusText(st.result)) || 'Analyze the blue-bordered chart from its real data.';
-      $('status').classList.toggle('is-error', !!st.error);
-      const g = gauge(st.result, st.stats);
-      $('summary').innerHTML = !g ? '' : `<div class="analyst-gauge${v.stale ? ' is-stale' : ''}" role="img" aria-label="${v.stale ? `Previous analysis for ${esc(keyLabel(st.key))}: ` : ''}Long ${g.long}%, short ${g.short}%">
-          <div class="analyst-bar"><span class="long" style="width:${g.long}%"></span><span class="short" style="width:${g.short}%"></span></div>
-          <div class="analyst-pcts"><span class="long">▲ ${g.long}%</span><span class="analyst-bias bias-${esc(g.bias)}">${esc(verdictWord(g.bias))} · ${esc(g.confidence)}</span><span class="short">${g.short}% ▼</span></div></div>`;
-      listeners.forEach(fn => { try { fn(v); } catch (_) { /* subscriber error must not break the card */ } });
+      const v = view();
+      listeners.forEach(fn => { try { fn(v); } catch (_) { /* one subscriber must not break the others */ } });
     }
 
     async function loadStats() {
@@ -301,7 +282,6 @@
       catch (err) { st.error = `Levels store: ${err.message}`; render(); return false; }
     }
 
-    $('run').addEventListener('click', () => run(true));
     const timer = setInterval(() => { if (autoDue(st.auto, deps.visible(), st.lastRun, now(), st.busy)) run(false); }, 15000);
     activeChanged();
     return { activeChanged, run, redraw: drawLines, view, centerOn, addLevel, render,
@@ -312,5 +292,5 @@
       destroy() { clearInterval(timer); clearLines(); listeners.clear(); }, _state: st };
   }
 
-  return Object.assign({ mount, esc }, model);
+  return Object.assign({ createController }, model);
 });

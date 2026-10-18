@@ -6,6 +6,8 @@ import time
 
 from flask import Blueprint, jsonify, request
 
+COLLECT_DEPTH = 1000
+
 
 def valid_identity(exchange, symbol, owner=None):
     if not isinstance(exchange, str) or exchange not in {'bybit', 'binance', 'hyperliquid'}:
@@ -33,7 +35,11 @@ def register_liquidity_routes(app, *, store_path=None, service_factory=None):
                     from liquidity_store import LiquidityStore, LiquidityCollector
                     path.parent.mkdir(parents=True, exist_ok=True)
                     store = LiquidityStore(path)
-                    state['service'] = (store, LiquidityCollector(store, fetch_depth_snapshot))
+                    # 1000 rows (Bybit/Binance max): the old 200 default (Binance: 100)
+                    # covered only ±0.02-0.04% of BTC price, a few pixels on most charts.
+                    def fetch(exchange, symbol):
+                        return fetch_depth_snapshot(exchange, symbol, depth=COLLECT_DEPTH)
+                    state['service'] = (store, LiquidityCollector(store, fetch))
             return state['service']
 
     @blueprint.before_request

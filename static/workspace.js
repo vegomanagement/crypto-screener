@@ -226,7 +226,7 @@
   const grid = $('#chart-grid');
   const footer = $('#workspace-status');
   const panes = new Map();
-  let analyst = null; // static/analyst-panel.js controller (compact sidebar summary + analysis state)
+  let analyst = null; // static/analyst-panel.js controller (analysis state; rendered only by the dashboard)
   let dashboard = null, disposeWheelGuard = null; // static/analysis-dashboard.js (full width, below the charts)
   // Seconds intervals are trade-built in the browser (static/seconds-candles.js); never fabricated.
   const SECONDS_API = window.WorkspaceSeconds || null;
@@ -850,7 +850,7 @@
       const capacity = [...panes.values()].filter(p => !p.disposed && isVisible(p)).length;
       const mode = status.paused ? 'Paused · invisible' : status.error ? `Collection error: ${status.error}` : status.collecting ? 'Collecting' : 'Connecting collector';
       const warnings = (data?.warnings || []).filter(w => typeof w === 'string');
-      this.liquidityStatus.textContent = `${mode} • ${coverage ? `history from ${coverage}` : 'No history yet'} · no history before collection · 10s snapshots, not tick-complete · last sample ${age} · gaps ${gaps}${gaps ? ' (transparent)' : ''} · depth limited: ${sampled} · native quantity (unit unknown unless venue metadata states otherwise) · ${capacity}/6 pane leases · subpixel samples: 1-device-pixel markers, not duration${this.liquidityModel?.truncated ? ' · draw limit reached' : ''}${warnings.length ? ` · ${warnings.join(' · ')}` : ''}`;
+      this.liquidityStatus.textContent = `${mode} • ${coverage ? `history from ${coverage}` : 'No history yet'} · no history before collection · 10s snapshots, not tick-complete · last sample ${age} · gaps ${gaps}${gaps ? ' (transparent)' : ''} · depth limited: ${sampled} · native quantity (unit unknown unless venue metadata states otherwise) · ${capacity}/6 pane leases · subpixel samples: 1-device-pixel markers, not duration${this.liquidityModel ? ` · bucket ${formatPrice(this.liquidityModel.step)}${this.liquidityModel.stepRaised ? ' (raised to 1px minimum)' : ''} · book spans ${Math.round(this.liquidityModel.bookPx)}px of plot` : ''}${this.liquidityModel?.truncated ? ' · draw limit reached' : ''}${warnings.length ? ` · ${warnings.join(' · ')}` : ''}`;
       this.liquidityStatus.title = this.liquidityStatus.textContent;
     }
     liquidityTooltip(parameter) {
@@ -2007,9 +2007,9 @@
     mountLayout(); loadIntervals(); refreshPrices();
   }
   function mountAnalyst() {
-    const api = window.WorkspaceAnalyst, el = $('#analyst-panel');
-    if (!api || !el) return;
-    analyst = api.mount(el, {
+    const api = window.WorkspaceAnalyst;
+    if (!api) return;
+    analyst = api.createController({
       fetch: (url, options) => fetch(url, options),
       getActive: () => {
         const config = state.panes[state.active], pane = panes.get(state.active);
@@ -2042,7 +2042,7 @@
     });
     // Wheel over a chart zooms it and never scrolls the (now scrollable) page.
     disposeWheelGuard = api.installWheelGuard(grid);
-    document.querySelectorAll('[data-jump="analysis"], .analyst-open').forEach(link => link.addEventListener('click', event => { event.preventDefault(); scrollToAnalysis(); }));
+    document.querySelectorAll('[data-jump="analysis"]').forEach(link => link.addEventListener('click', event => { event.preventDefault(); scrollToAnalysis(); }));
   }
   // Funding: refetch visible panes every 30 s (server caches 30 s too); tick countdowns every second.
   const fundingTimer = setInterval(() => {
