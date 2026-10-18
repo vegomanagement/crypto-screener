@@ -24,7 +24,14 @@ from market_candles import closed_candles, interval_ms
 from liquidity_api import register_liquidity_routes
 from footprint_api import register_footprint_routes
 from seconds_api import register_seconds_routes
+from trades_api import register_trades_routes
 from scalp_api import register_scalp_routes
+from agent_api import register_agent_routes
+from funding_api import register_funding_routes
+from positioning_api import register_positioning_routes
+from paper_api import register_paper_routes
+from whale_recorder import register_whale_routes
+from carry_api import register_carry_routes
 
 from decision import make_decision, format_decision_header
 from llm_agents import (
@@ -76,7 +83,18 @@ app = Flask(__name__)
 register_liquidity_routes(app)
 register_footprint_routes(app)
 register_seconds_routes(app)
+register_trades_routes(app)
 register_scalp_routes(app)
+register_funding_routes(app)
+# Late-bound: fetch_market/compute_confluence_score are defined further down this module.
+register_agent_routes(app, market=lambda symbol: fetch_market(symbol),
+                      confluence=lambda *args: compute_confluence_score(*args),
+                      funding=lambda exchange, symbol: app.extensions['funding']['get_service']().get(exchange, symbol))
+register_positioning_routes(app)
+# Paper journal (forward test): read-only routes; the worker starts only with PAPER_JOURNAL=1.
+register_paper_routes(app)
+register_whale_routes(app)
+register_carry_routes(app)
 ai  = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
 # ─── SIGNAL LABELS ────────────────────────────────────────────────────────────
@@ -919,15 +937,16 @@ def compute_indicators(candles: list) -> dict:
     }
 
 
-def compute_vwap(candles: list) -> dict:
+def compute_vwap(candles: list, now: datetime | None = None) -> dict:
     """
     Daily and Weekly VWAP with ±1σ / ±2σ bands from 1H candles (oldest→newest).
     Uses genuine candle timestamps for UTC resets; never infers time from count.
+    ``now`` (tz-aware) replays the bands as of a past moment (analyst backtest).
     """
     if not candles or any("ts" not in c for c in candles):
         return {}
 
-    now   = datetime.now(timezone.utc)
+    now   = now or datetime.now(timezone.utc)
     price = candles[-1]["c"]
 
     def _bands(window: list) -> dict:
@@ -995,8 +1014,8 @@ def check_mtf_confluence(biases: dict, direction: str) -> dict:
 
 # ─── SESSION ─────────────────────────────────────────────────────────────────
 
-def get_session() -> dict:
-    h = datetime.now(timezone.utc).hour
+def get_session(now: datetime | None = None) -> dict:
+    h = (now or datetime.now(timezone.utc)).hour
     if 13 <= h < 16:
         return {"name": "NY+London Overlap", "quality": 5, "icon": "🎯"}
     if 13 <= h < 22:

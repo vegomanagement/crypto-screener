@@ -5,16 +5,20 @@
   // via INDICATOR_DEFS. Migration chain below falls through v4 -> v3 -> v2 -> v1,
   // each older shape simply lacks indicatorSettings/new FVG fields and gets
   // the documented defaults (see INDICATOR_DEFS settingsSchema `default`s).
-  const STORAGE_KEY = 'crypto-screener.workspace.v4';
-  const VERSION = 4;
-  const PREVIOUS_KEYS = ['crypto-screener.workspace.v3', 'crypto-screener.workspace.v2', 'crypto-screener.workspace.v1'];
+  // v4 -> v5: split overlays merged into grouped indicators (EMA ribbon, MA
+  // channel, Turtle Zone, Opens/key levels, Market Sessions); older saves are
+  // migrated by WorkspaceIndicatorGroups.migrateLegacyState (static/indicators/groups.js).
+  const STORAGE_KEY = 'crypto-screener.workspace.v5';
+  const VERSION = 5;
+  const PREVIOUS_KEYS = ['crypto-screener.workspace.v4', 'crypto-screener.workspace.v3', 'crypto-screener.workspace.v2', 'crypto-screener.workspace.v1'];
   const FAVORITES_KEY = 'crypto-screener.workspace.favorites.v1';
   const EXCHANGES = { bybit: 'Bybit', binance: 'Binance', hyperliquid: 'Hyperliquid' };
   const LAYOUTS = { '1': 1, '2cols': 2, '2rows': 2, '3cols': 3, '4grid': 4, '6grid': 6 };
   const FAVORITES = [['1s', '1s'], ['5s', '5s'], ['15s', '15s'], ['30s', '30s'], ['1', '1m'], ['3', '3m'], ['5', '5m'], ['10', '10m'], ['12', '12m'], ['15', '15m'], ['30', '30m'], ['45', '45m'], ['60', '1h'], ['120', '2h'], ['180', '3h'], ['240', '4h'], ['480', '8h'], ['720', '12h'], ['D', 'D'], ['2D', '2D'], ['3D', '3D'], ['W', 'W'], ['M', 'M']];
 
-  const EMA_COLORS = { 7: '#d4ac5c', 14: '#b593d2', 28: '#6b98cf', 200: '#c9d2df' };
-  const MA20_COLORS = { high: '#f0b429', low: '#26c6da' };
+  const EMA_COLORS = { 200: '#c9d2df' };
+  const GROUPS = window.WorkspaceIndicatorGroups || null, OPENS = window.WorkspaceOpens || null, SESSIONS = window.WorkspaceSessions || null;
+  const RIBBON_KEYS = ['r0', 'r1', 'r2'];
 
   // ─── Part A: generic indicator plugin registry (see docs/INDICATOR_PLUGIN_PLAN.md) ───
   // Each entry: { id, label, kind: 'line'|'band'|'boxes', defaultEnabled,
@@ -38,6 +42,24 @@
     }
     return result;
   }
+  // Venue price grid from the server's exchange metadata (/api/scalp/instrument,
+  // shared with /scalp: Binance PRICE_FILTER.tickSize, Bybit priceFilter.tickSize,
+  // Hyperliquid szDecimals). Hyperliquid's tick depends on the price (≤ 5
+  // significant figures, ≤ 6 − szDecimals decimals), as in footprint.hyperliquid_tick.
+  const instrumentCache = new Map();
+  function fetchInstrument(exchange, symbol) {
+    const key = `${exchange}:${symbol}`;
+    if (!instrumentCache.has(key)) instrumentCache.set(key, fetch(`/api/scalp/instrument?${new URLSearchParams({ exchange, symbol })}`, { headers: { Accept: 'application/json' } })
+      .then(async response => { const data = await response.json().catch(() => null); if (!response.ok || !data) throw new Error(data?.error || `HTTP ${response.status}`); return data; })
+      .catch(error => { instrumentCache.delete(key); throw error; }));
+    return instrumentCache.get(key);
+  }
+  const venueTick = (meta, price) => { if (!meta) return null; const fixed = Number(meta.tick_size); if (fixed > 0) return fixed; if (!Number.isInteger(meta.sz_decimals) || meta.sz_decimals < 0 || !(price > 0)) return null; return Number(Math.min(1, Math.max(10 ** (Math.floor(Math.log10(price)) - 4), 10 ** -(6 - meta.sz_decimals))).toPrecision(12)); };
+  // Legend value of an EMA computed over closed bars. The forming bar has no
+  // closed-bar value, so it gets the provisional live EMA from the last closed
+  // value and the forming close ({live: true}); 'warming up' is only for bars
+  // before the first `period` closed candles.
+  const legendEmaValue = (values, candle, lastClosed, period) => { if (!candle || !values) return null; if (values.has(candle.time)) return { value: values.get(candle.time), live: false }; if (!lastClosed || candle.time <= lastClosed.time || !values.has(lastClosed.time) || !Number.isFinite(candle.close)) return null; const alpha = 2 / (period + 1); return { value: alpha * candle.close + (1 - alpha) * values.get(lastClosed.time), live: true }; };
   // Rolling SMA of a single OHLC component (no 0-padding warm-up: callers get
   // nothing before `period` closed candles exist).
   function smaData(candles, period, source) {
@@ -117,38 +139,11 @@
         { key: 'lowColor', label: 'Low intensity', type: 'color', default: '#632ca6' },
         { key: 'midColor', label: 'Medium intensity', type: 'color', default: '#ed4eaa' },
         { key: 'highColor', label: 'High intensity', type: 'color', default: '#ffe66d' }], compute: () => [] },
-    { id: 'ema7', label: 'EMA 7', kind: 'line', defaultEnabled: true,
-      settingsSchema: [
-        { key: 'period', label: 'Period', type: 'number', min: 2, max: 500, step: 1, default: 7 },
-        { key: 'color', label: 'Color', type: 'color', default: EMA_COLORS[7] }],
-      compute: (candles, settings) => emaData(candles, settings.period) },
-    { id: 'ema14', label: 'EMA 14', kind: 'line', defaultEnabled: true,
-      settingsSchema: [
-        { key: 'period', label: 'Period', type: 'number', min: 2, max: 500, step: 1, default: 14 },
-        { key: 'color', label: 'Color', type: 'color', default: EMA_COLORS[14] }],
-      compute: (candles, settings) => emaData(candles, settings.period) },
-    { id: 'ema28', label: 'EMA 28', kind: 'line', defaultEnabled: true,
-      settingsSchema: [
-        { key: 'period', label: 'Period', type: 'number', min: 2, max: 500, step: 1, default: 28 },
-        { key: 'color', label: 'Color', type: 'color', default: EMA_COLORS[28] }],
-      compute: (candles, settings) => emaData(candles, settings.period) },
     { id: 'ema200', label: 'EMA 200', kind: 'line', defaultEnabled: false,
       settingsSchema: [
         { key: 'period', label: 'Period', type: 'number', min: 2, max: 500, step: 1, default: 200 },
         { key: 'color', label: 'Color', type: 'color', default: EMA_COLORS[200] }],
       compute: (candles, settings) => emaData(candles, settings.period) },
-    { id: 'ma20high', label: 'MA20 High', kind: 'line', defaultEnabled: false,
-      settingsSchema: [
-        { key: 'period', label: 'Period', type: 'number', min: 2, max: 500, step: 1, default: 20 },
-        { key: 'source', label: 'Price source', type: 'select', options: ['open', 'high', 'low', 'close'], default: 'high' },
-        { key: 'color', label: 'Color', type: 'color', default: MA20_COLORS.high }],
-      compute: (candles, settings) => smaData(candles, settings.period, settings.source) },
-    { id: 'ma20low', label: 'MA20 Low', kind: 'line', defaultEnabled: false,
-      settingsSchema: [
-        { key: 'period', label: 'Period', type: 'number', min: 2, max: 500, step: 1, default: 20 },
-        { key: 'source', label: 'Price source', type: 'select', options: ['open', 'high', 'low', 'close'], default: 'low' },
-        { key: 'color', label: 'Color', type: 'color', default: MA20_COLORS.low }],
-      compute: (candles, settings) => smaData(candles, settings.period, settings.source) },
     { id: 'fvg', label: 'FVG', kind: 'boxes', defaultEnabled: true,
       settingsSchema: [
         { key: 'minGapPct', label: 'Min gap size (% of price)', type: 'number', min: 0, max: 50, step: 0.01, default: 0 },
@@ -176,6 +171,14 @@
         };
       } }
   ];
+  INDICATOR_DEFS.push(...(GROUPS?.definitions || []));
+  if (OPENS) INDICATOR_DEFS.push({ id: 'opens', label: 'Key levels / Opens', kind: 'opens', defaultEnabled: false, settingsSchema: OPENS.settingsSchema(),
+    labelForSettings: () => 'Key levels / Opens' });
+  if (SESSIONS) INDICATOR_DEFS.push({ id: 'sessions', label: 'Market Sessions', kind: 'sessions', defaultEnabled: false, settingsSchema: SESSIONS.settingsSchema(),
+    labelForSettings: () => 'Market Sessions' });
+  // Order-flow overlays (static/indicators/bubbles*.js, volume-anomaly.js, orderflow-pane.js).
+  if (window.WorkspaceBubbles && window.WorkspaceBubblesRender) INDICATOR_DEFS.push(window.WorkspaceBubbles.definition);
+  if (window.WorkspaceVolumeAnomaly) INDICATOR_DEFS.push(window.WorkspaceVolumeAnomaly.definition);
   INDICATOR_DEFS.push(...(window.WorkspaceIndicatorExtras?.definitions || []).map(def => def.kind !== 'band' ? def : ({ ...def, settingsSchema: [...def.settingsSchema,
     { key: 'innerBoundary', label: 'Visible inner boundary', type: 'select', default: def.innerBoundary || 'lower', options: ['upper', 'lower'] },
     { key: 'showOuter', label: 'Show outer boundary', type: 'boolean', default: false }
@@ -202,6 +205,8 @@
     if (field.type === 'select') return field.options.includes(value) ? value : field.default;
     if (field.type === 'boolean') return typeof value === 'boolean' ? value : field.default;
     if (field.type === 'color') return typeof value === 'string' && /^#[0-9a-fA-F]{6}$/.test(value) ? value : field.default;
+    if (field.type === 'text') return typeof value === 'string' && value.trim() ? value.trim().slice(0, field.maxLength || 40) : field.default;
+    if (field.type === 'session') return typeof value === 'string' && /^(?:[01]\d|2[0-3])[0-5]\d-(?:[01]\d|2[0-3])[0-5]\d$/.test(value.trim()) && value.trim().slice(0, 4) !== value.trim().slice(5) ? value.trim() : field.default;
     return field.default;
   }
   // Merge saved (possibly stale/missing/corrupt) indicator settings onto the
@@ -224,6 +229,8 @@
   const grid = $('#chart-grid');
   const footer = $('#workspace-status');
   const panes = new Map();
+  let analyst = null; // static/analyst-panel.js controller (analysis state; rendered only by the dashboard)
+  let dashboard = null, disposeWheelGuard = null; // static/analysis-dashboard.js (full width, below the charts)
   // Seconds intervals are trade-built in the browser (static/seconds-candles.js); never fabricated.
   const SECONDS_API = window.WorkspaceSeconds || null;
   let intervals = FAVORITES.map(([value, label]) => ({ value, label, available: !/s$/.test(value) || Boolean(SECONDS_API), reason: /s$/.test(value) ? (SECONDS_API ? 'Built from real trades (live stream; Binance also backfills recent minutes)' : 'Seconds candles module did not load') : '' }));
@@ -248,7 +255,7 @@
   const validInterval = value => typeof value === 'string' && /^(?:[1-9]\d{0,5}|[23]?D|W|M|1s|5s|15s|30s)$/.test(value);
   const isSecondsInterval = value => /^(?:1|5|15|30)s$/.test(value);
   function readState() {
-    const fallback = { version: VERSION, layout: '4grid', active: 0, panes: defaultPanes(), watchlistExchange: 'bybit', watchlistSearch: '', watchlistFavoritesOnly: false, watchlistSort: 'none', fvg: true, ema: { 7: true, 14: true, 28: true, 200: false }, ma20hl: { high: false, low: false }, auto: false, sidebar: true, localAlerts: false, indicatorEnabled: Object.fromEntries(INDICATOR_DEFS.map(d => [d.id, Boolean(d.defaultEnabled)])), indicatorSettings: defaultIndicatorSettings() };
+    const fallback = { version: VERSION, layout: '4grid', active: 0, panes: defaultPanes(), watchlistExchange: 'bybit', watchlistSearch: '', watchlistFavoritesOnly: false, watchlistSort: 'none', fvg: true, auto: false, sidebar: true, localAlerts: false, indicatorEnabled: Object.fromEntries(INDICATOR_DEFS.map(d => [d.id, Boolean(d.defaultEnabled)])), indicatorSettings: defaultIndicatorSettings() };
     try {
       // v4 -> v3 -> v2 -> v1 fallback chain: read whichever key exists, newest
       // first. Every older shape is a strict subset of the v4 fields below, so
@@ -258,7 +265,8 @@
         const raw = localStorage.getItem(key);
         if (raw) { saved = JSON.parse(raw); break; }
       }
-      if (!saved || ![1, 2, 3, VERSION].includes(saved.version) || !Object.hasOwn(LAYOUTS, saved.layout)) return fallback;
+      if (!saved || ![1, 2, 3, 4, VERSION].includes(saved.version) || !Object.hasOwn(LAYOUTS, saved.layout)) return fallback;
+      if (saved.version < VERSION && GROUPS) { const migrated = GROUPS.migrateLegacyState(saved); saved = migrated.saved; fallback.migrationNotes = migrated.notes; }
       fallback.layout = saved.layout;
       if (Array.isArray(saved.panes)) saved.panes.slice(0, 6).forEach((pane, index) => {
         const exchange = saved.version === 1 ? 'bybit' : pane?.exchange;
@@ -270,8 +278,6 @@
       if (['none', 'asc', 'desc'].includes(saved.watchlistSort)) fallback.watchlistSort = saved.watchlistSort;
       fallback.active = Number.isInteger(saved.active) && saved.active >= 0 && saved.active < LAYOUTS[fallback.layout] ? saved.active : 0;
       ['fvg', 'auto', 'sidebar'].forEach(key => { if (typeof saved[key] === 'boolean') fallback[key] = saved[key]; });
-      Object.keys(fallback.ema).forEach(period => { if (saved.ema && typeof saved.ema[period] === 'boolean') fallback.ema[period] = saved.ema[period]; });
-      Object.keys(fallback.ma20hl).forEach(key => { if (saved.ma20hl && typeof saved.ma20hl[key] === 'boolean') fallback.ma20hl[key] = saved.ma20hl[key]; });
       // New in v4; absent in v1-v3 saves, which fall through to documented defaults.
       fallback.indicatorSettings = sanitizeIndicatorSettings(saved.indicatorSettings);
       INDICATOR_DEFS.forEach(def => {
@@ -282,6 +288,7 @@
     return fallback;
   }
   const state = readState();
+  const migrationNotes = state.migrationNotes || []; delete state.migrationNotes;
   // Deep link from the /scalp DOM ("chart ↗"): ?exchange=…&symbol=… retargets the active pane only.
   try {
     const deep = new URLSearchParams(location.search), deepExchange = deep.get('exchange'), deepSymbol = deep.get('symbol');
@@ -329,9 +336,6 @@
 
   function isIndicatorEnabled(id) {
     if (id === 'fvg') return state.fvg;
-    if (['ema7','ema14','ema28','ema200'].includes(id)) return Boolean(state.ema[id.slice(3)]);
-    if (id === 'ma20high') return state.ma20hl.high;
-    if (id === 'ma20low') return state.ma20hl.low;
     return state.indicatorEnabled[id] ?? false;
   }
   function setIndicatorEnabled(id, value) {
@@ -414,6 +418,7 @@
     $('#watchlist-toggle').setAttribute('aria-expanded', String(state.sidebar));
     $('#workspace').classList.toggle('sidebar-collapsed', !state.sidebar);
     syncSuggestions();
+    analyst?.activeChanged();
   }
   function setActive(id) {
     if (!panes.has(id)) return;
@@ -567,6 +572,7 @@
           </details>
           <select class="pane-interval" aria-label="Interval for chart ${id + 1}"></select>
           <span class="pane-source" title="Data provider from chart response">—</span>
+          <span class="pane-funding" data-sign="none" hidden></span>
           <span class="pane-closed" title="Only completed candles are requested">CLOSED ONLY</span>
           <button type="button" class="pane-footprint-toggle" aria-pressed="false" aria-label="Footprint for chart ${id + 1}" title="Footprint (bid × ask order flow) for this chart">FP</button>
           <button type="button" class="pane-footprint-settings" aria-label="Footprint settings" title="Footprint settings">⚙</button>
@@ -574,7 +580,7 @@
         </header>
         <div class="chart-stage">
           <div class="chart-host"></div><canvas class="fvg-overlay" aria-hidden="true"></canvas>
-          <div class="chart-legend"><span class="ohlc">Waiting for provider…</span><span class="legend-ema ema-7" data-ema="7"></span><span class="legend-ema ema-14" data-ema="14"></span><span class="legend-ema ema-28" data-ema="28"></span><span class="legend-ema ema-200" data-ema="200"></span><span class="pane-live-price" data-state="hidden"></span></div>
+          <div class="chart-legend"><span class="ohlc">Waiting for provider…</span><span class="legend-ema" data-ema="r0"></span><span class="legend-ema" data-ema="r1"></span><span class="legend-ema" data-ema="r2"></span><span class="legend-ema ema-200" data-ema="200"></span><span class="pane-live-price" data-state="hidden"></span></div>
           <div class="chart-message"><span>Loading closed candles…</span></div>
         </div>
         <div class="pane-liquidity-status" role="status" hidden></div><div class="pane-footprint-status" role="status" hidden></div>
@@ -605,21 +611,21 @@
       this.initFootprint();
       this.volume = this.chart.addHistogramSeries({ priceFormat: { type: 'volume' }, priceScaleId: 'volume', lastValueVisible: false, priceLineVisible: false });
       this.chart.priceScale('volume').applyOptions({ scaleMargins: { top: 0.84, bottom: 0 }, visible: false });
-      Object.keys(EMA_COLORS).forEach(period => {
-        const settings = getIndicatorSettings(`ema${period}`);
-        this.emas[period] = this.chart.addLineSeries({ color: settings.color, lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, visible: state.ema[period] });
-      });
-      this.ma20 = {
-        high: this.chart.addLineSeries({ color: getIndicatorSettings('ma20high').color, lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, visible: state.ma20hl.high }),
-        low: this.chart.addLineSeries({ color: getIndicatorSettings('ma20low').color, lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, visible: state.ma20hl.low })
-      };
+      // EMA ribbon (3 lines) + EMA 200 and the MA channel's two lines are native line series.
+      const lineSeries = () => this.chart.addLineSeries({ lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, visible: false });
+      [...RIBBON_KEYS, '200'].forEach(key => { this.emas[key] = lineSeries(); });
+      this.ma20 = { high: lineSeries(), low: lineSeries() };
+      this.groupModels = {}; this.htf = null; this.htfKey = null;
+      this.htfLoader = OPENS?.createLoader({ fetch: (url, options) => fetch(url, options) });
       this.initDrawings();
+      this.initOrderflow();
       this.initCountdown();
       this.logicalListener = () => { this.scheduleDraw(); this.queueLiquidityRange(); };
       this.crosshairListener = parameter => {
         const candle = parameter.seriesData?.get(this.series);
         this.updateLegend(candle && typeof candle.close === 'number' ? candle : this.candles.at(-1));
         this.liquidityTooltip(parameter);
+        this.orderflow?.tooltip(parameter.point);
         this.scheduleDraw();
       };
       this.chart.timeScale().subscribeVisibleLogicalRangeChange(this.logicalListener);
@@ -693,6 +699,17 @@
         visible: () => !this.disposed && document.visibilityState === 'visible' && isVisible(this),
         onChange: () => { this.renderFootprintStatus(); this.scheduleDraw(); } });
     }
+    initOrderflow() {
+      const api = window.WorkspaceOrderflowPane;
+      if (!api) return;
+      const config = () => state.panes[this.id];
+      this.orderflow = api.attach({ pane: this, hub: streamHub, fetch: (url, options) => fetch(url, options), stage: $('.chart-stage', this.element),
+        statusAfter: this.footprintStatus, isEnabled: isIndicatorEnabled, settings: getIndicatorSettings, config, format: price => this.series.priceFormatter().format(price),
+        step: () => intervalSeconds(config().interval, this.candles.at(-1)?.time || Date.now() / 1000),
+        tickKnown: () => Boolean(this.instrument || this.instrumentError), tick: () => venueTick(this.instrument, this.lastDisplayPrice ?? this.candles.at(-1)?.close),
+        forming: () => (this.seconds ? this.seconds.view().forming : this.forming) || null,
+        mainFootprint: () => (config().footprint ? this.footprint?.store || null : null), requestDraw: () => this.scheduleDraw() });
+    }
     // Drawing tools + shared price levels live in static/drawings.js; the pane only maps pixels.
     initDrawings() {
       const api = window.WorkspaceDrawings;
@@ -701,11 +718,21 @@
         levels: window.ScreenerLevels || null, requestDraw: () => this.scheduleDraw(), getContext: () => this.drawingContext(),
         onError: message => { this.status.textContent = `Levels store: ${message}`; this.status.title = this.status.textContent; } });
     }
+    refreshInstrument() {
+      const config = state.panes[this.id], key = `${config.exchange}:${config.symbol}`;
+      this.instrumentKey = key; this.instrument = null; this.instrumentError = null;
+      fetchInstrument(config.exchange, config.symbol).then(meta => { if (this.instrumentKey === key && !this.disposed) { this.instrument = meta; this.scheduleDraw(); } })
+        .catch(error => { if (this.instrumentKey === key) { this.instrumentError = error.message; this.instrumentKey = null; } });
+    }
     drawingContext() {
       const config = state.panes[this.id];
-      return { exchange: config.exchange, symbol: config.symbol, candles: this.candles, chart: this.chart, series: this.series, host: this.host,
+      const tickSize = venueTick(this.instrument, this.lastDisplayPrice ?? this.candles.at(-1)?.close);
+      const fp = config.footprint ? this.footprint?.store : null;
+      return { exchange: config.exchange, symbol: config.symbol, interval: config.interval, candles: this.candles, chart: this.chart, series: this.series, host: this.host,
+        footprint: fp || null, footprintVersion: fp ? `${fp.bars?.size}:${this.footprint.status?.state}` : 0,
         stepMs: intervalSeconds(config.interval, this.candles.at(-1)?.time || Date.now() / 1000) * 1000,
         precision: this.series.options().priceFormat?.precision ?? 2,
+        tickSize, tickSource: tickSize ? `${config.exchange} ${this.instrument.tick_rule === 'fixed' ? 'tickSize' : 'szDecimals rule'}` : 'chart precision',
         plotWidth: Math.max(0, this.host.clientWidth - this.chart.priceScale('right').width()),
         plotHeight: Math.max(0, this.host.clientHeight - this.chart.timeScale().height()) };
     }
@@ -839,7 +866,7 @@
       const capacity = [...panes.values()].filter(p => !p.disposed && isVisible(p)).length;
       const mode = status.paused ? 'Paused · invisible' : status.error ? `Collection error: ${status.error}` : status.collecting ? 'Collecting' : 'Connecting collector';
       const warnings = (data?.warnings || []).filter(w => typeof w === 'string');
-      this.liquidityStatus.textContent = `${mode} • ${coverage ? `history from ${coverage}` : 'No history yet'} · no history before collection · 10s snapshots, not tick-complete · last sample ${age} · gaps ${gaps}${gaps ? ' (transparent)' : ''} · depth limited: ${sampled} · native quantity (unit unknown unless venue metadata states otherwise) · ${capacity}/6 pane leases · subpixel samples: 1-device-pixel markers, not duration${this.liquidityModel?.truncated ? ' · draw limit reached' : ''}${warnings.length ? ` · ${warnings.join(' · ')}` : ''}`;
+      this.liquidityStatus.textContent = `${mode} • ${coverage ? `history from ${coverage}` : 'No history yet'} · no history before collection · 10s snapshots, not tick-complete · last sample ${age} · gaps ${gaps}${gaps ? ' (transparent)' : ''} · depth limited: ${sampled} · native quantity (unit unknown unless venue metadata states otherwise) · ${capacity}/6 pane leases · subpixel samples: 1-device-pixel markers, not duration${this.liquidityModel ? ` · bucket ${formatPrice(this.liquidityModel.step)}${this.liquidityModel.stepRaised ? ' (raised to 1px minimum)' : ''} · book spans ${Math.round(this.liquidityModel.bookPx)}px of plot` : ''}${this.liquidityModel?.truncated ? ' · draw limit reached' : ''}${warnings.length ? ` · ${warnings.join(' · ')}` : ''}`;
       this.liquidityStatus.title = this.liquidityStatus.textContent;
     }
     liquidityTooltip(parameter) {
@@ -962,7 +989,11 @@
       context.font = '9px SFMono-Regular, Consolas, monospace';
       if (state.fvg) this.drawZones(context, plotWidth, plotHeight);
       this.drawBands(context, plotWidth, plotHeight);
+      this.drawGroupedOverlays(context, plotWidth, plotHeight);
+      if (this.wyckoff) this.drawWyckoff(context, plotWidth);
+      if (this.smcOverlay) this.drawSmc(context, plotWidth);
       if (state.panes[this.id].footprint) this.drawFootprint(context, plotWidth, plotHeight);
+      this.orderflow?.draw(context, plotWidth, plotHeight);
       this.drawings?.draw(context, plotWidth, plotHeight);
       context.restore();
     }
@@ -1039,37 +1070,105 @@
       if (logical === null) return null;
       return this.chart.timeScale().logicalToCoordinate(logical);
     }
+    // Grouped indicators (static/indicators/*): one toggle each; models are
+    // computed here once per data/settings change and painted per frame.
+    applyGroupedIndicators() {
+      const step = intervalSeconds(state.panes[this.id].interval, this.candles.at(-1)?.time || 0);
+      const options = (visible, color, width) => ({ visible: Boolean(visible), color, lineWidth: width || 1 });
+      this.groupWarnings = []; this.groupModels = {};
+      const ribbonOn = isIndicatorEnabled('ema-ribbon'), ribbonDef = INDICATOR_BY_ID.get('ema-ribbon');
+      (ribbonDef ? ribbonDef.compute(this.candles, getIndicatorSettings('ema-ribbon')).lines : []).forEach((line, index) => {
+        const key = RIBBON_KEYS[index];
+        this.emaValues[key] = new Map(line.data.map(point => [point.time, point.value]));
+        this.emas[key].applyOptions(options(ribbonOn && line.visible, line.color, line.width));
+        this.emas[key].setData(ribbonOn && line.visible ? line.data : []);
+      });
+      const ema200 = getIndicatorSettings('ema200'), ema200Data = INDICATOR_BY_ID.get('ema200').compute(this.candles, ema200);
+      this.emaValues['200'] = new Map(ema200Data.map(point => [point.time, point.value]));
+      this.emas['200'].applyOptions(options(isIndicatorEnabled('ema200'), ema200.color, 1));
+      this.emas['200'].setData(ema200Data);
+      const channelOn = isIndicatorEnabled('ma-channel'), channelDef = INDICATOR_BY_ID.get('ma-channel');
+      const channel = channelDef && channelOn ? channelDef.compute(this.candles, getIndicatorSettings('ma-channel')) : null;
+      ['high', 'low'].forEach(side => {
+        const line = channel?.[side === 'high' ? 'upper' : 'lower'];
+        this.ma20[side].applyOptions(options(line?.visible, line?.color, line?.width));
+        this.ma20[side].setData(line?.visible ? line.data : []);
+      });
+      if (channel?.fill) this.groupModels.channel = channel;
+      if (isIndicatorEnabled('turtle-zone') && INDICATOR_BY_ID.has('turtle-zone')) {
+        try { this.groupModels.turtle = INDICATOR_BY_ID.get('turtle-zone').compute(this.candles, getIndicatorSettings('turtle-zone')); }
+        catch (_) { /* reported once by the definition's warnings() */ }
+      }
+      if (SESSIONS && isIndicatorEnabled('sessions') && this.candles.length) {
+        const model = SESSIONS.compute(this.candles, getIndicatorSettings('sessions'), step);
+        this.groupModels.sessions = model;
+        this.groupWarnings.push(...model.warnings.map(text => `Market Sessions: ${text}`));
+      }
+      if (OPENS && isIndicatorEnabled('opens') && this.candles.length) {
+        const config = state.panes[this.id];
+        if (this.htf && this.htfMarket === `${config.exchange}:${config.symbol}`) {
+          const model = OPENS.computeModel({ ...this.htf, chart: this.candles }, getIndicatorSettings('opens'), { candles: this.candles, step });
+          this.groupModels.opens = model;
+          this.groupWarnings.push(...[...this.htf.errors, ...model.warnings].map(text => `Key levels: ${text}`));
+        } else this.groupWarnings.push('Key levels: loading higher-timeframe candles…');
+        this.refreshHigherTimeframes(step);
+      }
+    }
+    refreshHigherTimeframes(step) {
+      const config = state.panes[this.id], tfs = OPENS.neededTimeframes(getIndicatorSettings('opens'), step);
+      const key = JSON.stringify([config.exchange, config.symbol, tfs]);
+      if (this.htfPending === key || (this.htfKey === key && Date.now() - this.htfAt < 60000)) return;
+      this.htfPending = key;
+      this.htfLoader.ensure(config.exchange, config.symbol, tfs).then(data => {
+        if (this.htfPending === key) this.htfPending = null;
+        const now = state.panes[this.id];
+        if (this.disposed || JSON.stringify([now.exchange, now.symbol, OPENS.neededTimeframes(getIndicatorSettings('opens'), step)]) !== key) return;
+        this.htf = data; this.htfKey = key; this.htfAt = Date.now(); this.htfMarket = `${config.exchange}:${config.symbol}`;
+        this.applyIndicators();
+      });
+    }
+    drawGroupedOverlays(context, plotWidth, plotHeight) {
+      if (!this.candles.length || !GROUPS) return;
+      const scale = this.chart.timeScale();
+      const view = { x: time => this.edgeCoordinate(time), y: price => this.series.priceToCoordinate(price), barSpacing: scale.options().barSpacing,
+        lastX: scale.logicalToCoordinate(this.candles.length - 1), plotWidth, plotHeight, format: price => this.series.priceFormatter().format(price) };
+      const centers = points => points.map(p => ({ time: p.time, x: this.edgeCoordinateCenter(p.time), y: this.series.priceToCoordinate(p.value) }))
+        .filter(p => Number.isFinite(p.x) && Number.isFinite(p.y));
+      const channel = this.groupModels.channel;
+      if (channel) GROUPS.fillBetween(context, centers(channel.upper.data), centers(channel.lower.data), GROUPS.rgba(channel.fillColor, channel.opacity));
+      const turtle = this.groupModels.turtle;
+      if (turtle) turtle.zones.filter(zone => zone.visible).forEach(zone => {
+        const inner = centers(zone.inner), outer = centers(zone.outer);
+        if (turtle.fill) GROUPS.fillBetween(context, outer, inner, GROUPS.rgba(zone.color, turtle.opacity));
+        GROUPS.strokePolyline(context, inner, zone.color, turtle.width);
+        if (turtle.showOuter) GROUPS.strokePolyline(context, outer, zone.color, turtle.width);
+      });
+      if (this.groupModels.sessions) SESSIONS.draw(context, view, this.groupModels.sessions, getIndicatorSettings('sessions'));
+      if (this.groupModels.opens) OPENS.draw(context, view, this.groupModels.opens, getIndicatorSettings('opens'));
+    }
     showMessage(text) {
       this.message.hidden = !text;
       $('span', this.message).textContent = text;
     }
     updateLegend(candle) {
       $('.ohlc', this.element).textContent = candle ? `O ${formatPrice(candle.open)}  H ${formatPrice(candle.high)}  L ${formatPrice(candle.low)}  C ${formatPrice(candle.close)}` : 'No closed candle data';
-      Object.keys(EMA_COLORS).forEach(period => {
-        const element = $(`[data-ema="${period}"]`, this.element);
-        element.hidden = !state.ema[period];
-        const effectivePeriod = getIndicatorSettings(`ema${period}`).period;
-        const value = candle ? this.emaValues[period]?.get(candle.time) : undefined;
-        element.textContent = `EMA ${effectivePeriod} ${value === undefined ? '· warming up' : formatPrice(value)}`;
+      const ribbon = getIndicatorSettings('ema-ribbon');
+      [...RIBBON_KEYS, '200'].forEach((key, index) => {
+        const element = $(`[data-ema="${key}"]`, this.element);
+        const isRibbon = key !== '200', n = index + 1;
+        element.hidden = isRibbon ? !(isIndicatorEnabled('ema-ribbon') && ribbon[`show${n}`]) : !isIndicatorEnabled('ema200');
+        const effectivePeriod = isRibbon ? ribbon[`period${n}`] : getIndicatorSettings('ema200').period;
+        if (isRibbon) element.style.color = ribbon[`color${n}`];
+        const point = legendEmaValue(this.emaValues[key], candle, this.candles.at(-1), effectivePeriod);
+        element.textContent = `EMA ${effectivePeriod} ${point === null ? '· warming up' : `${formatPrice(point.value)}${point.live ? ' (live)' : ''}`}`;
+        element.title = point?.live ? 'Provisional EMA including the forming bar; the plotted line uses closed bars only' : '';
       });
     }
     applyIndicators() {
       this.syncLiquidity();
       this.syncFootprint();
-      Object.keys(EMA_COLORS).forEach(period => {
-        const settings = getIndicatorSettings(`ema${period}`);
-        const data = INDICATOR_BY_ID.get(`ema${period}`).compute(this.candles, settings);
-        this.emaValues[period] = new Map(data.map(point => [point.time, point.value]));
-        this.emas[period].applyOptions({ visible: state.ema[period], color: settings.color });
-        this.emas[period].setData(data);
-      });
-      ['high', 'low'].forEach(key => {
-        const id = `ma20${key}`;
-        const settings = getIndicatorSettings(id);
-        this.ma20[key].applyOptions({ visible: state.ma20hl[key], color: settings.color });
-        this.ma20[key].setData(INDICATOR_BY_ID.get(id).compute(this.candles, settings));
-      });
-      INDICATOR_DEFS.filter(def => def.kind === 'line' && !['ema7','ema14','ema28','ema200','ma20high','ma20low'].includes(def.id)).forEach(def => {
+      this.applyGroupedIndicators();
+      INDICATOR_DEFS.filter(def => def.kind === 'line' && def.id !== 'ema200').forEach(def => {
         const settings = getIndicatorSettings(def.id);
         let series = this.pluginLines.get(def.id);
         if (!series) {
@@ -1082,10 +1181,10 @@
       });
       syncIndicatorLabels();
       const warningEl = $('.pane-plugin-warnings', this.element);
-      const warnings = INDICATOR_DEFS.filter(def => isIndicatorEnabled(def.id) && typeof def.warnings === 'function').flatMap(def => {
+      const warnings = [...(this.groupWarnings || []), ...INDICATOR_DEFS.filter(def => isIndicatorEnabled(def.id) && typeof def.warnings === 'function').flatMap(def => {
         try { return def.warnings(this.candles, { ...getIndicatorSettings(def.id), intervalSeconds: intervalSeconds(state.panes[this.id].interval, this.candles.at(-1)?.time || 0) }).map(message => `${def.label}: ${message}`); }
         catch (error) { return [`${def.label}: ${error.message}`]; }
-      });
+      })];
       warningEl.textContent = warnings.join(' · '); warningEl.hidden = !warnings.length;
       this.updateLegend(this.candles.at(-1));
       this.scheduleDraw();
@@ -1208,6 +1307,72 @@
       else this.priceLine = this.series.createPriceLine({ price, color: '#4fc3f7', lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dotted, axisLabelVisible: true, title: 'Current' });
       this.livePriceEl.dataset.state = 'ready';
       this.livePriceEl.textContent = `${source} ${formatPrice(price)}`;
+    }
+    // Funding chip (static/funding.js): last settled → predicted · countdown, via GET /api/funding.
+    async refreshFunding() {
+      const config = state.panes[this.id], key = `${config.exchange}:${config.symbol}`;
+      if (this.fundingKey !== key) { this.fundingKey = key; this.fundingData = null; this.renderFundingChip(); }
+      if (this.fundingBusy) return;
+      this.fundingBusy = true;
+      try {
+        const response = await fetch(`/api/funding?${new URLSearchParams({ exchange: config.exchange, symbol: config.symbol })}`, { headers: { Accept: 'application/json' } });
+        const data = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+        if (this.fundingKey === key && !this.disposed) this.fundingData = response.ok ? data : { error: data.error || `HTTP ${response.status}`, detail: data.detail };
+      } catch (error) {
+        if (this.fundingKey === key) this.fundingData = { error: 'request failed', detail: String(error && error.message || error) };
+      } finally {
+        this.fundingBusy = false; this.renderFundingChip();
+        // The pane switched market while this request was in flight (the new market's call
+        // was skipped as busy): fetch it now instead of leaving the chip blank for up to 30 s.
+        if (!this.disposed && this.fundingKey !== key) this.refreshFunding();
+      }
+    }
+    renderFundingChip(now = Date.now()) {
+      const el = $('.pane-funding', this.element), api = window.WorkspaceFunding;
+      if (!el || !api) return;
+      const model = api.chipModel(this.fundingData, now);
+      el.hidden = !model && !this.fundingData?.error;
+      el.textContent = model ? model.text : this.fundingData?.error ? 'F n/a' : '';
+      el.title = model ? model.title : this.fundingData?.detail || this.fundingData?.error || '';
+      el.dataset.sign = model ? model.sign : 'none';
+    }
+    // Wyckoff overlay (static/indicators/wyckoff.js), driven by the analysis dashboard toggle.
+    setWyckoff(model) { this.wyckoff = model || null; this.scheduleDraw(); }
+    drawWyckoff(context, plotWidth) {
+      const c = state.panes[this.id], api = window.WorkspaceWyckoff;
+      if (!api || !c || this.wyckoff.key !== `${c.exchange}:${c.symbol}:${c.interval}`) return;
+      api.draw(context, { x: t => this.edgeCoordinate(t), xc: t => this.edgeCoordinateCenter(t), y: p => this.series.priceToCoordinate(p), plotWidth }, this.wyckoff);
+    }
+    // SMC / HTF overlay (static/indicators/smc.js), driven by the dashboard's Multi-timeframe toggles.
+    setSmc(model) { this.smcOverlay = model || null; this.scheduleDraw(); }
+    drawSmc(context, plotWidth) {
+      const c = state.panes[this.id], api = window.WorkspaceSmc;
+      if (!api || !c || this.smcOverlay.key !== `${c.exchange}:${c.symbol}:${c.interval}`) return;
+      api.draw(context, { x: t => this.edgeCoordinate(t), xc: t => this.edgeCoordinateCenter(t), y: p => this.series.priceToCoordinate(p), plotWidth, first: this.candles[0]?.time }, this.smcOverlay);
+    }
+    // Hermes analyst levels (static/analyst-panel.js): temporary dashed price lines, never stored.
+    setAnalystLines(rows) {
+      this.clearAnalystLines(false);
+      this.analystLines = rows.map(row => this.series.createPriceLine({ price: row.price, color: row.color, lineWidth: 1,
+        lineStyle: LightweightCharts.LineStyle.LargeDashed, axisLabelVisible: true, title: `H·${row.label}` }));
+    }
+    clearAnalystLines(resetCenter = true) {
+      (this.analystLines || []).forEach(line => { try { this.series.removePriceLine(line); } catch (_) { /* disposed */ } });
+      this.analystLines = [];
+      if (resetCenter) this.centerOnPrice(null);
+    }
+    // Centre the right price scale on `price` keeping the current span; null restores normal autoscale.
+    centerOnPrice(price) {
+      if (!Number.isFinite(price)) {
+        if (this.analystCenter) { this.analystCenter = null; this.series.applyOptions({ autoscaleInfoProvider: original => original() }); }
+        return;
+      }
+      const height = Math.max(0, this.host.clientHeight - this.chart.timeScale().height());
+      const top = this.series.coordinateToPrice(0), bottom = this.series.coordinateToPrice(height);
+      const span = Number.isFinite(top) && Number.isFinite(bottom) && top !== bottom ? Math.abs(top - bottom) : Math.abs(price) * 0.02;
+      this.analystCenter = { minValue: price - span / 2, maxValue: price + span / 2 };
+      this.series.applyOptions({ autoscaleInfoProvider: original => this.analystCenter ? { priceRange: this.analystCenter } : original() });
+      this.chart.priceScale('right').applyOptions({ autoScale: true });
     }
     removeLivePrice() {
       if (this.priceLine) { this.series.removePriceLine(this.priceLine); this.priceLine = null; }
@@ -1370,6 +1535,9 @@
       this.scheduleDraw();
     }
     async load(resetView = false, restart = false) {
+      if (resetView) this.centerOnPrice(null);
+      if (this.fundingKey !== `${state.panes[this.id].exchange}:${state.panes[this.id].symbol}`) this.refreshFunding();
+      if (this.instrumentKey !== `${state.panes[this.id].exchange}:${state.panes[this.id].symbol}`) this.refreshInstrument();
       if (this.disposed) return;
       this.updateHeader();
       if (isSecondsInterval(state.panes[this.id].interval)) return this.loadSeconds(resetView, restart);
@@ -1449,7 +1617,7 @@
     }
     destroy() {
       this.stopSeconds(); this.drawings?.dispose(); clearInterval(this.countdownTimer);
-      this.footprint?.disable();
+      this.footprint?.disable(); this.orderflow?.dispose();
       this.liquiditySession?.dispose(); clearInterval(this.liquidityTimer); clearTimeout(this.liquidityRangeTimer);
       this.disposed = true;
       this.generation += 1;
@@ -1669,7 +1837,13 @@
     const settings = getIndicatorSettings(id);
     const fields = $('.indicator-settings-fields', settingsPopover);
     fields.innerHTML = '';
+    let group = null;
     def.settingsSchema.forEach(field => {
+      if (field.group && field.group !== group) {
+        group = field.group;
+        const heading = document.createElement('div'); heading.className = 'indicator-settings-group'; heading.textContent = group;
+        fields.append(heading);
+      }
       const row = document.createElement('label');
       row.className = 'indicator-settings-field';
       const labelSpan = document.createElement('span');
@@ -1680,7 +1854,7 @@
         input = document.createElement('select');
         field.options.forEach(option => {
           const optionEl = document.createElement('option');
-          optionEl.value = option; optionEl.textContent = option;
+          optionEl.value = option; optionEl.textContent = field.optionLabels?.[option] ?? option;
           input.append(optionEl);
         });
         input.value = settings[field.key];
@@ -1691,6 +1865,12 @@
       } else if (field.type === 'color') {
         input = document.createElement('input');
         input.type = 'color';
+        input.value = settings[field.key];
+      } else if (field.type === 'text' || field.type === 'session') {
+        input = document.createElement('input');
+        input.type = 'text'; input.required = true; input.spellcheck = false;
+        if (field.type === 'session') { input.pattern = '(?:[01]\\d|2[0-3])[0-5]\\d-(?:[01]\\d|2[0-3])[0-5]\\d'; input.placeholder = 'HHMM-HHMM'; input.title = 'Session window HHMM-HHMM; end before start crosses midnight'; }
+        else input.maxLength = field.maxLength || 40;
         input.value = settings[field.key];
       } else {
         input = document.createElement('input');
@@ -1743,17 +1923,18 @@
     });
     setIndicatorSettings(settingsPopoverId, patch);
     panes.forEach(pane => pane.applyIndicators());
+    if (settingsPopoverId === 'ema-ribbon') analyst?.activeChanged(); // analysis key includes the periods
   }
   function resetSettingsPopover() {
     if (!settingsPopoverId) return;
     resetIndicatorSettings(settingsPopoverId);
     renderSettingsFields(settingsPopoverId);
     panes.forEach(pane => pane.applyIndicators());
+    if (settingsPopoverId === 'ema-ribbon') analyst?.activeChanged();
   }
   function indicatorLabel(def) {
     const settings = getIndicatorSettings(def.id);
-    if (['ema7','ema14','ema28','ema200'].includes(def.id)) return `EMA ${settings.period}`;
-    if (def.id.startsWith('ma20')) return `MA ${settings.period} ${settings.source}`;
+    if (def.id === 'ema200') return `EMA ${settings.period}`;
     return typeof def.labelForSettings === 'function' ? def.labelForSettings(settings) : `${def.label}${settings.period !== undefined ? ` ${settings.period}` : settings.length !== undefined ? ` ${settings.length}` : ''}`;
   }
   function syncIndicatorLabels() {
@@ -1768,8 +1949,10 @@
   }
   function initGenericIndicators() {
     const group = $('#extra-indicator-controls');
-    INDICATOR_DEFS.filter(def => !def.hidden && !$(`.indicator-settings-btn[data-indicator="${def.id}"]`)).forEach(def => {
-      const label = document.createElement('label'); label.className = 'toggle-chip';
+    // One chip + one ⚙ per indicator; grouped overlays first, liquidity last.
+    const order = def => ['ema-ribbon', 'ema200', 'ma-channel', 'turtle-zone', 'vwap-daily', 'vwap-weekly', 'opens', 'sessions', 'big-trades', 'abnormal-volume'].indexOf(def.id) + 1 || 99;
+    INDICATOR_DEFS.filter(def => !def.hidden && !$(`.indicator-settings-btn[data-indicator="${def.id}"]`)).sort((a, b) => order(a) - order(b)).forEach(def => {
+      const label = document.createElement('label'); label.className = 'toggle-chip'; label.dataset.indicatorChip = def.id;
       const input = document.createElement('input'); input.type = 'checkbox'; input.dataset.indicatorToggle = def.id;
       input.checked = isIndicatorEnabled(def.id);
       const span = document.createElement('span'); span.textContent = indicatorLabel(def); label.append(input, span);
@@ -1823,16 +2006,7 @@
     $('#watchlist-search').addEventListener('input', event => { state.watchlistSearch = event.target.value; saveState(); if (catalogReady && !pricesController) renderWatchlist(); });
     $('#fvg-toggle').checked = state.fvg;
     $('#auto-refresh').checked = state.auto;
-    Object.keys(EMA_COLORS).forEach(period => {
-      const control = $(`#ema${period}-toggle`);
-      control.checked = state.ema[period];
-      control.addEventListener('change', () => { state.ema[period] = control.checked; panes.forEach(pane => pane.applyIndicators()); saveState(); });
-    });
-    Object.keys(MA20_COLORS).forEach(key => {
-      const control = $(`#ma20-${key}-toggle`);
-      control.checked = state.ma20hl[key];
-      control.addEventListener('change', () => { state.ma20hl[key] = control.checked; panes.forEach(pane => pane.applyIndicators()); saveState(); });
-    });
+    if (migrationNotes.length) statusText(`Settings migrated to grouped indicators · ${migrationNotes.join(' · ')}`);
     $('#watchlist-favorites-toggle').setAttribute('aria-pressed', String(state.watchlistFavoritesOnly));
     $('#watchlist-favorites-toggle').classList.toggle('is-active', state.watchlistFavoritesOnly);
     $('#watchlist-favorites-toggle').addEventListener('click', () => {
@@ -1862,13 +2036,65 @@
     $('#watchlist-retry').addEventListener('click', () => refreshPrices(true));
     document.addEventListener('click', event => document.querySelectorAll('.pane-symbol-menu[open]').forEach(menu => { if (!menu.contains(event.target)) menu.open = false; }));
     initSettingsPopovers();
+    mountAnalyst();
     mountLayout(); loadIntervals(); refreshPrices();
   }
+  function mountAnalyst() {
+    const api = window.WorkspaceAnalyst;
+    if (!api) return;
+    analyst = api.createController({
+      fetch: (url, options) => fetch(url, options),
+      getActive: () => {
+        const config = state.panes[state.active], pane = panes.get(state.active);
+        if (!config || !pane) return null;
+        const ribbon = getIndicatorSettings('ema-ribbon') || {};
+        return { id: state.active, exchange: config.exchange, symbol: config.symbol, interval: config.interval,
+          precision: pane.series.options().priceFormat?.precision,
+          // The analysis describes the same EMA ribbon the chart draws (sent as ema_periods).
+          emaPeriods: [ribbon.period1, ribbon.period2, ribbon.period3] };
+      },
+      drawLines: (id, rows) => panes.get(id)?.setAnalystLines(rows),
+      clearLines: id => panes.get(id)?.clearAnalystLines(),
+      centerOn: (id, price) => panes.get(id)?.centerOnPrice(price),
+      levels: window.ScreenerLevels || null,
+      visible: () => document.visibilityState === 'visible'
+    });
+    mountDashboard();
+  }
+  function scrollToAnalysis() { $('#analysis-dashboard')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+  function mountDashboard() {
+    const api = window.AnalysisDashboard, el = $('#analysis-dashboard');
+    if (!api || !el || !analyst) return;
+    dashboard = api.mount(el, {
+      analyst,
+      getFunding: () => panes.get(state.active)?.fundingData || null,
+      fetch: (url, options) => fetch(url, options),
+      IntersectionObserver: window.IntersectionObserver || null,
+      pageVisible: () => document.visibilityState === 'visible',
+      scrollToCharts: () => window.scrollTo({ top: 0, behavior: 'smooth' }),
+      setWyckoffOverlay: model => panes.forEach((pane, id) => pane.setWyckoff(model && id === state.active ? model : null)),
+      setSmcOverlay: model => panes.forEach((pane, id) => pane.setSmc(model && id === state.active ? model : null))
+    });
+    // Wheel over a chart zooms it and never scrolls the (now scrollable) page.
+    disposeWheelGuard = api.installWheelGuard(grid);
+    document.querySelectorAll('[data-jump="analysis"]').forEach(link => link.addEventListener('click', event => { event.preventDefault(); scrollToAnalysis(); }));
+  }
+  // Funding: refetch visible panes every 30 s (server caches 30 s too); tick countdowns every second.
+  const fundingTimer = setInterval(() => {
+    if (document.visibilityState !== 'visible') return;
+    panes.forEach(pane => { if (isVisible(pane)) pane.refreshFunding(); });
+  }, 30000);
+  const fundingTick = setInterval(() => {
+    if (document.visibilityState !== 'visible') return;
+    const now = Date.now();
+    panes.forEach(pane => pane.renderFundingChip(now));
+    dashboard?.tick(now);
+  }, 1000);
   const refreshTimer = setInterval(autoRefresh, 60000);
   // pagehide also covers browser navigation with bfcache; pageshow reconstructs
   // disposed instances without leaving their requests or observers alive.
   window.addEventListener('pagehide', () => {
-    clearInterval(refreshTimer);
+    clearInterval(refreshTimer); clearInterval(fundingTimer); clearInterval(fundingTick); dashboard?.destroy(); disposeWheelGuard?.(); analyst?.destroy();
     pricesGeneration += 1; pricesController?.abort(); clearTimeout(pricesTimeout);
     panes.forEach(pane => pane.destroy()); panes.clear();
   });
@@ -1876,6 +2102,6 @@
   // Debug/test surface only (no prod secrets, read/write of already-exposed
   // state): lets the Playwright pixel regressions drive settings and read
   // Pane internals precisely instead of poking at private closures.
-  window.__workspaceDebug = { state, panes, INDICATOR_DEFS, INDICATOR_BY_ID, getIndicatorSettings, setIndicatorSettings, resetIndicatorSettings, setIndicatorEnabled, fvgZones, defaultIndicatorSettings };
+  window.__workspaceDebug = { state, panes, get analyst() { return analyst; }, get dashboard() { return dashboard; }, INDICATOR_DEFS, INDICATOR_BY_ID, getIndicatorSettings, setIndicatorSettings, resetIndicatorSettings, setIndicatorEnabled, fvgZones, defaultIndicatorSettings };
   init();
 })();

@@ -195,3 +195,27 @@ def test_real_end_to_end_watch_collect_history(tmp_path, monkeypatch):
 
     client.post('/api/liquidity/unwatch', json={
         'exchange': 'bybit', 'symbol': 'BTCUSDT', 'owner': 'tab-1'})
+
+
+def test_collector_requests_deep_books(tmp_path, monkeypatch):
+    """Regression: the default 200-row request (Binance: 100) covered only
+    ±0.02-0.04% of BTC price, so the heatmap was a few pixels tall on 15m-4h."""
+    from flask import Flask
+    from liquidity_api import COLLECT_DEPTH, register_liquidity_routes
+    import liquidity_data
+
+    depths = []
+
+    def fake_fetch(exchange, symbol, depth=200):
+        depths.append(depth)
+        raise liquidity_data.LiquidityDataError('offline test')
+
+    monkeypatch.setattr(liquidity_data, 'fetch_depth_snapshot', fake_fetch)
+    app = Flask(__name__)
+    register_liquidity_routes(app, store_path=tmp_path / 'depth.sqlite3')
+    _, collector = app.extensions['liquidity']['get_service']()
+    collector.watch('binance', 'BTCUSDT', 'tab-1')
+    collector.collect_once()
+    collector.stop()
+    assert COLLECT_DEPTH == 1000
+    assert depths == [1000]

@@ -1,0 +1,200 @@
+{
+ "source": "positioning_api.PositioningService (binance public endpoints)",
+ "ts": 1792262194212,
+ "exchange": "binance",
+ "coin": "BTC",
+ "period": "15m",
+ "period_note": "chart interval 15 → positioning period 15m",
+ "top_traders": {
+  "account": {
+   "value": 1.8273,
+   "source": "GET fapi.binance.com/futures/data/topLongShortAccountRatio",
+   "ts": 1792261800000,
+   "period": "15m",
+   "long_share": 0.6463,
+   "short_share": 0.3537
+  },
+  "position": {
+   "value": 1.7741,
+   "source": "GET fapi.binance.com/futures/data/topLongShortPositionRatio",
+   "ts": 1792261800000,
+   "period": "15m",
+   "long_share": 0.6395,
+   "short_share": 0.3605
+  }
+ },
+ "crowd": {
+  "value": 1.7064,
+  "source": "GET fapi.binance.com/futures/data/globalLongShortAccountRatio",
+  "ts": 1792261800000,
+  "period": "15m",
+  "long_share": 0.6305,
+  "short_share": 0.3695
+ },
+ "taker": {
+  "value": 1.0446,
+  "source": "GET fapi.binance.com/futures/data/takerlongshortRatio",
+  "ts": 1792260900000,
+  "period": "15m",
+  "buy_volume": 210.302,
+  "sell_volume": 201.328
+ },
+ "open_interest": {
+  "current": {
+   "value": 93775.959,
+   "source": "GET fapi.binance.com/fapi/v1/openInterest",
+   "ts": 1792262186567,
+   "period": "live",
+   "value_usd": 7645188200.0,
+   "unit": "base asset (one side)"
+  },
+  "change_1h": {
+   "value": -0.13,
+   "source": "GET fapi.binance.com/futures/data/openInterestHist (1h)",
+   "ts": 1792260000000,
+   "period": "1h",
+   "price_pct": 0.14,
+   "unit": "%",
+   "from_ts": 1792256400000
+  },
+  "change_4h": {
+   "value": -0.32,
+   "source": "GET fapi.binance.com/futures/data/openInterestHist (1h)",
+   "ts": 1792260000000,
+   "period": "4h",
+   "price_pct": -0.15,
+   "unit": "%",
+   "from_ts": 1792245600000
+  },
+  "change_24h": {
+   "value": -0.14,
+   "source": "GET fapi.binance.com/futures/data/openInterestHist (1h)",
+   "ts": 1792260000000,
+   "period": "24h",
+   "price_pct": 0.19,
+   "unit": "%",
+   "from_ts": 1792173600000
+  }
+ },
+ "basis": {
+  "value": -35.422174,
+  "source": "GET fapi.binance.com/futures/data/basis (PERPETUAL)",
+  "ts": 1792260900000,
+  "period": "15m",
+  "basis_rate": -0.0004,
+  "futures_price": 81474.6,
+  "index_price": 81510.022
+ },
+ "signals": {
+  "top_vs_crowd": {
+   "state": "aligned",
+   "value": 0.9,
+   "label": "Top traders vs crowd"
+  },
+  "oi_price_4h": {
+   "state": "no_clear_change",
+   "value": -0.32,
+   "label": "OI vs price (4h)"
+  },
+  "taker_flow": {
+   "state": "balanced",
+   "value": 1.0446,
+   "label": "Taker flow"
+  },
+  "crowd_extreme": {
+   "state": "not_extreme",
+   "value": 0.6305,
+   "label": "Crowd positioning"
+  },
+  "whale_bias": {
+   "state": "whales_net_short",
+   "value": 0.0078,
+   "label": "HL whales"
+  },
+  "liquidation_imbalance": {
+   "state": "none_recorded",
+   "value": 0.0,
+   "label": "Liquidations (1h)"
+  }
+ },
+ "liquidations": {
+  "label": "LOWER BOUND — Binance pushes at most one liquidation per symbol per 1000 ms (forceOrder snapshot stream); only connected time is covered.",
+  "lower_bound": true,
+  "source": "WS fstream.binance.com/market/ws/!forceOrder@arr",
+  "ts": 1792262194212,
+  "collector": "running",
+  "windows": {
+   "1h": {
+    "long_usd": 0.0,
+    "short_usd": 0.0,
+    "long_count": 0,
+    "short_count": 0,
+    "covered_min": 8.5,
+    "window_min": 60,
+    "complete_coverage": false
+   },
+   "24h": {
+    "long_usd": 0.0,
+    "short_usd": 0.0,
+    "long_count": 0,
+    "short_count": 0,
+    "covered_min": 8.5,
+    "window_min": 1440,
+    "complete_coverage": false
+   },
+   "4h": {
+    "long_usd": 0.0,
+    "short_usd": 0.0,
+    "long_count": 0,
+    "short_count": 0,
+    "covered_min": 8.5,
+    "window_min": 240,
+    "complete_coverage": false
+   }
+  },
+  "largest": []
+ },
+ "whales": {
+  "label": "Hyperliquid top-50 accounts by account value (public leaderboard), not all whales",
+  "venue": "hyperliquid",
+  "source": "GET stats-data.hyperliquid.xyz/Mainnet/leaderboard + POST api.hyperliquid.xyz/info clearinghouseState",
+  "ts": 1792262154689,
+  "tracker": "running",
+  "caveat": "includes vaults and market makers; changes only seen between polls (~60 s)",
+  "poll": {
+   "number": 9,
+   "ok": 50,
+   "requested": 50
+  },
+  "aggregate": {
+   "long_notional": 3910602.7,
+   "short_notional": 497860960.0,
+   "net_notional": -493950350.0,
+   "long_share": 0.0078,
+   "avg_entry_long": 81328.3,
+   "avg_entry_short": 77151.83,
+   "long_count": 1,
+   "short_count": 7
+  },
+  "changes_count_by_kind": {
+   "decreased": 1
+  },
+  "recent_changes": [
+   {
+    "ts": 1792262033920,
+    "kind": "decreased",
+    "side": "short",
+    "from_size": -21.18783,
+    "to_size": -18.16412,
+    "delta_usd": 246499.79
+   }
+  ]
+ },
+ "caveats": [
+  "liquidations are a LOWER BOUND: only the time the collector was connected is counted and Binance pushes at most one liquidation per symbol per second",
+  "whales = Hyperliquid top-N accounts by account value; they include vaults and market makers, so their net side is not pure directional conviction",
+  "ratios are completed-period venue data and can lag one period"
+ ],
+ "note": "descriptive positioning data, not trade signals",
+ "missing": {}
+}

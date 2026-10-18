@@ -1,0 +1,859 @@
+{
+ "status": "ok",
+ "source": "hermes",
+ "exchange": "binance",
+ "symbol": "BTCUSDT",
+ "interval": "15",
+ "generated_at": 1700180000000,
+ "price": {
+  "value": 103.57261,
+  "source": "last closed candle close",
+  "ts": 1700107999999
+ },
+ "analysis": {
+  "agent_bias": "long",
+  "confidence": "medium",
+  "horizon": "4-12 bars of 15m",
+  "levels": [
+   {
+    "type": "support",
+    "price": 104.0,
+    "reason": "fvg",
+    "source_fields": [
+     "fvg.nearest.0.top"
+    ]
+   }
+  ],
+  "scenarios": [
+   {
+    "name": "up",
+    "trigger": "hold",
+    "target": "x",
+    "invalidation": "y"
+   }
+  ],
+  "factor_scores": [
+   {
+    "factor": "rsi",
+    "direction": "long",
+    "strength": 2,
+    "source_fields": [
+     "indicators.rsi14"
+    ]
+   },
+   {
+    "factor": "ema stack",
+    "direction": "long",
+    "strength": 3,
+    "source_fields": [
+     "indicators.ema_stack_7_14_28"
+    ]
+   },
+   {
+    "factor": "book",
+    "direction": "short",
+    "strength": 1,
+    "source_fields": [
+     "orderbook.imbalance"
+    ]
+   }
+  ],
+  "risks": [
+   "chop"
+  ],
+  "summary_ru": "Лонг",
+  "bias": "long",
+  "long_pct": 88,
+  "short_pct": 12,
+  "split": {
+   "long_pct": 88,
+   "short_pct": 12,
+   "p_long": 88.08,
+   "bias": "long",
+   "net": 0.6667,
+   "agent_net": 0.6667,
+   "baseline_net": 0.6667,
+   "agent_long_points": 5,
+   "agent_short_points": 1,
+   "weights": {
+    "agent": 0.65,
+    "baseline": 0.35
+   },
+   "k": 3.0,
+   "neutral_band": 5.0,
+   "method": "p_long = logistic(k * (w_a*agent_net + w_b*baseline_net)/(w_a+w_b))"
+  },
+  "disagreement": null
+ },
+ "warnings": [],
+ "baseline": {
+  "source": "screener.compute_confluence_score + decision.make_decision over screener.fetch_market (Bybit-first USDT aggregate, not venue-pinned)",
+  "ts": 1700180000000,
+  "long_score": 40,
+  "long_verdict": "WAIT",
+  "long_confidence": 40,
+  "long_factors": [
+   "f1"
+  ],
+  "short_score": 20,
+  "short_verdict": "WAIT",
+  "short_confidence": 20,
+  "short_factors": [
+   "f2"
+  ],
+  "long_pct": 67,
+  "short_pct": 33
+ },
+ "model": "hermes-agent",
+ "latency_ms": 0,
+ "attempts": 1,
+ "snapshot_ms": 1,
+ "snapshot_hash": "458063eaf3511c96",
+ "snapshot_bytes": 11444,
+ "positioning_bytes": 4405,
+ "freshness": {
+  "last_close_ts": 1700107999999,
+  "sections": {
+   "candles": 1700107999999,
+   "indicators": 1700107999999,
+   "price": 1700107999999,
+   "structure": 1700107999999,
+   "fvg": 1700107999999,
+   "order_blocks": 1700107999999,
+   "session": 1700180000000,
+   "liquidity": 1700180000000,
+   "htf_bias": 1700180000000,
+   "regime": 1700180000000,
+   "flow": 1700180000000,
+   "derivatives": 1700000000000,
+   "footprint": 1700000000000,
+   "orderbook": 1700000000000,
+   "funding": 1700000000000,
+   "positioning": 1792259000000,
+   "baseline": 1700180000000
+  },
+  "missing": {},
+  "positioning_missing": {}
+ },
+ "raw_output": [
+  "{\"bias\": \"long\", \"confidence\": \"medium\", \"horizon\": \"4-12 bars of 15m\", \"levels\": [{\"type\": \"support\", \"price\": 104.0, \"reason\": \"fvg\", \"source_fields\": [\"fvg.nearest.0.top\"]}], \"scenarios\": [{\"name\": \"up\", \"trigger\": \"hold\", \"target\": \"x\", \"invalidation\": \"y\"}], \"factor_scores\": [{\"factor\": \"rsi\", \"direction\": \"long\", \"strength\": 2, \"source_fields\": [\"indicators.rsi14\"]}, {\"factor\": \"ema stack\", \"direction\": \"long\", \"strength\": 3, \"source_fields\": [\"indicators.ema_stack_7_14_28\"]}, {\"factor\": \"book\", \"direction\": \"short\", \"strength\": 1, \"source_fields\": [\"orderbook.imbalance\"]}], \"risks\": [\"chop\"], \"summary_ru\": \"\\u041b\\u043e\\u043d\\u0433\"}"
+ ],
+ "evaluation": {
+  "horizon_bars": 12,
+  "rule": "±1 ATR from the analysis price, bias side first"
+ },
+ "snapshot": {
+  "schema": "hermes-analyst/1",
+  "exchange": "binance",
+  "symbol": "BTCUSDT",
+  "interval": "15",
+  "generated_at": 1700180000000,
+  "evaluation_horizon_bars": 12,
+  "candles": {
+   "source": "binance closed candles via exchange_markets/chart_data",
+   "ts": 1700107999999,
+   "count": 120,
+   "first_ts": 1700000000000,
+   "last_close_ts": 1700107999999,
+   "closed_only": true,
+   "window_high": 108.0112,
+   "window_low": 98.34494,
+   "recent_fields": [
+    "open_ts",
+    "o",
+    "h",
+    "l",
+    "c",
+    "v"
+   ],
+   "recent": [
+    [
+     1700086400000,
+     102.98884,
+     104.42307,
+     102.38884,
+     103.82307,
+     15.0
+    ],
+    [
+     1700087300000,
+     103.30503,
+     104.51292,
+     102.70503,
+     103.91292,
+     16.0
+    ],
+    [
+     1700088200000,
+     103.71728,
+     104.6319,
+     103.11728,
+     104.0319,
+     10.0
+    ],
+    [
+     1700089100000,
+     104.20307,
+     104.80307,
+     103.58979,
+     104.18979,
+     11.0
+    ],
+    [
+     1700090000000,
+     104.7353,
+     105.3353,
+     103.79558,
+     104.39558,
+     12.0
+    ],
+    [
+     1700090900000,
+     105.28398,
+     105.88398,
+     104.05523,
+     104.65523,
+     13.0
+    ],
+    [
+     1700091800000,
+     105.81812,
+     106.41812,
+     104.36955,
+     104.96955,
+     14.0
+    ],
+    [
+     1700092700000,
+     106.3076,
+     106.9076,
+     104.73263,
+     105.33263,
+     15.0
+    ],
+    [
+     1700093600000,
+     106.72512,
+     107.32512,
+     105.13107,
+     105.73107,
+     16.0
+    ],
+    [
+     1700094500000,
+     107.04781,
+     107.64781,
+     105.54411,
+     106.14411,
+     10.0
+    ],
+    [
+     1700095400000,
+     107.25872,
+     107.85872,
+     105.94486,
+     106.54486,
+     11.0
+    ],
+    [
+     1700096300000,
+     107.34784,
+     107.94784,
+     106.30242,
+     106.90242,
+     12.0
+    ],
+    [
+     1700097200000,
+     107.31275,
+     107.91275,
+     106.58479,
+     107.18479,
+     13.0
+    ],
+    [
+     1700098100000,
+     107.15874,
+     107.96232,
+     106.55874,
+     107.36232,
+     14.0
+    ],
+    [
+     1700099000000,
+     106.89848,
+     108.0112,
+     106.29848,
+     107.4112,
+     15.0
+    ],
+    [
+     1700099900000,
+     106.55127,
+     107.91669,
+     105.95127,
+     107.31669,
+     16.0
+    ],
+    [
+     1700100800000,
+     106.14181,
+     107.67566,
+     105.54181,
+     107.07566,
+     10.0
+    ],
+    [
+     1700101700000,
+     105.69866,
+     107.29814,
+     105.09866,
+     106.69814,
+     11.0
+    ],
+    [
+     1700102600000,
+     105.25249,
+     106.80756,
+     104.65249,
+     106.20756,
+     12.0
+    ],
+    [
+     1700103500000,
+     104.83414,
+     106.23967,
+     104.23414,
+     105.63967,
+     13.0
+    ],
+    [
+     1700104400000,
+     104.47273,
+     105.64005,
+     103.87273,
+     105.04005,
+     14.0
+    ],
+    [
+     1700105300000,
+     104.19385,
+     105.06049,
+     103.59385,
+     104.46049,
+     15.0
+    ],
+    [
+     1700106200000,
+     104.01794,
+     104.61794,
+     103.35455,
+     103.95455,
+     16.0
+    ],
+    [
+     1700107100000,
+     103.95904,
+     104.55904,
+     102.97261,
+     103.57261,
+     10.0
+    ]
+   ]
+  },
+  "indicators": {
+   "source": "analyst.py from the same closed candles",
+   "ts": 1700107999999,
+   "ema7": 104.83025,
+   "ema14": 105.33276,
+   "ema28": 105.25998,
+   "ema200": null,
+   "ema_stack_7_14_28": "mixed",
+   "atr14": 1.7892018,
+   "rsi14": 30.79,
+   "close": 103.57261
+  },
+  "price": {
+   "value": 103.57261,
+   "source": "last closed candle close",
+   "ts": 1700107999999
+  },
+  "structure": {
+   "source": "structure.detect_structure (swing length default)",
+   "ts": 1700107999999,
+   "trend": "bull",
+   "last_swing_high": {
+    "price": 108.0112,
+    "ts": 1700099000000
+   },
+   "last_swing_low": {
+    "price": 102.10384,
+    "ts": 1700084600000
+   },
+   "recent_events": [
+    {
+     "kind": "CHOCH",
+     "direction": "bull",
+     "level": 102.91797,
+     "ts": 1700027900000
+    },
+    {
+     "kind": "BOS",
+     "direction": "bull",
+     "level": 104.22835,
+     "ts": 1700047700000
+    },
+    {
+     "kind": "BOS",
+     "direction": "bull",
+     "level": 106.69366,
+     "ts": 1700096300000
+    }
+   ]
+  },
+  "fvg": {
+   "source": "chart_data._fvg_zones (unfilled, wick mitigation)",
+   "ts": 1700107999999,
+   "total_unfilled": 1,
+   "nearest": [
+    {
+     "direction": "bull",
+     "top": 104.0,
+     "bottom": 103.0,
+     "start_ts": 1700000000000
+    }
+   ]
+  },
+  "order_blocks": {
+   "source": "order_blocks.find_order_blocks (lookback 120, unmitigated)",
+   "ts": 1700107999999,
+   "unmitigated": [
+    {
+     "direction": "bull",
+     "high": 102.47643,
+     "low": 100.27647,
+     "ts": 1700059400000
+    }
+   ]
+  },
+  "session": {
+   "source": "killzones.py (UTC windows)",
+   "ts": 1700180000000,
+   "active_killzone": "Asia",
+   "describe": "🌏 Asia killzone"
+  },
+  "liquidity": {
+   "source": "liquidity.build_liquidity_map over screener.fetch_market (Bybit-first USDT aggregate, not venue-pinned)",
+   "ts": 1700180000000,
+   "reference_price": 105.0,
+   "pools": [
+    {
+     "kind": "PDL",
+     "price": 104.8,
+     "side": "sellside",
+     "strength": 3,
+     "dist_pct": -0.19
+    },
+    {
+     "kind": "PWL",
+     "price": 104.2,
+     "side": "sellside",
+     "strength": 4,
+     "dist_pct": -0.762
+    },
+    {
+     "kind": "PDH",
+     "price": 106.8,
+     "side": "buyside",
+     "strength": 3,
+     "dist_pct": 1.714
+    },
+    {
+     "kind": "PWH",
+     "price": 106.8,
+     "side": "buyside",
+     "strength": 4,
+     "dist_pct": 1.714
+    },
+    {
+     "kind": "round",
+     "price": 100.0,
+     "side": "sellside",
+     "strength": 2,
+     "dist_pct": -4.762
+    },
+    {
+     "kind": "round",
+     "price": 110.0,
+     "side": "buyside",
+     "strength": 2,
+     "dist_pct": 4.762
+    }
+   ]
+  },
+  "htf_bias": {
+   "source": "htf_bias.compute_htf_bias (60/240/D) over screener.fetch_market (Bybit-first USDT aggregate, not venue-pinned)",
+   "ts": 1700180000000,
+   "direction": "short",
+   "strength": "strong",
+   "zones": {
+    "D": "premium",
+    "240": "premium",
+    "60": "premium"
+   }
+  },
+  "regime": {
+   "source": "regime.classify_regime over screener.fetch_market (Bybit-first USDT aggregate, not venue-pinned)",
+   "ts": 1700180000000,
+   "phase": "neutral",
+   "bias": "neutral",
+   "zone": "premium",
+   "positioning": "balanced",
+   "range_state": "normal",
+   "pos_in_range": 0.937,
+   "confidence": 40
+  },
+  "flow": {
+   "source": "screener.fetch_market (Bybit-first USDT aggregate, not venue-pinned)",
+   "ts": 1700180000000,
+   "cvd_1h": {
+    "trend": "up",
+    "price_trend": "up",
+    "divergence": false,
+    "method": "estimated from 1h candle shape (screener.compute_cvd), not trades"
+   },
+   "fear_greed": {
+    "value": 40,
+    "label": "Fear",
+    "source": "alternative.me via screener.get_macro"
+   },
+   "bybit_oi_change_pct": 0.5,
+   "change_24h_pct": 1.2
+  },
+  "derivatives": {
+   "source": "exchange_markets.get_exchange_context (binance)",
+   "ts": 1700000000000,
+   "open_interest": 1234.0,
+   "open_interest_unit": null,
+   "mark_price": 105.0,
+   "index_price": 105.0,
+   "ema_bias": null,
+   "warnings": []
+  },
+  "footprint": {
+   "source": "footprint_data.FootprintService (binance trades)",
+   "ts": 1700000000000,
+   "coverage_note": "complete = every trade of the bar; partial = only recent trades the venue still serves (Bybit/Hyperliquid)",
+   "bars": [
+    {
+     "open_ts": 1700000000000,
+     "delta": -3.5,
+     "total": 40.0,
+     "poc": 104.5,
+     "coverage": "complete"
+    }
+   ]
+  },
+  "orderbook": {
+   "source": "liquidity_data.fetch_depth_snapshot (binance REST)",
+   "ts": 1700000000000,
+   "levels_per_side": 20,
+   "best_bid": 104.9,
+   "best_ask": 105.0,
+   "bid_qty": 4.0,
+   "ask_qty": 2.0,
+   "imbalance": 0.3333,
+   "imbalance_note": "(bid-ask)/(bid+ask) native quantity, one sampled snapshot",
+   "bid_wall": 104.9,
+   "ask_wall": 105.0
+  },
+  "funding": {
+   "source": "funding_data.FundingService (binance public endpoints)",
+   "ts": 1700000000000,
+   "last_settled": {
+    "rate": "0.00003726",
+    "time": 1792252800003
+   },
+   "predicted": {
+    "rate": "0.00002858",
+    "settles_at": 1792281600000,
+    "note": "live estimate for the current period; changes until it settles"
+   },
+   "interval_hours": 8,
+   "annualized_last_settled": "0.0407997",
+   "annualized_predicted": "0.0312951",
+   "annualized_formula": "rate × 24 / interval_hours × 365",
+   "cap": "0.003",
+   "floor": "-0.003",
+   "premium": "-0.0004947971",
+   "trend_last_settlements": {
+    "n": 4,
+    "mean": "0.0000543725",
+    "min": "0.0000371",
+    "max": "0.0001",
+    "positive": 4,
+    "direction": "flat",
+    "method": "mean of last 1 vs first 1 settlements, ±10% of max |rate| = flat"
+   },
+   "cross_venue": [
+    {
+     "venue": "binance",
+     "rate": "0.00002858",
+     "interval_hours": 8,
+     "annualized": "0.0312951",
+     "stale": false
+    },
+    {
+     "venue": "hyperliquid",
+     "rate": "0.0000091165",
+     "interval_hours": 1,
+     "annualized": "0.07986054",
+     "stale": false
+    },
+    {
+     "venue": "bybit",
+     "rate": "0.00006431",
+     "interval_hours": 8,
+     "annualized": "0.07041945",
+     "stale": false
+    }
+   ],
+   "cross_venue_annualized_spread": "0.04856544",
+   "missing": {}
+  },
+  "positioning": {
+   "source": "positioning_api.PositioningService (binance public endpoints)",
+   "ts": 1792259000000,
+   "exchange": "binance",
+   "coin": "BTC",
+   "period": "15m",
+   "period_note": "chart interval 15 → positioning period 15m",
+   "top_traders": {
+    "account": {
+     "value": 1.8066,
+     "source": "GET fapi.binance.com/futures/data/topLongShortAccountRatio",
+     "ts": 1792256400000,
+     "period": "1h",
+     "long_share": 0.6437,
+     "short_share": 0.3563
+    },
+    "position": {
+     "value": 1.7331,
+     "source": "GET fapi.binance.com/futures/data/topLongShortPositionRatio",
+     "ts": 1792256400000,
+     "period": "1h",
+     "long_share": 0.6341,
+     "short_share": 0.3659
+    }
+   },
+   "crowd": {
+    "value": 1.6795,
+    "source": "GET fapi.binance.com/futures/data/globalLongShortAccountRatio",
+    "ts": 1792256400000,
+    "period": "1h",
+    "long_share": 0.6268,
+    "short_share": 0.3732
+   },
+   "taker": {
+    "value": 0.7939,
+    "source": "GET fapi.binance.com/futures/data/takerlongshortRatio",
+    "ts": 1792252800000,
+    "period": "1h",
+    "buy_volume": 1175.501,
+    "sell_volume": 1480.574
+   },
+   "open_interest": {
+    "current": {
+     "value": 94231.042,
+     "source": "GET fapi.binance.com/fapi/v1/openInterest",
+     "ts": 1792258681175,
+     "period": "live",
+     "value_usd": 7656361700.0,
+     "unit": "base asset (one side)"
+    },
+    "change_1h": {
+     "value": -0.13,
+     "source": "GET fapi.binance.com/futures/data/openInterestHist (1h)",
+     "ts": 1792256400000,
+     "period": "1h",
+     "price_pct": -0.11,
+     "unit": "%",
+     "from_ts": 1792252800000
+    },
+    "change_4h": {
+     "value": -0.15,
+     "source": "GET fapi.binance.com/futures/data/openInterestHist (1h)",
+     "ts": 1792256400000,
+     "period": "4h",
+     "price_pct": -0.32,
+     "unit": "%",
+     "from_ts": 1792242000000
+    },
+    "change_24h": {
+     "value": -0.79,
+     "source": "GET fapi.binance.com/futures/data/openInterestHist (1h)",
+     "ts": 1792256400000,
+     "period": "24h",
+     "price_pct": -0.22,
+     "unit": "%",
+     "from_ts": 1792170000000
+    }
+   },
+   "basis": {
+    "value": -36.078478,
+    "source": "GET fapi.binance.com/futures/data/basis (PERPETUAL)",
+    "ts": 1792252800000,
+    "period": "1h",
+    "basis_rate": -0.0004,
+    "futures_price": 81315.6,
+    "index_price": 81351.678
+   },
+   "signals": {
+    "top_vs_crowd": {
+     "state": "aligned",
+     "value": 0.73,
+     "label": "Top traders vs crowd"
+    },
+    "oi_price_4h": {
+     "state": "no_clear_change",
+     "value": -0.15,
+     "label": "OI vs price (4h)"
+    },
+    "taker_flow": {
+     "state": "sellers_aggressive",
+     "value": 0.7939,
+     "label": "Taker flow"
+    },
+    "crowd_extreme": {
+     "state": "not_extreme",
+     "value": 0.6268,
+     "label": "Crowd positioning"
+    },
+    "whale_bias": {
+     "state": "whales_net_long",
+     "value": 1.0,
+     "label": "HL whales"
+    },
+    "liquidation_imbalance": {
+     "state": "longs_flushed",
+     "value": 0.8325,
+     "label": "Liquidations (1h)"
+    }
+   },
+   "liquidations": {
+    "label": "LOWER BOUND — Binance pushes at most one liquidation per symbol per 1000 ms (forceOrder snapshot stream); only connected time is covered.",
+    "lower_bound": true,
+    "source": "WS fstream.binance.com/market/ws/!forceOrder@arr",
+    "ts": 1792259000000,
+    "collector": "running",
+    "windows": {
+     "1h": {
+      "long_usd": 40500.0,
+      "short_usd": 8150.0,
+      "long_count": 1,
+      "short_count": 1,
+      "covered_min": 60.0,
+      "window_min": 60,
+      "complete_coverage": true
+     },
+     "4h": {
+      "long_usd": 40500.0,
+      "short_usd": 8150.0,
+      "long_count": 1,
+      "short_count": 1,
+      "covered_min": 120.0,
+      "window_min": 240,
+      "complete_coverage": false
+     },
+     "24h": {
+      "long_usd": 40500.0,
+      "short_usd": 8150.0,
+      "long_count": 1,
+      "short_count": 1,
+      "covered_min": 120.0,
+      "window_min": 1440,
+      "complete_coverage": false
+     }
+    },
+    "largest": [
+     {
+      "side": "long",
+      "usd": 40500.0,
+      "price": 81000.0,
+      "ts": 1792258940000
+     },
+     {
+      "side": "short",
+      "usd": 8150.0,
+      "price": 81500.0,
+      "ts": 1792258880000
+     }
+    ]
+   },
+   "whales": {
+    "label": "Hyperliquid top-50 accounts by account value (public leaderboard), not all whales",
+    "venue": "hyperliquid",
+    "source": "GET stats-data.hyperliquid.xyz/Mainnet/leaderboard + POST api.hyperliquid.xyz/info clearinghouseState",
+    "ts": 1792258970000,
+    "tracker": "stopped",
+    "caveat": "includes vaults and market makers; changes only seen between polls (~60 s)",
+    "poll": {
+     "number": 3,
+     "ok": 50,
+     "requested": 50
+    },
+    "aggregate": {
+     "long_notional": 1011156.7,
+     "short_notional": 0.0,
+     "net_notional": 1011156.7,
+     "long_share": 1.0,
+     "avg_entry_long": 81246.7,
+     "avg_entry_short": null,
+     "long_count": 1,
+     "short_count": 0
+    },
+    "changes_count_by_kind": {
+     "increased": 1
+    },
+    "recent_changes": [
+     {
+      "ts": 1792258970000,
+      "kind": "increased",
+      "side": "long",
+      "from_size": 10.0,
+      "to_size": 12.44424,
+      "delta_usd": 198600.12
+     }
+    ]
+   },
+   "caveats": [
+    "liquidations are a LOWER BOUND: only the time the collector was connected is counted and Binance pushes at most one liquidation per symbol per second",
+    "whales = Hyperliquid top-N accounts by account value; they include vaults and market makers, so their net side is not pure directional conviction",
+    "ratios are completed-period venue data and can lag one period"
+   ],
+   "note": "descriptive positioning data, not trade signals",
+   "missing": {}
+  },
+  "baseline": {
+   "source": "screener.compute_confluence_score + decision.make_decision over screener.fetch_market (Bybit-first USDT aggregate, not venue-pinned)",
+   "ts": 1700180000000,
+   "long_score": 40,
+   "long_verdict": "WAIT",
+   "long_confidence": 40,
+   "long_factors": [
+    "f1"
+   ],
+   "short_score": 20,
+   "short_verdict": "WAIT",
+   "short_confidence": 20,
+   "short_factors": [
+    "f2"
+   ],
+   "long_pct": 67,
+   "short_pct": 33
+  },
+  "missing": {}
+ },
+ "cached": false,
+ "age_s": 0.0
+}

@@ -1,0 +1,635 @@
+[
+ {
+  "pane": 0,
+  "cfg": {
+   "symbol": "BTCUSDT",
+   "interval": "1",
+   "exchange": "binance"
+  },
+  "dumped_at": 1792311043724,
+  "bubbles": {
+   "symbol": "BTCUSDT",
+   "id_range": [
+    3488880250,
+    3488885599
+   ],
+   "raw_aggtrades": 5350,
+   "contiguous": true,
+   "page_prints_total": 3807,
+   "independent_prints_total": 3807,
+   "page_big": 45,
+   "independent_big": 45,
+   "only_page": [],
+   "only_independent": [],
+   "threshold_mismatch": 0,
+   "decimal_sum_mismatch": 0,
+   "gaps": 0,
+   "examples": [
+    {
+     "side": -1,
+     "time": 1792309626674,
+     "ids": [
+      3488880254,
+      3488880254
+     ],
+     "agg_trades": 1,
+     "page_qty": 0.661,
+     "raw_qty": "0.661",
+     "page_notional": 53970.12,
+     "raw_notional": "53970.12",
+     "ok": true
+    },
+    {
+     "side": 1,
+     "time": 1792309629674,
+     "ids": [
+      3488880264,
+      3488880266
+     ],
+     "agg_trades": 3,
+     "page_qty": 2.0580000000000003,
+     "raw_qty": "2.058",
+     "page_notional": 168034.26,
+     "raw_notional": "168034.26",
+     "ok": true
+    },
+    {
+     "side": 1,
+     "time": 1792309650660,
+     "ids": [
+      3488880307,
+      3488880310
+     ],
+     "agg_trades": 4,
+     "page_qty": 1.857,
+     "raw_qty": "1.857",
+     "page_notional": 151624.05,
+     "raw_notional": "151624.05",
+     "ok": true
+    },
+    {
+     "side": -1,
+     "time": 1792309651674,
+     "ids": [
+      3488880336,
+      3488880336
+     ],
+     "agg_trades": 1,
+     "page_qty": 0.792,
+     "raw_qty": "0.792",
+     "page_notional": 64670.68,
+     "raw_notional": "64670.68",
+     "ok": true
+    },
+    {
+     "side": -1,
+     "time": 1792309666676,
+     "ids": [
+      3488880354,
+      3488880354
+     ],
+     "agg_trades": 1,
+     "page_qty": 0.706,
+     "raw_qty": "0.706",
+     "page_notional": 57648.36,
+     "raw_notional": "57648.36",
+     "ok": true
+    },
+    {
+     "side": -1,
+     "time": 1792309673536,
+     "ids": [
+      3488880363,
+      3488880363
+     ],
+     "agg_trades": 1,
+     "page_qty": 0.819,
+     "raw_qty": "0.819",
+     "page_notional": 66875.36,
+     "raw_notional": "66875.36",
+     "ok": true
+    },
+    {
+     "side": -1,
+     "time": 1792309681619,
+     "ids": [
+      3488880380,
+      3488880380
+     ],
+     "agg_trades": 1,
+     "page_qty": 0.82,
+     "raw_qty": "0.820",
+     "page_notional": 66957.02,
+     "raw_notional": "66957.02",
+     "ok": true
+    },
+    {
+     "side": 1,
+     "time": 1792309684265,
+     "ids": [
+      3488880407,
+      3488880407
+     ],
+     "agg_trades": 1,
+     "page_qty": 1.246,
+     "raw_qty": "1.246",
+     "page_notional": 101736.9,
+     "raw_notional": "101736.90",
+     "ok": true
+    }
+   ]
+  },
+  "abnormal_volume": {
+   "source": "Binance /fapi/v1/klines",
+   "bars": 300,
+   "volume_mismatch": 1,
+   "volume_mismatch_times": [
+    1792310940
+   ],
+   "bars_missing_at_venue": 0,
+   "page_flags": 10,
+   "independent_flags": 10,
+   "tier_counts_page": {
+    "1": 7,
+    "2": 3
+   },
+   "disagree": [],
+   "forming": [
+    1792311000,
+    6.727
+   ],
+   "forming_flag": [],
+   "drawn_hits_with_delta": [
+    [
+     1792308000,
+     2,
+     null
+    ],
+    [
+     1792308360,
+     2,
+     null
+    ],
+    [
+     1792308480,
+     2,
+     null
+    ],
+    [
+     1792308540,
+     1,
+     null
+    ],
+    [
+     1792308660,
+     1,
+     null
+    ],
+    [
+     1792310520,
+     1,
+     [
+      "initiative",
+      1,
+      80.58038370716491,
+      true
+     ]
+    ]
+   ]
+  }
+ },
+ {
+  "pane": 1,
+  "cfg": {
+   "symbol": "BTCUSDT",
+   "interval": "15",
+   "exchange": "binance"
+  },
+  "dumped_at": 1792311043725,
+  "bubbles": {
+   "symbol": "BTCUSDT",
+   "id_range": [
+    3488880250,
+    3488885599
+   ],
+   "raw_aggtrades": 5350,
+   "contiguous": true,
+   "page_prints_total": 3807,
+   "independent_prints_total": 3807,
+   "page_big": 45,
+   "independent_big": 45,
+   "only_page": [],
+   "only_independent": [],
+   "threshold_mismatch": 0,
+   "decimal_sum_mismatch": 0,
+   "gaps": 0,
+   "examples": [
+    {
+     "side": -1,
+     "time": 1792309626674,
+     "ids": [
+      3488880254,
+      3488880254
+     ],
+     "agg_trades": 1,
+     "page_qty": 0.661,
+     "raw_qty": "0.661",
+     "page_notional": 53970.12,
+     "raw_notional": "53970.12",
+     "ok": true
+    },
+    {
+     "side": 1,
+     "time": 1792309629674,
+     "ids": [
+      3488880264,
+      3488880266
+     ],
+     "agg_trades": 3,
+     "page_qty": 2.0580000000000003,
+     "raw_qty": "2.058",
+     "page_notional": 168034.26,
+     "raw_notional": "168034.26",
+     "ok": true
+    },
+    {
+     "side": 1,
+     "time": 1792309650660,
+     "ids": [
+      3488880307,
+      3488880310
+     ],
+     "agg_trades": 4,
+     "page_qty": 1.857,
+     "raw_qty": "1.857",
+     "page_notional": 151624.05,
+     "raw_notional": "151624.05",
+     "ok": true
+    },
+    {
+     "side": -1,
+     "time": 1792309651674,
+     "ids": [
+      3488880336,
+      3488880336
+     ],
+     "agg_trades": 1,
+     "page_qty": 0.792,
+     "raw_qty": "0.792",
+     "page_notional": 64670.68,
+     "raw_notional": "64670.68",
+     "ok": true
+    },
+    {
+     "side": -1,
+     "time": 1792309666676,
+     "ids": [
+      3488880354,
+      3488880354
+     ],
+     "agg_trades": 1,
+     "page_qty": 0.706,
+     "raw_qty": "0.706",
+     "page_notional": 57648.36,
+     "raw_notional": "57648.36",
+     "ok": true
+    },
+    {
+     "side": -1,
+     "time": 1792309673536,
+     "ids": [
+      3488880363,
+      3488880363
+     ],
+     "agg_trades": 1,
+     "page_qty": 0.819,
+     "raw_qty": "0.819",
+     "page_notional": 66875.36,
+     "raw_notional": "66875.36",
+     "ok": true
+    },
+    {
+     "side": -1,
+     "time": 1792309681619,
+     "ids": [
+      3488880380,
+      3488880380
+     ],
+     "agg_trades": 1,
+     "page_qty": 0.82,
+     "raw_qty": "0.820",
+     "page_notional": 66957.02,
+     "raw_notional": "66957.02",
+     "ok": true
+    },
+    {
+     "side": 1,
+     "time": 1792309684265,
+     "ids": [
+      3488880407,
+      3488880407
+     ],
+     "agg_trades": 1,
+     "page_qty": 1.246,
+     "raw_qty": "1.246",
+     "page_notional": 101736.9,
+     "raw_notional": "101736.90",
+     "ok": true
+    }
+   ]
+  },
+  "abnormal_volume": {
+   "source": "Binance /fapi/v1/klines",
+   "bars": 300,
+   "volume_mismatch": 0,
+   "volume_mismatch_times": [],
+   "bars_missing_at_venue": 0,
+   "page_flags": 11,
+   "independent_flags": 11,
+   "tier_counts_page": {
+    "1": 5,
+    "2": 6
+   },
+   "disagree": [],
+   "forming": [
+    1792310400,
+    364.576
+   ],
+   "forming_flag": [],
+   "drawn_hits_with_delta": [
+    [
+     1792251900,
+     2,
+     null
+    ],
+    [
+     1792260000,
+     2,
+     null
+    ],
+    [
+     1792271700,
+     2,
+     null
+    ],
+    [
+     1792272600,
+     2,
+     null
+    ],
+    [
+     1792273500,
+     1,
+     null
+    ],
+    [
+     1792274400,
+     1,
+     null
+    ]
+   ]
+  }
+ },
+ {
+  "pane": 2,
+  "cfg": {
+   "symbol": "ETHUSDT",
+   "interval": "5s",
+   "exchange": "binance"
+  },
+  "dumped_at": 1792311043726,
+  "bubbles": {
+   "symbol": "ETHUSDT",
+   "id_range": [
+    3121913672,
+    3121919067
+   ],
+   "raw_aggtrades": 5396,
+   "contiguous": true,
+   "page_prints_total": 3262,
+   "independent_prints_total": 3263,
+   "page_big": 34,
+   "independent_big": 34,
+   "only_page": [],
+   "only_independent": [],
+   "threshold_mismatch": 0,
+   "decimal_sum_mismatch": 0,
+   "gaps": 0,
+   "examples": [
+    {
+     "side": -1,
+     "time": 1792309902451,
+     "ids": [
+      3121913673,
+      3121913674
+     ],
+     "agg_trades": 2,
+     "page_qty": 27.297,
+     "raw_qty": "27.297",
+     "page_notional": 65746.19,
+     "raw_notional": "65746.19",
+     "ok": true
+    },
+    {
+     "side": -1,
+     "time": 1792309902452,
+     "ids": [
+      3121913688,
+      3121913690
+     ],
+     "agg_trades": 3,
+     "page_qty": 42.108000000000004,
+     "raw_qty": "42.108",
+     "page_notional": 101411.34,
+     "raw_notional": "101411.34",
+     "ok": true
+    },
+    {
+     "side": 1,
+     "time": 1792309903266,
+     "ids": [
+      3121913744,
+      3121913744
+     ],
+     "agg_trades": 1,
+     "page_qty": 24.919,
+     "raw_qty": "24.919",
+     "page_notional": 59999.72,
+     "raw_notional": "59999.72",
+     "ok": true
+    },
+    {
+     "side": -1,
+     "time": 1792309909672,
+     "ids": [
+      3121913754,
+      3121913754
+     ],
+     "agg_trades": 1,
+     "page_qty": 35.626,
+     "raw_qty": "35.626",
+     "page_notional": 85779.57,
+     "raw_notional": "85779.57",
+     "ok": true
+    },
+    {
+     "side": -1,
+     "time": 1792309914675,
+     "ids": [
+      3121913767,
+      3121913767
+     ],
+     "agg_trades": 1,
+     "page_qty": 31.053,
+     "raw_qty": "31.053",
+     "page_notional": 74768.17,
+     "raw_notional": "74768.17",
+     "ok": true
+    },
+    {
+     "side": -1,
+     "time": 1792309929673,
+     "ids": [
+      3121913840,
+      3121913840
+     ],
+     "agg_trades": 1,
+     "page_qty": 26.407,
+     "raw_qty": "26.407",
+     "page_notional": 63570.89,
+     "raw_notional": "63570.89",
+     "ok": true
+    },
+    {
+     "side": 1,
+     "time": 1792309932314,
+     "ids": [
+      3121913846,
+      3121913848
+     ],
+     "agg_trades": 3,
+     "page_qty": 56.056,
+     "raw_qty": "56.056",
+     "page_notional": 134946.97,
+     "raw_notional": "134946.97",
+     "ok": true
+    },
+    {
+     "side": 1,
+     "time": 1792309934343,
+     "ids": [
+      3121913882,
+      3121913885
+     ],
+     "agg_trades": 4,
+     "page_qty": 46.05200000000001,
+     "raw_qty": "46.052",
+     "page_notional": 110882.66,
+     "raw_notional": "110882.66",
+     "ok": true
+    }
+   ]
+  },
+  "abnormal_volume": {
+   "source": "Binance aggTrades \u2192 5s buckets (4370 rows)",
+   "bars": 186,
+   "volume_mismatch": 0,
+   "volume_mismatch_times": [],
+   "bars_missing_at_venue": 0,
+   "page_flags": 1,
+   "independent_flags": 1,
+   "tier_counts_page": {
+    "1": 1,
+    "2": 0
+   },
+   "disagree": [],
+   "forming": [
+    1792311040,
+    43.916
+   ],
+   "forming_flag": [],
+   "drawn_hits_with_delta": [
+    [
+     1792310740,
+     1,
+     null
+    ]
+   ]
+  }
+ },
+ {
+  "pane": 3,
+  "cfg": {
+   "symbol": "SOLUSDT",
+   "interval": "1",
+   "exchange": "bybit"
+  },
+  "dumped_at": 1792311043726,
+  "bubbles": {
+   "symbol": "SOLUSDT",
+   "page_big": 3,
+   "checked_against_recent_trade": 2,
+   "mismatch": 0,
+   "note": "prints older than Bybit's latest 1000 trades cannot be re-fetched (no public history)",
+   "examples": [
+    {
+     "side": 1,
+     "time": 1792310708669,
+     "trades": 36,
+     "page_qty": 1150.2000000000003,
+     "raw_qty": "1150.2",
+     "ok": true
+    },
+    {
+     "side": 1,
+     "time": 1792310931997,
+     "trades": 43,
+     "page_qty": 969.7000000000004,
+     "raw_qty": "969.7",
+     "ok": true
+    }
+   ]
+  },
+  "abnormal_volume": {
+   "source": "Bybit /v5/market/kline",
+   "bars": 300,
+   "volume_mismatch": 0,
+   "volume_mismatch_times": [],
+   "bars_missing_at_venue": 0,
+   "page_flags": 9,
+   "independent_flags": 9,
+   "tier_counts_page": {
+    "1": 8,
+    "2": 1
+   },
+   "disagree": [],
+   "forming": [
+    1792311000,
+    266.8
+   ],
+   "forming_flag": [],
+   "drawn_hits_with_delta": [
+    [
+     1792304400,
+     1,
+     null
+    ],
+    [
+     1792307160,
+     1,
+     null
+    ],
+    [
+     1792308360,
+     2,
+     null
+    ],
+    [
+     1792308420,
+     1,
+     null
+    ]
+   ]
+  }
+ }
+]

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- TEMPLATE, not active. Persistent Mac tunnel 127.0.0.1:5087 -> VPS 127.0.0.1:5087
+     (crypto-screener-app-1). Install only AFTER the local server on :5087 is stopped,
+     otherwise ExitOnForwardFailure makes ssh exit (port busy) and launchd keeps retrying:
+       cp deploy/contabo/com.maxbelov.crypto-screener-tunnel.plist ~/Library/LaunchAgents/
+       launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.maxbelov.crypto-screener-tunnel.plist
+     Remove:
+       launchctl bootout gui/$(id -u)/com.maxbelov.crypto-screener-tunnel
+     Modeled on com.maxbelov.hindsight-tunnel.plist. Nothing on the VPS is public: no ufw rule,
+     no nginx vhost. ServerAliveInterval + ExitOnForwardFailure make a dead link exit so launchd
+     restarts it instead of leaving a half-open tunnel. -->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.maxbelov.crypto-screener-tunnel</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/ssh</string>
+    <string>-N</string>
+    <string>-T</string>
+    <string>-o</string><string>ExitOnForwardFailure=yes</string>
+    <string>-o</string><string>ServerAliveInterval=30</string>
+    <string>-o</string><string>ServerAliveCountMax=3</string>
+    <string>-o</string><string>StrictHostKeyChecking=accept-new</string>
+    <string>-o</string><string>BatchMode=yes</string>
+    <string>-i</string><string>/Users/maxbelov/.ssh/id_contabo</string>
+    <string>-L</string><string>127.0.0.1:5087:127.0.0.1:5087</string>
+    <string>root@173.249.40.103</string>
+  </array>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>ThrottleInterval</key>
+  <integer>10</integer>
+  <key>StandardOutPath</key>
+  <string>/tmp/crypto-screener-tunnel.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/crypto-screener-tunnel.log</string>
+</dict>
+</plist>

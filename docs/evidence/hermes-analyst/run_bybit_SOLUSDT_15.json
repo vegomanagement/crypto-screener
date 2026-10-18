@@ -1,0 +1,225 @@
+{
+ "age_s": 0.0,
+ "analysis": {
+  "bias": "short",
+  "confidence": "medium",
+  "horizon": "4-12 bars of 15m",
+  "key_factors": [
+   {
+    "source_fields": [
+     "indicators.ema_stack_7_14_28",
+     "indicators.ema200"
+    ],
+    "text": "EMA stack bearish, price under EMA200"
+   },
+   {
+    "source_fields": [
+     "structure.recent_events.4.level"
+    ],
+    "text": "Fresh bear BOS at 103.76"
+   },
+   {
+    "source_fields": [
+     "orderbook.imbalance"
+    ],
+    "text": "Orderbook ask-heavy"
+   },
+   {
+    "source_fields": [
+     "flow.cvd_1h.trend"
+    ],
+    "text": "CVD 1h down, no divergence"
+   },
+   {
+    "source_fields": [
+     "liquidity.pools.1.strength"
+    ],
+    "text": "Sellside pools dominate below"
+   },
+   {
+    "source_fields": [
+     "htf_bias.direction",
+     "htf_bias.zones.D"
+    ],
+    "text": "HTF bias long in discount — counter risk"
+   }
+  ],
+  "levels": [
+   {
+    "price": 103.53,
+    "reason": "Bear FVG just overhead",
+    "source_fields": [
+     "fvg.nearest.0.top"
+    ],
+    "type": "resistance"
+   },
+   {
+    "price": 103.85,
+    "reason": "Unmitigated bear OB high",
+    "source_fields": [
+     "order_blocks.unmitigated.2.high"
+    ],
+    "type": "resistance"
+   },
+   {
+    "price": 103.48,
+    "reason": "Retest of FVG bottom",
+    "source_fields": [
+     "fvg.nearest.0.bottom"
+    ],
+    "type": "entry"
+   },
+   {
+    "price": 103.9,
+    "reason": "Above OB and EMA28",
+    "source_fields": [
+     "order_blocks.unmitigated.2.high",
+     "indicators.ema28"
+    ],
+    "type": "stop"
+   },
+   {
+    "price": 102.64,
+    "reason": "VAL sellside pool",
+    "source_fields": [
+     "liquidity.pools.0.price"
+    ],
+    "type": "target"
+   },
+   {
+    "price": 102.43,
+    "reason": "EQL strength 5 + bull FVG",
+    "source_fields": [
+     "liquidity.pools.1.price",
+     "fvg.nearest.1.top"
+    ],
+    "type": "target"
+   },
+   {
+    "price": 103.08,
+    "reason": "Bid wall in depth snapshot",
+    "source_fields": [
+     "orderbook.bid_wall"
+    ],
+    "type": "support"
+   },
+   {
+    "price": 100.48,
+    "reason": "PDL/PWL cluster below",
+    "source_fields": [
+     "liquidity.pools.6.price"
+    ],
+    "type": "liquidity"
+   }
+  ],
+  "long_pct": 38,
+  "risks": [
+   "RSI 31 near oversold, bounce risk",
+   "HTF strong-long conflicts with short",
+   "Positive footprint delta on last bar",
+   "Outside killzone, thin liquidity"
+  ],
+  "scenarios": [
+   {
+    "invalidation": "Close back above 103.53",
+    "name": "Continuation down",
+    "target": "102.64 then 102.43",
+    "trigger": "15m close below 103.00"
+   },
+   {
+    "invalidation": "Close above 103.90",
+    "name": "FVG retest short",
+    "target": "102.64",
+    "trigger": "Tag 103.48-103.53 and reject"
+   },
+   {
+    "invalidation": "Loss of 103.00",
+    "name": "Discount bounce",
+    "target": "103.93 EMA28",
+    "trigger": "Reclaim 103.53 with bid flip"
+   }
+  ],
+  "short_pct": 62,
+  "summary_ru": "Нисходящая структура: bearish EMA-стек, свежий BOS 103.76, цена под EMA200. Стакан с перевесом ask, CVD 1ч вниз. Предпочтение шорта от ретеста 103.48-103.53 с целями 102.64 и 102.43. Риски: RSI 31, сильный HTF-лонг в discount и положительная дельта последнего бара. Отмена — закрытие выше 103.90."
+ },
+ "attempts": 1,
+ "baseline": {
+  "long_confidence": 69,
+  "long_factors": [
+   "CVD ⚪ нейтрально",
+   "VP ⚪ внутри VA | POC $110",
+   "Session 🗽 NY Session [4/5]",
+   "Book ❌ стакан против сигнала",
+   "F&G 🤑 Greed [55]",
+   "TZ 1H ⚪ Нейтральная [-1.7% от mean]",
+   "TZ 4H ⚪ Нейтральная [-8.2% от mean]",
+   "RSI ⚪ [34]"
+  ],
+  "long_pct": 52,
+  "long_score": 74,
+  "long_verdict": "WAIT",
+  "short_confidence": 54,
+  "short_factors": [
+   "CVD ✅ подтверждает направление",
+   "VP ⚪ внутри VA | POC $110",
+   "Session 🗽 NY Session [4/5]",
+   "Book ✅ ask>bid",
+   "F&G 🤑 Greed [55]",
+   "TZ 1H ⚪ Нейтральная [-1.7% от mean]",
+   "TZ 4H ⚪ Нейтральная [-8.2% от mean]",
+   "RSI ⚪ [34]"
+  ],
+  "short_pct": 48,
+  "short_score": 68,
+  "short_verdict": "WAIT",
+  "source": "screener.compute_confluence_score + decision.make_decision over screener.fetch_market (Bybit-first USDT aggregate, not venue-pinned)",
+  "ts": 1792258200404
+ },
+ "cached": false,
+ "evaluation": {
+  "horizon_bars": 12,
+  "rule": "±1 ATR from the analysis price, bias side first"
+ },
+ "exchange": "bybit",
+ "freshness": {
+  "last_close_ts": 1792258200000,
+  "missing": {},
+  "sections": {
+   "baseline": 1792258200404,
+   "candles": 1792258200000,
+   "derivatives": 1792258200406,
+   "flow": 1792258200404,
+   "footprint": 1792258200409,
+   "funding": 1792258200407,
+   "fvg": 1792258200000,
+   "htf_bias": 1792258200404,
+   "indicators": 1792258200000,
+   "liquidity": 1792258200404,
+   "order_blocks": 1792258200000,
+   "orderbook": 1792258200520,
+   "price": 1792258200000,
+   "regime": 1792258200404,
+   "session": 1792258200404,
+   "structure": 1792258200000
+  }
+ },
+ "generated_at": 1792258200404,
+ "id": 11,
+ "interval": "15",
+ "latency_ms": 15177,
+ "model": "hermes-agent",
+ "price": {
+  "source": "last closed candle close",
+  "ts": 1792258200000,
+  "value": 103.16
+ },
+ "raw_output": [
+  "{\"bias\":\"short\",\"long_pct\":38,\"short_pct\":62,\"confidence\":\"medium\",\"horizon\":\"4-12 bars of 15m\",\"levels\":[{\"type\":\"resistance\",\"price\":103.53,\"reason\":\"Bear FVG just overhead\",\"source_fields\":[\"fvg.nearest.0.top\"]},{\"type\":\"resistance\",\"price\":103.85,\"reason\":\"Unmitigated bear OB high\",\"source_fields\":[\"order_blocks.unmitigated.2.high\"]},{\"type\":\"entry\",\"price\":103.48,\"reason\":\"Retest of FVG bottom\",\"source_fields\":[\"fvg.nearest.0.bottom\"]},{\"type\":\"stop\",\"price\":103.9,\"reason\":\"Above OB and EMA28\",\"source_fields\":[\"order_blocks.unmitigated.2.high\",\"indicators.ema28\"]},{\"type\":\"target\",\"price\":102.64,\"reason\":\"VAL sellside pool\",\"source_fields\":[\"liquidity.pools.0.price\"]},{\"type\":\"target\",\"price\":102.43,\"reason\":\"EQL strength 5 + bull FVG\",\"source_fields\":[\"liquidity.pools.1.price\",\"fvg.nearest.1.top\"]},{\"type\":\"support\",\"price\":103.08,\"reason\":\"Bid wall in depth snapshot\",\"source_fields\":[\"orderbook.bid_wall\"]},{\"type\":\"liquidity\",\"price\":100.48,\"reason\":\"PDL/PWL cluster below\",\"source_fields\":[\"liquidity.pools.6.price\"]}],\"scenarios\":[{\"name\":\"Continuation down\",\"trigger\":\"15m close below 103.00\",\"target\":\"102.64 then 102.43\",\"invalidation\":\"Close back above 103.53\"},{\"name\":\"FVG retest short\",\"trigger\":\"Tag 103.48-103.53 and reject\",\"target\":\"102.64\",\"invalidation\":\"Close above 103.90\"},{\"name\":\"Discount bounce\",\"trigger\":\"Reclaim 103.53 with bid flip\",\"target\":\"103.93 EMA28\",\"invalidation\":\"Loss of 103.00\"}],\"key_factors\":[{\"text\":\"EMA stack bearish, price under EMA200\",\"source_fields\":[\"indicators.ema_stack_7_14_28\",\"indicators.ema200\"]},{\"text\":\"Fresh bear BOS at 103.76\",\"source_fields\":[\"structure.recent_events.4.level\"]},{\"text\":\"Orderbook ask-heavy\",\"source_fields\":[\"orderbook.imbalance\"]},{\"text\":\"CVD 1h down, no divergence\",\"source_fields\":[\"flow.cvd_1h.trend\"]},{\"text\":\"Sellside pools dominate below\",\"source_fields\":[\"liquidity.pools.1.strength\"]},{\"text\":\"HTF bias long in discount — counter risk\",\"source_fields\":[\"htf_bias.direction\",\"htf_bias.zones.D\"]}],\"risks\":[\"RSI 31 near oversold, bounce risk\",\"HTF strong-long conflicts with short\",\"Positive footprint delta on last bar\",\"Outside killzone, thin liquidity\"],\"summary_ru\":\"Нисходящая структура: bearish EMA-стек, свежий BOS 103.76, цена под EMA200. Стакан с перевесом ask, CVD 1ч вниз. Предпочтение шорта от ретеста 103.48-103.53 с целями 102.64 и 102.43. Риски: RSI 31, сильный HTF-лонг в discount и положительная дельта последнего бара. Отмена — закрытие выше 103.90.\"}"
+ ],
+ "snapshot_hash": "2da35c86d75ca114",
+ "snapshot_ms": 1016,
+ "source": "hermes",
+ "status": "ok",
+ "symbol": "SOLUSDT",
+ "warnings": []
+}

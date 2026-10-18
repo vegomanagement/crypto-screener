@@ -1,0 +1,94 @@
+{
+ "1": {
+  "asideH": 551,
+  "rowsH": 346,
+  "rowsTop": 141,
+  "rowsScrollH": 40702,
+  "rowCount": 866,
+  "visibleRows": 7,
+  "rowH": 47,
+  "asideScrolls": false,
+  "children": [
+   "watchlist-heading",
+   "watchlist-search-label",
+   "watchlist-tabs",
+   "watchlist-columns",
+   "watchlist-rows",
+   "prices-status",
+   "local-alerts"
+  ],
+  "analystPanel": false,
+  "analystText": false,
+  "dashboard": true,
+  "jumpTop": true,
+  "jumpFooter": true
+ },
+ "4grid": {
+  "asideH": 551,
+  "rowsH": 332,
+  "rowsTop": 141,
+  "rowsScrollH": 40702,
+  "rowCount": 866,
+  "visibleRows": 7,
+  "rowH": 47,
+  "asideScrolls": false,
+  "children": [
+   "watchlist-heading",
+   "watchlist-search-label",
+   "watchlist-tabs",
+   "watchlist-columns",
+   "watchlist-rows",
+   "prices-status",
+   "local-alerts"
+  ],
+  "analystPanel": false,
+  "analystText": false,
+  "dashboard": true,
+  "jumpTop": true,
+  "jumpFooter": true
+ },
+ "6grid": {
+  "asideH": 551,
+  "rowsH": 332,
+  "rowsTop": 141,
+  "rowsScrollH": 40702,
+  "rowCount": 866,
+  "visibleRows": 7,
+  "rowH": 47,
+  "asideScrolls": false,
+  "children": [
+   "watchlist-heading",
+   "watchlist-search-label",
+   "watchlist-tabs",
+   "watchlist-columns",
+   "watchlist-rows",
+   "prices-status",
+   "local-alerts"
+  ],
+  "analystPanel": false,
+  "analystText": false,
+  "dashboard": true,
+  "jumpTop": true,
+  "jumpFooter": true
+ },
+ "toggle": [
+  {
+   "expanded": "true",
+   "asideDisplay": "flex",
+   "gridW": 1018,
+   "saved": true
+  },
+  {
+   "expanded": "false",
+   "asideDisplay": "none",
+   "gridW": 1280,
+   "saved": false
+  },
+  {
+   "expanded": "true",
+   "asideDisplay": "flex",
+   "gridW": 1018,
+   "saved": true
+  }
+ ]
+}

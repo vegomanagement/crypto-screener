@@ -29,3 +29,6 @@ Thumbs.db
 .vscode/
 .idea/
 *.swp
+*.db-shm
+*.db-wal
+*.db.lock

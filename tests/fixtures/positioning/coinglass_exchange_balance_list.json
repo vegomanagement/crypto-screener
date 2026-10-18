@@ -1,0 +1,26 @@
+{
+ "code": "0",
+ "msg": "success",
+ "data": [
+  {
+   "exchange_name": "Coinbase",
+   "total_balance": 716590.351233,
+   "balance_change_1d": 638.797302,
+   "balance_change_percent_1d": 0.09,
+   "balance_change_7d": 799.967408,
+   "balance_change_percent_7d": 0.11,
+   "balance_change_30d": -29121.977486,
+   "balance_change_percent_30d": -3.91
+  },
+  {
+   "exchange_name": "Binance",
+   "total_balance": 582344.497738,
+   "balance_change_1d": 505.682778,
+   "balance_change_percent_1d": 0.09,
+   "balance_change_7d": -3784.88544,
+   "balance_change_percent_7d": -0.65,
+   "balance_change_30d": 3753.870055,
+   "balance_change_percent_30d": 0.65
+  }
+ ]
+}

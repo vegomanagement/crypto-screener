@@ -1,0 +1,53 @@
+[
+ {
+  "exchange": "binance",
+  "symbol": "BTCUSDT",
+  "interval": "15",
+  "status": "ok",
+  "wall_s": 22.5,
+  "model_latency_ms": 17189,
+  "snapshot_ms": 5306,
+  "attempts": 1,
+  "bias": "short",
+  "long_pct": 38,
+  "short_pct": 62,
+  "confidence": "medium",
+  "levels": 8,
+  "warnings": [],
+  "missing": {}
+ },
+ {
+  "exchange": "binance",
+  "symbol": "ETHUSDT",
+  "interval": "60",
+  "status": "ok",
+  "wall_s": 33.0,
+  "model_latency_ms": 18528,
+  "snapshot_ms": 14503,
+  "attempts": 1,
+  "bias": "short",
+  "long_pct": 38,
+  "short_pct": 62,
+  "confidence": "low",
+  "levels": 8,
+  "warnings": [],
+  "missing": {}
+ },
+ {
+  "exchange": "bybit",
+  "symbol": "SOLUSDT",
+  "interval": "15",
+  "status": "ok",
+  "wall_s": 16.2,
+  "model_latency_ms": 15177,
+  "snapshot_ms": 1016,
+  "attempts": 1,
+  "bias": "short",
+  "long_pct": 38,
+  "short_pct": 62,
+  "confidence": "medium",
+  "levels": 8,
+  "warnings": [],
+  "missing": {}
+ }
+]

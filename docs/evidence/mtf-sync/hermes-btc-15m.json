@@ -1,0 +1,554 @@
+{
+ "status": "ok",
+ "source": "hermes",
+ "model": "hermes-agent",
+ "exchange": "binance",
+ "symbol": "BTCUSDT",
+ "interval": "15",
+ "generated_at": 1792315328091,
+ "snapshot_bytes": 28646,
+ "snapshot_ms": 11272,
+ "warnings": [
+  "counter-trend vs HTF: the split leans long while the dominant 1D reads bearish (MTF verdict mixed_counter_trend)"
+ ],
+ "analysis": {
+  "bias": "long",
+  "long_pct": 63,
+  "short_pct": 37,
+  "factor_scores": [
+   {
+    "direction": "long",
+    "factor": "Momentum bar +924 delta on 2186 vol",
+    "source_fields": [
+     "footprint.bars.5.delta",
+     "footprint.bars.5.total"
+    ],
+    "strength": 3
+   },
+   {
+    "direction": "long",
+    "factor": "EMA 7/14/21 stack bullish, close above",
+    "source_fields": [
+     "indicators.ema_stack",
+     "indicators.ema_fast",
+     "indicators.close"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "long",
+    "factor": "Internal bull BOS above 81759",
+    "source_fields": [
+     "smc.last_internal_break.kind",
+     "smc.last_internal_break.level"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "long",
+    "factor": "Taker buyers aggressive 2.46x",
+    "source_fields": [
+     "positioning.taker.value",
+     "positioning.signals.taker_flow.state"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "long",
+    "factor": "Bid-heavy book imbalance 0.64",
+    "source_fields": [
+     "orderbook.imbalance",
+     "orderbook.bid_qty"
+    ],
+    "strength": 1
+   },
+   {
+    "direction": "long",
+    "factor": "Wyckoff Phase C spring held, conf 0.77",
+    "source_fields": [
+     "wyckoff.phase",
+     "wyckoff.confidence",
+     "wyckoff.events.4.price"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "short",
+    "factor": "1D bear CHoCH, distribution phase D",
+    "source_fields": [
+     "mtf.tfs.1D.smc_trend",
+     "mtf.tfs.1D.wyckoff.phase",
+     "mtf.dominant_tf"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "short",
+    "factor": "4h bear structure, price below 4h VWAP",
+    "source_fields": [
+     "mtf.tfs.4h.smc_trend",
+     "mtf.tfs.4h.vwap_position",
+     "mtf.verdict"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "short",
+    "factor": "Premium zone 0.77 of dealing range",
+    "source_fields": [
+     "smc.dealing_range.zone",
+     "smc.dealing_range.position"
+    ],
+    "strength": 2
+   },
+   {
+    "direction": "short",
+    "factor": "RSI 66.8 near overbought into creek",
+    "source_fields": [
+     "indicators.rsi14",
+     "wyckoff.creek"
+    ],
+    "strength": 1
+   },
+   {
+    "direction": "short",
+    "factor": "Crowd and top traders both long-heavy",
+    "source_fields": [
+     "positioning.crowd.long_share",
+     "positioning.top_traders.position.long_share"
+    ],
+    "strength": 1
+   },
+   {
+    "direction": "short",
+    "factor": "Funding positive, longs pay, rising",
+    "source_fields": [
+     "funding.predicted.rate",
+     "funding.annualized_predicted",
+     "funding.cross_venue_annualized_spread"
+    ],
+    "strength": 1
+   }
+  ],
+  "summary_ru": "15m: бычий внутренний BOS, стек EMA 7/14/21 вверх, импульсный бар с дельтой +924 и агрессивными покупателями. Но это откат против медвежьей 1D-дистрибуции и 4h-структуры, синхронизация только с 4h. Цена в премиуме (0.77), RSI 66.8 у крика 82092.1. Резолв: закрытие 1h выше 82900.5 отменит 1h-дистрибуцию. Лонг только до крика.",
+  "split": {
+   "agent_long_points": 12,
+   "agent_net": 0.1429,
+   "agent_short_points": 9,
+   "baseline_cap": 0.5,
+   "baseline_net": 0.5,
+   "baseline_raw": 0.6993,
+   "bias": "long",
+   "configured_weights": {
+    "agent": 0.9,
+    "baseline": 0.1
+   },
+   "conflict": false,
+   "conflict_min_agent": 0.15,
+   "flip_guard": false,
+   "htf_warning": "counter-trend vs HTF: the split leans long while the dominant 1D reads bearish (MTF verdict mixed_counter_trend)",
+   "k": 3.0,
+   "long_pct": 63,
+   "method": "p_long = logistic(k * (w_a*agent_net + w_b*clip(baseline, ±cap))); w_b = 0 against a clear factor tally; never flips the factors' sign",
+   "net": 0.1786,
+   "neutral_band": 5.0,
+   "p_long": 63.081,
+   "short_pct": 37,
+   "weights": {
+    "agent": 0.9,
+    "baseline": 0.1
+   }
+  }
+ },
+ "snapshot_mtf": {
+  "conflicts": [
+   {
+    "id": "W1",
+    "text": "4h accumulation (phase A) sits across an edge of the 1D distribution (phase D, 82832–87385.1): a counter-trend bounce inside a top; the 1D read has priority.",
+    "tfs": [
+     "4h",
+     "1D"
+    ]
+   },
+   {
+    "id": "W1m",
+    "text": "1h distribution (phase A) sits at the resistance of the 4h accumulation (phase A, 79732.3–82900.5): a counter-trend dip inside a base; the 4h read has priority.",
+    "tfs": [
+     "1h",
+     "4h"
+    ]
+   },
+   {
+    "id": "W1",
+    "text": "15m accumulation (phase C) sits at the support of the 1h distribution (phase A, 80780–82900.5): a counter-trend bounce inside a top; the 1h read has priority.",
+    "tfs": [
+     "15m",
+     "1h"
+    ]
+   },
+   {
+    "id": "W3",
+    "text": "15m Spring 80751 pierced the 1h low 80780 and the 1h bar closed back inside (81099.5): inside the 1h distribution this is a test of its edge, not a reversal yet.",
+    "tfs": [
+     "15m",
+     "1h"
+    ]
+   },
+   {
+    "id": "S1",
+    "text": "1h printed a bull CHoCH at 81733 against the intact 4h bear structure: a pullback, or the start of a 4h reversal",
+    "tfs": [
+     "1h",
+     "4h"
+    ]
+   }
+  ],
+  "dominant_tf": "1D",
+  "edge": "descriptive context: no proven out-of-sample edge (docs/MTF_SYNC_RESULT.md)",
+  "entry_tf": "1h",
+  "ladder": [
+   "1D",
+   "4h",
+   "1h",
+   "15m",
+   "5m"
+  ],
+  "levels": [
+   {
+    "kinds": [
+     "4h EMA 200",
+     "1h VWAP",
+     "1h swing high (HH)"
+    ],
+    "price": 82056.56683,
+    "score": 6.5,
+    "tfs": [
+     "4h",
+     "1h",
+     "15m"
+    ]
+   },
+   {
+    "kinds": [
+     "4h swing low (HL)",
+     "1h swing low (LL)",
+     "1h TR support"
+    ],
+    "price": 80773.17647,
+    "score": 6.5,
+    "tfs": [
+     "4h",
+     "1h",
+     "15m"
+    ]
+   },
+   {
+    "kinds": [
+     "4h equilibrium",
+     "15m equilibrium",
+     "15m VAH"
+    ],
+    "price": 81824.80536,
+    "score": 5.5,
+    "tfs": [
+     "4h",
+     "15m",
+     "5m"
+    ]
+   },
+   {
+    "kinds": [
+     "1h POC",
+     "15m EMA 200",
+     "5m TR support"
+    ],
+    "price": 81660.43253,
+    "score": 4.5,
+    "tfs": [
+     "1h",
+     "15m",
+     "5m"
+    ]
+   },
+   {
+    "kinds": [
+     "1D equilibrium",
+     "4h VWAP"
+    ],
+    "price": 83487.98036,
+    "score": 7.0,
+    "tfs": [
+     "1D",
+     "4h"
+    ]
+   },
+   {
+    "kinds": [
+     "4h TR resistance",
+     "4h swing high (LH)",
+     "1h TR resistance"
+    ],
+    "price": 82900.5,
+    "score": 5.0,
+    "tfs": [
+     "4h",
+     "1h"
+    ]
+   },
+   {
+    "kinds": [
+     "4h VAL",
+     "15m VAL"
+    ],
+    "price": 81247.37333,
+    "score": 4.5,
+    "tfs": [
+     "4h",
+     "15m"
+    ]
+   },
+   {
+    "kinds": [
+     "15m VWAP",
+     "15m POC",
+     "15m swing low (LL)"
+    ],
+    "price": 81552.02586,
+    "score": 2.5,
+    "tfs": [
+     "15m",
+     "5m"
+    ]
+   }
+  ],
+  "missing": {},
+  "pairs": [
+   {
+    "pair": "1D>4h",
+    "status": "pullback_ended"
+   },
+   {
+    "pair": "4h>1h",
+    "status": "divergence"
+   },
+   {
+    "pair": "1h>15m",
+    "status": "reversal_propagated"
+   },
+   {
+    "pair": "15m>5m",
+    "status": "pullback_ended"
+   }
+  ],
+  "resolve": [
+   "1D close above 87385.1 would invalidate the 1D distribution and align with the 4h accumulation",
+   "1D close below 82832 would confirm the 1D distribution; the 4h accumulation would fail",
+   "4h close below 79732.3 would invalidate the 4h accumulation and align with the 1h distribution",
+   "4h close above 82900.5 would confirm the 4h accumulation; the 1h distribution would fail",
+   "1h close above 82900.5 would invalidate the 1h distribution and align with the 15m accumulation"
+  ],
+  "setups": [
+   {
+    "direction": null,
+    "entry": null,
+    "pair": "4h→15m",
+    "state": "waiting_for_poi",
+    "stop": null,
+    "target": null
+   },
+   {
+    "direction": null,
+    "entry": null,
+    "pair": "1h→5m",
+    "state": "waiting_for_poi",
+    "stop": null,
+    "target": null
+   },
+   {
+    "direction": null,
+    "entry": null,
+    "pair": "1D→1h",
+    "state": "waiting_for_poi",
+    "stop": null,
+    "target": null
+   }
+  ],
+  "source": "mtf.py + mtf_rules.py + mtf_block.py over each TF's closed candles (300 per TF)",
+  "sync_tf": "4h",
+  "tfs": {
+   "15m": {
+    "atr14": 111.1754548,
+    "bias": "bull",
+    "bias_score": 3,
+    "eq": 81818.25,
+    "internal_trend": "bull",
+    "last_break": {
+     "dir": "bull",
+     "kind": "BOS",
+     "level": 81877.3,
+     "ts": 1792292400000
+    },
+    "nearest_ob": {
+     "bottom": 81070.6,
+     "dir": "bull",
+     "state": "mitigated",
+     "top": 81635.5
+    },
+    "poc": 81546.6375,
+    "position_vs_htf": "at_htf_support",
+    "smc_trend": "bull",
+    "value_position": "above",
+    "vwap_position": "above",
+    "wyckoff": {
+     "last_event": "Test",
+     "phase": "C",
+     "resistance": 82092.1,
+     "schematic": "accumulation",
+     "support": 80780.0
+    },
+    "zone": "premium"
+   },
+   "1D": {
+    "atr14": 2182.897465,
+    "bias": "neutral",
+    "bias_score": -1,
+    "eq": 83490.95,
+    "internal_trend": "bear",
+    "last_break": {
+     "dir": "bear",
+     "kind": "CHoCH",
+     "level": 82500.1,
+     "ts": 1791417600000
+    },
+    "nearest_ob": {
+     "bottom": 83136.6,
+     "dir": "bear",
+     "state": "mitigated",
+     "top": 85265.3
+    },
+    "poc": 64054.23125,
+    "position_vs_htf": null,
+    "smc_trend": "bear",
+    "value_position": "above",
+    "vwap_position": "above",
+    "wyckoff": {
+     "last_event": "LPSY",
+     "phase": "D",
+     "resistance": 87385.1,
+     "schematic": "distribution",
+     "support": 82832.0
+    },
+    "zone": "discount"
+   },
+   "1h": {
+    "atr14": 246.4825652,
+    "bias": "neutral",
+    "bias_score": 0,
+    "eq": 81400.5,
+    "internal_trend": "bull",
+    "last_break": {
+     "dir": "bull",
+     "kind": "CHoCH",
+     "level": 81733.0,
+     "ts": 1792288800000
+    },
+    "nearest_ob": {
+     "bottom": 80751.0,
+     "dir": "bull",
+     "state": "mitigated",
+     "top": 81686.4
+    },
+    "poc": 81650.86875,
+    "position_vs_htf": "at_htf_resistance",
+    "smc_trend": "bull",
+    "value_position": "inside",
+    "vwap_position": "below",
+    "wyckoff": {
+     "last_event": "AR",
+     "phase": "A",
+     "resistance": 82900.5,
+     "schematic": "distribution",
+     "support": 80780.0
+    },
+    "zone": "premium"
+   },
+   "4h": {
+    "atr14": 749.6040539,
+    "bias": "bear",
+    "bias_score": -3,
+    "eq": 81825.75,
+    "internal_trend": "bear",
+    "last_break": {
+     "dir": "bear",
+     "kind": "CHoCH",
+     "level": 80985.0,
+     "ts": 1792022400000
+    },
+    "nearest_ob": {
+     "bottom": 80095.9,
+     "dir": "bull",
+     "state": "mitigated",
+     "top": 81295.0
+    },
+    "poc": 83396.98375,
+    "position_vs_htf": "overlapping",
+    "smc_trend": "bear",
+    "value_position": "inside",
+    "vwap_position": "below",
+    "wyckoff": {
+     "last_event": "AR",
+     "phase": "A",
+     "resistance": 82900.5,
+     "schematic": "accumulation",
+     "support": 79732.3
+    },
+    "zone": "discount"
+   },
+   "5m": {
+    "atr14": 63.39449606,
+    "bias": "bull",
+    "bias_score": 4,
+    "eq": 81835.0,
+    "internal_trend": "bull",
+    "last_break": {
+     "dir": "bull",
+     "kind": "CHoCH",
+     "level": 81687.4,
+     "ts": 1792312200000
+    },
+    "nearest_ob": {
+     "bottom": 81615.0,
+     "dir": "bull",
+     "state": "mitigated",
+     "top": 81687.4
+    },
+    "poc": 81691.785,
+    "position_vs_htf": "inside",
+    "smc_trend": "bull",
+    "value_position": "inside",
+    "vwap_position": "above",
+    "wyckoff": {
+     "last_event": "Markup",
+     "phase": "E",
+     "resistance": 81759.0,
+     "schematic": "accumulation",
+     "support": 81629.0
+    },
+    "zone": "premium"
+   }
+  },
+  "ts": 1792315200000,
+  "verdict": "mixed_counter_trend"
+ },
+ "snapshot_smc_last_break": {
+  "close": 81890.8,
+  "confirm_ts": 1792293300000,
+  "dir": "bull",
+  "initial": false,
+  "kind": "BOS",
+  "leg_price": 81551.7,
+  "level": 81877.3,
+  "swing_ts": 1792287000000,
+  "ts": 1792292400000
+ }
+}

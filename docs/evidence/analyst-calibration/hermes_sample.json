@@ -1,0 +1,2158 @@
+[
+ {
+  "symbol": "BTCUSDT",
+  "interval": "15",
+  "as_of": 1792242000000,
+  "price": 81485.6,
+  "atr": 67.857991,
+  "touch": "up",
+  "status": "ok",
+  "agent_bias": "short",
+  "factors": [
+   {
+    "factor": "EMA 7/14/21 stack bearish, close below all",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "indicators.ema_stack",
+     "indicators.ema_fast",
+     "indicators.ema_slow",
+     "indicators.close"
+    ]
+   },
+   {
+    "factor": "Price below EMA200 81698",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "indicators.ema200"
+    ]
+   },
+   {
+    "factor": "Structure trend bear, fresh bear CHOCH 81520",
+    "direction": "short",
+    "strength": 3,
+    "source_fields": [
+     "structure.trend",
+     "structure.recent_events.4.level",
+     "structure.recent_events.4.kind"
+    ]
+   },
+   {
+    "factor": "Lower highs: swing high 81707.8 unretested",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "structure.last_swing_high.price"
+    ]
+   },
+   {
+    "factor": "Bear BOS 81443.6 still the active break",
+    "direction": "short",
+    "strength": 1,
+    "source_fields": [
+     "structure.recent_events.2.level",
+     "structure.recent_events.2.direction"
+    ]
+   },
+   {
+    "factor": "Unfilled bear FVG just above at 81591-81594",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "fvg.nearest.0.top",
+     "fvg.nearest.0.bottom"
+    ]
+   },
+   {
+    "factor": "RSI14 37.6 weak, no oversold reversal yet",
+    "direction": "short",
+    "strength": 1,
+    "source_fields": [
+     "indicators.rsi14"
+    ]
+   },
+   {
+    "factor": "Sellside EQL 81373 nearest magnet below",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "liquidity.pools.1.price",
+     "liquidity.pools.1.side"
+    ]
+   },
+   {
+    "factor": "24h change -0.64% with fading closes",
+    "direction": "short",
+    "strength": 1,
+    "source_fields": [
+     "flow.change_24h_pct",
+     "candles.recent.23.4"
+    ]
+   },
+   {
+    "factor": "HTF bias long, 4H in discount zone",
+    "direction": "long",
+    "strength": 2,
+    "source_fields": [
+     "htf_bias.direction",
+     "htf_bias.zones.240"
+    ]
+   },
+   {
+    "factor": "CVD 1h up, no bearish divergence",
+    "direction": "long",
+    "strength": 2,
+    "source_fields": [
+     "flow.cvd_1h.trend",
+     "flow.cvd_1h.divergence"
+    ]
+   },
+   {
+    "factor": "Buyside VAL 81584 close overhead support zone",
+    "direction": "long",
+    "strength": 1,
+    "source_fields": [
+     "liquidity.pools.0.price",
+     "liquidity.pools.0.kind"
+    ]
+   }
+  ],
+  "baseline": {
+   "source": "screener.compute_confluence_score + decision.make_decision over screener.fetch_market (Bybit-first USDT aggregate, not venue-pinned)",
+   "ts": 1792242000000,
+   "long_score": 100,
+   "long_verdict": "LONG",
+   "long_confidence": 100,
+   "long_factors": [
+    "CVD \u2705 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0430\u0435\u0442 \u043d\u0430\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u0438\u0435",
+    "VP \u2705 \u0443 VAL $81,584",
+    "Session \ud83c\udfaf NY+London Overlap [5/5]",
+    "F&G  Greed [55]",
+    "TZ 1H \u26aa \u041d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u0430\u044f [-0.7% \u043e\u0442 mean]",
+    "TZ 4H \u26aa \u041d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u0430\u044f [-2.6% \u043e\u0442 mean]",
+    "RSI \u26aa [44]",
+    "MACD \ud83d\udfe1 \u0431\u044b\u0447\u0438\u0439 \u0442\u0440\u0435\u043d\u0434"
+   ],
+   "short_score": 45,
+   "short_verdict": "WAIT",
+   "short_confidence": 37,
+   "short_factors": [
+    "CVD \u26aa \u043d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u043e",
+    "VP \u274c \u0443 VAL \u2014 \u043f\u0440\u043e\u0442\u0438\u0432 \u0441\u0438\u0433\u043d\u0430\u043b\u0430",
+    "Session \ud83c\udfaf NY+London Overlap [5/5]",
+    "F&G  Greed [55]",
+    "TZ 1H \u26aa \u041d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u0430\u044f [-0.7% \u043e\u0442 mean]",
+    "TZ 4H \u26aa \u041d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u0430\u044f [-2.6% \u043e\u0442 mean]",
+    "RSI \u26aa [44]",
+    "MACD \u274c \u0431\u044b\u0447\u0438\u0439 \u043f\u0440\u0438 \u0448\u043e\u0440\u0442\u0435"
+   ],
+   "long_pct": 69,
+   "short_pct": 31
+  },
+  "model": "hermes-agent",
+  "latency_ms": 21110,
+  "missing": {
+   "derivatives": "ValueError: not reconstructible as of the bar close (historical replay)",
+   "footprint": "ValueError: not reconstructible as of the bar close (historical replay)",
+   "orderbook": "ValueError: not reconstructible as of the bar close (historical replay)",
+   "positioning": "positioning history: not reconstructible as of the bar close (historical replay)"
+  },
+  "split_old": {
+   "long_pct": 51,
+   "short_pct": 49,
+   "p_long": 50.714,
+   "bias": "neutral",
+   "net": 0.0095,
+   "agent_net": -0.5238,
+   "baseline_net": 1.0,
+   "agent_long_points": 5,
+   "agent_short_points": 16,
+   "weights": {
+    "agent": 0.65,
+    "baseline": 0.35
+   },
+   "k": 3.0,
+   "neutral_band": 5.0,
+   "method": "p_long = logistic(k * (w_a*agent_net + w_b*baseline_net)/(w_a+w_b))"
+  }
+ },
+ {
+  "symbol": "ETHUSDT",
+  "interval": "15",
+  "as_of": 1792235700000,
+  "price": 2438.28,
+  "atr": 3.6385101,
+  "touch": "down",
+  "status": "ok",
+  "agent_bias": "long",
+  "factors": [
+   {
+    "factor": "EMA 7/14/21 stack bullish, close above all",
+    "direction": "long",
+    "strength": 2,
+    "source_fields": [
+     "indicators.ema_stack",
+     "indicators.ema_fast",
+     "indicators.ema_slow"
+    ]
+   },
+   {
+    "factor": "Price well above EMA200",
+    "direction": "long",
+    "strength": 2,
+    "source_fields": [
+     "indicators.ema200",
+     "indicators.close"
+    ]
+   },
+   {
+    "factor": "Three consecutive bull BOS, trend bull",
+    "direction": "long",
+    "strength": 3,
+    "source_fields": [
+     "structure.trend",
+     "structure.recent_events.4.level",
+     "structure.recent_events.3.level"
+    ]
+   },
+   {
+    "factor": "HTF bias long, D/4H in discount",
+    "direction": "long",
+    "strength": 2,
+    "source_fields": [
+     "htf_bias.direction",
+     "htf_bias.zones.D",
+     "htf_bias.zones.240"
+    ]
+   },
+   {
+    "factor": "1h CVD up with price up, no divergence",
+    "direction": "long",
+    "strength": 2,
+    "source_fields": [
+     "flow.cvd_1h.trend",
+     "flow.cvd_1h.divergence"
+    ]
+   },
+   {
+    "factor": "Fresh unfilled bull FVG just below price",
+    "direction": "long",
+    "strength": 1,
+    "source_fields": [
+     "fvg.nearest.0.top",
+     "fvg.nearest.0.bottom"
+    ]
+   },
+   {
+    "factor": "Unmitigated bull OB at 2432-2437 as support",
+    "direction": "long",
+    "strength": 2,
+    "source_fields": [
+     "order_blocks.unmitigated.3.low",
+     "order_blocks.unmitigated.3.high"
+    ]
+   },
+   {
+    "factor": "Slightly negative funding: shorts pay, no crowded longs",
+    "direction": "long",
+    "strength": 1,
+    "source_fields": [
+     "funding.last_settled.rate",
+     "funding.interval_hours"
+    ]
+   },
+   {
+    "factor": "RSI14 65.6 nearing overbought, upside limited",
+    "direction": "short",
+    "strength": 1,
+    "source_fields": [
+     "indicators.rsi14"
+    ]
+   },
+   {
+    "factor": "Bear OBs 2454-2478 overhead cap rallies",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "order_blocks.unmitigated.0.low",
+     "order_blocks.unmitigated.1.high"
+    ]
+   },
+   {
+    "factor": "Regime neutral, range compressing, low confidence",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "regime.phase",
+     "regime.range_state",
+     "regime.confidence"
+    ]
+   },
+   {
+    "factor": "24h change negative, outside killzone",
+    "direction": "short",
+    "strength": 1,
+    "source_fields": [
+     "flow.change_24h_pct",
+     "session.active_killzone"
+    ]
+   }
+  ],
+  "baseline": {
+   "source": "screener.compute_confluence_score + decision.make_decision over screener.fetch_market (Bybit-first USDT aggregate, not venue-pinned)",
+   "ts": 1792235700000,
+   "long_score": 81,
+   "long_verdict": "WAIT",
+   "long_confidence": 81,
+   "long_factors": [
+    "CVD \u2705 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0430\u0435\u0442 \u043d\u0430\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u0438\u0435",
+    "VP \u26aa \u0432\u043d\u0443\u0442\u0440\u0438 VA | POC $2,508",
+    "Session \ud83c\udfe6 London Session [4/5]",
+    "F&G  Greed [55]",
+    "TZ 1H \u26aa \u041d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u0430\u044f [-0.1% \u043e\u0442 mean]",
+    "TZ 4H \u26aa \u041d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u0430\u044f [-5.1% \u043e\u0442 mean]",
+    "RSI \u26aa [56]",
+    "MACD \ud83d\udfe1 \u0431\u044b\u0447\u0438\u0439 \u0442\u0440\u0435\u043d\u0434"
+   ],
+   "short_score": 56,
+   "short_verdict": "WAIT",
+   "short_confidence": 48,
+   "short_factors": [
+    "CVD \u26aa \u043d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u043e",
+    "VP \u26aa \u0432\u043d\u0443\u0442\u0440\u0438 VA | POC $2,508",
+    "Session \ud83c\udfe6 London Session [4/5]",
+    "F&G  Greed [55]",
+    "TZ 1H \u26aa \u041d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u0430\u044f [-0.1% \u043e\u0442 mean]",
+    "TZ 4H \u26aa \u041d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u0430\u044f [-5.1% \u043e\u0442 mean]",
+    "RSI \u26aa [56]",
+    "MACD \u274c \u0431\u044b\u0447\u0438\u0439 \u043f\u0440\u0438 \u0448\u043e\u0440\u0442\u0435"
+   ],
+   "long_pct": 59,
+   "short_pct": 41
+  },
+  "model": "hermes-agent",
+  "latency_ms": 20566,
+  "missing": {
+   "derivatives": "ValueError: not reconstructible as of the bar close (historical replay)",
+   "footprint": "ValueError: not reconstructible as of the bar close (historical replay)",
+   "orderbook": "ValueError: not reconstructible as of the bar close (historical replay)",
+   "positioning": "positioning history: not reconstructible as of the bar close (historical replay)"
+  },
+  "split_old": {
+   "long_pct": 77,
+   "short_pct": 23,
+   "p_long": 77.187,
+   "bias": "long",
+   "net": 0.4063,
+   "agent_net": 0.4286,
+   "baseline_net": 0.365,
+   "agent_long_points": 15,
+   "agent_short_points": 6,
+   "weights": {
+    "agent": 0.65,
+    "baseline": 0.35
+   },
+   "k": 3.0,
+   "neutral_band": 5.0,
+   "method": "p_long = logistic(k * (w_a*agent_net + w_b*baseline_net)/(w_a+w_b))"
+  }
+ },
+ {
+  "symbol": "SOLUSDT",
+  "interval": "15",
+  "as_of": 1792229400000,
+  "price": 104.98,
+  "atr": 0.20660946,
+  "touch": "down",
+  "status": "ok",
+  "agent_bias": "long",
+  "factors": [
+   {
+    "factor": "EMA 7/14/21 stack bullish, close above all",
+    "direction": "long",
+    "strength": 2,
+    "source_fields": [
+     "indicators.ema_stack",
+     "indicators.ema_fast",
+     "indicators.ema_slow"
+    ]
+   },
+   {
+    "factor": "Close holds above EMA200",
+    "direction": "long",
+    "strength": 1,
+    "source_fields": [
+     "indicators.ema200",
+     "indicators.close"
+    ]
+   },
+   {
+    "factor": "Structure bull after bull CHOCH at 104.56",
+    "direction": "long",
+    "strength": 2,
+    "source_fields": [
+     "structure.trend",
+     "structure.recent_events.4.direction"
+    ]
+   },
+   {
+    "factor": "HTF 60/240/D bias long, D in discount",
+    "direction": "long",
+    "strength": 2,
+    "source_fields": [
+     "htf_bias.direction",
+     "htf_bias.zones.D"
+    ]
+   },
+   {
+    "factor": "RSI 56 mildly bullish, no extreme",
+    "direction": "long",
+    "strength": 1,
+    "source_fields": [
+     "indicators.rsi14"
+    ]
+   },
+   {
+    "factor": "Fresh bull OB 104.90-105.06 under price",
+    "direction": "long",
+    "strength": 2,
+    "source_fields": [
+     "order_blocks.unmitigated.5.low",
+     "order_blocks.unmitigated.5.high"
+    ]
+   },
+   {
+    "factor": "Funding near zero, no crowded longs",
+    "direction": "long",
+    "strength": 1,
+    "source_fields": [
+     "funding.last_settled.rate",
+     "funding.interval_hours"
+    ]
+   },
+   {
+    "factor": "Five unmitigated bear OBs stacked 105-106.9",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "order_blocks.unmitigated.1.low",
+     "order_blocks.unmitigated.4.high"
+    ]
+   },
+   {
+    "factor": "Bear FVG 105.24-105.59 caps upside",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "fvg.nearest.0.bottom",
+     "fvg.nearest.0.top"
+    ]
+   },
+   {
+    "factor": "1h CVD down with price down, sell flow",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "flow.cvd_1h.trend",
+     "flow.cvd_1h.price_trend"
+    ]
+   },
+   {
+    "factor": "24h change -1.66%, Greed sentiment",
+    "direction": "short",
+    "strength": 1,
+    "source_fields": [
+     "flow.change_24h_pct",
+     "flow.fear_greed.value"
+    ]
+   },
+   {
+    "factor": "Range compressing, neutral regime, ATR 0.21",
+    "direction": "short",
+    "strength": 1,
+    "source_fields": [
+     "regime.range_state",
+     "regime.phase",
+     "indicators.atr14"
+    ]
+   }
+  ],
+  "baseline": {
+   "source": "screener.compute_confluence_score + decision.make_decision over screener.fetch_market (Bybit-first USDT aggregate, not venue-pinned)",
+   "ts": 1792229400000,
+   "long_score": 66,
+   "long_verdict": "LONG",
+   "long_confidence": 66,
+   "long_factors": [
+    "CVD \u26aa \u043d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u043e",
+    "VP \u26aa \u0432\u043d\u0443\u0442\u0440\u0438 VA | POC $110",
+    "Session \ud83c\udfe6 London Session [4/5]",
+    "F&G  Greed [55]",
+    "TZ 1H \u26aa \u041d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u0430\u044f [-0.1% \u043e\u0442 mean]",
+    "TZ 4H \u26aa \u041d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u0430\u044f [-7.2% \u043e\u0442 mean]",
+    "RSI \u26aa [53]",
+    "MACD \ud83d\udfe1 \u0431\u044b\u0447\u0438\u0439 \u0442\u0440\u0435\u043d\u0434"
+   ],
+   "short_score": 71,
+   "short_verdict": "SKIP",
+   "short_confidence": 63,
+   "short_factors": [
+    "CVD \u2705 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0430\u0435\u0442 \u043d\u0430\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u0438\u0435",
+    "VP \u26aa \u0432\u043d\u0443\u0442\u0440\u0438 VA | POC $110",
+    "Session \ud83c\udfe6 London Session [4/5]",
+    "F&G  Greed [55]",
+    "TZ 1H \u26aa \u041d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u0430\u044f [-0.1% \u043e\u0442 mean]",
+    "TZ 4H \u26aa \u041d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u0430\u044f [-7.2% \u043e\u0442 mean]",
+    "RSI \u26aa [53]",
+    "MACD \u274c \u0431\u044b\u0447\u0438\u0439 \u043f\u0440\u0438 \u0448\u043e\u0440\u0442\u0435"
+   ],
+   "long_pct": 48,
+   "short_pct": 52
+  },
+  "model": "hermes-agent",
+  "latency_ms": 21459,
+  "missing": {
+   "derivatives": "ValueError: not reconstructible as of the bar close (historical replay)",
+   "footprint": "ValueError: not reconstructible as of the bar close (historical replay)",
+   "orderbook": "ValueError: not reconstructible as of the bar close (historical replay)",
+   "positioning": "positioning history: not reconstructible as of the bar close (historical replay)"
+  },
+  "split_old": {
+   "long_pct": 68,
+   "short_pct": 32,
+   "p_long": 68.054,
+   "bias": "long",
+   "net": 0.2521,
+   "agent_net": 0.1579,
+   "baseline_net": 0.427,
+   "agent_long_points": 11,
+   "agent_short_points": 8,
+   "weights": {
+    "agent": 0.65,
+    "baseline": 0.35
+   },
+   "k": 3.0,
+   "neutral_band": 5.0,
+   "method": "p_long = logistic(k * (w_a*agent_net + w_b*baseline_net)/(w_a+w_b))"
+  }
+ },
+ {
+  "symbol": "BTCUSDT",
+  "interval": "60",
+  "as_of": 1792036800000,
+  "price": 80879.0,
+  "atr": 548.61331,
+  "touch": "up",
+  "status": "ok",
+  "agent_bias": "short",
+  "factors": [
+   {
+    "factor": "EMA 7/14/21 stack bearish, close below all",
+    "direction": "short",
+    "strength": 3,
+    "source_fields": [
+     "indicators.ema_stack",
+     "indicators.ema_fast",
+     "indicators.ema_slow",
+     "indicators.close"
+    ]
+   },
+   {
+    "factor": "Price far below EMA200",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "indicators.ema200"
+    ]
+   },
+   {
+    "factor": "Structure bear, latest CHOCH bearish",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "structure.trend",
+     "structure.recent_events.4.direction",
+     "structure.recent_events.4.level"
+    ]
+   },
+   {
+    "factor": "Last bar broke to new window low on volume",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "candles.recent.22.3",
+     "candles.window_low",
+     "candles.recent.22.5"
+    ]
+   },
+   {
+    "factor": "CVD down confirms down price, no divergence",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "flow.cvd_1h.trend",
+     "flow.cvd_1h.divergence"
+    ]
+   },
+   {
+    "factor": "All 5 unfilled FVGs bearish overhead",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "fvg.total_unfilled",
+     "fvg.nearest.0.top",
+     "fvg.nearest.0.bottom"
+    ]
+   },
+   {
+    "factor": "24h change -3.3%, momentum down",
+    "direction": "short",
+    "strength": 1,
+    "source_fields": [
+     "flow.change_24h_pct"
+    ]
+   },
+   {
+    "factor": "Sellside PWL/round liquidity just below draws price",
+    "direction": "short",
+    "strength": 1,
+    "source_fields": [
+     "liquidity.pools.4.price",
+     "liquidity.pools.5.price"
+    ]
+   },
+   {
+    "factor": "RSI14 24 deeply oversold, bounce risk",
+    "direction": "long",
+    "strength": 2,
+    "source_fields": [
+     "indicators.rsi14"
+    ]
+   },
+   {
+    "factor": "HTF bias long, 60/240 in discount",
+    "direction": "long",
+    "strength": 2,
+    "source_fields": [
+     "htf_bias.direction",
+     "htf_bias.zones.240",
+     "htf_bias.zones.60"
+    ]
+   },
+   {
+    "factor": "Pos in range 0.17, deep discount zone",
+    "direction": "long",
+    "strength": 1,
+    "source_fields": [
+     "regime.pos_in_range",
+     "regime.zone"
+    ]
+   },
+   {
+    "factor": "Last settled funding slightly negative, shorts pay",
+    "direction": "long",
+    "strength": 1,
+    "source_fields": [
+     "funding.last_settled.rate"
+    ]
+   }
+  ],
+  "baseline": {
+   "source": "screener.compute_confluence_score + decision.make_decision over screener.fetch_market (Bybit-first USDT aggregate, not venue-pinned)",
+   "ts": 1792036800000,
+   "long_score": 80,
+   "long_verdict": "WAIT",
+   "long_confidence": 75,
+   "long_factors": [
+    "CVD \u26aa \u043d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u043e",
+    "VP \u26aa \u0432\u043d\u0435 VA | POC $83,073",
+    "Session \ud83c\udf0f Asian Session [2/5]",
+    "F&G  Neutral [53]",
+    "TZ 1H \u26aa \u041d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u0430\u044f [-2.6% \u043e\u0442 mean]",
+    "TZ 4H \u26aa \u041d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u0430\u044f [-3.9% \u043e\u0442 mean]",
+    "RSI \u2705 \u043f\u0435\u0440\u0435\u043f\u0440\u043e\u0434\u0430\u043d [24] \u2014 \u0445\u043e\u0440\u043e\u0448\u0438\u0439 \u043b\u043e\u043d\u0433",
+    "MACD \u274c \u043c\u0435\u0434\u0432\u0435\u0436\u0438\u0439 \u043f\u0440\u0438 \u043b\u043e\u043d\u0433\u0435"
+   ],
+   "short_score": 57,
+   "short_verdict": "WAIT",
+   "short_confidence": 23,
+   "short_factors": [
+    "CVD \u2705 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0430\u0435\u0442 \u043d\u0430\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u0438\u0435",
+    "VP \u26aa \u0432\u043d\u0435 VA | POC $83,073",
+    "Session \ud83c\udf0f Asian Session [2/5]",
+    "F&G  Neutral [53]",
+    "TZ 1H \u26aa \u041d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u0430\u044f [-2.6% \u043e\u0442 mean]",
+    "TZ 4H \u26aa \u041d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u0430\u044f [-3.9% \u043e\u0442 mean]",
+    "RSI \u274c \u043f\u0435\u0440\u0435\u043f\u0440\u043e\u0434\u0430\u043d [24] \u2014 \u0440\u0438\u0441\u043a\u043e\u0432\u0430\u043d\u043d\u044b\u0439 \u0448\u043e\u0440\u0442",
+    "MACD \ud83d\udfe1 \u043c\u0435\u0434\u0432\u0435\u0436\u0438\u0439 \u0442\u0440\u0435\u043d\u0434"
+   ],
+   "long_pct": 58,
+   "short_pct": 42
+  },
+  "model": "hermes-agent",
+  "latency_ms": 20292,
+  "missing": {
+   "derivatives": "ValueError: not reconstructible as of the bar close (historical replay)",
+   "footprint": "ValueError: not reconstructible as of the bar close (historical replay)",
+   "orderbook": "ValueError: not reconstructible as of the bar close (historical replay)",
+   "positioning": "positioning history: not reconstructible as of the bar close (historical replay)"
+  },
+  "split_old": {
+   "long_pct": 38,
+   "short_pct": 62,
+   "p_long": 38.151,
+   "bias": "short",
+   "net": -0.1611,
+   "agent_net": -0.4286,
+   "baseline_net": 0.3358,
+   "agent_long_points": 6,
+   "agent_short_points": 15,
+   "weights": {
+    "agent": 0.65,
+    "baseline": 0.35
+   },
+   "k": 3.0,
+   "neutral_band": 5.0,
+   "method": "p_long = logistic(k * (w_a*agent_net + w_b*baseline_net)/(w_a+w_b))"
+  }
+ },
+ {
+  "symbol": "ETHUSDT",
+  "interval": "60",
+  "as_of": 1792011600000,
+  "price": 2415.97,
+  "atr": 21.73929,
+  "touch": "down",
+  "status": "ok",
+  "agent_bias": "short",
+  "factors": [
+   {
+    "factor": "EMA 7/14/21 stack bearish, close below all",
+    "direction": "short",
+    "strength": 3,
+    "source_fields": [
+     "indicators.ema_stack",
+     "indicators.ema_fast",
+     "indicators.ema_slow",
+     "indicators.close"
+    ]
+   },
+   {
+    "factor": "Bear BOS at 2495.76 confirms markdown",
+    "direction": "short",
+    "strength": 3,
+    "source_fields": [
+     "structure.recent_events.4.kind",
+     "structure.recent_events.4.level",
+     "structure.trend"
+    ]
+   },
+   {
+    "factor": "Price far below EMA200 2547",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "indicators.ema200"
+    ]
+   },
+   {
+    "factor": "Regime markdown, range expanding",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "regime.phase",
+     "regime.range_state",
+     "regime.bias"
+    ]
+   },
+   {
+    "factor": "CVD 1h down with price down, no divergence",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "flow.cvd_1h.trend",
+     "flow.cvd_1h.divergence"
+    ]
+   },
+   {
+    "factor": "Last bar made new window low 2403.82",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "candles.recent.23.3",
+     "candles.window_low"
+    ]
+   },
+   {
+    "factor": "Two unfilled bear FVGs overhead at 2456-2498",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "fvg.nearest.0.bottom",
+     "fvg.nearest.1.top"
+    ]
+   },
+   {
+    "factor": "Sellside pools 2405/2400 invite stop run",
+    "direction": "short",
+    "strength": 1,
+    "source_fields": [
+     "liquidity.pools.1.price",
+     "liquidity.pools.2.price"
+    ]
+   },
+   {
+    "factor": "RSI14 27 oversold, bounce risk",
+    "direction": "long",
+    "strength": 2,
+    "source_fields": [
+     "indicators.rsi14"
+    ]
+   },
+   {
+    "factor": "HTF bias long strong, D/4H/1H discount",
+    "direction": "long",
+    "strength": 2,
+    "source_fields": [
+     "htf_bias.direction",
+     "htf_bias.strength",
+     "htf_bias.zones.D"
+    ]
+   },
+   {
+    "factor": "pos_in_range 0.069 near range floor",
+    "direction": "long",
+    "strength": 1,
+    "source_fields": [
+     "regime.pos_in_range",
+     "regime.zone"
+    ]
+   },
+   {
+    "factor": "Funding slightly negative: shorts pay",
+    "direction": "long",
+    "strength": 1,
+    "source_fields": [
+     "funding.last_settled.rate"
+    ]
+   }
+  ],
+  "baseline": {
+   "source": "screener.compute_confluence_score + decision.make_decision over screener.fetch_market (Bybit-first USDT aggregate, not venue-pinned)",
+   "ts": 1792011600000,
+   "long_score": 89,
+   "long_verdict": "WAIT",
+   "long_confidence": 73,
+   "long_factors": [
+    "CVD \u26aa \u043d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u043e",
+    "VP \u26aa \u0432\u043d\u0435 VA | POC $2,507",
+    "Session \ud83d\uddfd NY Session [4/5]",
+    "F&G  Greed [62]",
+    "TZ 1H \u26aa \u041d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u0430\u044f [-3.6% \u043e\u0442 mean]",
+    "TZ 4H \u2705 \ud83d\udfe2 \u041d\u0438\u0436\u043d\u044f\u044f \u0437\u043e\u043d\u0430 (\u043f\u0435\u0440\u0435\u043f\u0440\u043e\u0434\u0430\u043d\u043d\u043e\u0441\u0442\u044c) [-7.0%]",
+    "RSI \u2705 \u043f\u0435\u0440\u0435\u043f\u0440\u043e\u0434\u0430\u043d [27] \u2014 \u0445\u043e\u0440\u043e\u0448\u0438\u0439 \u043b\u043e\u043d\u0433",
+    "MACD \u274c \u043c\u0435\u0434\u0432\u0435\u0436\u0438\u0439 \u043f\u0440\u0438 \u043b\u043e\u043d\u0433\u0435"
+   ],
+   "short_score": 48,
+   "short_verdict": "WAIT",
+   "short_confidence": 48,
+   "short_factors": [
+    "CVD \u2705 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0430\u0435\u0442 \u043d\u0430\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u0438\u0435",
+    "VP \u26aa \u0432\u043d\u0435 VA | POC $2,507",
+    "Session \ud83d\uddfd NY Session [4/5]",
+    "F&G  Greed [62]",
+    "TZ 1H \u26aa \u041d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u0430\u044f [-3.6% \u043e\u0442 mean]",
+    "TZ 4H \u274c \ud83d\udfe2 \u0426\u0435\u043d\u0430 \u043f\u0435\u0440\u0435\u043f\u0440\u043e\u0434\u0430\u043d\u0430 [-7.0%]",
+    "RSI \u274c \u043f\u0435\u0440\u0435\u043f\u0440\u043e\u0434\u0430\u043d [27] \u2014 \u0440\u0438\u0441\u043a\u043e\u0432\u0430\u043d\u043d\u044b\u0439 \u0448\u043e\u0440\u0442",
+    "MACD \ud83d\udfe1 \u043c\u0435\u0434\u0432\u0435\u0436\u0438\u0439 \u0442\u0440\u0435\u043d\u0434"
+   ],
+   "long_pct": 65,
+   "short_pct": 35
+  },
+  "model": "hermes-agent",
+  "latency_ms": 20892,
+  "missing": {
+   "derivatives": "ValueError: not reconstructible as of the bar close (historical replay)",
+   "footprint": "ValueError: not reconstructible as of the bar close (historical replay)",
+   "orderbook": "ValueError: not reconstructible as of the bar close (historical replay)",
+   "positioning": "positioning history: not reconstructible as of the bar close (historical replay)"
+  },
+  "split_old": {
+   "long_pct": 42,
+   "short_pct": 58,
+   "p_long": 42.455,
+   "bias": "short",
+   "net": -0.1014,
+   "agent_net": -0.4783,
+   "baseline_net": 0.5985,
+   "agent_long_points": 6,
+   "agent_short_points": 17,
+   "weights": {
+    "agent": 0.65,
+    "baseline": 0.35
+   },
+   "k": 3.0,
+   "neutral_band": 5.0,
+   "method": "p_long = logistic(k * (w_a*agent_net + w_b*baseline_net)/(w_a+w_b))"
+  }
+ },
+ {
+  "symbol": "SOLUSDT",
+  "interval": "60",
+  "as_of": 1791986400000,
+  "price": 104.81,
+  "atr": 1.1134129,
+  "touch": "down",
+  "status": "ok",
+  "agent_bias": "short",
+  "factors": [
+   {
+    "factor": "EMA 7/14/21 stack bearish, close below all",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "indicators.ema_stack",
+     "indicators.ema_fast",
+     "indicators.ema_slow",
+     "indicators.close"
+    ]
+   },
+   {
+    "factor": "Price far below EMA200 111.77",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "indicators.ema200"
+    ]
+   },
+   {
+    "factor": "Bear BOS at 106.58 confirms markdown",
+    "direction": "short",
+    "strength": 3,
+    "source_fields": [
+     "structure.recent_events.4.kind",
+     "structure.recent_events.4.level"
+    ]
+   },
+   {
+    "factor": "Structure trend bear, swing high 108.65",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "structure.trend",
+     "structure.last_swing_high.price"
+    ]
+   },
+   {
+    "factor": "Regime markdown, range expanding",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "regime.phase",
+     "regime.range_state",
+     "regime.bias"
+    ]
+   },
+   {
+    "factor": "Heavy volume breakdown bar closed near low",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "candles.recent.22.5",
+     "candles.recent.23.4",
+     "candles.recent.23.3"
+    ]
+   },
+   {
+    "factor": "CVD 1h down with price down, no divergence",
+    "direction": "short",
+    "strength": 1,
+    "source_fields": [
+     "flow.cvd_1h.trend",
+     "flow.cvd_1h.divergence"
+    ]
+   },
+   {
+    "factor": "Fresh bear FVG 106.35-106.60 overhead",
+    "direction": "short",
+    "strength": 1,
+    "source_fields": [
+     "fvg.nearest.0.top",
+     "fvg.nearest.0.bottom"
+    ]
+   },
+   {
+    "factor": "Unmitigated bear OB 106.03-107.17 above",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "order_blocks.unmitigated.0.high",
+     "order_blocks.unmitigated.0.low"
+    ]
+   },
+   {
+    "factor": "RSI14 32 oversold, bounce risk",
+    "direction": "long",
+    "strength": 2,
+    "source_fields": [
+     "indicators.rsi14"
+    ]
+   },
+   {
+    "factor": "HTF bias long, 60/240 in discount",
+    "direction": "long",
+    "strength": 2,
+    "source_fields": [
+     "htf_bias.direction",
+     "htf_bias.zones.240",
+     "htf_bias.zones.60"
+    ]
+   },
+   {
+    "factor": "Funding near zero, no crowded longs",
+    "direction": "long",
+    "strength": 1,
+    "source_fields": [
+     "funding.last_settled.rate",
+     "funding.interval_hours"
+    ]
+   }
+  ],
+  "baseline": {
+   "source": "screener.compute_confluence_score + decision.make_decision over screener.fetch_market (Bybit-first USDT aggregate, not venue-pinned)",
+   "ts": 1791986400000,
+   "long_score": 86,
+   "long_verdict": "SKIP",
+   "long_confidence": 54,
+   "long_factors": [
+    "CVD \u26aa \u043d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u043e",
+    "VP \u26aa \u0432\u043d\u0443\u0442\u0440\u0438 VA | POC $110",
+    "Session \ud83c\udfaf NY+London Overlap [5/5]",
+    "F&G  Greed [62]",
+    "TZ 1H \u26aa \u041d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u0430\u044f [-3.4% \u043e\u0442 mean]",
+    "TZ 4H \u26aa \u041d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u0430\u044f [-8.0% \u043e\u0442 mean]",
+    "RSI \u26aa [32]",
+    "MACD \u274c \u043c\u0435\u0434\u0432\u0435\u0436\u0438\u0439 \u043f\u0440\u0438 \u043b\u043e\u043d\u0433\u0435"
+   ],
+   "short_score": 70,
+   "short_verdict": "SKIP",
+   "short_confidence": 58,
+   "short_factors": [
+    "CVD \u2705 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0430\u0435\u0442 \u043d\u0430\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u0438\u0435",
+    "VP \u26aa \u0432\u043d\u0443\u0442\u0440\u0438 VA | POC $110",
+    "Session \ud83c\udfaf NY+London Overlap [5/5]",
+    "F&G  Greed [62]",
+    "TZ 1H \u26aa \u041d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u0430\u044f [-3.4% \u043e\u0442 mean]",
+    "TZ 4H \u26aa \u041d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u0430\u044f [-8.0% \u043e\u0442 mean]",
+    "RSI \u26aa [32]",
+    "MACD \ud83d\udfe1 \u043c\u0435\u0434\u0432\u0435\u0436\u0438\u0439 \u0442\u0440\u0435\u043d\u0434"
+   ],
+   "long_pct": 55,
+   "short_pct": 45
+  },
+  "model": "hermes-agent",
+  "latency_ms": 20273,
+  "missing": {
+   "derivatives": "ValueError: not reconstructible as of the bar close (historical replay)",
+   "footprint": "ValueError: not reconstructible as of the bar close (historical replay)",
+   "orderbook": "ValueError: not reconstructible as of the bar close (historical replay)",
+   "positioning": "positioning history: not reconstructible as of the bar close (historical replay)"
+  },
+  "split_old": {
+   "long_pct": 30,
+   "short_pct": 70,
+   "p_long": 29.98,
+   "bias": "short",
+   "net": -0.2828,
+   "agent_net": -0.5455,
+   "baseline_net": 0.2051,
+   "agent_long_points": 5,
+   "agent_short_points": 17,
+   "weights": {
+    "agent": 0.65,
+    "baseline": 0.35
+   },
+   "k": 3.0,
+   "neutral_band": 5.0,
+   "method": "p_long = logistic(k * (w_a*agent_net + w_b*baseline_net)/(w_a+w_b))"
+  }
+ },
+ {
+  "symbol": "BTCUSDT",
+  "interval": "15",
+  "as_of": 1792209600000,
+  "price": 81532.4,
+  "atr": 116.66445,
+  "touch": "timeout",
+  "status": "ok",
+  "agent_bias": "short",
+  "factors": [
+   {
+    "factor": "EMA 7/14/21 stack bearish, close below all",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "indicators.ema_stack",
+     "indicators.ema_fast",
+     "indicators.ema_slow",
+     "indicators.close"
+    ]
+   },
+   {
+    "factor": "Price far below EMA200 81884",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "indicators.ema200"
+    ]
+   },
+   {
+    "factor": "Bearish BOS at 81443.6 confirms bear structure",
+    "direction": "short",
+    "strength": 3,
+    "source_fields": [
+     "structure.recent_events.4.kind",
+     "structure.recent_events.4.level",
+     "structure.trend"
+    ]
+   },
+   {
+    "factor": "Regime markdown, bias short, range expanding",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "regime.phase",
+     "regime.bias",
+     "regime.range_state"
+    ]
+   },
+   {
+    "factor": "1h CVD down with price down, no divergence",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "flow.cvd_1h.trend",
+     "flow.cvd_1h.divergence"
+    ]
+   },
+   {
+    "factor": "24h change -0.68% keeps sellers in control",
+    "direction": "short",
+    "strength": 1,
+    "source_fields": [
+     "flow.change_24h_pct"
+    ]
+   },
+   {
+    "factor": "Unmitigated bear OBs overhead 82120-82900",
+    "direction": "short",
+    "strength": 1,
+    "source_fields": [
+     "order_blocks.unmitigated.0.low",
+     "order_blocks.unmitigated.1.low"
+    ]
+   },
+   {
+    "factor": "Bear FVG 81649.8-81710.8 caps bounces",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "fvg.nearest.1.bottom",
+     "fvg.nearest.1.top"
+    ]
+   },
+   {
+    "factor": "Strong EQL 80780 sellside magnet below",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "liquidity.pools.5.price",
+     "liquidity.pools.5.strength"
+    ]
+   },
+   {
+    "factor": "HTF bias long (weak), 4H in discount",
+    "direction": "long",
+    "strength": 1,
+    "source_fields": [
+     "htf_bias.direction",
+     "htf_bias.zones.240"
+    ]
+   },
+   {
+    "factor": "Bull FVG 81451-81521 under price, VAL 81546 near",
+    "direction": "long",
+    "strength": 1,
+    "source_fields": [
+     "fvg.nearest.0.top",
+     "liquidity.pools.0.price"
+    ]
+   },
+   {
+    "factor": "Funding +0.0001 settled, near neutral tilt",
+    "direction": "short",
+    "strength": 1,
+    "source_fields": [
+     "funding.last_settled.rate",
+     "funding.interval_hours"
+    ]
+   }
+  ],
+  "baseline": {
+   "source": "screener.compute_confluence_score + decision.make_decision over screener.fetch_market (Bybit-first USDT aggregate, not venue-pinned)",
+   "ts": 1792209600000,
+   "long_score": 52,
+   "long_verdict": "WAIT",
+   "long_confidence": 44,
+   "long_factors": [
+    "CVD \u26aa \u043d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u043e",
+    "VP \u2705 \u0443 VAL $81,546",
+    "Session \ud83c\udf0f Asian Session [2/5]",
+    "F&G  Greed [55]",
+    "TZ 1H \u26aa \u041d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u0430\u044f [-0.8% \u043e\u0442 mean]",
+    "TZ 4H \u26aa \u041d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u0430\u044f [-2.7% \u043e\u0442 mean]",
+    "RSI \u26aa [46]",
+    "MACD \u274c \u043c\u0435\u0434\u0432\u0435\u0436\u0438\u0439 \u043f\u0440\u0438 \u043b\u043e\u043d\u0433\u0435"
+   ],
+   "short_score": 82,
+   "short_verdict": "WAIT",
+   "short_confidence": 84,
+   "short_factors": [
+    "CVD \u2705 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0430\u0435\u0442 \u043d\u0430\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u0438\u0435",
+    "VP \u274c \u0443 VAL \u2014 \u043f\u0440\u043e\u0442\u0438\u0432 \u0441\u0438\u0433\u043d\u0430\u043b\u0430",
+    "Session \ud83c\udf0f Asian Session [2/5]",
+    "F&G  Greed [55]",
+    "TZ 1H \u26aa \u041d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u0430\u044f [-0.8% \u043e\u0442 mean]",
+    "TZ 4H \u26aa \u041d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u0430\u044f [-2.7% \u043e\u0442 mean]",
+    "RSI \u26aa [46]",
+    "MACD \ud83d\udfe1 \u043c\u0435\u0434\u0432\u0435\u0436\u0438\u0439 \u0442\u0440\u0435\u043d\u0434"
+   ],
+   "long_pct": 39,
+   "short_pct": 61
+  },
+  "model": "hermes-agent",
+  "latency_ms": 21679,
+  "missing": {
+   "derivatives": "ValueError: not reconstructible as of the bar close (historical replay)",
+   "footprint": "ValueError: not reconstructible as of the bar close (historical replay)",
+   "orderbook": "ValueError: not reconstructible as of the bar close (historical replay)",
+   "positioning": "positioning history: not reconstructible as of the bar close (historical replay)"
+  },
+  "split_old": {
+   "long_pct": 12,
+   "short_pct": 88,
+   "p_long": 11.607,
+   "bias": "short",
+   "net": -0.6767,
+   "agent_net": -0.8,
+   "baseline_net": -0.4478,
+   "agent_long_points": 2,
+   "agent_short_points": 18,
+   "weights": {
+    "agent": 0.65,
+    "baseline": 0.35
+   },
+   "k": 3.0,
+   "neutral_band": 5.0,
+   "method": "p_long = logistic(k * (w_a*agent_net + w_b*baseline_net)/(w_a+w_b))"
+  }
+ },
+ {
+  "symbol": "ETHUSDT",
+  "interval": "15",
+  "as_of": 1792203300000,
+  "price": 2423.73,
+  "atr": 5.9444318,
+  "touch": "down",
+  "status": "ok",
+  "agent_bias": "long",
+  "factors": [
+   {
+    "factor": "Bull CHOCH at 2421.22 holds, structure trend bull",
+    "direction": "long",
+    "strength": 2,
+    "source_fields": [
+     "structure.trend",
+     "structure.recent_events.4.level"
+    ]
+   },
+   {
+    "factor": "Close 2423.73 reclaims prior swing high 2424.46 area",
+    "direction": "long",
+    "strength": 1,
+    "source_fields": [
+     "price.value",
+     "structure.last_swing_high.price"
+    ]
+   },
+   {
+    "factor": "HTF bias long, D/4H in discount",
+    "direction": "long",
+    "strength": 2,
+    "source_fields": [
+     "htf_bias.direction",
+     "htf_bias.zones.D",
+     "htf_bias.zones.240"
+    ]
+   },
+   {
+    "factor": "Last bar expansion 2418.96-2426.55 on rising volume",
+    "direction": "long",
+    "strength": 2,
+    "source_fields": [
+     "candles.recent.23.3",
+     "candles.recent.23.2",
+     "candles.recent.23.5"
+    ]
+   },
+   {
+    "factor": "Buyside EQH 2426.87 just 0.13% above, magnet",
+    "direction": "long",
+    "strength": 2,
+    "source_fields": [
+     "liquidity.pools.0.price",
+     "liquidity.pools.0.strength"
+    ]
+   },
+   {
+    "factor": "RSI14 53 neutral-up, room before overbought",
+    "direction": "long",
+    "strength": 1,
+    "source_fields": [
+     "indicators.rsi14"
+    ]
+   },
+   {
+    "factor": "Price far below EMA200 2435.96, trend cap",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "indicators.ema200",
+     "indicators.close"
+    ]
+   },
+   {
+    "factor": "EMA 7/14/21 stack mixed, no trend thrust",
+    "direction": "short",
+    "strength": 1,
+    "source_fields": [
+     "indicators.ema_stack",
+     "indicators.ema_periods"
+    ]
+   },
+   {
+    "factor": "Unfilled bear FVG 2432.34-2434.61 overhead",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "fvg.nearest.0.bottom",
+     "fvg.nearest.0.top"
+    ]
+   },
+   {
+    "factor": "1h CVD down with price down, sellers in control",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "flow.cvd_1h.trend",
+     "flow.cvd_1h.price_trend"
+    ]
+   },
+   {
+    "factor": "Two unmitigated bear OBs 2453-2478 above",
+    "direction": "short",
+    "strength": 1,
+    "source_fields": [
+     "order_blocks.unmitigated.0.low",
+     "order_blocks.unmitigated.1.high"
+    ]
+   },
+   {
+    "factor": "Funding +0.0053% mildly positive, longs pay",
+    "direction": "short",
+    "strength": 1,
+    "source_fields": [
+     "funding.last_settled.rate"
+    ]
+   }
+  ],
+  "baseline": {
+   "source": "screener.compute_confluence_score + decision.make_decision over screener.fetch_market (Bybit-first USDT aggregate, not venue-pinned)",
+   "ts": 1792203300000,
+   "long_score": 65,
+   "long_verdict": "SKIP",
+   "long_confidence": 41,
+   "long_factors": [
+    "CVD \u26aa \u043d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u043e",
+    "VP \u26aa \u0432\u043d\u0443\u0442\u0440\u0438 VA | POC $2,507",
+    "Session \ud83c\udf0f Asian Session [2/5]",
+    "F&G  Greed [55]",
+    "TZ 1H \u26aa \u041d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u0430\u044f [-1.1% \u043e\u0442 mean]",
+    "TZ 4H \u26aa \u041d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u0430\u044f [-5.8% \u043e\u0442 mean]",
+    "RSI \u26aa [44]",
+    "MACD \u274c \u043c\u0435\u0434\u0432\u0435\u0436\u0438\u0439 \u043f\u0440\u0438 \u043b\u043e\u043d\u0433\u0435"
+   ],
+   "short_score": 69,
+   "short_verdict": "SHORT",
+   "short_confidence": 69,
+   "short_factors": [
+    "CVD \u2705 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0430\u0435\u0442 \u043d\u0430\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u0438\u0435",
+    "VP \u26aa \u0432\u043d\u0443\u0442\u0440\u0438 VA | POC $2,507",
+    "Session \ud83c\udf0f Asian Session [2/5]",
+    "F&G  Greed [55]",
+    "TZ 1H \u26aa \u041d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u0430\u044f [-1.1% \u043e\u0442 mean]",
+    "TZ 4H \u26aa \u041d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u0430\u044f [-5.8% \u043e\u0442 mean]",
+    "RSI \u26aa [44]",
+    "MACD \ud83d\udfe1 \u043c\u0435\u0434\u0432\u0435\u0436\u0438\u0439 \u0442\u0440\u0435\u043d\u0434"
+   ],
+   "long_pct": 49,
+   "short_pct": 51
+  },
+  "model": "hermes-agent",
+  "latency_ms": 22913,
+  "missing": {
+   "derivatives": "ValueError: not reconstructible as of the bar close (historical replay)",
+   "footprint": "ValueError: not reconstructible as of the bar close (historical replay)",
+   "orderbook": "ValueError: not reconstructible as of the bar close (historical replay)",
+   "positioning": "positioning history: not reconstructible as of the bar close (historical replay)"
+  },
+  "split_old": {
+   "long_pct": 38,
+   "short_pct": 62,
+   "p_long": 38.106,
+   "bias": "short",
+   "net": -0.1617,
+   "agent_net": 0.0526,
+   "baseline_net": -0.5597,
+   "agent_long_points": 10,
+   "agent_short_points": 9,
+   "weights": {
+    "agent": 0.65,
+    "baseline": 0.35
+   },
+   "k": 3.0,
+   "neutral_band": 5.0,
+   "method": "p_long = logistic(k * (w_a*agent_net + w_b*baseline_net)/(w_a+w_b))"
+  }
+ },
+ {
+  "symbol": "SOLUSDT",
+  "interval": "15",
+  "as_of": 1792197000000,
+  "price": 104.34,
+  "atr": 0.35232392,
+  "touch": "up",
+  "status": "ok",
+  "agent_bias": "short",
+  "factors": [
+   {
+    "factor": "Structure trend bear, last BOS bear at 105.03",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "structure.trend",
+     "structure.recent_events.4.level"
+    ]
+   },
+   {
+    "factor": "Price below EMA200 105.01, trend resistance",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "indicators.ema200",
+     "indicators.close"
+    ]
+   },
+   {
+    "factor": "Two unmitigated bear order blocks 105.05-106.12",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "order_blocks.unmitigated.0.low",
+     "order_blocks.unmitigated.1.high"
+    ]
+   },
+   {
+    "factor": "Unfilled bear FVG 104.85-105.59 just overhead",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "fvg.nearest.0.bottom",
+     "fvg.nearest.0.top"
+    ]
+   },
+   {
+    "factor": "Regime markdown phase, bias short, expanding",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "regime.phase",
+     "regime.bias",
+     "regime.range_state"
+    ]
+   },
+   {
+    "factor": "CVD 1h down with price down, sellers in control",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "flow.cvd_1h.trend",
+     "flow.cvd_1h.price_trend"
+    ]
+   },
+   {
+    "factor": "24h change -0.94% negative drift",
+    "direction": "short",
+    "strength": 1,
+    "source_fields": [
+     "flow.change_24h_pct"
+    ]
+   },
+   {
+    "factor": "Strong sellside EQL cluster 102.43 pulls price down",
+    "direction": "short",
+    "strength": 1,
+    "source_fields": [
+     "liquidity.pools.1.price",
+     "liquidity.pools.1.strength"
+    ]
+   },
+   {
+    "factor": "EMA 7/14/21 stack bullish, short-term up",
+    "direction": "long",
+    "strength": 2,
+    "source_fields": [
+     "indicators.ema_stack",
+     "indicators.ema_fast",
+     "indicators.ema_slow"
+    ]
+   },
+   {
+    "factor": "HTF bias long moderate, D/240 in discount",
+    "direction": "long",
+    "strength": 2,
+    "source_fields": [
+     "htf_bias.direction",
+     "htf_bias.zones.D",
+     "htf_bias.zones.240"
+    ]
+   },
+   {
+    "factor": "Price reclaimed from 102.43 low, higher lows",
+    "direction": "long",
+    "strength": 1,
+    "source_fields": [
+     "structure.last_swing_low.price",
+     "candles.recent.2.3"
+    ]
+   },
+   {
+    "factor": "Funding slightly negative, shorts pay, no long crowd",
+    "direction": "long",
+    "strength": 1,
+    "source_fields": [
+     "funding.last_settled.rate",
+     "funding.interval_hours"
+    ]
+   }
+  ],
+  "baseline": {
+   "source": "screener.compute_confluence_score + decision.make_decision over screener.fetch_market (Bybit-first USDT aggregate, not venue-pinned)",
+   "ts": 1792197000000,
+   "long_score": 60,
+   "long_verdict": "SKIP",
+   "long_confidence": 41,
+   "long_factors": [
+    "CVD \u26aa \u043d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u043e",
+    "VP \u26aa \u0432\u043d\u0443\u0442\u0440\u0438 VA | POC $110",
+    "Session \ud83c\udf0f Asian Session [2/5]",
+    "F&G  Greed [55]",
+    "TZ 1H \u26aa \u041d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u0430\u044f [-0.9% \u043e\u0442 mean]",
+    "TZ 4H \u26aa \u041d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u0430\u044f [-8.1% \u043e\u0442 mean]",
+    "RSI \u26aa [47]",
+    "MACD \u274c \u043c\u0435\u0434\u0432\u0435\u0436\u0438\u0439 \u043f\u0440\u0438 \u043b\u043e\u043d\u0433\u0435"
+   ],
+   "short_score": 67,
+   "short_verdict": "SHORT",
+   "short_confidence": 69,
+   "short_factors": [
+    "CVD \u2705 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0430\u0435\u0442 \u043d\u0430\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u0438\u0435",
+    "VP \u26aa \u0432\u043d\u0443\u0442\u0440\u0438 VA | POC $110",
+    "Session \ud83c\udf0f Asian Session [2/5]",
+    "F&G  Greed [55]",
+    "TZ 1H \u26aa \u041d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u0430\u044f [-0.9% \u043e\u0442 mean]",
+    "TZ 4H \u26aa \u041d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u0430\u044f [-8.1% \u043e\u0442 mean]",
+    "RSI \u26aa [47]",
+    "MACD \ud83d\udfe1 \u043c\u0435\u0434\u0432\u0435\u0436\u0438\u0439 \u0442\u0440\u0435\u043d\u0434"
+   ],
+   "long_pct": 47,
+   "short_pct": 53
+  },
+  "model": "hermes-agent",
+  "latency_ms": 23330,
+  "missing": {
+   "derivatives": "ValueError: not reconstructible as of the bar close (historical replay)",
+   "footprint": "ValueError: not reconstructible as of the bar close (historical replay)",
+   "orderbook": "ValueError: not reconstructible as of the bar close (historical replay)",
+   "positioning": "positioning history: not reconstructible as of the bar close (historical replay)"
+  },
+  "split_old": {
+   "long_pct": 19,
+   "short_pct": 81,
+   "p_long": 19.454,
+   "bias": "short",
+   "net": -0.4736,
+   "agent_net": -0.4,
+   "baseline_net": -0.6102,
+   "agent_long_points": 6,
+   "agent_short_points": 14,
+   "weights": {
+    "agent": 0.65,
+    "baseline": 0.35
+   },
+   "k": 3.0,
+   "neutral_band": 5.0,
+   "method": "p_long = logistic(k * (w_a*agent_net + w_b*baseline_net)/(w_a+w_b))"
+  }
+ },
+ {
+  "symbol": "BTCUSDT",
+  "interval": "60",
+  "as_of": 1791907200000,
+  "price": 83393.1,
+  "atr": 510.21477,
+  "touch": "up",
+  "status": "ok",
+  "agent_bias": "short",
+  "factors": [
+   {
+    "factor": "Regime: distribution phase, premium zone",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "regime.phase",
+     "regime.zone",
+     "regime.confidence"
+    ]
+   },
+   {
+    "factor": "HTF bias short, 60m in premium",
+    "direction": "short",
+    "strength": 1,
+    "source_fields": [
+     "htf_bias.direction",
+     "htf_bias.zones.60"
+    ]
+   },
+   {
+    "factor": "CVD down vs price up: bearish divergence",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "flow.cvd_1h.trend",
+     "flow.cvd_1h.divergence"
+    ]
+   },
+   {
+    "factor": "Price below EMA200 83623 acts as cap",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "indicators.ema200",
+     "indicators.close"
+    ]
+   },
+   {
+    "factor": "Rejected from swing high 84134, lower highs",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "structure.last_swing_high.price",
+     "candles.recent.22.2"
+    ]
+   },
+   {
+    "factor": "Heavy sellside pools 83063 EQL / POC 82942",
+    "direction": "short",
+    "strength": 1,
+    "source_fields": [
+     "liquidity.pools.0.price",
+     "liquidity.pools.2.price"
+    ]
+   },
+   {
+    "factor": "F&G Greed 57 with range compressing",
+    "direction": "short",
+    "strength": 1,
+    "source_fields": [
+     "flow.fear_greed.value",
+     "regime.range_state"
+    ]
+   },
+   {
+    "factor": "EMA 7/14/21 stack bullish, momentum intact",
+    "direction": "long",
+    "strength": 2,
+    "source_fields": [
+     "indicators.ema_stack",
+     "indicators.ema_fast",
+     "indicators.ema_slow"
+    ]
+   },
+   {
+    "factor": "Structure trend bull, latest CHOCH bullish",
+    "direction": "long",
+    "strength": 2,
+    "source_fields": [
+     "structure.trend",
+     "structure.recent_events.4.direction"
+    ]
+   },
+   {
+    "factor": "Four unmitigated bull OBs below 83080-80985",
+    "direction": "long",
+    "strength": 2,
+    "source_fields": [
+     "order_blocks.unmitigated.0.high",
+     "order_blocks.unmitigated.3.low"
+    ]
+   },
+   {
+    "factor": "Unfilled bull FVGs 82751/82380 support dips",
+    "direction": "long",
+    "strength": 1,
+    "source_fields": [
+     "fvg.nearest.0.bottom",
+     "fvg.nearest.1.top"
+    ]
+   },
+   {
+    "factor": "Funding settled +0.0035% only, no crowded longs",
+    "direction": "long",
+    "strength": 1,
+    "source_fields": [
+     "funding.last_settled.rate",
+     "funding.interval_hours"
+    ]
+   }
+  ],
+  "baseline": {
+   "source": "screener.compute_confluence_score + decision.make_decision over screener.fetch_market (Bybit-first USDT aggregate, not venue-pinned)",
+   "ts": 1791907200000,
+   "long_score": 46,
+   "long_verdict": "WAIT",
+   "long_confidence": 46,
+   "long_factors": [
+    "CVD \u26a0\ufe0f \u0434\u0438\u0432\u0435\u0440\u0433\u0435\u043d\u0446\u0438\u044f: \u0446\u0435\u043d\u0430 \u0438 \u043f\u043e\u0442\u043e\u043a \u0440\u0430\u0441\u0445\u043e\u0434\u044f\u0442\u0441\u044f",
+    "VP \u26aa \u0432\u043d\u0443\u0442\u0440\u0438 VA | POC $82,942",
+    "Session \ud83d\uddfd NY Session [4/5]",
+    "F&G  Greed [57]",
+    "TZ 1H \u26aa \u041d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u0430\u044f [+0.5% \u043e\u0442 mean]",
+    "TZ 4H \u26aa \u041d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u0430\u044f [-1.1% \u043e\u0442 mean]",
+    "RSI \u26aa [53]",
+    "MACD \ud83d\udfe1 \u0431\u044b\u0447\u0438\u0439 \u0442\u0440\u0435\u043d\u0434"
+   ],
+   "short_score": 89,
+   "short_verdict": "WAIT",
+   "short_confidence": 71,
+   "short_factors": [
+    "CVD \u2705 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0430\u0435\u0442 \u043d\u0430\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u0438\u0435",
+    "VP \u26aa \u0432\u043d\u0443\u0442\u0440\u0438 VA | POC $82,942",
+    "Session \ud83d\uddfd NY Session [4/5]",
+    "F&G  Greed [57]",
+    "TZ 1H \u26aa \u041d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u0430\u044f [+0.5% \u043e\u0442 mean]",
+    "TZ 4H \u26aa \u041d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u0430\u044f [-1.1% \u043e\u0442 mean]",
+    "RSI \u26aa [53]",
+    "MACD \u274c \u0431\u044b\u0447\u0438\u0439 \u043f\u0440\u0438 \u0448\u043e\u0440\u0442\u0435"
+   ],
+   "long_pct": 34,
+   "short_pct": 66
+  },
+  "model": "hermes-agent",
+  "latency_ms": 21135,
+  "missing": {
+   "derivatives": "ValueError: not reconstructible as of the bar close (historical replay)",
+   "footprint": "ValueError: not reconstructible as of the bar close (historical replay)",
+   "orderbook": "ValueError: not reconstructible as of the bar close (historical replay)",
+   "positioning": "positioning history: not reconstructible as of the bar close (historical replay)"
+  },
+  "split_old": {
+   "long_pct": 27,
+   "short_pct": 73,
+   "p_long": 27.353,
+   "bias": "short",
+   "net": -0.3256,
+   "agent_net": -0.1579,
+   "baseline_net": -0.637,
+   "agent_long_points": 8,
+   "agent_short_points": 11,
+   "weights": {
+    "agent": 0.65,
+    "baseline": 0.35
+   },
+   "k": 3.0,
+   "neutral_band": 5.0,
+   "method": "p_long = logistic(k * (w_a*agent_net + w_b*baseline_net)/(w_a+w_b))"
+  }
+ },
+ {
+  "symbol": "ETHUSDT",
+  "interval": "60",
+  "as_of": 1791882000000,
+  "price": 2517.08,
+  "atr": 21.556325,
+  "touch": "down",
+  "status": "ok",
+  "agent_bias": "short",
+  "factors": [
+   {
+    "factor": "Structure bear trend, CHOCH bear at 2513.1",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "structure.trend",
+     "structure.recent_events.4.level"
+    ]
+   },
+   {
+    "factor": "Price below EMA200 2566.5",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "indicators.ema200",
+     "indicators.close"
+    ]
+   },
+   {
+    "factor": "Regime markdown, short bias, premium zone",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "regime.phase",
+     "regime.bias",
+     "regime.zone"
+    ]
+   },
+   {
+    "factor": "CVD 1h down confirming lower prices",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "flow.cvd_1h.trend",
+     "flow.cvd_1h.price_trend"
+    ]
+   },
+   {
+    "factor": "Unmitigated bear OB 2541-2569 overhead",
+    "direction": "short",
+    "strength": 1,
+    "source_fields": [
+     "order_blocks.unmitigated.0.low",
+     "order_blocks.unmitigated.0.high"
+    ]
+   },
+   {
+    "factor": "Bear FVG 2545.38-2552.33 caps upside",
+    "direction": "short",
+    "strength": 1,
+    "source_fields": [
+     "fvg.nearest.1.bottom",
+     "fvg.nearest.1.top"
+    ]
+   },
+   {
+    "factor": "24h change negative, last bar closed at low",
+    "direction": "short",
+    "strength": 1,
+    "source_fields": [
+     "flow.change_24h_pct",
+     "candles.recent.23.4"
+    ]
+   },
+   {
+    "factor": "Positive funding: longs still pay, mild crowding",
+    "direction": "short",
+    "strength": 1,
+    "source_fields": [
+     "funding.last_settled.rate"
+    ]
+   },
+   {
+    "factor": "Strong rebound off 2407 swing low, +4%",
+    "direction": "long",
+    "strength": 2,
+    "source_fields": [
+     "structure.last_swing_low.price",
+     "candles.recent.15.3"
+    ]
+   },
+   {
+    "factor": "Bull FVG 2496.67-2505.8 unfilled below",
+    "direction": "long",
+    "strength": 1,
+    "source_fields": [
+     "fvg.nearest.0.bottom",
+     "fvg.nearest.0.top"
+    ]
+   },
+   {
+    "factor": "Daily/4H in discount zone",
+    "direction": "long",
+    "strength": 1,
+    "source_fields": [
+     "htf_bias.zones.D",
+     "htf_bias.zones.240"
+    ]
+   },
+   {
+    "factor": "RSI 51 neutral, EMA 7/14/21 stack mixed",
+    "direction": "long",
+    "strength": 1,
+    "source_fields": [
+     "indicators.rsi14",
+     "indicators.ema_stack"
+    ]
+   }
+  ],
+  "baseline": {
+   "source": "screener.compute_confluence_score + decision.make_decision over screener.fetch_market (Bybit-first USDT aggregate, not venue-pinned)",
+   "ts": 1791882000000,
+   "long_score": 56,
+   "long_verdict": "SKIP",
+   "long_confidence": 31,
+   "long_factors": [
+    "CVD \u26aa \u043d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u043e",
+    "VP \u26aa \u0432\u043d\u0443\u0442\u0440\u0438 VA | POC $2,697",
+    "Session \ud83c\udfe6 London Session [4/5]",
+    "F&G  Greed [57]",
+    "TZ 1H \u26aa \u041d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u0430\u044f [+0.5% \u043e\u0442 mean]",
+    "TZ 4H \u26aa \u041d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u0430\u044f [-4.1% \u043e\u0442 mean]",
+    "RSI \u26aa [51]",
+    "MACD \ud83d\udfe1 \u0431\u044b\u0447\u0438\u0439 \u0442\u0440\u0435\u043d\u0434"
+   ],
+   "short_score": 89,
+   "short_verdict": "SHORT",
+   "short_confidence": 86,
+   "short_factors": [
+    "CVD \u2705 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0430\u0435\u0442 \u043d\u0430\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u0438\u0435",
+    "VP \u26aa \u0432\u043d\u0443\u0442\u0440\u0438 VA | POC $2,697",
+    "Session \ud83c\udfe6 London Session [4/5]",
+    "F&G  Greed [57]",
+    "TZ 1H \u26aa \u041d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u0430\u044f [+0.5% \u043e\u0442 mean]",
+    "TZ 4H \u26aa \u041d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u0430\u044f [-4.1% \u043e\u0442 mean]",
+    "RSI \u26aa [51]",
+    "MACD \u274c \u0431\u044b\u0447\u0438\u0439 \u043f\u0440\u0438 \u0448\u043e\u0440\u0442\u0435"
+   ],
+   "long_pct": 39,
+   "short_pct": 61
+  },
+  "model": "hermes-agent",
+  "latency_ms": 23886,
+  "missing": {
+   "derivatives": "ValueError: not reconstructible as of the bar close (historical replay)",
+   "footprint": "ValueError: not reconstructible as of the bar close (historical replay)",
+   "orderbook": "ValueError: not reconstructible as of the bar close (historical replay)",
+   "positioning": "positioning history: not reconstructible as of the bar close (historical replay)"
+  },
+  "split_old": {
+   "long_pct": 14,
+   "short_pct": 86,
+   "p_long": 14.114,
+   "bias": "short",
+   "net": -0.602,
+   "agent_net": -0.4118,
+   "baseline_net": -0.9552,
+   "agent_long_points": 5,
+   "agent_short_points": 12,
+   "weights": {
+    "agent": 0.65,
+    "baseline": 0.35
+   },
+   "k": 3.0,
+   "neutral_band": 5.0,
+   "method": "p_long = logistic(k * (w_a*agent_net + w_b*baseline_net)/(w_a+w_b))"
+  }
+ },
+ {
+  "symbol": "SOLUSDT",
+  "interval": "60",
+  "as_of": 1791856800000,
+  "price": 105.28,
+  "atr": 1.3468083,
+  "touch": "up",
+  "status": "ok",
+  "agent_bias": "short",
+  "factors": [
+   {
+    "factor": "EMA 7/14/21 stack bearish, close below all",
+    "direction": "short",
+    "strength": 3,
+    "source_fields": [
+     "indicators.ema_stack",
+     "indicators.ema_fast",
+     "indicators.ema_slow",
+     "indicators.close"
+    ]
+   },
+   {
+    "factor": "Price far below EMA200 113.13",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "indicators.ema200"
+    ]
+   },
+   {
+    "factor": "Bear structure, bear CHOCH at 109.82",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "structure.trend",
+     "structure.recent_events.4.level"
+    ]
+   },
+   {
+    "factor": "Regime markdown, range expanding",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "regime.phase",
+     "regime.range_state",
+     "regime.bias"
+    ]
+   },
+   {
+    "factor": "CVD down confirms falling price",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "flow.cvd_1h.trend",
+     "flow.cvd_1h.price_trend"
+    ]
+   },
+   {
+    "factor": "13 unfilled bear FVGs overhead cap bounces",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "fvg.total_unfilled",
+     "fvg.nearest.0.top",
+     "fvg.nearest.1.bottom"
+    ]
+   },
+   {
+    "factor": "Unmitigated bear OB 107.4-108.32 above",
+    "direction": "short",
+    "strength": 1,
+    "source_fields": [
+     "order_blocks.unmitigated.0.high",
+     "order_blocks.unmitigated.0.low"
+    ]
+   },
+   {
+    "factor": "-5.6% in 24h, capitulation volume 4.03M",
+    "direction": "short",
+    "strength": 2,
+    "source_fields": [
+     "flow.change_24h_pct",
+     "candles.recent.22.5"
+    ]
+   },
+   {
+    "factor": "Long lower wick to 101.56 then close 105.28",
+    "direction": "long",
+    "strength": 2,
+    "source_fields": [
+     "candles.recent.22.3",
+     "candles.recent.23.4"
+    ]
+   },
+   {
+    "factor": "RSI14 34 oversold, room to bounce",
+    "direction": "long",
+    "strength": 1,
+    "source_fields": [
+     "indicators.rsi14"
+    ]
+   },
+   {
+    "factor": "HTF bias long, 60m/4H in discount",
+    "direction": "long",
+    "strength": 2,
+    "source_fields": [
+     "htf_bias.direction",
+     "htf_bias.zones.60",
+     "htf_bias.zones.240"
+    ]
+   },
+   {
+    "factor": "Funding near zero, no crowded longs to flush",
+    "direction": "long",
+    "strength": 1,
+    "source_fields": [
+     "funding.last_settled.rate",
+     "funding.interval_hours"
+    ]
+   }
+  ],
+  "baseline": {
+   "source": "screener.compute_confluence_score + decision.make_decision over screener.fetch_market (Bybit-first USDT aggregate, not venue-pinned)",
+   "ts": 1791856800000,
+   "long_score": 62,
+   "long_verdict": "SKIP",
+   "long_confidence": 30,
+   "long_factors": [
+    "CVD \u26aa \u043d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u043e",
+    "VP \u26aa \u0432\u043d\u0443\u0442\u0440\u0438 VA | POC $110",
+    "Session \ud83c\udf0f Asian Session [2/5]",
+    "F&G  Greed [57]",
+    "TZ 1H \u2705 \ud83d\udfe2 \u041d\u0438\u0436\u043d\u044f\u044f \u0437\u043e\u043d\u0430 (\u043f\u0435\u0440\u0435\u043f\u0440\u043e\u0434\u0430\u043d\u043d\u043e\u0441\u0442\u044c) [-4.2%]",
+    "TZ 4H \u2705 \ud83d\udfe2 \u041d\u0438\u0436\u043d\u044f\u044f \u0437\u043e\u043d\u0430 (\u043f\u0435\u0440\u0435\u043f\u0440\u043e\u0434\u0430\u043d\u043d\u043e\u0441\u0442\u044c) [-10.2%]",
+    "RSI \u26aa [34]",
+    "MACD \u274c \u043c\u0435\u0434\u0432\u0435\u0436\u0438\u0439 \u043f\u0440\u0438 \u043b\u043e\u043d\u0433\u0435"
+   ],
+   "short_score": 80,
+   "short_verdict": "SHORT",
+   "short_confidence": 68,
+   "short_factors": [
+    "CVD \u2705 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0430\u0435\u0442 \u043d\u0430\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u0438\u0435",
+    "VP \u26aa \u0432\u043d\u0443\u0442\u0440\u0438 VA | POC $110",
+    "Session \ud83c\udf0f Asian Session [2/5]",
+    "F&G  Greed [57]",
+    "TZ 1H \u274c \ud83d\udfe2 \u0426\u0435\u043d\u0430 \u043f\u0435\u0440\u0435\u043f\u0440\u043e\u0434\u0430\u043d\u0430 [-4.2%]",
+    "TZ 4H \u274c \ud83d\udfe2 \u0426\u0435\u043d\u0430 \u043f\u0435\u0440\u0435\u043f\u0440\u043e\u0434\u0430\u043d\u0430 [-10.2%]",
+    "RSI \u26aa [34]",
+    "MACD \ud83d\udfe1 \u043c\u0435\u0434\u0432\u0435\u0436\u0438\u0439 \u0442\u0440\u0435\u043d\u0434"
+   ],
+   "long_pct": 44,
+   "short_pct": 56
+  },
+  "model": "hermes-agent",
+  "latency_ms": 22369,
+  "missing": {
+   "derivatives": "ValueError: not reconstructible as of the bar close (historical replay)",
+   "footprint": "ValueError: not reconstructible as of the bar close (historical replay)",
+   "orderbook": "ValueError: not reconstructible as of the bar close (historical replay)",
+   "positioning": "positioning history: not reconstructible as of the bar close (historical replay)"
+  },
+  "split_old": {
+   "long_pct": 16,
+   "short_pct": 84,
+   "p_long": 15.742,
+   "bias": "short",
+   "net": -0.5592,
+   "agent_net": -0.4545,
+   "baseline_net": -0.7535,
+   "agent_long_points": 6,
+   "agent_short_points": 16,
+   "weights": {
+    "agent": 0.65,
+    "baseline": 0.35
+   },
+   "k": 3.0,
+   "neutral_band": 5.0,
+   "method": "p_long = logistic(k * (w_a*agent_net + w_b*baseline_net)/(w_a+w_b))"
+  }
+ }
+]

@@ -1,0 +1,59 @@
+[
+ {
+  "id": 0,
+  "cfg": {
+   "symbol": "BTCUSDT",
+   "interval": "1",
+   "exchange": "binance"
+  },
+  "candles": 300,
+  "status": "Big trades · Binance aggTrades · exact history since 07:47:03 + live · threshold now $307.2K (adaptive) · 45 stored · Abnormal volume: delta from footprint (recent bars only; ? = partial/forming)",
+  "big": 45,
+  "hits": 45,
+  "vol": 6,
+  "errs": ""
+ },
+ {
+  "id": 1,
+  "cfg": {
+   "symbol": "BTCUSDT",
+   "interval": "15",
+   "exchange": "binance"
+  },
+  "candles": 300,
+  "status": "Big trades · Binance aggTrades · exact history since 07:47:03 + live · threshold now $307.2K (adaptive) · 45 stored · Abnormal volume: delta from footprint (recent bars only; ? = partial/forming)",
+  "big": 45,
+  "hits": 45,
+  "vol": 6,
+  "errs": ""
+ },
+ {
+  "id": 2,
+  "cfg": {
+   "symbol": "ETHUSDT",
+   "interval": "5s",
+   "exchange": "binance"
+  },
+  "candles": 186,
+  "status": "Big trades · Binance aggTrades · exact history since 07:51:41 + live · threshold now $195.8K (adaptive) · 34 stored · Abnormal volume: delta needs footprint (1m–1h); none on this interval",
+  "big": 34,
+  "hits": 11,
+  "vol": 1,
+  "errs": ""
+ },
+ {
+  "id": 3,
+  "cfg": {
+   "symbol": "SOLUSDT",
+   "interval": "1",
+   "exchange": "bybit"
+  },
+  "candles": 300,
+  "status": "Big trades · Bybit trades · PARTIAL history since 08:02:17 + live · threshold now $50K (fixed (percentile warming up)) · 3 stored · Bybit recent-trade returns only the latest ≤1000 trades: history is partial. · Abnormal volume: delta from footprint (recent bars only; ? = partial/forming)",
+  "big": 3,
+  "hits": 3,
+  "vol": 4,
+  "errs": ""
+ }
+]
+errors 0 []

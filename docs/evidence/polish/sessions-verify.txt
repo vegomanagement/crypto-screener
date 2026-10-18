@@ -1,0 +1,93 @@
+sessions-dst-15m         New York  America/New_York  UTC Wed 10-14 12:00 → 10-14 21:00  local Wed 10-14 08:00 EDT → 17:00 EDT
+sessions-dst-15m         Sydney    Australia/Sydney  UTC Wed 10-14 20:00 → 10-15 05:00  local Thu 10-15 07:00 AEDT → 16:00 AEDT
+sessions-dst-15m         Tokyo     Asia/Tokyo        UTC Thu 10-15 00:00 → 10-15 06:00  local Thu 10-15 09:00 JST → 15:00 JST
+sessions-dst-15m         London    Europe/London     UTC Thu 10-15 07:00 → 10-15 16:00  local Thu 10-15 08:00 BST → 17:00 BST
+sessions-dst-15m         New York  America/New_York  UTC Thu 10-15 12:00 → 10-15 21:00  local Thu 10-15 08:00 EDT → 17:00 EDT
+sessions-dst-15m         Sydney    Australia/Sydney  UTC Thu 10-15 20:00 → 10-16 05:00  local Fri 10-16 07:00 AEDT → 16:00 AEDT
+sessions-dst-15m         Tokyo     Asia/Tokyo        UTC Fri 10-16 00:00 → 10-16 06:00  local Fri 10-16 09:00 JST → 15:00 JST
+sessions-dst-15m         London    Europe/London     UTC Fri 10-16 07:00 → 10-16 16:00  local Fri 10-16 08:00 BST → 17:00 BST
+sessions-dst-15m         New York  America/New_York  UTC Fri 10-16 12:00 → 10-16 21:00  local Fri 10-16 08:00 EDT → 17:00 EDT
+sessions-dst-15m         Sydney    Australia/Sydney  UTC Fri 10-16 20:00 → 10-17 05:00  local Sat 10-17 07:00 AEDT → 16:00 AEDT
+sessions-dst-15m         Tokyo     Asia/Tokyo        UTC Sat 10-17 00:00 → 10-17 06:00  local Sat 10-17 09:00 JST → 15:00 JST
+sessions-dst-15m         London    Europe/London     UTC Sat 10-17 07:00 → 10-17 16:00  local Sat 10-17 08:00 BST → 17:00 BST
+sessions-dst-15m         New York  America/New_York  UTC Sat 10-17 12:00 → 10-17 21:00  local Sat 10-17 08:00 EDT → 17:00 EDT
+sessions-or-15m-gmt0     London    GMT+0             UTC Wed 10-14 08:00 → 10-14 17:00  local Wed 10-14 08:00 UTC → 17:00 UTC
+sessions-or-15m-gmt0     New York  GMT+0             UTC Wed 10-14 13:00 → 10-14 22:00  local Wed 10-14 13:00 UTC → 22:00 UTC
+sessions-or-15m-gmt0     Tokyo     GMT+0             UTC Thu 10-15 00:00 → 10-15 09:00  local Thu 10-15 00:00 UTC → 09:00 UTC
+sessions-or-15m-gmt0     London    GMT+0             UTC Thu 10-15 08:00 → 10-15 17:00  local Thu 10-15 08:00 UTC → 17:00 UTC
+sessions-or-15m-gmt0     New York  GMT+0             UTC Thu 10-15 13:00 → 10-15 22:00  local Thu 10-15 13:00 UTC → 22:00 UTC
+sessions-or-15m-gmt0     Tokyo     GMT+0             UTC Fri 10-16 00:00 → 10-16 09:00  local Fri 10-16 00:00 UTC → 09:00 UTC
+sessions-or-15m-gmt0     London    GMT+0             UTC Fri 10-16 08:00 → 10-16 17:00  local Fri 10-16 08:00 UTC → 17:00 UTC
+sessions-or-15m-gmt0     New York  GMT+0             UTC Fri 10-16 13:00 → 10-16 22:00  local Fri 10-16 13:00 UTC → 22:00 UTC
+sessions-or-15m-gmt0     Tokyo     GMT+0             UTC Sat 10-17 00:00 → 10-17 09:00  local Sat 10-17 00:00 UTC → 09:00 UTC
+sessions-or-15m-gmt0     London    GMT+0             UTC Sat 10-17 08:00 → 10-17 17:00  local Sat 10-17 08:00 UTC → 17:00 UTC
+sessions-or-15m-gmt0     New York  GMT+0             UTC Sat 10-17 13:00 → 10-17 22:00  local Sat 10-17 13:00 UTC → 22:00 UTC
+sessions-sydney-dst-4h   Sydney    Australia/Sydney  UTC Fri 08-28 10:00 → 08-28 19:00  local Fri 08-28 20:00 AEST → 05:00 AEST
+sessions-sydney-dst-4h   Sydney    Australia/Sydney  UTC Sat 08-29 10:00 → 08-29 19:00  local Sat 08-29 20:00 AEST → 05:00 AEST
+sessions-sydney-dst-4h   Sydney    Australia/Sydney  UTC Sun 08-30 10:00 → 08-30 19:00  local Sun 08-30 20:00 AEST → 05:00 AEST
+sessions-sydney-dst-4h   Sydney    Australia/Sydney  UTC Mon 08-31 10:00 → 08-31 19:00  local Mon 08-31 20:00 AEST → 05:00 AEST
+sessions-sydney-dst-4h   Sydney    Australia/Sydney  UTC Tue 09-01 10:00 → 09-01 19:00  local Tue 09-01 20:00 AEST → 05:00 AEST
+sessions-sydney-dst-4h   Sydney    Australia/Sydney  UTC Wed 09-02 10:00 → 09-02 19:00  local Wed 09-02 20:00 AEST → 05:00 AEST
+sessions-sydney-dst-4h   Sydney    Australia/Sydney  UTC Thu 09-03 10:00 → 09-03 19:00  local Thu 09-03 20:00 AEST → 05:00 AEST
+sessions-sydney-dst-4h   Sydney    Australia/Sydney  UTC Fri 09-04 10:00 → 09-04 19:00  local Fri 09-04 20:00 AEST → 05:00 AEST
+sessions-sydney-dst-4h   Sydney    Australia/Sydney  UTC Sat 09-05 10:00 → 09-05 19:00  local Sat 09-05 20:00 AEST → 05:00 AEST
+sessions-sydney-dst-4h   Sydney    Australia/Sydney  UTC Sun 09-06 10:00 → 09-06 19:00  local Sun 09-06 20:00 AEST → 05:00 AEST
+sessions-sydney-dst-4h   Sydney    Australia/Sydney  UTC Mon 09-07 10:00 → 09-07 19:00  local Mon 09-07 20:00 AEST → 05:00 AEST
+sessions-sydney-dst-4h   Sydney    Australia/Sydney  UTC Tue 09-08 10:00 → 09-08 19:00  local Tue 09-08 20:00 AEST → 05:00 AEST
+sessions-sydney-dst-4h   Sydney    Australia/Sydney  UTC Wed 09-09 10:00 → 09-09 19:00  local Wed 09-09 20:00 AEST → 05:00 AEST
+sessions-sydney-dst-4h   Sydney    Australia/Sydney  UTC Thu 09-10 10:00 → 09-10 19:00  local Thu 09-10 20:00 AEST → 05:00 AEST
+sessions-sydney-dst-4h   Sydney    Australia/Sydney  UTC Fri 09-11 10:00 → 09-11 19:00  local Fri 09-11 20:00 AEST → 05:00 AEST
+sessions-sydney-dst-4h   Sydney    Australia/Sydney  UTC Sat 09-12 10:00 → 09-12 19:00  local Sat 09-12 20:00 AEST → 05:00 AEST
+sessions-sydney-dst-4h   Sydney    Australia/Sydney  UTC Sun 09-13 10:00 → 09-13 19:00  local Sun 09-13 20:00 AEST → 05:00 AEST
+sessions-sydney-dst-4h   Sydney    Australia/Sydney  UTC Mon 09-14 10:00 → 09-14 19:00  local Mon 09-14 20:00 AEST → 05:00 AEST
+sessions-sydney-dst-4h   Sydney    Australia/Sydney  UTC Tue 09-15 10:00 → 09-15 19:00  local Tue 09-15 20:00 AEST → 05:00 AEST
+sessions-sydney-dst-4h   Sydney    Australia/Sydney  UTC Wed 09-16 10:00 → 09-16 19:00  local Wed 09-16 20:00 AEST → 05:00 AEST
+sessions-sydney-dst-4h   Sydney    Australia/Sydney  UTC Thu 09-17 10:00 → 09-17 19:00  local Thu 09-17 20:00 AEST → 05:00 AEST
+sessions-sydney-dst-4h   Sydney    Australia/Sydney  UTC Fri 09-18 10:00 → 09-18 19:00  local Fri 09-18 20:00 AEST → 05:00 AEST
+sessions-sydney-dst-4h   Sydney    Australia/Sydney  UTC Sat 09-19 10:00 → 09-19 19:00  local Sat 09-19 20:00 AEST → 05:00 AEST
+sessions-sydney-dst-4h   Sydney    Australia/Sydney  UTC Sun 09-20 10:00 → 09-20 19:00  local Sun 09-20 20:00 AEST → 05:00 AEST
+sessions-sydney-dst-4h   Sydney    Australia/Sydney  UTC Mon 09-21 10:00 → 09-21 19:00  local Mon 09-21 20:00 AEST → 05:00 AEST
+sessions-sydney-dst-4h   Sydney    Australia/Sydney  UTC Tue 09-22 10:00 → 09-22 19:00  local Tue 09-22 20:00 AEST → 05:00 AEST
+sessions-sydney-dst-4h   Sydney    Australia/Sydney  UTC Wed 09-23 10:00 → 09-23 19:00  local Wed 09-23 20:00 AEST → 05:00 AEST
+sessions-sydney-dst-4h   Sydney    Australia/Sydney  UTC Thu 09-24 10:00 → 09-24 19:00  local Thu 09-24 20:00 AEST → 05:00 AEST
+sessions-sydney-dst-4h   Sydney    Australia/Sydney  UTC Fri 09-25 10:00 → 09-25 19:00  local Fri 09-25 20:00 AEST → 05:00 AEST
+sessions-sydney-dst-4h   Sydney    Australia/Sydney  UTC Sat 09-26 10:00 → 09-26 19:00  local Sat 09-26 20:00 AEST → 05:00 AEST
+sessions-sydney-dst-4h   Sydney    Australia/Sydney  UTC Sun 09-27 10:00 → 09-27 19:00  local Sun 09-27 20:00 AEST → 05:00 AEST
+sessions-sydney-dst-4h   Sydney    Australia/Sydney  UTC Mon 09-28 10:00 → 09-28 19:00  local Mon 09-28 20:00 AEST → 05:00 AEST
+sessions-sydney-dst-4h   Sydney    Australia/Sydney  UTC Tue 09-29 10:00 → 09-29 19:00  local Tue 09-29 20:00 AEST → 05:00 AEST
+sessions-sydney-dst-4h   Sydney    Australia/Sydney  UTC Wed 09-30 10:00 → 09-30 19:00  local Wed 09-30 20:00 AEST → 05:00 AEST
+sessions-sydney-dst-4h   Sydney    Australia/Sydney  UTC Thu 10-01 10:00 → 10-01 19:00  local Thu 10-01 20:00 AEST → 05:00 AEST
+sessions-sydney-dst-4h   Sydney    Australia/Sydney  UTC Fri 10-02 10:00 → 10-02 19:00  local Fri 10-02 20:00 AEST → 05:00 AEST
+sessions-sydney-dst-4h   Sydney    Australia/Sydney  UTC Sat 10-03 10:00 → 10-03 18:00  local Sat 10-03 20:00 AEST → 05:00 AEDT
+sessions-sydney-dst-4h   Sydney    Australia/Sydney  UTC Sun 10-04 09:00 → 10-04 18:00  local Sun 10-04 20:00 AEDT → 05:00 AEDT
+sessions-sydney-dst-4h   Sydney    Australia/Sydney  UTC Mon 10-05 09:00 → 10-05 18:00  local Mon 10-05 20:00 AEDT → 05:00 AEDT
+sessions-sydney-dst-4h   Sydney    Australia/Sydney  UTC Tue 10-06 09:00 → 10-06 18:00  local Tue 10-06 20:00 AEDT → 05:00 AEDT
+sessions-sydney-dst-4h   Sydney    Australia/Sydney  UTC Wed 10-07 09:00 → 10-07 18:00  local Wed 10-07 20:00 AEDT → 05:00 AEDT
+sessions-sydney-dst-4h   Sydney    Australia/Sydney  UTC Thu 10-08 09:00 → 10-08 18:00  local Thu 10-08 20:00 AEDT → 05:00 AEDT
+sessions-sydney-dst-4h   Sydney    Australia/Sydney  UTC Fri 10-09 09:00 → 10-09 18:00  local Fri 10-09 20:00 AEDT → 05:00 AEDT
+sessions-sydney-dst-4h   Sydney    Australia/Sydney  UTC Sat 10-10 09:00 → 10-10 18:00  local Sat 10-10 20:00 AEDT → 05:00 AEDT
+sessions-sydney-dst-4h   Sydney    Australia/Sydney  UTC Sun 10-11 09:00 → 10-11 18:00  local Sun 10-11 20:00 AEDT → 05:00 AEDT
+sessions-sydney-dst-4h   Sydney    Australia/Sydney  UTC Mon 10-12 09:00 → 10-12 18:00  local Mon 10-12 20:00 AEDT → 05:00 AEDT
+sessions-sydney-dst-4h   Sydney    Australia/Sydney  UTC Tue 10-13 09:00 → 10-13 18:00  local Tue 10-13 20:00 AEDT → 05:00 AEDT
+sessions-sydney-dst-4h   Sydney    Australia/Sydney  UTC Wed 10-14 09:00 → 10-14 18:00  local Wed 10-14 20:00 AEDT → 05:00 AEDT
+sessions-sydney-dst-4h   Sydney    Australia/Sydney  UTC Thu 10-15 09:00 → 10-15 18:00  local Thu 10-15 20:00 AEDT → 05:00 AEDT
+sessions-sydney-dst-4h   Sydney    Australia/Sydney  UTC Fri 10-16 09:00 → 10-16 18:00  local Fri 10-16 20:00 AEDT → 05:00 AEDT
+sessions-sydney-dst-4h   Sydney    Australia/Sydney  UTC Sat 10-17 09:00 → 10-17 18:00  local Sat 10-17 20:00 AEDT → 05:00 AEDT
+('sessions-dst-15m', 'New York'): local windows [('08:00', '17:00')] OK (constant local time across DST)
+('sessions-dst-15m', 'Sydney'): local windows [('07:00', '16:00')] OK (constant local time across DST)
+('sessions-dst-15m', 'Tokyo'): local windows [('09:00', '15:00')] OK (constant local time across DST)
+('sessions-dst-15m', 'London'): local windows [('08:00', '17:00')] OK (constant local time across DST)
+('sessions-or-15m-gmt0', 'London'): local windows [('08:00', '17:00')] OK (constant local time across DST)
+('sessions-or-15m-gmt0', 'New York'): local windows [('13:00', '22:00')] OK (constant local time across DST)
+('sessions-or-15m-gmt0', 'Tokyo'): local windows [('00:00', '09:00')] OK (constant local time across DST)
+('sessions-sydney-dst-4h', 'Sydney'): local windows [('20:00', '05:00')] OK (constant local time across DST)
+OR sessions-dst-15m London 10-15 07:00: bars 2 (venue 2), top 81171.6 vs 81171.6, btm 80784.6 vs 80784.6, N=16 OK
+OR sessions-dst-15m New York 10-15 12:00: bars 2 (venue 2), top 81146.6 vs 81146.6, btm 80820.5 vs 80820.5, N=16 OK
+OR sessions-dst-15m London 10-16 07:00: bars 2 (venue 2), top 82265.4 vs 82265.4, btm 82100 vs 82100.0, N=16 OK
+OR sessions-dst-15m New York 10-16 12:00: bars 2 (venue 2), top 82616.9 vs 82616.9, btm 82080.4 vs 82080.4, N=16 OK
+OR sessions-dst-15m London 10-17 07:00: bars 2 (venue 2), top 81619.5 vs 81619.5, btm 81541.9 vs 81541.9, N=16 OK
+OR sessions-dst-15m New York 10-17 12:00: bars 2 (venue 2), top 81582 vs 81582.0, btm 81493.4 vs 81493.4, N=16 OK
+OR sessions-or-15m-gmt0 London 10-15 08:00: bars 2 (venue 2), top 81540 vs 81540.0, btm 81139 vs 81139.0, N=16 OK
+OR sessions-or-15m-gmt0 London 10-16 08:00: bars 2 (venue 2), top 82328.5 vs 82328.5, btm 82120.9 vs 82120.9, N=16 OK
+OR sessions-or-15m-gmt0 London 10-17 08:00: bars 2 (venue 2), top 81724.8 vs 81724.8, btm 81672.4 vs 81672.4, N=16 OK
+failures 0

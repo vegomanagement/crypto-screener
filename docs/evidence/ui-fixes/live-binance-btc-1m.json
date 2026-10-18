@@ -1,0 +1,535 @@
+{
+ "timeline": [
+  {
+   "t": 1792310449671,
+   "frames": 34,
+   "samples": 34,
+   "coverage_start": 1792309845944,
+   "latest": 1792310442522,
+   "rows": [
+    1000,
+    1000
+   ],
+   "step": 4,
+   "cells": 1863,
+   "profile": 63,
+   "bookPx": 677,
+   "cellsX": [
+    1088,
+    1183
+   ],
+   "cellsY": [
+    9,
+    686
+   ],
+   "minRowPx": 7.554550724637693,
+   "status": "Collecting \u2022 history from 2026-10-18 07:50:45.944Z \u00b7 no history before collection \u00b7 10s snapshots, not tick-complete \u00b7 last sample 6s ago \u00b7 gaps 1 (transparent) \u00b7 depth limited: 1000 bid / 1000 ask rows \u00b7 native quantity (unit unknown unless venue metadata states otherwise) \u00b7 1/6 pane leases \u00b7 subpixel samples: 1-device-pixel markers, not duration \u00b7 bucket 4 \u00b7 book spans 677px of plot \u00b7 Collection gaps present; do not extend books across gaps",
+   "elapsed_s": 0
+  },
+  {
+   "t": 1792310459764,
+   "frames": 34,
+   "samples": 34,
+   "coverage_start": 1792309856306,
+   "latest": 1792310452950,
+   "rows": [
+    1000,
+    1000
+   ],
+   "step": 4,
+   "cells": 1918,
+   "profile": 63,
+   "bookPx": 677,
+   "cellsX": [
+    1090,
+    1185
+   ],
+   "cellsY": [
+    9,
+    686
+   ],
+   "minRowPx": 7.554550724637693,
+   "status": "Collecting \u2022 history from 2026-10-18 07:50:56.306Z \u00b7 no history before collection \u00b7 10s snapshots, not tick-complete \u00b7 last sample 6s ago \u00b7 gaps 1 (transparent) \u00b7 depth limited: 1000 bid / 1000 ask rows \u00b7 native quantity (unit unknown unless venue metadata states otherwise) \u00b7 1/6 pane leases \u00b7 subpixel samples: 1-device-pixel markers, not duration \u00b7 bucket 4 \u00b7 book spans 677px of plot \u00b7 Collection gaps present; do not extend books across gaps",
+   "elapsed_s": 10
+  },
+  {
+   "t": 1792310469773,
+   "frames": 33,
+   "samples": 33,
+   "coverage_start": 1792309866672,
+   "latest": 1792310452950,
+   "rows": [
+    1000,
+    1000
+   ],
+   "step": 4,
+   "cells": 1910,
+   "profile": 63,
+   "bookPx": 677,
+   "cellsX": [
+    1082,
+    1176
+   ],
+   "cellsY": [
+    9,
+    686
+   ],
+   "minRowPx": 7.554550724637693,
+   "status": "Collecting \u2022 history from 2026-10-18 07:51:06.672Z \u00b7 no history before collection \u00b7 10s snapshots, not tick-complete \u00b7 last sample 16s ago \u00b7 gaps 1 (transparent) \u00b7 depth limited: 1000 bid / 1000 ask rows \u00b7 native quantity (unit unknown unless venue metadata states otherwise) \u00b7 1/6 pane leases \u00b7 subpixel samples: 1-device-pixel markers, not duration \u00b7 bucket 4 \u00b7 book spans 677px of plot \u00b7 Collection gaps present; do not extend books across gaps",
+   "elapsed_s": 20
+  },
+  {
+   "t": 1792310479796,
+   "frames": 33,
+   "samples": 33,
+   "coverage_start": 1792309877048,
+   "latest": 1792310463331,
+   "rows": [
+    1000,
+    1000
+   ],
+   "step": 4,
+   "cells": 1964,
+   "profile": 62,
+   "bookPx": 677,
+   "cellsX": [
+    1084,
+    1178
+   ],
+   "cellsY": [
+    9,
+    686
+   ],
+   "minRowPx": 7.554550724637693,
+   "status": "Collecting \u2022 history from 2026-10-18 07:51:17.048Z \u00b7 no history before collection \u00b7 10s snapshots, not tick-complete \u00b7 last sample 16s ago \u00b7 gaps 1 (transparent) \u00b7 depth limited: 1000 bid / 1000 ask rows \u00b7 native quantity (unit unknown unless venue metadata states otherwise) \u00b7 1/6 pane leases \u00b7 subpixel samples: 1-device-pixel markers, not duration \u00b7 bucket 4 \u00b7 book spans 677px of plot \u00b7 Collection gaps present; do not extend books across gaps",
+   "elapsed_s": 30
+  },
+  {
+   "t": 1792310489810,
+   "frames": 33,
+   "samples": 33,
+   "coverage_start": 1792309887430,
+   "latest": 1792310473744,
+   "rows": [
+    1000,
+    1000
+   ],
+   "step": 4,
+   "cells": 2013,
+   "profile": 57,
+   "bookPx": 677,
+   "cellsX": [
+    1085,
+    1179
+   ],
+   "cellsY": [
+    9,
+    686
+   ],
+   "minRowPx": 7.554550724637693,
+   "status": "Collecting \u2022 history from 2026-10-18 07:51:27.430Z \u00b7 no history before collection \u00b7 10s snapshots, not tick-complete \u00b7 last sample 15s ago \u00b7 gaps 1 (transparent) \u00b7 depth limited: 1000 bid / 1000 ask rows \u00b7 native quantity (unit unknown unless venue metadata states otherwise) \u00b7 1/6 pane leases \u00b7 subpixel samples: 1-device-pixel markers, not duration \u00b7 bucket 4 \u00b7 book spans 677px of plot \u00b7 Collection gaps present; do not extend books across gaps",
+   "elapsed_s": 40
+  },
+  {
+   "t": 1792310499823,
+   "frames": 33,
+   "samples": 33,
+   "coverage_start": 1792309897812,
+   "latest": 1792310484136,
+   "rows": [
+    1000,
+    1000
+   ],
+   "step": 4,
+   "cells": 2062,
+   "profile": 57,
+   "bookPx": 677,
+   "cellsX": [
+    1129,
+    1181
+   ],
+   "cellsY": [
+    9,
+    686
+   ],
+   "minRowPx": 7.554550724637693,
+   "status": "Collecting \u2022 history from 2026-10-18 07:51:37.812Z \u00b7 no history before collection \u00b7 10s snapshots, not tick-complete \u00b7 last sample 15s ago \u00b7 gaps 1 (transparent) \u00b7 depth limited: 1000 bid / 1000 ask rows \u00b7 native quantity (unit unknown unless venue metadata states otherwise) \u00b7 1/6 pane leases \u00b7 subpixel samples: 1-device-pixel markers, not duration \u00b7 bucket 4 \u00b7 book spans 677px of plot \u00b7 Collection gaps present; do not extend books across gaps",
+   "elapsed_s": 50
+  },
+  {
+   "t": 1792310509832,
+   "frames": 33,
+   "samples": 33,
+   "coverage_start": 1792310166405,
+   "latest": 1792310494533,
+   "rows": [
+    1000,
+    1000
+   ],
+   "step": 4,
+   "cells": 2120,
+   "profile": 58,
+   "bookPx": 677,
+   "cellsX": [
+    1129,
+    1183
+   ],
+   "cellsY": [
+    9,
+    686
+   ],
+   "minRowPx": 7.554550724637693,
+   "status": "Collecting \u2022 history from 2026-10-18 07:56:06.405Z \u00b7 no history before collection \u00b7 10s snapshots, not tick-complete \u00b7 last sample 15s ago \u00b7 gaps 0 \u00b7 depth limited: 1000 bid / 1000 ask rows \u00b7 native quantity (unit unknown unless venue metadata states otherwise) \u00b7 1/6 pane leases \u00b7 subpixel samples: 1-device-pixel markers, not duration \u00b7 bucket 4 \u00b7 book spans 677px of plot",
+   "elapsed_s": 60
+  },
+  {
+   "t": 1792310519905,
+   "frames": 34,
+   "samples": 34,
+   "coverage_start": 1792310166405,
+   "latest": 1792310504918,
+   "rows": [
+    1000,
+    1000
+   ],
+   "step": 4,
+   "cells": 2180,
+   "profile": 60,
+   "bookPx": 677,
+   "cellsX": [
+    1129,
+    1184
+   ],
+   "cellsY": [
+    9,
+    686
+   ],
+   "minRowPx": 7.554550724637693,
+   "status": "Collecting \u2022 history from 2026-10-18 07:56:06.405Z \u00b7 no history before collection \u00b7 10s snapshots, not tick-complete \u00b7 last sample 14s ago \u00b7 gaps 0 \u00b7 depth limited: 1000 bid / 1000 ask rows \u00b7 native quantity (unit unknown unless venue metadata states otherwise) \u00b7 1/6 pane leases \u00b7 subpixel samples: 1-device-pixel markers, not duration \u00b7 bucket 4 \u00b7 book spans 677px of plot",
+   "elapsed_s": 70
+  },
+  {
+   "t": 1792310529914,
+   "frames": 35,
+   "samples": 35,
+   "coverage_start": 1792310166405,
+   "latest": 1792310515312,
+   "rows": [
+    1000,
+    1000
+   ],
+   "step": 4,
+   "cells": 2240,
+   "profile": 60,
+   "bookPx": 677,
+   "cellsX": [
+    1120,
+    1176
+   ],
+   "cellsY": [
+    9,
+    686
+   ],
+   "minRowPx": 7.554550724637693,
+   "status": "Collecting \u2022 history from 2026-10-18 07:56:06.405Z \u00b7 no history before collection \u00b7 10s snapshots, not tick-complete \u00b7 last sample 14s ago \u00b7 gaps 0 \u00b7 depth limited: 1000 bid / 1000 ask rows \u00b7 native quantity (unit unknown unless venue metadata states otherwise) \u00b7 1/6 pane leases \u00b7 subpixel samples: 1-device-pixel markers, not duration \u00b7 bucket 4 \u00b7 book spans 677px of plot",
+   "elapsed_s": 80
+  },
+  {
+   "t": 1792310539925,
+   "frames": 36,
+   "samples": 36,
+   "coverage_start": 1792310166405,
+   "latest": 1792310525711,
+   "rows": [
+    1000,
+    1000
+   ],
+   "step": 4,
+   "cells": 2301,
+   "profile": 61,
+   "bookPx": 677,
+   "cellsX": [
+    1120,
+    1178
+   ],
+   "cellsY": [
+    9,
+    686
+   ],
+   "minRowPx": 7.554550724637693,
+   "status": "Collecting \u2022 history from 2026-10-18 07:56:06.405Z \u00b7 no history before collection \u00b7 10s snapshots, not tick-complete \u00b7 last sample 14s ago \u00b7 gaps 0 \u00b7 depth limited: 1000 bid / 1000 ask rows \u00b7 native quantity (unit unknown unless venue metadata states otherwise) \u00b7 1/6 pane leases \u00b7 subpixel samples: 1-device-pixel markers, not duration \u00b7 bucket 4 \u00b7 book spans 677px of plot",
+   "elapsed_s": 90
+  },
+  {
+   "t": 1792310549934,
+   "frames": 37,
+   "samples": 37,
+   "coverage_start": 1792310166405,
+   "latest": 1792310536124,
+   "rows": [
+    1000,
+    1000
+   ],
+   "step": 4,
+   "cells": 2362,
+   "profile": 61,
+   "bookPx": 677,
+   "cellsX": [
+    1120,
+    1180
+   ],
+   "cellsY": [
+    9,
+    686
+   ],
+   "minRowPx": 7.554550724637693,
+   "status": "Collecting \u2022 history from 2026-10-18 07:56:06.405Z \u00b7 no history before collection \u00b7 10s snapshots, not tick-complete \u00b7 last sample 13s ago \u00b7 gaps 0 \u00b7 depth limited: 1000 bid / 1000 ask rows \u00b7 native quantity (unit unknown unless venue metadata states otherwise) \u00b7 1/6 pane leases \u00b7 subpixel samples: 1-device-pixel markers, not duration \u00b7 bucket 4 \u00b7 book spans 677px of plot",
+   "elapsed_s": 100
+  },
+  {
+   "t": 1792310559940,
+   "frames": 38,
+   "samples": 38,
+   "coverage_start": 1792310166405,
+   "latest": 1792310546542,
+   "rows": [
+    1000,
+    1000
+   ],
+   "step": 4,
+   "cells": 2424,
+   "profile": 62,
+   "bookPx": 677,
+   "cellsX": [
+    1120,
+    1181
+   ],
+   "cellsY": [
+    9,
+    686
+   ],
+   "minRowPx": 7.554550724637693,
+   "status": "Collecting \u2022 history from 2026-10-18 07:56:06.405Z \u00b7 no history before collection \u00b7 10s snapshots, not tick-complete \u00b7 last sample 13s ago \u00b7 gaps 0 \u00b7 depth limited: 1000 bid / 1000 ask rows \u00b7 native quantity (unit unknown unless venue metadata states otherwise) \u00b7 1/6 pane leases \u00b7 subpixel samples: 1-device-pixel markers, not duration \u00b7 bucket 4 \u00b7 book spans 677px of plot",
+   "elapsed_s": 110
+  },
+  {
+   "t": 1792310569951,
+   "frames": 39,
+   "samples": 39,
+   "coverage_start": 1792310166405,
+   "latest": 1792310556949,
+   "rows": [
+    1000,
+    1000
+   ],
+   "step": 4,
+   "cells": 2490,
+   "profile": 66,
+   "bookPx": 686,
+   "cellsX": [
+    1120,
+    1183
+   ],
+   "cellsY": [
+    0,
+    686
+   ],
+   "minRowPx": 7.554550724637693,
+   "status": "Collecting \u2022 history from 2026-10-18 07:56:06.405Z \u00b7 no history before collection \u00b7 10s snapshots, not tick-complete \u00b7 last sample 12s ago \u00b7 gaps 0 \u00b7 depth limited: 1000 bid / 1000 ask rows \u00b7 native quantity (unit unknown unless venue metadata states otherwise) \u00b7 1/6 pane leases \u00b7 subpixel samples: 1-device-pixel markers, not duration \u00b7 bucket 4 \u00b7 book spans 686px of plot",
+   "elapsed_s": 120
+  }
+ ],
+ "shots": [
+  "/Users/maxbelov/Projects/wt/ui-fixes/docs/evidence/ui-fixes/live-binance-btc-1m-t000.png",
+  "/Users/maxbelov/Projects/wt/ui-fixes/docs/evidence/ui-fixes/live-binance-btc-1m-t060.png",
+  "/Users/maxbelov/Projects/wt/ui-fixes/docs/evidence/ui-fixes/live-binance-btc-1m-t120.png",
+  "/Users/maxbelov/Projects/wt/ui-fixes/docs/evidence/ui-fixes/live-binance-btc-1m-t130.png"
+ ],
+ "compare": {
+  "raw2_fetched_at": 1792310581792,
+  "stored_rows": [
+   1000,
+   1000
+  ],
+  "exchange": "binance",
+  "symbol": "BTCUSDT",
+  "raw_fetched_at": [
+   1792310580133,
+   1792310580470
+  ],
+  "page_frame_observed_at": 1792310577855,
+  "delta_ms": -2615,
+  "step": "4",
+  "bands": [
+   {
+    "side": "bids",
+    "bucket": "81660",
+    "page_qty": "6.308999999999999",
+    "raw_qty": "6.607",
+    "diff_pct": 4.510367791736052,
+    "raw2_qty": "6.267",
+    "raw_vs_raw2_pct": 5.146057212047828,
+    "db_equal": true,
+    "kind": "near"
+   },
+   {
+    "side": "bids",
+    "bucket": "81656",
+    "page_qty": "3.9849999999999985",
+    "raw_qty": "4.169",
+    "diff_pct": 4.41352842408255,
+    "raw2_qty": "4.141",
+    "raw_vs_raw2_pct": 0.671623890621252,
+    "db_equal": true,
+    "kind": "near"
+   },
+   {
+    "side": "bids",
+    "bucket": "81652",
+    "page_qty": "7.858",
+    "raw_qty": "8.126",
+    "diff_pct": 3.2980556239232093,
+    "raw2_qty": "8.029",
+    "raw_vs_raw2_pct": 1.1936992370169826,
+    "db_equal": true,
+    "kind": "near"
+   },
+   {
+    "side": "bids",
+    "bucket": "81648",
+    "page_qty": "20.989",
+    "raw_qty": "21.606",
+    "diff_pct": 2.8556882347496066,
+    "raw2_qty": "21.603",
+    "raw_vs_raw2_pct": 0.013885031935573451,
+    "db_equal": true,
+    "kind": "near"
+   },
+   {
+    "side": "bids",
+    "bucket": "81644",
+    "page_qty": "13.243",
+    "raw_qty": "12.815",
+    "diff_pct": 3.3398361295357004,
+    "raw2_qty": "13.413",
+    "raw_vs_raw2_pct": 4.666406554818572,
+    "db_equal": true,
+    "kind": "near"
+   },
+   {
+    "side": "bids",
+    "bucket": "81632",
+    "page_qty": "36.402000000000015",
+    "raw_qty": "36.425",
+    "diff_pct": 0.06314344543578586,
+    "raw2_qty": "36.427",
+    "raw_vs_raw2_pct": 0.00549073438572409,
+    "db_equal": true,
+    "kind": "largest"
+   },
+   {
+    "side": "bids",
+    "bucket": "81624",
+    "page_qty": "32.26999999999999",
+    "raw_qty": "30.461",
+    "diff_pct": 5.938741341387315,
+    "raw2_qty": "32.088",
+    "raw_vs_raw2_pct": 5.341256032303601,
+    "db_equal": true,
+    "kind": "largest"
+   },
+   {
+    "side": "asks",
+    "bucket": "81664",
+    "page_qty": "4.705000000000001",
+    "raw_qty": "4.820",
+    "diff_pct": 2.3858921161825517,
+    "raw2_qty": "4.772",
+    "raw_vs_raw2_pct": 0.995850622406639,
+    "db_equal": true,
+    "kind": "near"
+   },
+   {
+    "side": "asks",
+    "bucket": "81668",
+    "page_qty": "2.9579999999999997",
+    "raw_qty": "1.537",
+    "diff_pct": 92.45283018867923,
+    "raw2_qty": "2.917",
+    "raw_vs_raw2_pct": 89.78529603122966,
+    "db_equal": true,
+    "kind": "near"
+   },
+   {
+    "side": "asks",
+    "bucket": "81672",
+    "page_qty": "8.188000000000002",
+    "raw_qty": "8.157",
+    "diff_pct": 0.38004168199095256,
+    "raw2_qty": "8.550",
+    "raw_vs_raw2_pct": 4.817947774917249,
+    "db_equal": true,
+    "kind": "near"
+   },
+   {
+    "side": "asks",
+    "bucket": "81676",
+    "page_qty": "4.011",
+    "raw_qty": "4.873",
+    "diff_pct": 17.689308434229428,
+    "raw2_qty": "4.115",
+    "raw_vs_raw2_pct": 15.555099528011493,
+    "db_equal": true,
+    "kind": "near"
+   },
+   {
+    "side": "asks",
+    "bucket": "81680",
+    "page_qty": "4.528999999999999",
+    "raw_qty": "4.526",
+    "diff_pct": 0.06628369421120195,
+    "raw2_qty": "4.532",
+    "raw_vs_raw2_pct": 0.13256738842244808,
+    "db_equal": true,
+    "kind": "near"
+   },
+   {
+    "side": "asks",
+    "bucket": "81744",
+    "page_qty": "52.641999999999996",
+    "raw_qty": "52.615",
+    "diff_pct": 0.05131616459183883,
+    "raw2_qty": "52.614",
+    "raw_vs_raw2_pct": 0.0019005986885869048,
+    "db_equal": true,
+    "kind": "largest"
+   },
+   {
+    "side": "asks",
+    "bucket": "81720",
+    "page_qty": "24.390000000000004",
+    "raw_qty": "24.268",
+    "diff_pct": 0.5027196307895335,
+    "raw2_qty": "24.298",
+    "raw_vs_raw2_pct": 0.12361958134168452,
+    "db_equal": true,
+    "kind": "largest"
+   },
+   {
+    "side": "asks",
+    "bucket": "81764",
+    "page_qty": "23.360999999999997",
+    "raw_qty": "23.360",
+    "diff_pct": 0.004280821917795377,
+    "raw2_qty": "23.360",
+    "raw_vs_raw2_pct": 0.0,
+    "db_equal": true,
+    "kind": "largest"
+   }
+  ],
+  "bids_buckets_page": 31,
+  "bids_buckets_raw": 31,
+  "asks_buckets_page": 35,
+  "asks_buckets_raw": 35
+ }
+}

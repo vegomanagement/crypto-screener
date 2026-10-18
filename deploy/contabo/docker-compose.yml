@@ -1,0 +1,40 @@
+# Project name crypto-screener -> container crypto-screener-app-1 (host convention).
+# Private: bound to 127.0.0.1 only, reached over an SSH tunnel. No nginx vhost, no ufw rule.
+name: crypto-screener
+
+services:
+  app:
+    build:
+      context: ../..
+      dockerfile: deploy/contabo/Dockerfile
+    image: crypto-screener-app:${CS_REVISION:-local}
+    restart: unless-stopped
+    env_file:
+      - ${CS_ROOT:-/opt/crypto-screener}/.env
+    environment:
+      PORT: "5087"
+      DATA_DIR: /data
+      DB_PATH: /data/signals.db
+      LIQUIDATIONS_DB_PATH: /data/liquidations.db
+      PAPER_DB_PATH: /data/paper_journal.db
+      WHALES_DB_PATH: /data/whales.db
+      MPLCONFIGDIR: /tmp/matplotlib
+    ports:
+      - "127.0.0.1:5087:5087"
+    volumes:
+      # All SQLite files live outside the source tree; deploy.sh never touches them.
+      - ${CS_ROOT:-/opt/crypto-screener}/data:/data
+      # liquidity.sqlite3 + agent_analyses.sqlite3 (app.root_path/.data in the code).
+      - ${CS_ROOT:-/opt/crypto-screener}/data/app-data:/app/.data
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    mem_limit: 1536m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

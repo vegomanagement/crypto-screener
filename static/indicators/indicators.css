@@ -1,0 +1,15 @@
+/* Grouped indicator settings popover (TradingView-style sections). */
+.indicator-settings-popover { width: 280px; }
+.indicator-settings-fields { max-height: min(70vh, 560px); overflow-y: auto; padding-right: 4px; }
+.indicator-settings-group {
+  margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--line);
+  color: var(--text); font-weight: 600; font-size: 10px; letter-spacing: 0.04em; text-transform: uppercase;
+}
+.indicator-settings-group:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+.indicator-settings-input[type="text"] { width: 110px; }
+.indicator-settings-input:invalid { outline: 1px solid #ef6670; }
+
+/* Order-flow overlays: big-trade bubbles + abnormal volume (static/indicators/orderflow-pane.js) */
+.orderflow-tooltip { position: absolute; z-index: 6; pointer-events: none; max-width: 330px; padding: 6px 8px; border: 1px solid #3c5a7a; border-radius: 4px; background: rgba(13,17,26,0.96); color: #dbe6f3; font: 10px/1.5 SFMono-Regular, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+.orderflow-tooltip[hidden], .pane-orderflow-status[hidden] { display: none; }
+.pane-orderflow-status { flex-shrink: 0; font-size: 10px; color: #9cc3e6; padding: 4px 8px; border-top: 1px solid #22334a; line-height: 1.5; max-height: 49px; overflow: auto; overflow-wrap: anywhere; }

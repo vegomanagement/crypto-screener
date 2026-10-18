@@ -1,0 +1,1210 @@
+{
+ "generated": "2026-10-18T09:11:02+00:00",
+ "end": "2026-10-18",
+ "rules": "SMC swing-trading entry model (the 'right fractal'): one causal scanner for backtest and live.\n\nModel (long; short is the mirror), for a fractal pair HTF \u2192 entry TF (e.g. 4h \u2192 15m):\n  1. HTF bias = HTF external structure trend (smc.py 5/5) as of the last CLOSED HTF bar.\n  2. POI = an HTF order block or FVG in the bias direction that is still unmitigated on closed\n     HTF bars and lies in discount (zone top \u2264 HTF dealing-range equilibrium). An entry-TF bar\n     trading into it (low \u2264 top, close \u2265 bottom) arms the setup for ``arm_htf_bars`` HTF bars.\n     Variant ``sweep``: the touch must follow an entry-TF wick sweep of a swing low within\n     ``sweep_bars`` bars.\n  3. Trigger = an entry-TF CHoCH in the bias direction (smc.py, strength ``ltf_len``) while armed.\n  4. Entry = limit at the top of the entry-TF OB created by that CHoCH (else its FVG, else the\n     close), filled within ``fill_bars``; stop = the low of the leg that made the CHoCH minus\n     0.1 ATR; target = the HTF dealing-range high (opposing HTF liquidity) \u2014 skipped when it is\n     < ``min_rr`` R away. Half off at 2R and the stop to break-even; the rest at the target or at\n     the close after ``max_hold`` bars. Stop first when a bar touches both.\n  ``filtered=False`` = the same CHoCH \u2192 retest entries in either direction without HTF bias/POI.\nFees in R = 2 \u00d7 fee \u00d7 entry / risk (taker 0.05 % or maker 0.02 % per side).",
+ "fees": {
+  "taker": 0.0005,
+  "maker": 0.0002
+ },
+ "series": [
+  {
+   "symbol": "BTCUSDT",
+   "pair": "4h>15m",
+   "ltf_bars": 238272,
+   "htf_bars": 14892,
+   "first_ts": 1577836800000,
+   "last_close_ts": 1792281600000,
+   "oos_from_ts": 1727947800000,
+   "oos_months": 24.461372098116513,
+   "is_months": 57.076078624616734
+  },
+  {
+   "symbol": "ETHUSDT",
+   "pair": "4h>15m",
+   "ltf_bars": 238272,
+   "htf_bars": 14892,
+   "first_ts": 1577836800000,
+   "last_close_ts": 1792281600000,
+   "oos_from_ts": 1727947800000,
+   "oos_months": 24.461372098116513,
+   "is_months": 57.076078624616734
+  },
+  {
+   "symbol": "SOLUSDT",
+   "pair": "4h>15m",
+   "ltf_bars": 213092,
+   "htf_bars": 13318,
+   "first_ts": 1600066800000,
+   "last_close_ts": 1792281600000,
+   "oos_from_ts": 1734746400000,
+   "oos_months": 21.876368812965396,
+   "is_months": 51.208661848445026
+  },
+  {
+   "symbol": "BTCUSDT",
+   "pair": "1h>5m",
+   "ltf_bars": 714816,
+   "htf_bars": 59568,
+   "first_ts": 1577836800000,
+   "last_close_ts": 1792281600000,
+   "oos_from_ts": 1727948100000,
+   "oos_months": 24.461258030369397,
+   "is_months": 57.07619269236385
+  },
+  {
+   "symbol": "ETHUSDT",
+   "pair": "1h>5m",
+   "ltf_bars": 714816,
+   "htf_bars": 59568,
+   "first_ts": 1577836800000,
+   "last_close_ts": 1792281600000,
+   "oos_from_ts": 1727948100000,
+   "oos_months": 24.461258030369397,
+   "is_months": 57.07619269236385
+  },
+  {
+   "symbol": "SOLUSDT",
+   "pair": "1h>5m",
+   "ltf_bars": 639276,
+   "htf_bars": 53273,
+   "first_ts": 1600066800000,
+   "last_close_ts": 1792281600000,
+   "oos_from_ts": 1734746700000,
+   "oos_months": 21.87625474521828,
+   "is_months": 51.208775916192145
+  },
+  {
+   "symbol": "BTCUSDT",
+   "pair": "1d>1h",
+   "ltf_bars": 59568,
+   "htf_bars": 2482,
+   "first_ts": 1577836800000,
+   "last_close_ts": 1792281600000,
+   "oos_from_ts": 1727946000000,
+   "oos_months": 24.46205650459921,
+   "is_months": 57.075394218134036
+  },
+  {
+   "symbol": "ETHUSDT",
+   "pair": "1d>1h",
+   "ltf_bars": 59568,
+   "htf_bars": 2482,
+   "first_ts": 1577836800000,
+   "last_close_ts": 1792281600000,
+   "oos_from_ts": 1727946000000,
+   "oos_months": 24.46205650459921,
+   "is_months": 57.075394218134036
+  },
+  {
+   "symbol": "SOLUSDT",
+   "pair": "1d>1h",
+   "ltf_bars": 53273,
+   "htf_bars": 2219,
+   "first_ts": 1600066800000,
+   "last_close_ts": 1792281600000,
+   "oos_from_ts": 1734746400000,
+   "oos_months": 21.876368812965396,
+   "is_months": 51.208661848445026
+  }
+ ],
+ "pairs": {
+  "4h>15m": {
+   "variants_is": {
+    "[true, {\"ltf_len\": 2, \"poi\": \"any\", \"sweep\": false}]": {
+     "n": 366,
+     "expectancy_r": -0.1288,
+     "win_rate": 0.3415
+    },
+    "[true, {\"ltf_len\": 3, \"poi\": \"any\", \"sweep\": false}]": {
+     "n": 286,
+     "expectancy_r": -0.2472,
+     "win_rate": 0.3531
+    },
+    "[true, {\"ltf_len\": 2, \"poi\": \"any\", \"sweep\": true}]": {
+     "n": 261,
+     "expectancy_r": -0.1878,
+     "win_rate": 0.3295
+    },
+    "[true, {\"ltf_len\": 3, \"poi\": \"any\", \"sweep\": true}]": {
+     "n": 174,
+     "expectancy_r": -0.1458,
+     "win_rate": 0.3391
+    },
+    "[true, {\"ltf_len\": 2, \"poi\": \"ob\", \"sweep\": false}]": {
+     "n": 256,
+     "expectancy_r": -0.1534,
+     "win_rate": 0.3594
+    },
+    "[true, {\"ltf_len\": 3, \"poi\": \"ob\", \"sweep\": false}]": {
+     "n": 198,
+     "expectancy_r": -0.2622,
+     "win_rate": 0.3687
+    },
+    "[true, {\"ltf_len\": 2, \"poi\": \"ob\", \"sweep\": true}]": {
+     "n": 188,
+     "expectancy_r": -0.1812,
+     "win_rate": 0.3564
+    },
+    "[true, {\"ltf_len\": 3, \"poi\": \"ob\", \"sweep\": true}]": {
+     "n": 120,
+     "expectancy_r": -0.0862,
+     "win_rate": 0.3667
+    },
+    "[true, {\"ltf_len\": 2, \"poi\": \"fvg\", \"sweep\": false}]": {
+     "n": 219,
+     "expectancy_r": -0.1483,
+     "win_rate": 0.3196
+    },
+    "[true, {\"ltf_len\": 3, \"poi\": \"fvg\", \"sweep\": false}]": {
+     "n": 178,
+     "expectancy_r": -0.1223,
+     "win_rate": 0.3596
+    },
+    "[true, {\"ltf_len\": 2, \"poi\": \"fvg\", \"sweep\": true}]": {
+     "n": 155,
+     "expectancy_r": -0.1519,
+     "win_rate": 0.3097
+    },
+    "[true, {\"ltf_len\": 3, \"poi\": \"fvg\", \"sweep\": true}]": {
+     "n": 109,
+     "expectancy_r": -0.0856,
+     "win_rate": 0.3394
+    },
+    "[false, {\"ltf_len\": 2}]": {
+     "n": 6792,
+     "expectancy_r": -0.2172,
+     "win_rate": 0.3286
+    },
+    "[false, {\"ltf_len\": 3}]": {
+     "n": 5293,
+     "expectancy_r": -0.2082,
+     "win_rate": 0.3318
+    }
+   },
+   "oos_months_total": 70.8,
+   "filtered": {
+    "variant": [
+     true,
+     {
+      "ltf_len": 3,
+      "poi": "fvg",
+      "sweep": true
+     }
+    ],
+    "is": {
+     "n": 109,
+     "win_rate": 0.3394,
+     "win_ci95": [
+      0.2574,
+      0.4325
+     ],
+     "expectancy_r": -0.0856,
+     "expectancy_ci": [
+      -0.4508,
+      0.2797
+     ],
+     "max_dd_r": 23.66,
+     "total_r": -9.33,
+     "mean_fee_r": 0.1874
+    },
+    "oos_taker": {
+     "n": 44,
+     "win_rate": 0.3182,
+     "win_ci95": [
+      0.2,
+      0.4656
+     ],
+     "expectancy_r": -0.5026,
+     "expectancy_ci": [
+      -0.8641,
+      -0.1411
+     ],
+     "max_dd_r": 22.83,
+     "total_r": -22.11,
+     "mean_fee_r": 0.2277
+    },
+    "oos_taker_bonf": {
+     "n": 44,
+     "win_rate": 0.3182,
+     "win_ci95": [
+      0.1691,
+      0.5169
+     ],
+     "expectancy_r": -0.5026,
+     "expectancy_ci": [
+      -0.9892,
+      -0.016
+     ],
+     "max_dd_r": 22.83,
+     "total_r": -22.11,
+     "mean_fee_r": 0.2277
+    },
+    "oos_maker": {
+     "n": 44,
+     "win_rate": 0.3182,
+     "win_ci95": [
+      0.2,
+      0.4656
+     ],
+     "expectancy_r": -0.366,
+     "expectancy_ci": [
+      -0.7258,
+      -0.0061
+     ],
+     "max_dd_r": 16.99,
+     "total_r": -16.1,
+     "mean_fee_r": 0.0911
+    },
+    "oos_gross": {
+     "n": 44,
+     "win_rate": 0.3182,
+     "win_ci95": [
+      0.2,
+      0.4656
+     ],
+     "expectancy_r": -0.2749,
+     "expectancy_ci": [
+      -0.6346,
+      0.0848
+     ],
+     "max_dd_r": 13.1,
+     "total_r": -12.1,
+     "mean_fee_r": null
+    },
+    "oos_trades_per_month_per_symbol": 0.62,
+    "oos_by_symbol": {
+     "BTCUSDT": {
+      "n": 16,
+      "win_rate": 0.1875,
+      "win_ci95": [
+       0.0659,
+       0.4301
+      ],
+      "expectancy_r": -0.9227,
+      "expectancy_ci": [
+       -1.3163,
+       -0.5292
+      ],
+      "max_dd_r": 14.76,
+      "total_r": -14.76,
+      "mean_fee_r": 0.2977
+     },
+     "ETHUSDT": {
+      "n": 14,
+      "win_rate": 0.4286,
+      "win_ci95": [
+       0.2138,
+       0.6741
+      ],
+      "expectancy_r": -0.0883,
+      "expectancy_ci": [
+       -0.9647,
+       0.788
+      ],
+      "max_dd_r": 6.82,
+      "total_r": -1.24,
+      "mean_fee_r": 0.2243
+     },
+     "SOLUSDT": {
+      "n": 14,
+      "win_rate": 0.3571,
+      "win_ci95": [
+       0.1634,
+       0.6124
+      ],
+      "expectancy_r": -0.4366,
+      "expectancy_ci": [
+       -0.9607,
+       0.0874
+      ],
+      "max_dd_r": 6.97,
+      "total_r": -6.11,
+      "mean_fee_r": 0.1509
+     }
+    },
+    "random_control": {
+     "seeds": 50,
+     "n_per_seed": 43,
+     "mean_expectancy_taker": -0.2708,
+     "p05": -0.6931,
+     "p95": 0.1821,
+     "model_beats_share": 0.24
+    },
+    "passes": false
+   },
+   "unfiltered": {
+    "variant": [
+     false,
+     {
+      "ltf_len": 3
+     }
+    ],
+    "is": {
+     "n": 5293,
+     "win_rate": 0.3318,
+     "win_ci95": [
+      0.3192,
+      0.3446
+     ],
+     "expectancy_r": -0.2082,
+     "expectancy_ci": [
+      -0.2611,
+      -0.1553
+     ],
+     "max_dd_r": 1136.79,
+     "total_r": -1101.85,
+     "mean_fee_r": 0.2294
+    },
+    "oos_taker": {
+     "n": 2238,
+     "win_rate": 0.3195,
+     "win_ci95": [
+      0.3005,
+      0.3391
+     ],
+     "expectancy_r": -0.2938,
+     "expectancy_ci": [
+      -0.3719,
+      -0.2156
+     ],
+     "max_dd_r": 666.11,
+     "total_r": -657.43,
+     "mean_fee_r": 0.2773
+    },
+    "oos_taker_bonf": {
+     "n": 2238,
+     "win_rate": 0.3195,
+     "win_ci95": [
+      0.2941,
+      0.346
+     ],
+     "expectancy_r": -0.2938,
+     "expectancy_ci": [
+      -0.3989,
+      -0.1886
+     ],
+     "max_dd_r": 666.11,
+     "total_r": -657.43,
+     "mean_fee_r": 0.2773
+    },
+    "oos_maker": {
+     "n": 2238,
+     "win_rate": 0.3235,
+     "win_ci95": [
+      0.3044,
+      0.3432
+     ],
+     "expectancy_r": -0.1274,
+     "expectancy_ci": [
+      -0.2034,
+      -0.0513
+     ],
+     "max_dd_r": 298.07,
+     "total_r": -285.08,
+     "mean_fee_r": 0.1109
+    },
+    "oos_gross": {
+     "n": 2238,
+     "win_rate": 0.3239,
+     "win_ci95": [
+      0.3049,
+      0.3436
+     ],
+     "expectancy_r": -0.0165,
+     "expectancy_ci": [
+      -0.092,
+      0.0591
+     ],
+     "max_dd_r": 116.98,
+     "total_r": -36.84,
+     "mean_fee_r": null
+    },
+    "oos_trades_per_month_per_symbol": 31.61,
+    "oos_by_symbol": {
+     "BTCUSDT": {
+      "n": 776,
+      "win_rate": 0.3325,
+      "win_ci95": [
+       0.3002,
+       0.3664
+      ],
+      "expectancy_r": -0.2996,
+      "expectancy_ci": [
+       -0.4417,
+       -0.1576
+      ],
+      "max_dd_r": 233.08,
+      "total_r": -232.5,
+      "mean_fee_r": 0.3814
+     },
+     "ETHUSDT": {
+      "n": 780,
+      "win_rate": 0.2962,
+      "win_ci95": [
+       0.2652,
+       0.3291
+      ],
+      "expectancy_r": -0.3842,
+      "expectancy_ci": [
+       -0.5074,
+       -0.261
+      ],
+      "max_dd_r": 307.39,
+      "total_r": -299.65,
+      "mean_fee_r": 0.2499
+     },
+     "SOLUSDT": {
+      "n": 682,
+      "win_rate": 0.3314,
+      "win_ci95": [
+       0.2971,
+       0.3676
+      ],
+      "expectancy_r": -0.1837,
+      "expectancy_ci": [
+       -0.3239,
+       -0.0435
+      ],
+      "max_dd_r": 148.32,
+      "total_r": -125.28,
+      "mean_fee_r": 0.1901
+     }
+    },
+    "passes": false
+   }
+  },
+  "1h>5m": {
+   "variants_is": {
+    "[true, {\"ltf_len\": 2, \"poi\": \"any\", \"sweep\": false}]": {
+     "n": 1156,
+     "expectancy_r": -0.4425,
+     "win_rate": 0.3157
+    },
+    "[true, {\"ltf_len\": 3, \"poi\": \"any\", \"sweep\": false}]": {
+     "n": 863,
+     "expectancy_r": -0.4766,
+     "win_rate": 0.3071
+    },
+    "[true, {\"ltf_len\": 2, \"poi\": \"any\", \"sweep\": true}]": {
+     "n": 825,
+     "expectancy_r": -0.4679,
+     "win_rate": 0.3188
+    },
+    "[true, {\"ltf_len\": 3, \"poi\": \"any\", \"sweep\": true}]": {
+     "n": 534,
+     "expectancy_r": -0.5052,
+     "win_rate": 0.3015
+    },
+    "[true, {\"ltf_len\": 2, \"poi\": \"ob\", \"sweep\": false}]": {
+     "n": 838,
+     "expectancy_r": -0.4527,
+     "win_rate": 0.3103
+    },
+    "[true, {\"ltf_len\": 3, \"poi\": \"ob\", \"sweep\": false}]": {
+     "n": 617,
+     "expectancy_r": -0.4642,
+     "win_rate": 0.3079
+    },
+    "[true, {\"ltf_len\": 2, \"poi\": \"ob\", \"sweep\": true}]": {
+     "n": 590,
+     "expectancy_r": -0.4904,
+     "win_rate": 0.3153
+    },
+    "[true, {\"ltf_len\": 3, \"poi\": \"ob\", \"sweep\": true}]": {
+     "n": 374,
+     "expectancy_r": -0.5408,
+     "win_rate": 0.2968
+    },
+    "[true, {\"ltf_len\": 2, \"poi\": \"fvg\", \"sweep\": false}]": {
+     "n": 665,
+     "expectancy_r": -0.4154,
+     "win_rate": 0.3128
+    },
+    "[true, {\"ltf_len\": 3, \"poi\": \"fvg\", \"sweep\": false}]": {
+     "n": 517,
+     "expectancy_r": -0.4892,
+     "win_rate": 0.294
+    },
+    "[true, {\"ltf_len\": 2, \"poi\": \"fvg\", \"sweep\": true}]": {
+     "n": 474,
+     "expectancy_r": -0.4583,
+     "win_rate": 0.308
+    },
+    "[true, {\"ltf_len\": 3, \"poi\": \"fvg\", \"sweep\": true}]": {
+     "n": 324,
+     "expectancy_r": -0.5055,
+     "win_rate": 0.2994
+    },
+    "[false, {\"ltf_len\": 2}]": {
+     "n": 20159,
+     "expectancy_r": -0.5065,
+     "win_rate": 0.3137
+    },
+    "[false, {\"ltf_len\": 3}]": {
+     "n": 15863,
+     "expectancy_r": -0.4396,
+     "win_rate": 0.3202
+    }
+   },
+   "oos_months_total": 70.8,
+   "filtered": {
+    "variant": [
+     true,
+     {
+      "ltf_len": 2,
+      "poi": "fvg",
+      "sweep": false
+     }
+    ],
+    "is": {
+     "n": 665,
+     "win_rate": 0.3128,
+     "win_ci95": [
+      0.2787,
+      0.349
+     ],
+     "expectancy_r": -0.4154,
+     "expectancy_ci": [
+      -0.5564,
+      -0.2744
+     ],
+     "max_dd_r": 278.85,
+     "total_r": -276.25,
+     "mean_fee_r": 0.3795
+    },
+    "oos_taker": {
+     "n": 270,
+     "win_rate": 0.3111,
+     "win_ci95": [
+      0.2589,
+      0.3687
+     ],
+     "expectancy_r": -0.5014,
+     "expectancy_ci": [
+      -0.7199,
+      -0.2829
+     ],
+     "max_dd_r": 137.24,
+     "total_r": -135.38,
+     "mean_fee_r": 0.4969
+    },
+    "oos_taker_bonf": {
+     "n": 270,
+     "win_rate": 0.3111,
+     "win_ci95": [
+      0.2423,
+      0.3894
+     ],
+     "expectancy_r": -0.5014,
+     "expectancy_ci": [
+      -0.7955,
+      -0.2073
+     ],
+     "max_dd_r": 137.24,
+     "total_r": -135.38,
+     "mean_fee_r": 0.4969
+    },
+    "oos_maker": {
+     "n": 270,
+     "win_rate": 0.3333,
+     "win_ci95": [
+      0.2798,
+      0.3916
+     ],
+     "expectancy_r": -0.2033,
+     "expectancy_ci": [
+      -0.4058,
+      -0.0007
+     ],
+     "max_dd_r": 61.82,
+     "total_r": -54.88,
+     "mean_fee_r": 0.1988
+    },
+    "oos_gross": {
+     "n": 270,
+     "win_rate": 0.3407,
+     "win_ci95": [
+      0.2868,
+      0.3992
+     ],
+     "expectancy_r": -0.0045,
+     "expectancy_ci": [
+      -0.2023,
+      0.1934
+     ],
+     "max_dd_r": 29.96,
+     "total_r": -1.21,
+     "mean_fee_r": null
+    },
+    "oos_trades_per_month_per_symbol": 3.81,
+    "oos_by_symbol": {
+     "BTCUSDT": {
+      "n": 90,
+      "win_rate": 0.2444,
+      "win_ci95": [
+       0.1673,
+       0.3425
+      ],
+      "expectancy_r": -0.7586,
+      "expectancy_ci": [
+       -1.0941,
+       -0.4231
+      ],
+      "max_dd_r": 70.72,
+      "total_r": -68.27,
+      "mean_fee_r": 0.6656
+     },
+     "ETHUSDT": {
+      "n": 98,
+      "win_rate": 0.3265,
+      "win_ci95": [
+       0.2418,
+       0.4244
+      ],
+      "expectancy_r": -0.607,
+      "expectancy_ci": [
+       -0.9548,
+       -0.2592
+      ],
+      "max_dd_r": 61.34,
+      "total_r": -59.48,
+      "mean_fee_r": 0.4819
+     },
+     "SOLUSDT": {
+      "n": 82,
+      "win_rate": 0.3659,
+      "win_ci95": [
+       0.2698,
+       0.4739
+      ],
+      "expectancy_r": -0.093,
+      "expectancy_ci": [
+       -0.5416,
+       0.3556
+      ],
+      "max_dd_r": 24.64,
+      "total_r": -7.63,
+      "mean_fee_r": 0.3298
+     }
+    },
+    "random_control": {
+     "seeds": 50,
+     "n_per_seed": 269,
+     "mean_expectancy_taker": -0.6866,
+     "p05": -0.9631,
+     "p95": -0.4374,
+     "model_beats_share": 0.88
+    },
+    "passes": false
+   },
+   "unfiltered": {
+    "variant": [
+     false,
+     {
+      "ltf_len": 3
+     }
+    ],
+    "is": {
+     "n": 15863,
+     "win_rate": 0.3202,
+     "win_ci95": [
+      0.313,
+      0.3275
+     ],
+     "expectancy_r": -0.4396,
+     "expectancy_ci": [
+      -0.4724,
+      -0.4068
+     ],
+     "max_dd_r": 6978.57,
+     "total_r": -6973.0,
+     "mean_fee_r": 0.4408
+    },
+    "oos_taker": {
+     "n": 6653,
+     "win_rate": 0.2945,
+     "win_ci95": [
+      0.2836,
+      0.3055
+     ],
+     "expectancy_r": -0.6121,
+     "expectancy_ci": [
+      -0.6568,
+      -0.5674
+     ],
+     "max_dd_r": 4080.52,
+     "total_r": -4072.29,
+     "mean_fee_r": 0.5358
+    },
+    "oos_taker_bonf": {
+     "n": 6653,
+     "win_rate": 0.2945,
+     "win_ci95": [
+      0.2799,
+      0.3094
+     ],
+     "expectancy_r": -0.6121,
+     "expectancy_ci": [
+      -0.6722,
+      -0.552
+     ],
+     "max_dd_r": 4080.52,
+     "total_r": -4072.29,
+     "mean_fee_r": 0.5358
+    },
+    "oos_maker": {
+     "n": 6653,
+     "win_rate": 0.3153,
+     "win_ci95": [
+      0.3043,
+      0.3266
+     ],
+     "expectancy_r": -0.2906,
+     "expectancy_ci": [
+      -0.3318,
+      -0.2494
+     ],
+     "max_dd_r": 1944.76,
+     "total_r": -1933.41,
+     "mean_fee_r": 0.2143
+    },
+    "oos_gross": {
+     "n": 6653,
+     "win_rate": 0.3175,
+     "win_ci95": [
+      0.3064,
+      0.3287
+     ],
+     "expectancy_r": -0.0763,
+     "expectancy_ci": [
+      -0.1166,
+      -0.036
+     ],
+     "max_dd_r": 525.93,
+     "total_r": -507.49,
+     "mean_fee_r": null
+    },
+    "oos_trades_per_month_per_symbol": 93.97,
+    "oos_by_symbol": {
+     "BTCUSDT": {
+      "n": 2259,
+      "win_rate": 0.2603,
+      "win_ci95": [
+       0.2426,
+       0.2788
+      ],
+      "expectancy_r": -0.8742,
+      "expectancy_ci": [
+       -0.9551,
+       -0.7933
+      ],
+      "max_dd_r": 1977.89,
+      "total_r": -1974.81,
+      "mean_fee_r": 0.7554
+     },
+     "ETHUSDT": {
+      "n": 2315,
+      "win_rate": 0.3011,
+      "win_ci95": [
+       0.2827,
+       0.3201
+      ],
+      "expectancy_r": -0.5275,
+      "expectancy_ci": [
+       -0.6025,
+       -0.4525
+      ],
+      "max_dd_r": 1227.09,
+      "total_r": -1221.15,
+      "mean_fee_r": 0.4792
+     },
+     "SOLUSDT": {
+      "n": 2079,
+      "win_rate": 0.3242,
+      "win_ci95": [
+       0.3044,
+       0.3446
+      ],
+      "expectancy_r": -0.4215,
+      "expectancy_ci": [
+       -0.4956,
+       -0.3474
+      ],
+      "max_dd_r": 877.64,
+      "total_r": -876.33,
+      "mean_fee_r": 0.3603
+     }
+    },
+    "passes": false
+   }
+  },
+  "1d>1h": {
+   "variants_is": {
+    "[true, {\"ltf_len\": 2, \"poi\": \"any\", \"sweep\": false}]": {
+     "n": 50,
+     "expectancy_r": -0.0743,
+     "win_rate": 0.4
+    },
+    "[true, {\"ltf_len\": 3, \"poi\": \"any\", \"sweep\": false}]": {
+     "n": 39,
+     "expectancy_r": -0.1101,
+     "win_rate": 0.4103
+    },
+    "[true, {\"ltf_len\": 2, \"poi\": \"any\", \"sweep\": true}]": {
+     "n": 33,
+     "expectancy_r": 0.0439,
+     "win_rate": 0.4545
+    },
+    "[true, {\"ltf_len\": 3, \"poi\": \"any\", \"sweep\": true}]": {
+     "n": 26,
+     "expectancy_r": 0.0707,
+     "win_rate": 0.4615
+    },
+    "[true, {\"ltf_len\": 2, \"poi\": \"ob\", \"sweep\": false}]": {
+     "n": 38,
+     "expectancy_r": -0.0182,
+     "win_rate": 0.4211
+    },
+    "[true, {\"ltf_len\": 3, \"poi\": \"ob\", \"sweep\": false}]": {
+     "n": 27,
+     "expectancy_r": 0.2253,
+     "win_rate": 0.5185
+    },
+    "[true, {\"ltf_len\": 2, \"poi\": \"ob\", \"sweep\": true}]": {
+     "n": 28,
+     "expectancy_r": 0.22,
+     "win_rate": 0.5
+    },
+    "[true, {\"ltf_len\": 3, \"poi\": \"ob\", \"sweep\": true}]": {
+     "n": 21,
+     "expectancy_r": 0.3098,
+     "win_rate": 0.5238
+    },
+    "[true, {\"ltf_len\": 2, \"poi\": \"fvg\", \"sweep\": false}]": {
+     "n": 29,
+     "expectancy_r": -0.1408,
+     "win_rate": 0.3448
+    },
+    "[true, {\"ltf_len\": 3, \"poi\": \"fvg\", \"sweep\": false}]": {
+     "n": 21,
+     "expectancy_r": -0.4989,
+     "win_rate": 0.3333
+    },
+    "[true, {\"ltf_len\": 2, \"poi\": \"fvg\", \"sweep\": true}]": {
+     "n": 16,
+     "expectancy_r": -0.2008,
+     "win_rate": 0.3125
+    },
+    "[true, {\"ltf_len\": 3, \"poi\": \"fvg\", \"sweep\": true}]": {
+     "n": 11,
+     "expectancy_r": -0.5107,
+     "win_rate": 0.3636
+    },
+    "[false, {\"ltf_len\": 2}]": {
+     "n": 1608,
+     "expectancy_r": -0.114,
+     "win_rate": 0.3265
+    },
+    "[false, {\"ltf_len\": 3}]": {
+     "n": 1246,
+     "expectancy_r": -0.1503,
+     "win_rate": 0.321
+    }
+   },
+   "oos_months_total": 70.8,
+   "filtered": {
+    "variant": [
+     true,
+     {
+      "ltf_len": 2,
+      "poi": "any",
+      "sweep": true
+     }
+    ],
+    "is": {
+     "n": 33,
+     "win_rate": 0.4545,
+     "win_ci95": [
+      0.2984,
+      0.6201
+     ],
+     "expectancy_r": 0.0439,
+     "expectancy_ci": [
+      -0.5673,
+      0.6551
+     ],
+     "max_dd_r": 6.7,
+     "total_r": 1.45,
+     "mean_fee_r": 0.1485
+    },
+    "oos_taker": {
+     "n": 28,
+     "win_rate": 0.3929,
+     "win_ci95": [
+      0.2357,
+      0.5759
+     ],
+     "expectancy_r": -0.0461,
+     "expectancy_ci": [
+      -0.6452,
+      0.553
+     ],
+     "max_dd_r": 10.05,
+     "total_r": -1.29,
+     "mean_fee_r": 0.1367
+    },
+    "oos_taker_bonf": {
+     "n": 28,
+     "win_rate": 0.3929,
+     "win_ci95": [
+      0.1952,
+      0.6331
+     ],
+     "expectancy_r": -0.0461,
+     "expectancy_ci": [
+      -0.8525,
+      0.7603
+     ],
+     "max_dd_r": 10.05,
+     "total_r": -1.29,
+     "mean_fee_r": 0.1367
+    },
+    "oos_maker": {
+     "n": 28,
+     "win_rate": 0.3929,
+     "win_ci95": [
+      0.2357,
+      0.5759
+     ],
+     "expectancy_r": 0.0359,
+     "expectancy_ci": [
+      -0.5609,
+      0.6327
+     ],
+     "max_dd_r": 9.42,
+     "total_r": 1.01,
+     "mean_fee_r": 0.0547
+    },
+    "oos_gross": {
+     "n": 28,
+     "win_rate": 0.3929,
+     "win_ci95": [
+      0.2357,
+      0.5759
+     ],
+     "expectancy_r": 0.0906,
+     "expectancy_ci": [
+      -0.5052,
+      0.6863
+     ],
+     "max_dd_r": 9.0,
+     "total_r": 2.54,
+     "mean_fee_r": null
+    },
+    "oos_trades_per_month_per_symbol": 0.4,
+    "oos_by_symbol": {
+     "BTCUSDT": {
+      "n": 9,
+      "win_rate": 0.3333,
+      "win_ci95": [
+       0.1206,
+       0.6458
+      ],
+      "expectancy_r": -0.2001,
+      "expectancy_ci": [
+       -1.2383,
+       0.838
+      ],
+      "max_dd_r": 4.72,
+      "total_r": -1.8,
+      "mean_fee_r": 0.1334
+     },
+     "ETHUSDT": {
+      "n": 5,
+      "win_rate": 0.8,
+      "win_ci95": [
+       0.3755,
+       0.9638
+      ],
+      "expectancy_r": 0.3441,
+      "expectancy_ci": [
+       -0.4125,
+       1.1007
+      ],
+      "max_dd_r": 1.18,
+      "total_r": 1.72,
+      "mean_fee_r": 0.2559
+     },
+     "SOLUSDT": {
+      "n": 14,
+      "win_rate": 0.2857,
+      "win_ci95": [
+       0.1172,
+       0.5465
+      ],
+      "expectancy_r": -0.0864,
+      "expectancy_ci": [
+       -1.0766,
+       0.9037
+      ],
+      "max_dd_r": 5.32,
+      "total_r": -1.21,
+      "mean_fee_r": 0.0963
+     }
+    },
+    "random_control": {
+     "seeds": 50,
+     "n_per_seed": 27,
+     "mean_expectancy_taker": -0.0242,
+     "p05": -0.6036,
+     "p95": 0.4521,
+     "model_beats_share": 0.5
+    },
+    "passes": false
+   },
+   "unfiltered": {
+    "variant": [
+     false,
+     {
+      "ltf_len": 2
+     }
+    ],
+    "is": {
+     "n": 1608,
+     "win_rate": 0.3265,
+     "win_ci95": [
+      0.304,
+      0.3498
+     ],
+     "expectancy_r": -0.114,
+     "expectancy_ci": [
+      -0.2122,
+      -0.0157
+     ],
+     "max_dd_r": 200.43,
+     "total_r": -183.25,
+     "mean_fee_r": 0.1142
+    },
+    "oos_taker": {
+     "n": 666,
+     "win_rate": 0.3408,
+     "win_ci95": [
+      0.3058,
+      0.3777
+     ],
+     "expectancy_r": -0.1031,
+     "expectancy_ci": [
+      -0.271,
+      0.0648
+     ],
+     "max_dd_r": 126.31,
+     "total_r": -68.65,
+     "mean_fee_r": 0.1465
+    },
+    "oos_taker_bonf": {
+     "n": 666,
+     "win_rate": 0.3408,
+     "win_ci95": [
+      0.2943,
+      0.3907
+     ],
+     "expectancy_r": -0.1031,
+     "expectancy_ci": [
+      -0.3291,
+      0.1229
+     ],
+     "max_dd_r": 126.31,
+     "total_r": -68.65,
+     "mean_fee_r": 0.1465
+    },
+    "oos_maker": {
+     "n": 666,
+     "win_rate": 0.3408,
+     "win_ci95": [
+      0.3058,
+      0.3777
+     ],
+     "expectancy_r": -0.0152,
+     "expectancy_ci": [
+      -0.1807,
+      0.1503
+     ],
+     "max_dd_r": 90.99,
+     "total_r": -10.13,
+     "mean_fee_r": 0.0586
+    },
+    "oos_gross": {
+     "n": 666,
+     "win_rate": 0.3408,
+     "win_ci95": [
+      0.3058,
+      0.3777
+     ],
+     "expectancy_r": 0.0434,
+     "expectancy_ci": [
+      -0.1215,
+      0.2083
+     ],
+     "max_dd_r": 67.44,
+     "total_r": 28.88,
+     "mean_fee_r": null
+    },
+    "oos_trades_per_month_per_symbol": 9.41,
+    "oos_by_symbol": {
+     "BTCUSDT": {
+      "n": 228,
+      "win_rate": 0.3114,
+      "win_ci95": [
+       0.2548,
+       0.3742
+      ],
+      "expectancy_r": -0.2697,
+      "expectancy_ci": [
+       -0.5518,
+       0.0124
+      ],
+      "max_dd_r": 62.43,
+      "total_r": -61.49,
+      "mean_fee_r": 0.1756
+     },
+     "ETHUSDT": {
+      "n": 237,
+      "win_rate": 0.3376,
+      "win_ci95": [
+       0.2804,
+       0.3999
+      ],
+      "expectancy_r": -0.1522,
+      "expectancy_ci": [
+       -0.3725,
+       0.0681
+      ],
+      "max_dd_r": 47.94,
+      "total_r": -36.06,
+      "mean_fee_r": 0.1205
+     },
+     "SOLUSDT": {
+      "n": 201,
+      "win_rate": 0.3781,
+      "win_ci95": [
+       0.3139,
+       0.4468
+      ],
+      "expectancy_r": 0.1438,
+      "expectancy_ci": [
+       -0.2287,
+       0.5162
+      ],
+      "max_dd_r": 35.62,
+      "total_r": 28.9,
+      "mean_fee_r": 0.1441
+     }
+    },
+    "passes": false
+   }
+  }
+ },
+ "variants_tested": 42,
+ "oos_hypotheses": 6,
+ "z_bonferroni": 2.638
+}

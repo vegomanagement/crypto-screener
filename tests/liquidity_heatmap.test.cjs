@@ -30,7 +30,10 @@ test('geometry maps exact milliseconds through integer native anchors and leaves
   assert.equal(model.cells[1].width,10,'do not stretch snapshot through 40s gap');
   assert.deepEqual(model.cells.map(c=>c.qty),[7,9,2]);
   assert.equal(model.profile[0].qty,2,'profile is latest only');
-  assert.equal(model.profile[0].x,318,'right profile stays inside plot');
+  assert.equal(model.profile[0].x,252,'profile starts in the empty space right of the last candle (250 px edge + 2), not over the newest heatmap columns');
+  assert.ok(model.profile[0].x+model.profile[0].width<=400,'right profile stays inside plot');
+  const narrow=api().geometry({frames,latest:frames[2],sample_period_ms:10000}, {step:1,minQty:0,opacity:0.3}, {candles,scale,interval:60,priceToCoordinate:p=>200-p,width:260,height:200,now:200000});
+  assert.equal(narrow.profile[0].x,178,'without right-offset room the profile falls back to the right edge slot');
   assert.equal(api().geometry({frames:[]}, {}, {candles,scale,interval:60,priceToCoordinate:p=>p,width:400,height:200,now:200000}).cells.length,0);
   assert.equal(api().hitTest(model,170,100),null,'no fabricated data in gap');
   assert.equal(api().hitTest(model,140,101).qty,7);
@@ -45,6 +48,27 @@ test('subpixel samples are one-device-pixel markers with explicit actual time wi
   assert.ok(model.cells[0].actualWidth<0.5);
   assert.deepEqual([model.cells[0].time,model.cells[0].endTime],[135500,145500]);
   assert.equal(model.cells[0].marker,true);
+});
+
+test('regression: automatic buckets stay visible on a real BTC 4h price scale (no subpixel rows)',()=>{
+  // Live 2026-10-18 Bybit BTCUSDT 4h: 626 px plot showed 77067-88911 (18.9 $/px);
+  // 200-row book 81608.8-81669 → old span/80 step 0.8 drew 0.04 px rows.
+  const top=88911.55, bottom=77067.12, height=626, p2c=p=>(top-p)/(top-bottom)*height;
+  const bids=Array.from({length:200},(_,i)=>[+(81639.7-i*0.1).toFixed(1),1+i%7]);
+  const asks=Array.from({length:200},(_,i)=>[+(81639.8+i*0.1).toFixed(1),1+i%5]);
+  const frame={observed_at:1792309924662,bids,asks};
+  const candles=[{time:1792296000-14400},{time:1792296000}],scale={options:()=>({barSpacing:9.45}),logicalToCoordinate:i=>{assert.ok(Number.isInteger(i));return 1180+(i-1)*9.45;}};
+  const view={candles,scale,interval:14400,priceToCoordinate:p2c,width:1190,height,now:1792309934662,pixelRatio:2};
+  const model=api().geometry({frames:[frame],latest:frame,sample_period_ms:10000},{step:0},view);
+  assert.ok(model.step>=3*(top-bottom)/height-1e-9,`step ${model.step} must cover >= ${api().MIN_ROW_PX}px`);
+  assert.ok(model.cells.length>0 && model.profile.length>0);
+  model.cells.concat(model.profile).forEach(c=>assert.ok(c.height>=2.99,`row height ${c.height}px`));
+  const bidQty=bids.reduce((a,r)=>a+r[1],0), drawn=model.profile.filter(c=>c.side==='bids').reduce((a,c)=>a+c.qty,0);
+  assert.equal(drawn,bidQty,'coarser buckets keep the full native quantity of the snapshot');
+  const manual=api().geometry({frames:[frame],latest:frame,sample_period_ms:10000},{step:0.1},view);
+  assert.equal(manual.stepRaised,true);
+  manual.cells.forEach(c=>assert.ok(c.height>=0.999,'manual step is raised to a 1px minimum'));
+  assert.ok(Math.abs(api().pixelPriceSpan(81640,p2c,1)-(top-bottom)/height)<1e-6);
 });
 
 function sessionHarness() {
@@ -153,7 +177,7 @@ test('browser: local depth primitive behind native candles, opt-in leases, gaps,
     await page.locator('.indicator-settings-btn[data-indicator="liquidity"]').click();
     await page.locator('[data-key="minQty"]').fill('999');await page.locator('.indicator-settings-apply').click();
     await page.waitForFunction(()=>window.__workspaceDebug.panes.get(0).liquidityModel.cells.length===0);
-    assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('crypto-screener.workspace.v4')).indicatorSettings.liquidity.minQty),999);
+    assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('crypto-screener.workspace.v5')).indicatorSettings.liquidity.minQty),999);
     await page.locator('.indicator-settings-reset').click();await page.keyboard.press('Escape');
     empty=true;await page.evaluate(()=>{const p=window.__workspaceDebug.panes.get(0);p.liquiditySession.invalidate();return p.liquiditySession.tick();});
     await page.waitForFunction(()=>window.__workspaceDebug.panes.get(0).liquidityModel.cells.length===0);

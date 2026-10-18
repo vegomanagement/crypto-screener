@@ -16,3 +16,9 @@ SYMBOLS     = [s.strip() for s in os.environ.get("SYMBOLS", "BTCUSDT,ETHUSDT").s
 DIGEST_TIME = os.environ.get("DIGEST_TIME", "08:00")
 DB_PATH     = os.environ.get("DB_PATH", "signals.db")
 MIN_QUALITY = int(os.environ.get("MIN_QUALITY", 0))
+
+# Hermes analyst (/ui right sidebar). Read by agent_api/analyst_hermes from the
+# ENVIRONMENT only — set them in the shell/service, never commit real values.
+#   HERMES_API_URL  e.g. http://127.0.0.1:<port>/v1  (unset → deterministic baseline only)
+#   HERMES_API_KEY  bearer key of the gateway
+#   HERMES_MODEL    default "hermes-agent"

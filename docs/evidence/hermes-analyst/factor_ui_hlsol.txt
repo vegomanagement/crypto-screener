@@ -1,0 +1,36 @@
+{
+ "ui_wait_s": 24.626,
+ "status": "Hermes analysis",
+ "lines": 8,
+ "target": "hyperliquid · SOL · 60",
+ "gauge": "LONG 31%short · medium69% SHORT",
+ "levels": [
+  "Liquidity105.24 +2.05%",
+  "Stop104.45 +1.28%",
+  "Resistance104.39 +1.22%",
+  "Resistance103.89 +0.74%",
+  "Entry103.6 +0.46%",
+  "Target102.43 -0.68%",
+  "Support102.4 -0.71%",
+  "Target101.74 -1.35%"
+ ],
+ "fresh": "last closed bar 53m ago · hermes-agent 21.1 s · snapshot 1.4 s · missing: footprint",
+ "stats": "Calibration: 3 logged, 3 pending — no outcomes scored yet · p_long 26.11–31.48 over 3 (2 distinct) · funding cited 3/3",
+ "split": "factors −0.52 (L 5 · S 16) ×0.65 · baseline +0.23 ×0.35 → net −0.26 → p_long 31.3 (k 3, neutral ±5)",
+ "disagree": null,
+ "chips": [
+  "S −2 EMA stack 7<14<28 bearish, price below all",
+  "S −2 Price far under EMA200 108.01",
+  "S −2 Structure bear, last event CHOCH bear 104.53",
+  "S −1 Fresh bear FVG 103.85-103.89 overhead",
+  "S −2 Unmitigated bear OB 103.89-104.39 caps bounce",
+  "S −2 CVD 1h down with price down, no divergence",
+  "S −2 Derivatives EMA bias bearish on 60/240/D",
+  "S −1 Book slightly ask-heavy, ask wall 103.46",
+  "S −2 Dense sellside EQL cluster below invites sweep",
+  "L$ +1 Negative funding: shorts pay, mild squeeze risk",
+  "L +2 HTF bias long strong, all TF discount",
+  "L +2 RSI14 34.8 oversold near bull FVG 102.2-102.4"
+ ]
+}
+errors 0 []

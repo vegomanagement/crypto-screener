@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Funding carry (research) · Crypto Screener</title>
+  <link rel="icon" href="data:,">
+  <script defer src="/static/carry-panel.js"></script>
+  <style>
+    body { margin: 0; background: #0c0f15; color: #d8dfeb; font: 12px ui-sans-serif, system-ui, sans-serif; }
+    header { display: flex; gap: 12px; align-items: center; padding: 8px 12px; border-bottom: 1px solid #242b3a; background: #10141c; }
+    header a { color: #d8dfeb; text-decoration: none; font-weight: 700; letter-spacing: .08em; }
+    header select { background: #121824; color: #d8dfeb; border: 1px solid #242b3a; }
+    main { padding: 12px 16px; max-width: 1280px; }
+    .banner { background: #3a2a07; color: #f5c46b; border: 1px solid #7a5a12; padding: 6px 10px; border-radius: 4px; font-weight: 600; }
+    .meta { color: #8b95a7; margin: 6px 0; } .warn { color: #f5a623; margin: 8px 0; }
+    table { border-collapse: collapse; width: 100%; margin-top: 8px; } th, td { text-align: right; padding: 3px 8px; border-bottom: 1px solid #1c2230; white-space: nowrap; }
+    th:first-child, td:first-child { text-align: left; } th { color: #8b95a7; font-weight: 500; }
+    tr.up td:nth-child(10) { color: #4cc38a; } tr.down td:nth-child(10) { color: #e5605b; }
+  </style>
+</head>
+<body>
+<header>
+  <a href="/ui">SCREENER / FUNDING CARRY</a>
+  <label class="meta">Short-leg margin <select id="lev"><option value="1">1x</option><option value="2">2x</option><option value="3">3x</option></select></label>
+  <span class="meta">Delta-neutral long spot + short perp · research only · estimates</span>
+</header>
+<main id="carry" aria-live="polite"><p class="meta">Loading…</p></main>
+<script>
+  window.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('carry');
+    const lev = document.getElementById('lev');
+    const refresh = () => fetch(`/api/carry?L=${lev.value}`, { headers: { Accept: 'application/json' } })
+      .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+      .then(d => window.CarryPanel.render(el, d))
+      .catch(e => { el.innerHTML = '<p class="warn"></p>'; el.firstChild.textContent = `Carry panel unavailable: ${e.message}`; });
+    lev.addEventListener('change', refresh);
+    refresh();
+    setInterval(refresh, 120000);
+  });
+</script>
+</body>
+</html>

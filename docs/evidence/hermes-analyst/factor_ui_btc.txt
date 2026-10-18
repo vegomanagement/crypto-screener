@@ -1,0 +1,38 @@
+{
+ "ui_wait_s": 30.578,
+ "status": "Hermes analysis",
+ "lines": 8,
+ "target": "binance · BTCUSDT · 15",
+ "gauge": "LONG 23%short · medium77% SHORT",
+ "levels": [
+  "Resistance81,583 +0.41%",
+  "Resistance81,575.5 +0.40%",
+  "Stop81,545 +0.36%",
+  "POI81,428 +0.22%",
+  "Entry81,300 +0.06%",
+  "Support81,149.8 -0.12%",
+  "Target81,000 -0.31%",
+  "Liquidity80,755.9 -0.61%"
+ ],
+ "fresh": "last closed bar 6m ago · hermes-agent 21.8 s · snapshot 6.7 s",
+ "stats": "Calibration: 8 logged, 8 pending — no outcomes scored yet · p_long 22.95–33.65 over 3 (3 distinct) · funding cited 3/3",
+ "split": "factors −0.67 (L 4 · S 20) ×0.65 · baseline +0.08 ×0.35 → net −0.40 → p_long 22.9 (k 3, neutral ±5)",
+ "disagree": null,
+ "chips": [
+  "S −3 EMA 7/14/28 stacked bearish, price under all",
+  "S −2 Price far below EMA200",
+  "S −2 Bear structure, latest CHOCH bear at 81520",
+  "S −2 Lower highs/lows last 8 bars, no swing low",
+  "S −2 Unfilled bear FVGs just overhead at 81413-81434",
+  "S −2 Unmitigated bear OB 81424-81541 caps rallies",
+  "S −2 1h CVD down with price down, sellers in control",
+  "S −2 Footprint deltas mostly negative on heavy volume",
+  "S −2 OI up while price fell: trapped longs",
+  "S$ −1 Funding positive and rising, longs still paying",
+  "L +2 RSI14 31.5 near oversold, bounce risk",
+  "L +2 HTF bias long, 4h/1h discount zone"
+ ]
+}
+errors 1 [
+  '{"entry":{"source":"network","level":"error","text":"Failed to load resource: the server responded with a status of 404 (NOT FOUND)","timestamp":1792259437172.052,"url":"http://127.0.0.1:5090/favicon.ico","networkRequestId":"68684.37"}}'
+]

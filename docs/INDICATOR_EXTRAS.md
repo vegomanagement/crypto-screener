@@ -9,6 +9,12 @@ and finite nonnegative `volume`. The library cannot determine whether an
 exchange candle is closed without timeframe/current-time context, and does not
 pretend to do so.
 
+> **/ui since the indicator-groups change:** the split definitions `turtle-upper`/`turtle-lower`,
+> `prev-day-*`/`prev-week-*` and `session-asia`/`-london`/`-ny` are still exported by this library
+> (and still tested), but `/ui` no longer registers them. They are replaced by the grouped
+> indicators *Turtle Zone* (uses `computeTurtleZone`), *Key levels / Opens* and *Market Sessions*
+> — see docs/INDICATOR_GROUPS_RESULT.md. VWAP daily/weekly are unchanged.
+
 ## Definitions
 
 All 11 entries are disabled by default. Each has `settingsSchema`, `compute`,
@@ -172,8 +178,12 @@ inventing a time. Runtime IANA timezone data must be available.
 - `computeTurtleZone(candles, settings)` → `{upper: band, lower: band}`.
 - `twoPole(values, length)`, `logTrueRange(candles)`, `validateCandles(candles)`.
 - `computeVWAP(candles, {anchor:'day'|'week', intervalSeconds?})`.
-- `computePreviousLevel(candles, {anchor, field:'high'|'low', intervalSeconds?})`.
-- `computeSession(candles, {timezone, startHour, endHour, intervalSeconds?})`.
+- Removed (polish branch, see docs/POLISH_RESULT.md): the old split definitions
+  `turtle-upper/lower`, `prev-day/week-high/low`, `session-asia/london/ny` and
+  their helpers `computePreviousLevel` / `computeSession`. /ui had stopped
+  registering them; the grouped Turtle Zone, Key levels / Opens and Market
+  Sessions replace them, and the save migration in `static/indicators/groups.js`
+  still maps the old ids. The sections above describe the removed code.
 - `computeemaBias(candles, periods=[7,14,28])` (alias `computeEMABias`) →
   `'up' | 'down' | 'mixed' | 'insufficient'`. SMA-seeded close EMAs, at least
   the slowest period of real history, strictly increasing integer periods

@@ -1,0 +1,2 @@
+streamed leaderboard: 47151 rows, kept top 50, 1.48s, peak RSS 23.8 MB -> 32.0 MB (macOS ru_maxrss bytes)
+top1 0xa822a9ceb6d6cb5b565bd10098abcfa9cf18d748 15498891423.7130012512 rank50 49282417.1228459999

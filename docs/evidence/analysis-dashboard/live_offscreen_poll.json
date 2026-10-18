@@ -1,0 +1,22 @@
+{
+ "offscreen": {
+  "requests_65s": 0,
+  "debug": {
+   "visible": false,
+   "polling": false,
+   "observer": true,
+   "renders": 0,
+   "alive": true
+  }
+ },
+ "onscreen": {
+  "requests_65s": 3,
+  "debug": {
+   "visible": true,
+   "polling": true,
+   "observer": true,
+   "renders": 1,
+   "alive": true
+  }
+ }
+}

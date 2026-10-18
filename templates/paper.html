@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Paper journal (forward test) · Crypto Screener</title>
+  <link rel="icon" href="data:,">
+  <script defer src="/static/paper-portfolio.js"></script>
+  <script defer src="/static/paper-observer.js"></script>
+  <script defer src="/static/paper-journal.js"></script>
+  <style>
+    body { margin: 0; background: #0c0f15; color: #d8dfeb; font: 12px ui-sans-serif, system-ui, sans-serif; }
+    header { display: flex; gap: 12px; align-items: center; padding: 8px 12px; border-bottom: 1px solid #242b3a; background: #10141c; }
+    header a { color: #d8dfeb; text-decoration: none; font-weight: 700; letter-spacing: .08em; }
+    main { padding: 12px 16px; max-width: 1280px; }
+    .banner { background: #3a2a07; color: #f5c46b; border: 1px solid #7a5a12; padding: 6px 10px; border-radius: 4px; font-weight: 600; }
+    h2 { font-size: 15px; margin: 12px 0 2px; } h2 small { color: #8b95a7; font-weight: 400; }
+    h3 { font-size: 12px; margin: 16px 0 6px; color: #aab4c5; text-transform: uppercase; letter-spacing: .06em; }
+    .meta { color: #8b95a7; margin: 4px 0; } .warn { color: #f5a623; margin: 8px 0; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; margin-top: 10px; }
+    .card { background: #121824; border: 1px solid #242b3a; border-radius: 6px; padding: 8px 10px; display: flex; flex-direction: column; gap: 3px; }
+    .card.wide { grid-column: span 2; } .card span { color: #8b95a7; } .card b { font-size: 16px; } .card i { color: #8b95a7; font-style: normal; font-size: 11px; }
+    table { border-collapse: collapse; width: 100%; } th, td { text-align: left; padding: 3px 8px; border-bottom: 1px solid #1c2230; white-space: nowrap; }
+    th { color: #8b95a7; font-weight: 500; } tr.up td { color: #4cc38a; } tr.down td { color: #e5605b; } tr.tagged td { opacity: .6; }
+    .equity { width: 100%; max-width: 640px; height: 160px; background: #10141c; border: 1px solid #242b3a; border-radius: 6px; }
+    .equity path { fill: none; stroke: #5aa0ff; stroke-width: 1.5; } .equity .zero { stroke: #3a4458; stroke-dasharray: 3 3; } .equity text { fill: #8b95a7; }
+    .equity .band { fill: rgba(90,160,255,.12); stroke: none; } .equity .strat { fill: none; stroke: #5aa0ff; stroke-width: 1.6; } .equity .btc { fill: none; stroke: #f5a623; stroke-width: 1.2; }
+    .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; } .tabs a { color: #aab4c5; text-decoration: none; border: 1px solid #242b3a; border-radius: 4px; padding: 4px 8px; }
+    .tabs a.sel { background: #1b2433; color: #fff; border-color: #3a4a66; } .tabs small { color: #8b95a7; }
+    .empty { color: #8b95a7; } details { margin-top: 10px; } summary { cursor: pointer; color: #aab4c5; margin-bottom: 6px; }
+  </style>
+</head>
+<body>
+<header>
+  <a href="/ui">SCREENER / PAPER JOURNAL</a>
+  <span class="meta">Forward test of a registered strategy on closed candles · paper only · not a signal</span>
+</header>
+<main id="paper-journal" aria-live="polite"><p class="meta">Loading…</p></main>
+<script>
+  window.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('paper-journal');
+    const sid = new URLSearchParams(location.search).get('strategy');
+    const fetchJson = url => fetch(url, { headers: { Accept: 'application/json' } }).then(r => { if (!r.ok) throw new Error(`${url}: HTTP ${r.status}`); return r.json(); });
+    const refresh = () => window.PaperJournal.load(fetchJson, sid).then(d => window.PaperJournal.render(el, d))
+      .catch(e => { el.innerHTML = '<p class="warn"></p>'; el.firstChild.textContent = `Paper journal unavailable: ${e.message}`; });
+    refresh();
+    setInterval(refresh, 60000);
+  });
+</script>
+</body>
+</html>

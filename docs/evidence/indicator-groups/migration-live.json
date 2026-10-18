@@ -1,0 +1,52 @@
+{
+ "version": 5,
+ "enabled": {
+  "footprint": false,
+  "liquidity": false,
+  "ema200": false,
+  "fvg": true,
+  "demo-band": false,
+  "ema-ribbon": true,
+  "ma-channel": true,
+  "turtle-zone": false,
+  "opens": true,
+  "sessions": true,
+  "vwap-daily": false,
+  "vwap-weekly": false
+ },
+ "ribbon": {
+  "show1": false,
+  "period1": 7,
+  "color1": "#d4ac5c",
+  "width1": 1,
+  "show2": false,
+  "period2": 14,
+  "color2": "#b593d2",
+  "width2": 1,
+  "show3": true,
+  "period3": 34,
+  "color3": "#6b98cf",
+  "width3": 1
+ },
+ "channel": [
+  true,
+  false
+ ],
+ "opens": [
+  true
+ ],
+ "sessions": [
+  true,
+  false,
+  false,
+  false
+ ],
+ "legend": "O 81,226.7  H 81,340.1  L 81,149.8  C 81,340.1EMA 7 · warming upEMA 14 · warming upEMA 34 · warming upEMA 200 · warming upWS 81,340.1",
+ "chips": [
+  "ema-ribbon",
+  "ma-channel",
+  "opens",
+  "sessions"
+ ],
+ "v5saved": 5
+}
