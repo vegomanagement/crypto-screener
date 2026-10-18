@@ -50,8 +50,9 @@
       ctx.strokeStyle = rgba(model.color, 0.7); ctx.lineWidth = 1; ctx.setLineDash?.([4, 3]);
       ctx.strokeRect(Math.min(x1, x2), Math.min(yt, yb), Math.abs(x2 - x1), Math.abs(yb - yt));
       ctx.setLineDash?.([]);
-      ctx.fillStyle = model.color; ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
-      ctx.fillText(model.title, Math.max(2, Math.min(x1, x2) + 3), Math.min(yt, yb) - 2);
+      // title inside the box (markers sit just outside its top/bottom edges)
+      ctx.fillStyle = model.color; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+      ctx.fillText(model.title, Math.max(48, Math.min(x1, x2) + 8), Math.min(yt, yb) + 4); // 48 px: clear of the drawing toolbar
       drawn += 1;
     }
     const ye = isNum(model.edge) ? view.y(model.edge) : null;

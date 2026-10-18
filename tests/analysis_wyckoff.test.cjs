@@ -57,6 +57,9 @@ test('pickBlocks prefers live structure for the active key, then the matching sn
   const result = { snapshot: { wyckoff: ACC, signals: null, missing: {} } };
   assert.equal(W.pickBlocks(live, result, 'binance:ETHUSDT:60', 'binance:ETHUSDT:60').origin, 'snapshot');
   assert.equal(W.pickBlocks(null, result, 'binance:ETHUSDT:60', 'binance:BTCUSDT:60').origin, 'none');
+  // the analyst's keys carry the EMA periods; the market part is what matters here
+  assert.equal(W.pickBlocks(live, null, 'binance:BTCUSDT:60:ema7-14-21', '').origin, 'live');
+  assert.equal(W.pickBlocks(null, result, 'binance:ETHUSDT:60:ema7-14-21', 'binance:ETHUSDT:60:ema9-21').origin, 'snapshot');
 });
 
 test('overlay model: TR box, creek line, markers below lows / above highs; mirrored for distribution', () => {

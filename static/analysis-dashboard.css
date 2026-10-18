@@ -178,3 +178,4 @@
 .ad-wy-why p { margin: 4px 0; font-size: 13px; }
 .ad-wy-events td.reason, .ad-sig-events td:last-child { font-size: 12px; color: #c4cad6; }
 .ad-sig-events td.warn { color: #f2d39a; }
+#ad-signals .ad-rows { margin-top: 12px; }

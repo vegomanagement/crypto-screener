@@ -63,11 +63,14 @@
       unavailable: Object.keys(s.unavailable || {}).map(k => NAMES[k] || k), source: s.source || '' };
   }
 
+  /** 'exchange:symbol:interval' of a key (the analyst's keys also carry ':ema7-14-21'). */
+  const market = k => String(k || '').split(':').slice(0, 3).join(':');
   /** Blocks for the active chart: the structure endpoint first, else the shown analysis snapshot. */
   function pickBlocks(structure, result, activeKey, resultKey) {
+    activeKey = market(activeKey);
     if (structure && structure.key === activeKey && !structure.error) return { ...structure.body, origin: 'live', key: structure.key };
     const snap = result && result.snapshot;
-    if (snap && resultKey === activeKey && (snap.wyckoff || snap.signals)) return { wyckoff: snap.wyckoff, signals: snap.signals, missing: snap.missing || {}, origin: 'snapshot', key: resultKey };
+    if (snap && market(resultKey) === activeKey && (snap.wyckoff || snap.signals)) return { wyckoff: snap.wyckoff, signals: snap.signals, missing: snap.missing || {}, origin: 'snapshot', key: activeKey };
     return { wyckoff: null, signals: null, missing: {}, origin: 'none', error: structure && structure.key === activeKey ? structure.error : '', key: activeKey };
   }
 
@@ -100,5 +103,5 @@
     return sectionWrap('signals', 'Signals · no proven edge', 'Candidate events from the order-flow / structure study, shown as context only.', banner + list + ctx + foot);
   }
 
-  return { wyckoffView, signalsView, pickBlocks, statsText, wyckoffHtml, signalsHtml, NAMES };
+  return { wyckoffView, signalsView, pickBlocks, market, statsText, wyckoffHtml, signalsHtml, NAMES };
 });

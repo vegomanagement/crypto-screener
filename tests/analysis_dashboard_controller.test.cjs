@@ -133,6 +133,8 @@ test('Analyze button routes to the shared analyst controller; tick re-renders wh
 test('Wyckoff + Signals sections: structure fetched for the active pane, late answers dropped, overlay toggle drives the pane', async () => {
   const timers = fakeTimers(), pending = [], overlays = [];
   const analyst = fakeAnalyst({ id: 0, exchange: 'binance', symbol: 'BTCUSDT', interval: '60', precision: 1 });
+  const baseView = analyst.view;
+  analyst.view = () => ({ ...baseView(), activeKey: `${baseView().activeKey}:ema7-14-21` }); // like analyst-panel keyOf
   const fetch = url => new Promise(resolve => pending.push({ url, resolve: body => resolve({ ok: true, json: async () => body }) }));
   const root = fakeRoot();
   const dash = D.mount(root, { analyst, getFunding: () => null, fetch, IntersectionObserver: null, pageVisible: () => true, setWyckoffOverlay: m => overlays.push(m), ...timers });

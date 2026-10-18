@@ -82,6 +82,7 @@ def guidance(block):
         mid = (sup + res) / 2
         invalidate = f"a close back {'below' if acc else 'above'} the range midpoint {_fmt(mid)}"
     else:
-        invalidate = (f"closes {'below' if acc else 'above'} {_fmt(edge_in)} that do not reclaim it "
-                      f"(3 bars, or more than max(0.3·height, 1 ATR) beyond)")
+        side = "below" if acc else "above"
+        invalidate = (f"3 consecutive closes {side} {_fmt(edge_in)}, or one close more than "
+                      f"max(0.3·height, 1 ATR) {side} it")
     return confirm, invalidate
