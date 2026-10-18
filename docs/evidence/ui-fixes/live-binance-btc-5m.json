@@ -1,0 +1,310 @@
+{
+ "timeline": [
+  {
+   "t": 1792310619114,
+   "frames": 44,
+   "samples": 44,
+   "coverage_start": 1792310166405,
+   "latest": 1792310609110,
+   "rows": [
+    1000,
+    1000
+   ],
+   "step": 8,
+   "cells": 1489,
+   "profile": 34,
+   "bookPx": 128,
+   "cellsX": [
+    1168,
+    1183
+   ],
+   "cellsY": [
+    189,
+    317
+   ],
+   "minRowPx": 3.1174333483958208,
+   "status": "Collecting \u2022 history from 2026-10-18 07:56:06.405Z \u00b7 no history before collection \u00b7 10s snapshots, not tick-complete \u00b7 last sample 9s ago \u00b7 gaps 0 \u00b7 depth limited: 1000 bid / 1000 ask rows \u00b7 native quantity (unit unknown unless venue metadata states otherwise) \u00b7 1/6 pane leases \u00b7 subpixel samples: 1-device-pixel markers, not duration \u00b7 bucket 8 \u00b7 book spans 128px of plot",
+   "elapsed_s": 0
+  },
+  {
+   "t": 1792310629247,
+   "frames": 45,
+   "samples": 45,
+   "coverage_start": 1792310166405,
+   "latest": 1792310612492,
+   "rows": [
+    1000,
+    1000
+   ],
+   "step": 8,
+   "cells": 1523,
+   "profile": 34,
+   "bookPx": 128,
+   "cellsX": [
+    1168,
+    1183
+   ],
+   "cellsY": [
+    189,
+    317
+   ],
+   "minRowPx": 3.1174333483958208,
+   "status": "Collecting \u2022 history from 2026-10-18 07:56:06.405Z \u00b7 no history before collection \u00b7 10s snapshots, not tick-complete \u00b7 last sample 16s ago \u00b7 gaps 0 \u00b7 depth limited: 1000 bid / 1000 ask rows \u00b7 native quantity (unit unknown unless venue metadata states otherwise) \u00b7 1/6 pane leases \u00b7 subpixel samples: 1-device-pixel markers, not duration \u00b7 bucket 8 \u00b7 book spans 128px of plot",
+   "elapsed_s": 10
+  },
+  {
+   "t": 1792310639255,
+   "frames": 46,
+   "samples": 46,
+   "coverage_start": 1792310166405,
+   "latest": 1792310622890,
+   "rows": [
+    1000,
+    1000
+   ],
+   "step": 8,
+   "cells": 1557,
+   "profile": 34,
+   "bookPx": 128,
+   "cellsX": [
+    1168,
+    1184
+   ],
+   "cellsY": [
+    189,
+    317
+   ],
+   "minRowPx": 3.1174333483958208,
+   "status": "Collecting \u2022 history from 2026-10-18 07:56:06.405Z \u00b7 no history before collection \u00b7 10s snapshots, not tick-complete \u00b7 last sample 16s ago \u00b7 gaps 0 \u00b7 depth limited: 1000 bid / 1000 ask rows \u00b7 native quantity (unit unknown unless venue metadata states otherwise) \u00b7 1/6 pane leases \u00b7 subpixel samples: 1-device-pixel markers, not duration \u00b7 bucket 8 \u00b7 book spans 128px of plot",
+   "elapsed_s": 20
+  },
+  {
+   "t": 1792310649266,
+   "frames": 47,
+   "samples": 47,
+   "coverage_start": 1792310166405,
+   "latest": 1792310633319,
+   "rows": [
+    1000,
+    1000
+   ],
+   "step": 8,
+   "cells": 1592,
+   "profile": 35,
+   "bookPx": 128,
+   "cellsX": [
+    1168,
+    1184
+   ],
+   "cellsY": [
+    189,
+    317
+   ],
+   "minRowPx": 3.1174333483958208,
+   "status": "Collecting \u2022 history from 2026-10-18 07:56:06.405Z \u00b7 no history before collection \u00b7 10s snapshots, not tick-complete \u00b7 last sample 15s ago \u00b7 gaps 0 \u00b7 depth limited: 1000 bid / 1000 ask rows \u00b7 native quantity (unit unknown unless venue metadata states otherwise) \u00b7 1/6 pane leases \u00b7 subpixel samples: 1-device-pixel markers, not duration \u00b7 bucket 8 \u00b7 book spans 128px of plot",
+   "elapsed_s": 30
+  }
+ ],
+ "shots": [
+  "/Users/maxbelov/Projects/wt/ui-fixes/docs/evidence/ui-fixes/live-binance-btc-5m-t000.png",
+  "/Users/maxbelov/Projects/wt/ui-fixes/docs/evidence/ui-fixes/live-binance-btc-5m-t040.png"
+ ],
+ "compare": {
+  "raw2_fetched_at": 1792310660986,
+  "stored_rows": [
+   1000,
+   1000
+  ],
+  "exchange": "binance",
+  "symbol": "BTCUSDT",
+  "raw_fetched_at": [
+   1792310659333,
+   1792310659655
+  ],
+  "page_frame_observed_at": 1792310664558,
+  "delta_ms": 4903,
+  "step": "8",
+  "bands": [
+   {
+    "side": "bids",
+    "bucket": "81632",
+    "page_qty": "10.445",
+    "raw_qty": "9.162",
+    "diff_pct": 14.003492687186204,
+    "raw2_qty": "9.095",
+    "raw_vs_raw2_pct": 0.7312813796114386,
+    "db_equal": true,
+    "kind": "near"
+   },
+   {
+    "side": "bids",
+    "bucket": "81624",
+    "page_qty": "22.516",
+    "raw_qty": "23.141",
+    "diff_pct": 2.7008340175446177,
+    "raw2_qty": "21.843",
+    "raw_vs_raw2_pct": 5.609092087636662,
+    "db_equal": true,
+    "kind": "near"
+   },
+   {
+    "side": "bids",
+    "bucket": "81616",
+    "page_qty": "32.809999999999995",
+    "raw_qty": "32.129",
+    "diff_pct": 2.1195804413458093,
+    "raw2_qty": "33.427",
+    "raw_vs_raw2_pct": 4.03996389554608,
+    "db_equal": true,
+    "kind": "near"
+   },
+   {
+    "side": "bids",
+    "bucket": "81608",
+    "page_qty": "24.302999999999994",
+    "raw_qty": "24.486",
+    "diff_pct": 0.7473658417054888,
+    "raw2_qty": "24.179",
+    "raw_vs_raw2_pct": 1.2537776688720086,
+    "db_equal": true,
+    "kind": "near"
+   },
+   {
+    "side": "bids",
+    "bucket": "81600",
+    "page_qty": "31.66600000000001",
+    "raw_qty": "28.358",
+    "diff_pct": 11.665138585231716,
+    "raw2_qty": "28.676",
+    "raw_vs_raw2_pct": 1.1213766838281967,
+    "db_equal": true,
+    "kind": "near"
+   },
+   {
+    "side": "bids",
+    "bucket": "81568",
+    "page_qty": "41.96700000000002",
+    "raw_qty": "41.981",
+    "diff_pct": 0.03334841952306996,
+    "raw2_qty": "41.981",
+    "raw_vs_raw2_pct": 0.0,
+    "db_equal": true,
+    "kind": "largest"
+   },
+   {
+    "side": "bids",
+    "bucket": "81576",
+    "page_qty": "34.541000000000004",
+    "raw_qty": "34.564",
+    "diff_pct": 0.06654322416385836,
+    "raw2_qty": "34.576",
+    "raw_vs_raw2_pct": 0.034718203911584304,
+    "db_equal": true,
+    "kind": "largest"
+   },
+   {
+    "side": "bids",
+    "bucket": "81560",
+    "page_qty": "34.132",
+    "raw_qty": "34.130",
+    "diff_pct": 0.005859947260474656,
+    "raw2_qty": "34.118",
+    "raw_vs_raw2_pct": 0.03515968356284793,
+    "db_equal": true,
+    "kind": "largest"
+   },
+   {
+    "side": "asks",
+    "bucket": "81640",
+    "page_qty": "7.252999999999999",
+    "raw_qty": "7.338",
+    "diff_pct": 1.1583537748705506,
+    "raw2_qty": "7.356",
+    "raw_vs_raw2_pct": 0.24529844644317253,
+    "db_equal": true,
+    "kind": "near"
+   },
+   {
+    "side": "asks",
+    "bucket": "81648",
+    "page_qty": "6.186000000000001",
+    "raw_qty": "6.670",
+    "diff_pct": 7.2563718140929385,
+    "raw2_qty": "6.664",
+    "raw_vs_raw2_pct": 0.08995502248875563,
+    "db_equal": true,
+    "kind": "near"
+   },
+   {
+    "side": "asks",
+    "bucket": "81656",
+    "page_qty": "12.216999999999999",
+    "raw_qty": "12.733",
+    "diff_pct": 4.05246210633787,
+    "raw2_qty": "12.717",
+    "raw_vs_raw2_pct": 0.1256577397314066,
+    "db_equal": true,
+    "kind": "near"
+   },
+   {
+    "side": "asks",
+    "bucket": "81664",
+    "page_qty": "14.794999999999998",
+    "raw_qty": "15.196",
+    "diff_pct": 2.638852329560424,
+    "raw2_qty": "15.182",
+    "raw_vs_raw2_pct": 0.09212950776520137,
+    "db_equal": true,
+    "kind": "near"
+   },
+   {
+    "side": "asks",
+    "bucket": "81672",
+    "page_qty": "19.333000000000006",
+    "raw_qty": "19.700",
+    "diff_pct": 1.8629441624365177,
+    "raw2_qty": "19.739",
+    "raw_vs_raw2_pct": 0.19796954314720813,
+    "db_equal": true,
+    "kind": "near"
+   },
+   {
+    "side": "asks",
+    "bucket": "81712",
+    "page_qty": "56.117",
+    "raw_qty": "56.103",
+    "diff_pct": 0.024954102276170616,
+    "raw2_qty": "56.103",
+    "raw_vs_raw2_pct": 0.0,
+    "db_equal": true,
+    "kind": "largest"
+   },
+   {
+    "side": "asks",
+    "bucket": "81760",
+    "page_qty": "38.57900000000001",
+    "raw_qty": "40.133",
+    "diff_pct": 3.8721251837639596,
+    "raw2_qty": "39.530",
+    "raw_vs_raw2_pct": 1.5025041736227045,
+    "db_equal": true,
+    "kind": "largest"
+   },
+   {
+    "side": "asks",
+    "bucket": "81768",
+    "page_qty": "37.19599999999999",
+    "raw_qty": "37.931",
+    "diff_pct": 1.9377290342991484,
+    "raw2_qty": "37.911",
+    "raw_vs_raw2_pct": 0.0527273206612006,
+    "db_equal": true,
+    "kind": "largest"
+   }
+  ],
+  "bids_buckets_page": 16,
+  "bids_buckets_raw": 16,
+  "asks_buckets_page": 18,
+  "asks_buckets_raw": 18
+ }
+}
