@@ -28,6 +28,8 @@ from __future__ import annotations
 
 from mtf import TF_LABEL, tf_minutes
 
+POS_TEXT = {"inside": "inside the range", "at_htf_support": "at the support", "at_htf_resistance": "at the resistance",
+            "overlapping": "across an edge"}
 DIR = {"bull": 1, "bear": -1, "none": 0, "neutral": 0}
 
 
@@ -90,7 +92,7 @@ def wyckoff_rules(lo_tf, lo, hi_tf, hi):
         lw_name, hw_name = lw["schematic"], hw["schematic"]
         up = ld > 0
         hit("W1" if up else "W1m", "conflict",
-            f"{L} {lw_name} (phase {lw['phase']}) sits {pos.replace('_', ' ')} of the {H} {hw_name} "
+            f"{L} {lw_name} (phase {lw['phase']}) sits {POS_TEXT[pos]} of the {H} {hw_name} "
             f"(phase {hw['phase']}, {_px(hs)}–{_px(hr)}): a counter-trend "
             f"{'bounce inside a top' if up else 'dip inside a base'}; the {H} read has priority.",
             [f"{H} close {'above' if up else 'below'} {_px(hr if up else hs)} would invalidate the {H} "
@@ -179,6 +181,7 @@ def smc_pair(lo_tf, lo, hi_tf, hi):
                                               f"counter-trend pullback against the {H} ended")
         return {**base, "status": status, "divergence": False, "text": text, "resolve": []}
     key = hsw["L" if hd > 0 else "H"]
+    lsw = [s for s in ls["swings"] if s["kind"] == ("H" if hd > 0 else "L")]
     htf_level = key[-1]["price"] if key else None
     if lb and lb["kind"] == "CHoCH":
         return {**base, "status": "divergence", "divergence": True,
@@ -187,14 +190,16 @@ def smc_pair(lo_tf, lo, hi_tf, hi):
                 "resolve": [f"{H} close {'below' if hd > 0 else 'above'} {_px(htf_level)} (a {H} CHoCH) would "
                             f"confirm the reversal",
                             f"{L} close {'above' if hd > 0 else 'below'} its last swing "
-                            f"{'high' if hd > 0 else 'low'} would end the pullback"]}
+                            f"{'high' if hd > 0 else 'low'} {_px(lsw[-1]['price']) if lsw else ''} would end "
+                            f"the pullback".replace("  ", " ")]}
     return {**base, "status": "counter_trend", "divergence": False,
             "text": f"{L} trends {ls['trend']} (BOS) against the {H} {hs['trend']} structure",
             "resolve": [f"{H} close {'below' if hd > 0 else 'above'} {_px(htf_level)} would align the {H}"]}
 
 
 def sync(tfs, reads):
-    """Lowest TF from which every TF above has the same external direction (None if the top is flat)."""
+    """Lowest TF from which every TF above has the same external direction; None when the top TF
+    is flat or the top two TFs already disagree. Returns (sync_tf, entry_tf = the TF below it)."""
     have = [tf for tf in sorted(tfs, key=tf_minutes, reverse=True) if tf in reads]
     if not have:
         return None, None
@@ -206,6 +211,8 @@ def sync(tfs, reads):
         if DIR[reads[tf]["smc"]["trend"]] != d:
             break
         chain.append(tf)
+    if len(chain) < 2:
+        return None, None          # the top two TFs already disagree: nothing is synchronised
     s = chain[-1]
     below = [tf for tf in have if tf_minutes(tf) < tf_minutes(s)]
     return s, (below[0] if below else None)

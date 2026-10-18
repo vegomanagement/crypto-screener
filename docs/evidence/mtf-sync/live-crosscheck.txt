@@ -1,0 +1,107 @@
+
+== binance BTCUSDT 15: verdict mixed_counter_trend, dominant D, sync 240, entry 60, conflicts ['W1', 'W1m', 'W1', 'W3', 'S1']
+    1D: ext bear int bear last CHoCH bear 82500.1 | bias neutral -1 | wyckoff distribution D (82832.0, 87385.1) | POC 64054.231 VA 57758.6-79237.812 | checked {'swings': 6, 'breaks': 4, 'tr': 1, 'profile': 1} -> OK
+    4h: ext bear int bear last CHoCH bear 80985.0 | bias bear -3 | wyckoff accumulation A (79732.3, 82900.5) | POC 83396.984 VA 81235.76-84806.477 | checked {'swings': 6, 'breaks': 4, 'tr': 1, 'profile': 1} -> OK
+    1h: ext bull int bull last CHoCH bull 81733.0 | bias neutral +0 | wyckoff distribution A (80780.0, 82900.5) | POC 81650.869 VA 80499.727-82692.378 | checked {'swings': 6, 'breaks': 4, 'tr': 1, 'profile': 1} -> OK
+   15m: ext bull int bull last BOS bull 81877.3 | bias bull +3 | wyckoff accumulation C (80780.0, 82092.1) | POC 81546.637 VA 81270.6-81822.675 | checked {'swings': 6, 'breaks': 4, 'tr': 1, 'profile': 1} -> OK
+    5m: ext bull int bull last CHoCH bull 81687.4 | bias bull +4 | wyckoff accumulation E (81629.0, 81759.0) | POC 81691.785 VA 81572.38-81919.74 | checked {'swings': 6, 'breaks': 4, 'tr': 1, 'profile': 1} -> OK
+  level 82056.567 ['4h', '1h', '15m'] ['4h EMA 200', '1h VWAP', '1h swing high (HH)']
+  level 80773.176 ['4h', '1h', '15m'] ['4h swing low (HL)', '1h swing low (LL)', '1h TR support']
+  level 81824.805 ['4h', '15m', '5m'] ['4h equilibrium', '15m equilibrium', '15m VAH']
+  level 81660.433 ['1h', '15m', '5m'] ['1h POC', '15m EMA 200', '5m TR support']
+  level 83487.98 ['1D', '4h'] ['1D equilibrium', '4h VWAP']
+  conflict W1 ['240', 'D']: 4h accumulation (phase A) sits across an edge of the 1D distribution (phase D, 82832–87385.1): a counter-trend bounce inside a top; the 1D read has priority.
+  conflict W1m ['60', '240']: 1h distribution (phase A) sits at the resistance of the 4h accumulation (phase A, 79732.3–82900.5): a counter-trend dip inside a base; the 4h read has priority.
+  conflict W1 ['15', '60']: 15m accumulation (phase C) sits at the support of the 1h distribution (phase A, 80780–82900.5): a counter-trend bounce inside a top; the 1h read has priority.
+  conflict W3 ['15', '60']: 15m Spring 80751 pierced the 1h low 80780 and the 1h bar closed back inside (81099.5): inside the 1h distribution this is a test of its edge, not a reversal yet.
+  conflict S1 ['60', '240']: 1h printed a bull CHoCH at 81733 against the intact 4h bear structure: a pullback, or the start of a 4h reversal
+  resolve: 1D close above 87385.1 would invalidate the 1D distribution and align with the 4h accumulation
+  resolve: 1D close below 82832 would confirm the 1D distribution; the 4h accumulation would fail
+  resolve: 4h close below 79732.3 would invalidate the 4h accumulation and align with the 1h distribution
+  setup 4h→15m: waiting_for_poi None None
+  setup 1h→5m: waiting_for_poi None None
+  setup 1D→1h: waiting_for_poi None None
+
+== binance BTCUSDT 60: verdict mixed_counter_trend, dominant W, sync None, entry None, conflicts ['W4c', 'W1', 'W1m', 'W1', 'W3', 'B1', 'W4c', 'S1', 'S1']
+    1W: ext bull int bull last CHoCH bull 82828.7 | bias bull +3 | wyckoff None None None | POC 65318.606 VA 56620.05-97213.312 | checked {'swings': 6, 'breaks': 4, 'tr': 0, 'profile': 1} -> OK
+    1D: ext bear int bear last CHoCH bear 82500.1 | bias neutral -1 | wyckoff distribution D (82832.0, 87385.1) | POC 64054.231 VA 57758.6-79237.812 | checked {'swings': 6, 'breaks': 4, 'tr': 1, 'profile': 1} -> OK
+    4h: ext bear int bear last CHoCH bear 80985.0 | bias bear -3 | wyckoff accumulation A (79732.3, 82900.5) | POC 83396.984 VA 81235.76-84806.477 | checked {'swings': 6, 'breaks': 4, 'tr': 1, 'profile': 1} -> OK
+    1h: ext bull int bull last CHoCH bull 81733.0 | bias neutral +0 | wyckoff distribution A (80780.0, 82900.5) | POC 81650.869 VA 80499.727-82692.378 | checked {'swings': 6, 'breaks': 4, 'tr': 1, 'profile': 1} -> OK
+   15m: ext bull int bull last BOS bull 81877.3 | bias bull +3 | wyckoff accumulation C (80780.0, 82092.1) | POC 81546.637 VA 81270.6-81822.675 | checked {'swings': 6, 'breaks': 4, 'tr': 1, 'profile': 1} -> OK
+  level 82863.265 ['1W', '1D', '4h', '1h'] ['1W swing high (LH)', '1D TR support', '4h TR resistance']
+  level 82056.567 ['4h', '1h', '15m'] ['4h EMA 200', '1h VWAP', '1h swing high (HH)']
+  level 80773.176 ['4h', '1h', '15m'] ['4h swing low (HL)', '1h swing low (LL)', '1h TR support']
+  level 57758.6 ['1W', '1D'] ['1W swing low (LL)', '1D VAL']
+  level 82671.708 ['1W', '1h'] ['1W VWAP', '1h VAH']
+  conflict W4c ['D', 'W']: 1D distribution while the 1W trends up without a range: a counter-trend structure inside the higher-TF trend.
+  conflict W1 ['240', 'D']: 4h accumulation (phase A) sits across an edge of the 1D distribution (phase D, 82832–87385.1): a counter-trend bounce inside a top; the 1D read has priority.
+  conflict W1m ['60', '240']: 1h distribution (phase A) sits at the resistance of the 4h accumulation (phase A, 79732.3–82900.5): a counter-trend dip inside a base; the 4h read has priority.
+  conflict W1 ['15', '60']: 15m accumulation (phase C) sits at the support of the 1h distribution (phase A, 80780–82900.5): a counter-trend bounce inside a top; the 1h read has priority.
+  conflict W3 ['15', '60']: 15m Spring 80751 pierced the 1h low 80780 and the 1h bar closed back inside (81099.5): inside the 1h distribution this is a test of its edge, not a reversal yet.
+  conflict B1 ['240', 'W']: 4h bias bear (-3/5) against 1W bias bull (+3/5): the 4h move is counter-trend.
+  resolve: 1W CHoCH down would align the 1W with the 1D
+  resolve: 1D close above 87385.1 would invalidate the 1D distribution and align with the 4h accumulation
+  resolve: 1D close below 82832 would confirm the 1D distribution; the 4h accumulation would fail
+  setup 4h→15m: waiting_for_poi None None
+  setup 1D→1h: waiting_for_poi None None
+
+== binance ETHUSDT 15: verdict range_bound, dominant 240, sync 15, entry 5, conflicts ['B1', 'S1']
+    1D: ext bear int bear last CHoCH bear 2405.07 | bias neutral +0 | wyckoff distribution None (2222.0, 2336.82) | POC 1883.4384 VA 1510.87-2482.7875 | checked {'swings': 6, 'breaks': 4, 'tr': 1, 'profile': 1} -> OK
+    4h: ext bear int bull last BOS bear 2407.0 | bias bear -4 | wyckoff accumulation B (2313.39, 2493.48) | POC 2691.6981 VA 2476.3535-2779 | checked {'swings': 6, 'breaks': 4, 'tr': 1, 'profile': 1} -> OK
+    1h: ext bear int bear last BOS bear 2392.14 | bias bear -4 | wyckoff accumulation A (2355.0, None) | POC 2418.7778 VA 2362.0305-2486.334 | checked {'swings': 6, 'breaks': 4, 'tr': 1, 'profile': 1} -> OK
+   15m: ext bear int bull last BOS bear 2397.11 | bias neutral -1 | wyckoff accumulation None (2421.24, 2427.41) | POC 2409.7485 VA 2400.087-2436.586 | checked {'swings': 6, 'breaks': 4, 'tr': 1, 'profile': 1} -> OK
+    5m: ext bull int bull last CHoCH bull 2415.36 | bias bull +4 | wyckoff accumulation E (2402.0, 2407.88) | POC 2409.3191 VA 2404.9462-2421.466 | checked {'swings': 6, 'breaks': 4, 'tr': 1, 'profile': 1} -> OK
+  level 2405.6443 ['1D', '15m', '5m'] ['1D swing low (HL)', '15m swing low (LL)', '5m VAL']
+  level 2416.9106 ['1h', '15m', '5m'] ['1h POC', '15m equilibrium', '15m EMA 200']
+  level 2779 ['1D', '4h'] ['1D swing high (LH)', '4h VAH']
+  level 2392.132 ['4h', '1h'] ['4h swing low (HL)', '1h equilibrium']
+  level 2428.691 ['1h', '15m'] ['1h swing high (HH)', '15m TR resistance', '15m swing high (HH)']
+  conflict B1 ['5', '240']: 5m bias bull (+4/5) against 4h bias bear (-4/5): the 5m move is counter-trend.
+  conflict S1 ['5', '15']: 5m printed a bull CHoCH at 2415.36 against the intact 15m bear structure: a pullback, or the start of a 15m reversal
+  resolve: 4h bias flipping bull (e.g. a 4h CHoCH) would align them
+  resolve: 15m close above 2429.24 (a 15m CHoCH) would confirm the reversal
+  resolve: 5m close below its last swing low 2406.92 would end the pullback
+  setup 4h→15m: waiting_for_poi None None
+  setup 1h→5m: waiting_for_poi None None
+  setup 1D→1h: waiting_for_poi None None
+
+== binance ETHUSDT 60: verdict aligned_short, dominant 240, sync None, entry None, conflicts ['S1']
+    1W: ext bull int bull last CHoCH bull 2463.86 | bias neutral +0 | wyckoff None None None | POC 2411.4301 VA 1562.6835-3170.835 | checked {'swings': 6, 'breaks': 4, 'tr': 0, 'profile': 1} -> OK
+    1D: ext bear int bear last CHoCH bear 2405.07 | bias neutral +0 | wyckoff distribution None (2222.0, 2336.82) | POC 1883.4384 VA 1510.87-2482.7875 | checked {'swings': 6, 'breaks': 4, 'tr': 1, 'profile': 1} -> OK
+    4h: ext bear int bull last BOS bear 2407.0 | bias bear -4 | wyckoff accumulation B (2313.39, 2493.48) | POC 2691.6981 VA 2476.3535-2779 | checked {'swings': 6, 'breaks': 4, 'tr': 1, 'profile': 1} -> OK
+    1h: ext bear int bear last BOS bear 2392.14 | bias bear -4 | wyckoff accumulation A (2355.0, None) | POC 2418.7778 VA 2362.0305-2486.334 | checked {'swings': 6, 'breaks': 4, 'tr': 1, 'profile': 1} -> OK
+   15m: ext bear int bull last BOS bear 2397.11 | bias neutral -1 | wyckoff accumulation None (2421.24, 2427.41) | POC 2409.7485 VA 2400.087-2436.586 | checked {'swings': 6, 'breaks': 4, 'tr': 1, 'profile': 1} -> OK
+  level 2407.6777 ['1W', '1D', '15m'] ['1W POC', '1D swing low (HL)', '15m VAL']
+  level 2481.4309 ['1D', '4h', '1h'] ['1D VAH', '4h VAL', '1h VAH']
+  level 2420.5426 ['4h', '1h', '15m'] ['4h equilibrium', '1h POC', '15m equilibrium']
+  level 2465.344 ['1W', '1h'] ['1W swing high (LH)', '1h EMA 200']
+  level 2311.7068 ['1D', '4h'] ['1D EMA 200', '4h TR support']
+  conflict S1 ['D', 'W']: 1D printed a bear CHoCH at 2405.07 against the intact 1W bull structure: a pullback, or the start of a 1W reversal
+  resolve: 1W close below 1503.6 (a 1W CHoCH) would confirm the reversal
+  resolve: 1D close above its last swing high 2779 would end the pullback
+  setup 4h→15m: waiting_for_poi None None
+  setup 1D→1h: waiting_for_poi None None
+
+== bybit SOLUSDT 15: verdict mixed_counter_trend, dominant 240, sync None, entry None, conflicts ['S1', 'S1', 'S1', 'S1']
+    1D: ext bull int bear last CHoCH bull 107.32 | bias neutral +2 | wyckoff distribution None (94.84, 103.21) | POC 73.877375 VA 63.96-103.6295 | checked {'swings': 6, 'breaks': 4, 'tr': 1, 'profile': 1} -> OK
+    4h: ext bear int bear last CHoCH bear 108.88 | bias bear -4 | wyckoff accumulation C (101.56, 109.0) | POC 118.83662 VA 108.6385-123.79 | checked {'swings': 6, 'breaks': 4, 'tr': 1, 'profile': 1} -> OK
+    1h: ext bull int bull last CHoCH bull 104.31 | bias neutral -2 | wyckoff accumulation C (101.56, 109.0) | POC 103.85013 VA 102.931-107.22025 | checked {'swings': 6, 'breaks': 4, 'tr': 1, 'profile': 1} -> OK
+   15m: ext bear int bear last CHoCH bear 103.23 | bias bear -3 | wyckoff accumulation None (103.0, 104.31) | POC 103.86638 VA 102.5945-104.426 | checked {'swings': 6, 'breaks': 4, 'tr': 1, 'profile': 1} -> OK
+    5m: ext bull int bull last CHoCH bull 103.82 | bias neutral +1 | wyckoff distribution A (None, 103.96) | POC 103.54625 VA 103.0915-103.8405 | checked {'swings': 6, 'breaks': 4, 'tr': 0, 'profile': 1} -> OK
+  level 103.59486 ['1D', '15m', '5m'] ['1D VAH', '15m VWAP', '5m equilibrium']
+  level 104.32629 ['4h', '15m', '5m'] ['4h equilibrium', '15m TR resistance', '15m VAH']
+  level 103.8591 ['1h', '15m', '5m'] ['1h POC', '15m equilibrium', '15m POC']
+  level 102.97247 ['1h', '15m', '5m'] ['1h VAL', '1h equilibrium', '15m TR support']
+  level 103.21545 ['1D', '15m'] ['1D TR resistance', '15m swing low (HL)']
+  conflict S1 ['240', 'D']: 4h printed a bear CHoCH at 108.88 against the intact 1D bull structure: a pullback, or the start of a 1D reversal
+  conflict S1 ['60', '240']: 1h printed a bull CHoCH at 104.31 against the intact 4h bear structure: a pullback, or the start of a 4h reversal
+  conflict S1 ['15', '60']: 15m printed a bear CHoCH at 103.23 against the intact 1h bull structure: a pullback, or the start of a 1h reversal
+  conflict S1 ['5', '15']: 5m printed a bull CHoCH at 103.82 against the intact 15m bear structure: a pullback, or the start of a 15m reversal
+  resolve: 1D close below 95.69 (a 1D CHoCH) would confirm the reversal
+  resolve: 4h close above its last swing high 107.39 would end the pullback
+  resolve: 4h close above 107.39 (a 4h CHoCH) would confirm the reversal
+  setup 4h→15m: waiting_for_poi None None
+  setup 1h→5m: waiting_for_poi None None
+  setup 1D→1h: waiting_for_poi None None
+
+mismatches: 0

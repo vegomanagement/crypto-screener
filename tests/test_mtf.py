@@ -94,6 +94,8 @@ def test_sync_tf_is_lowest_tf_of_the_aligned_chain():
     assert R.sync(list(reads), reads) == ("60", "15")
     reads["240"] = read("240", trend="none")
     assert R.sync(list(reads), reads) == (None, None)
+    reads["240"] = read("240", trend="bull")            # top two disagree: nothing synchronised
+    assert R.sync(list(reads), reads) == (None, None)
 
 
 def test_dominant_is_highest_clear_tf_and_verdicts():

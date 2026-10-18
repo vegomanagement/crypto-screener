@@ -36,7 +36,8 @@
     if (o.htf && up && b.tfs[up]) layers.push(layer(b.tfs[up], up, true));
     let box = null;
     if (o.box) {
-      const tf = ladder.slice(ladder.indexOf(pane) + 1).find(t => b.tfs[t] && b.tfs[t].wyckoff && b.tfs[t].wyckoff.status === 'structure' && b.tfs[t].wyckoff.tr);
+      const tf = ladder.slice(ladder.indexOf(pane) + 1).find(t => b.tfs[t] && b.tfs[t].wyckoff && b.tfs[t].wyckoff.status === 'structure' && b.tfs[t].wyckoff.tr
+        && isNum(b.tfs[t].wyckoff.tr.support) && isNum(b.tfs[t].wyckoff.tr.resistance));   // first HTF with a defined range
       const w = tf && b.tfs[tf].wyckoff;
       if (w && isNum(w.tr.support) && isNum(w.tr.resistance) && isNum(w.tr.start_ts)) {
         box = { tf, start: sec(w.tr.start_ts), end: isNum(w.tr.end_ts) ? sec(w.tr.end_ts) : null, top: w.tr.resistance, bottom: w.tr.support,
@@ -67,7 +68,7 @@
         ctx.strokeStyle = rgba(b.color, 0.9); ctx.lineWidth = 1.5; ctx.setLineDash?.([8, 4]);
         ctx.strokeRect(Math.min(x1, x2), Math.min(yt, yb), Math.abs(x2 - x1), Math.abs(yb - yt)); ctx.setLineDash?.([]);
         ctx.fillStyle = b.color; ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
-        ctx.fillText(b.title, Math.max(48, Math.min(x1, x2) + 6), Math.min(yt, yb) - 3);
+        ctx.fillText(b.title, Math.max(48, Math.min(x1, x2) + 6), Math.max(60, Math.min(yt, yb) - 3));   // below the OHLC legend when the top is off-screen
         drawn += 1;
       }
     }
@@ -76,7 +77,7 @@
       L.zones.forEach(z => {
         const x1 = X(z.time), yt = view.y(z.top), yb = view.y(z.bottom);
         if (![x1, yt, yb].every(isNum)) return;
-        ctx.fillStyle = rgba(z.bull ? up : down, L.htf ? 0.10 : 0.12); ctx.fillRect(x1, Math.min(yt, yb), view.plotWidth - x1, Math.abs(yb - yt));
+        ctx.fillStyle = rgba(z.bull ? up : down, L.htf ? 0.06 : 0.07); ctx.fillRect(x1, Math.min(yt, yb), view.plotWidth - x1, Math.abs(yb - yt));
         ctx.fillStyle = z.bull ? up : down; ctx.textAlign = 'right'; ctx.textBaseline = 'top'; ctx.fillText(z.label, view.plotWidth - 4, Math.min(yt, yb) + 1);
         drawn += 1;
       });
