@@ -445,6 +445,9 @@ def build_snapshot(exchange, symbol, interval, providers, *, ema_periods=None):
     section("structure", structure_section, candles)
     section("fvg", fvg_section, chart, price)
     section("order_blocks", order_blocks_section, candles)
+    from structure_context import signals_section, wyckoff_section
+    section("wyckoff", wyckoff_section, candles, results.get("footprint"))
+    section("signals", signals_section, candles, interval)
     section("session", session_section, now)
     market = results.get("market")
     names = ("liquidity", "htf_bias", "regime", "flow")

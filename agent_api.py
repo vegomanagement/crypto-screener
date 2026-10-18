@@ -3,6 +3,7 @@
 POST /api/agent/analysis {exchange, symbol, interval[, force][, ema_periods]} → validated analysis
      ema_periods: the active chart's EMA ribbon periods, 1-3 integers 2..400 (default 7/14/21)
 GET  /api/agent/stats[?exchange&symbol&interval]               → calibration stats
+GET  /api/agent/structure?exchange&symbol&interval → Wyckoff + order-flow context (no LLM, 30 s cache)
 The browser never talks to Hermes; the gateway URL/key stay server-side.
 """
 from __future__ import annotations
@@ -61,8 +62,14 @@ def app_positioning(app):
     return provider
 
 
+def default_structure_chart(exchange, symbol, interval):
+    from analyst import default_providers
+    return default_providers()["chart"](exchange, symbol, interval)
+
+
 def register_agent_routes(app, *, market=None, confluence=None, funding=None, service_factory=None,
-                          store_path=None, fetch_bars=None, env=None, positioning=None):
+                          store_path=None, fetch_bars=None, env=None, positioning=None,
+                          structure_chart=None):
     """``market``/``confluence`` are screener callables (late-bound lambdas are fine)."""
     blueprint = Blueprint('agent', __name__)
     path = Path(store_path) if store_path else Path(app.root_path) / '.data' / 'agent_analyses.sqlite3'
@@ -160,6 +167,34 @@ def register_agent_routes(app, *, market=None, confluence=None, funding=None, se
         payload.update(evaluated_now=evaluated, filters={'exchange': exchange, 'symbol': symbol,
                                                          'interval': interval},
                        rule='win = +1 ATR in bias direction before -1 ATR against, within horizon_bars')
+        return jsonify(payload), 200
+
+    structure_cache = {}
+
+    @blueprint.get('/api/agent/structure')
+    def structure():
+        """Same closed candles the analyst snapshot uses; never starts the footprint collector."""
+        exchange, symbol = request.args.get('exchange'), request.args.get('symbol')
+        interval = request.args.get('interval')
+        if not valid_identity(exchange, symbol) or not valid_interval(interval):
+            return jsonify({'error': 'invalid exchange, symbol or interval'}), 400
+        key, now = (exchange, symbol, interval), time.monotonic()
+        hit = structure_cache.get(key)
+        if hit and now - hit[0] < 30:
+            return jsonify(hit[1]), 200
+        from structure_context import structure_block
+        try:
+            chart = (structure_chart or default_structure_chart)(exchange, symbol, interval)
+        except Exception as exc:  # noqa: BLE001
+            log.warning("structure candles unavailable for %s %s %s: %s", exchange, symbol, interval, exc)
+            return jsonify({'error': 'chart data unavailable', 'detail': str(exc)[:160]}), 502
+        candles = chart['candles']
+        payload = {'exchange': exchange, 'symbol': symbol, 'interval': interval,
+                   'last_close_ts': candles[-1]['close_ts'] if candles else None,
+                   **structure_block(candles, interval)}
+        if len(structure_cache) > 256:
+            structure_cache.clear()
+        structure_cache[key] = (now, payload)
         return jsonify(payload), 200
 
     app.extensions['agent'] = {'path': path, 'get_service': get_service, 'get_store': get_store}
