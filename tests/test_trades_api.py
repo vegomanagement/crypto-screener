@@ -74,3 +74,12 @@ def test_route_ok_and_malformed_venue_is_502():
     bad = Flask(__name__)
     trades_api.register_trades_routes(bad, service_factory=lambda: _svc(lambda *a, **k: {"retCode": 0, "result": {"list": [{"symbol": "SOLUSDT"}]}}, T0))
     assert bad.test_client().get("/api/trades/recent?exchange=bybit&symbol=SOLUSDT").status_code == 502
+
+
+def test_binance_busy_rate_window_is_an_error_not_an_empty_exact_history():
+    busy = _svc(FakeBinance(make_trades(10, 2)), T0 + 2 * MIN - 1, binance_rate=(0, 60_000))
+    with pytest.raises(fd.FootprintError, match="rate budget busy"):
+        trades_api.trades_payload(busy, "binance", "BTCUSDT", minutes=1)
+    app = Flask(__name__)
+    trades_api.register_trades_routes(app, service_factory=lambda: busy)
+    assert app.test_client().get("/api/trades/recent?exchange=binance&symbol=BTCUSDT").status_code == 502

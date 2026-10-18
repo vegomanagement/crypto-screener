@@ -138,7 +138,7 @@
       this.gaps = 0; this.lastTime = 0; this.version = 0; this.prints = 0; this.trades = 0; this.errors = 0; this.dropped = 0;
     }
     loadBackfill(payload) {
-      this.backfill = { coverage: payload.coverage, oldestMs: payload.oldest_ms, asOf: payload.as_of, truncated: payload.truncated, count: payload.count, warnings: payload.warnings || [] };
+      this.backfill = { coverage: payload.coverage, oldestMs: payload.oldest_ms, asOf: payload.as_of, truncated: payload.truncated, count: payload.count, firstId: payload.trades?.[0]?.[0] ?? null, lastId: payload.last_trade_id ?? null, warnings: payload.warnings || [] };
       for (const row of payload.trades || []) { const t = tradeFromRow(row); if (t) this.accept(t, true); else this.errors += 1; }
       this.nextId = this.venue === 'binance' && payload.last_trade_id !== null ? payload.last_trade_id + 1 : null;
       this.ready = true;

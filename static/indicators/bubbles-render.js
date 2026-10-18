@@ -92,7 +92,8 @@
   function createController(options) {
     const { fetch: fetchImpl, hub, onChange = () => {}, now = Date.now } = options;
     const every = options.setInterval || setInterval, stopEvery = options.clearInterval || clearInterval;
-    let store = null, config = null, key = null, off = null, timer = null, generation = 0, status = { state: 'off', message: '' };
+    const later = options.setTimeout || setTimeout, cancel = options.clearTimeout || clearTimeout;
+    let store = null, config = null, key = null, off = null, timer = null, retry = null, kick = null, retries = 0, generation = 0, status = { state: 'off', message: '' };
     async function backfill(g) {
       const q = new URLSearchParams({ exchange: config.exchange, symbol: config.symbol, minutes: String(config.settings.backfillMin), max_requests: String(config.settings.budget) });
       try {
@@ -106,26 +107,34 @@
         if (g !== generation) return;
         store.loadBackfill({ trades: [], coverage: 'none', oldest_ms: null, as_of: now(), last_trade_id: null, warnings: [] });
         status = { state: 'live-only', message: error?.message || 'backfill unavailable' };
+        // A busy shared aggTrades budget is transient: rebuild with a fresh backfill (≤3 tries).
+        if (retries < 3) { retries += 1; const again = { ...config }; retry = later(() => { retry = null; if (g === generation) { key = null; enable(again, true); } }, 15000 * retries); }
       }
       onChange();
     }
-    function enable(next) {
+    function enable(next, isRetry = false) {
       const k = JSON.stringify([next.exchange, next.symbol, next.tick, DATA_KEYS.map(x => next.settings[x])]);
       if (k === key) return;
-      disable(); key = k; config = { ...next }; generation += 1;
+      const keepRetries = isRetry ? retries : 0;
+      disable(); key = k; retries = keepRetries; config = { ...next }; generation += 1;
       store = new B.BigTradeStore({ venue: next.exchange, settings: next.settings, tick: next.tick });
       status = { state: 'loading', message: '' };
+      // Fetch history only once the live stream is up, so the REST snapshot's last id meets the
+      // first streamed id (no boundary gap); fall back after 4 s (no WS / unsupported).
+      const g = generation; let started = false;
+      const start = () => { if (started || g !== generation) return; started = true; backfill(g); };
       off = hub?.subscribeTrades?.({ venue: next.exchange, symbol: next.symbol }, event => {
         if (!store) return;
-        if (event.type === 'status') { status = { ...status, stream: event.status }; return; }
+        if (event.type === 'status') { status = { ...status, stream: event.status }; if (['connected', 'live', 'unsupported'].includes(event.status)) start(); return; }
         if (event.type !== 'trades') return;
+        start();
         const before = store.version; store.onRows(event.rows); if (store.version !== before) onChange();
       }) || null;
       timer = every(() => { if (store && store.flushIdle(now() - 1000)) onChange(); }, 500);
-      backfill(generation);
+      kick = later(() => { kick = null; start(); }, 4000);
     }
     function disable() {
-      generation += 1; off?.(); off = null; if (timer) stopEvery(timer); timer = null;
+      generation += 1; off?.(); off = null; if (timer) stopEvery(timer); timer = null; if (retry) cancel(retry); retry = null; if (kick) cancel(kick); kick = null;
       store = null; config = null; key = null; status = { state: 'off', message: '' };
     }
     function statusText() {
@@ -133,7 +142,7 @@
       if (status.state === 'loading') return 'Big trades: loading real trades…';
       const bf = store.backfill, venue = B.VENUE_LABEL[config.exchange];
       const parts = [`Big trades · ${venue} ${config.exchange === 'binance' ? 'aggTrades' : 'trades'}`];
-      if (status.state === 'live-only') parts.push(`backfill failed (${status.message}); live stream only`);
+      if (status.state === 'live-only') parts.push(`backfill failed (${status.message}); live stream only${retry ? ', retrying' : ''}`);
       else if (bf) parts.push(`${bf.coverage === 'exact' ? 'exact' : 'PARTIAL'} history since ${bf.oldestMs ? iso(bf.oldestMs).slice(11, 19) : '—'}${bf.truncated ? ' (budget-truncated)' : ''} + live`);
       const th = B.threshold(store.s, store.dist);
       parts.push(`threshold now ${th.value === null ? `— (percentile warming up: ${th.n}/${store.s.minSamples} prints)` : `$${B.compact(th.value)} (${th.basis})`}`);

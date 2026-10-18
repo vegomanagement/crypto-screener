@@ -9,6 +9,8 @@
   'use strict';
   const B = root.WorkspaceBubbles, BR = root.WorkspaceBubblesRender, V = root.WorkspaceVolumeAnomaly, FP = root.WorkspaceFootprint;
   const FP_INTERVALS = new Set(['1', '3', '5', '15', '30', '60']);
+  // Delta only needs recent bars; keep the shared Binance aggTrades budget (60 req/min) for the bubbles too.
+  const DELTA_BARS = { 1: 30, 3: 20, 5: 12, 15: 8, 30: 6, 60: 4 };
   /**
    * deps: { pane, hub, fetch, stage, statusAfter, isEnabled(id), settings(id), config(), step() (s), tick(),
    *         tickKnown(), forming() → bar|null, mainFootprint() → store|null, format(price), requestDraw() }
@@ -33,7 +35,7 @@
       if (deltaFp) {
         const s = V ? deps.settings(V.ID) : null;
         const want = V && deps.isEnabled(V.ID) && s.showDelta && FP_INTERVALS.has(config.interval) && !deps.mainFootprint();
-        if (want) deltaFp.enable({ exchange: config.exchange, symbol: config.symbol, interval: config.interval, bars: Math.min(300, Math.max(60, s.lookback * 2)), groupTicks: null });
+        if (want) deltaFp.enable({ exchange: config.exchange, symbol: config.symbol, interval: config.interval, bars: DELTA_BARS[config.interval], groupTicks: null });
         else deltaFp.disable();
       }
     }

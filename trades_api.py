@@ -33,6 +33,8 @@ def trades_payload(service, exchange, symbol, *, minutes=15, max_requests=10):
         trades, info = service.binance_trades_since(symbol, now - minutes * 60_000, max_requests=max_requests)
         as_of, truncated, coverage = info["as_of"], info["truncated"], "exact"
         last_id = info["last_trade_id"]
+        if not trades and truncated:
+            raise FootprintError("binance: aggTrades rate budget busy (shared with footprint); retry shortly")
         warnings += info.get("warnings", [])
         if truncated:
             warnings.append("Request budget reached: only the newest trades were fetched; older ones are missing.")

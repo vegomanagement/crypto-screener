@@ -170,3 +170,24 @@ test('delta sign classification: initiative vs absorption vs balanced', () => {
   assert.deepEqual(fd, { delta: 0.5, total: 6.5, coverage: 'complete', complete: true });
   assert.equal(V.footprintDelta({ coverage: 'complete', forming: true, bar: { levels: new Map() } }).complete, false, 'forming is never "complete"');
 });
+
+test('controller: backfill waits for the live stream, retries a busy budget, disable cancels everything', async () => {
+  const timers = new Map(); let nextTimer = 1, listener = null, unsubscribed = 0;
+  const later = (fn, ms) => { const id = nextTimer++; timers.set(id, { fn: () => { timers.delete(id); fn(); }, ms }); return id; };
+  const cancel = id => timers.delete(id);
+  const hub = { subscribeTrades: (cfg, fn) => { listener = fn; return () => { unsubscribed += 1; }; } };
+  const calls = []; let fail = true;
+  const fetch = async url => { calls.push(url); return { ok: !fail, status: fail ? 502 : 200, json: async () => fail ? { error: 'binance: aggTrades rate budget busy' }
+    : { exchange: 'binance', symbol: 'BTCUSDT', coverage: 'exact', oldest_ms: T0, as_of: T0 + 10, last_trade_id: 1, trades: [[1, T0, '100', '1000', 1]], warnings: [] } }; };
+  const c = R.createController({ fetch, hub, setTimeout: later, clearTimeout: cancel, setInterval: () => 0, clearInterval: () => {}, now: () => T0 + 100 });
+  c.enable({ exchange: 'binance', symbol: 'BTCUSDT', tick: 0.1, settings: S({ mode: 'fixed', minUsd: 1000 }) });
+  assert.equal(calls.length, 0, 'no backfill before the stream is up');
+  listener({ type: 'status', status: 'connecting' }); assert.equal(calls.length, 0);
+  listener({ type: 'status', status: 'live' }); await new Promise(r => setImmediate(r));
+  assert.equal(calls.length, 1); assert.equal(c.status.state, 'live-only'); assert.match(c.statusText(), /retrying/);
+  const retryTimer = [...timers.values()].find(t => t.ms === 15000); assert.ok(retryTimer, 'retry scheduled');
+  fail = false; retryTimer.fn(); listener({ type: 'status', status: 'live' }); await new Promise(r => setImmediate(r));
+  assert.equal(calls.length, 2); assert.equal(c.status.state, 'ready'); assert.equal(c.store.big.length, 0, 'open print not yet final');
+  c.store.flushIdle(T0 + 10000); assert.equal(c.store.big.length, 1);
+  c.disable(); assert.equal(c.store, null); assert.ok(unsubscribed >= 2); assert.equal(timers.size, 0, 'timers cancelled');
+});
