@@ -165,3 +165,25 @@ stops, rebalancing costs, poisoned future), `portfolio_strategies.py`, `portfoli
 ## 9. Deviations log
 
 (none yet)
+
+Logged after the development run, BEFORE the holdout was opened:
+
+- D1 (data): settled contracts (FTM) keep flat zero-volume 1h bars after settlement in the cache;
+  bars after the last bar with volume > 0 are dropped, so the delisting close-out of §1 applies
+  at the real last traded day (2025-01-05 for FTM).
+- D2 (A+SMC 'skip'): "skip" disarms the signal like a stop-out (EMA entries need a close back
+  through the EMA to re-arm; Donchian needs a new close beyond the channel the next day). The
+  prereg did not spell this out.
+- D3 (C random control): for C variants built on A or B the random control is the same as for A
+  / B (random entries / random ranks) with the regime filter applied; for the SMC base the
+  control is the unfiltered base, as pre-registered.
+- D4 (C on the SMC base): trades come from the cached grid built by
+  `scripts/backtest_swing_universe.py` (costs in R already included); a trade's regime is read at
+  the last daily close ≤ its signal bar's open; only trades with exit < 2026-01-01 are in dev.
+- No rule, grid or criterion was changed. Development result: no finalist passes criteria 1–6
+  (see docs/evidence/strategy-research/dev_selection.json); all 5 finalists still go to the
+  holdout as pre-registered.
+- D5 (determinism fix, controls only): `_rebalance` iterated a Python set, so the order of
+  same-day trades — and with it the random draws of the D cross-sectional random-entry control —
+  depended on PYTHONHASHSEED. Now sorted; dev re-run, every non-random metric and every finalist
+  criterion unchanged, results identical across hash seeds.

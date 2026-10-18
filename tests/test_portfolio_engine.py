@@ -206,3 +206,43 @@ def test_stats_drawdown_peryear_dsr():
     rets = [rnd.gauss(0.002, 0.02) for _ in range(1000)]
     assert pst.dsr(rets, 100, 0.0005) < pst.psr(rets)
     assert pst.holm({"a": 0.01, "b": 0.04}) == {"a": 0.02, "b": 0.04}
+
+
+def _h4(seed, n_days, poison_after=None):
+    rnd, out, p = random.Random(seed), [], 100.0
+    for k in range(n_days * 6):
+        o = p
+        c = o * math.exp(rnd.gauss(0.0003, 0.012))
+        h, lo = max(o, c) * (1 + abs(rnd.gauss(0, 0.005))), min(o, c) * (1 - abs(rnd.gauss(0, 0.005)))
+        t = T0 + k * 4 * 3_600_000
+        b = {"ts": t, "close_ts": t + 4 * 3_600_000, "o": o, "h": h, "l": lo, "c": c, "v": 1.0}
+        if poison_after is not None and t >= T0 + (poison_after + 1) * DAY:
+            b.update(h=h * 4, l=lo * 0.25, c=c * 0.5)
+        out.append(b)
+        p = c
+    return out
+
+
+def _daily_from(h4):
+    out = []
+    for j in range(0, len(h4), 6):
+        g = h4[j:j + 6]
+        out.append({"ts": g[0]["ts"], "o": g[0]["o"], "h": max(b["h"] for b in g), "l": min(b["l"] for b in g),
+                    "c": g[-1]["c"]})
+    return out
+
+
+def test_poisoned_future_smc_execution():
+    k, n = 300, 420
+    runs = []
+    for poison in (None, k):
+        h4 = {s: _h4(i + 3, n, poison) for i, s in enumerate(("AAA", "BBB"))}
+        mkt = pe.Market({s: _daily_from(b) for s, b in h4.items()})
+        zones = ps.SmcZones(mkt, h4)
+        st = ps.Trend(mkt, ps.Ind(mkt), "ema", 50, True, 3.0, smc="market", zones=zones)
+        runs.append(pe.run(mkt, st))
+    a, b = runs
+    assert a["equity"][:k + 1] == b["equity"][:k + 1]
+    ta = [(t["sym"], t["entry_i"], t["kind"]) for t in a["trades"] if t["exit_i"] is not None and t["exit_i"] <= k]
+    tb = [(t["sym"], t["entry_i"], t["kind"]) for t in b["trades"] if t["exit_i"] is not None and t["exit_i"] <= k]
+    assert ta == tb and any(x[2] == "limit" for x in ta)

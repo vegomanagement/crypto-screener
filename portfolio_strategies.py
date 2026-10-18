@@ -33,7 +33,7 @@ class Ind:
             c = [mkt.c[s][i] for i in idx]
             m = len(idx)
 
-            def scatter(vals):
+            def scatter(vals, idx=idx):
                 full = [None] * n
                 for j, i in enumerate(idx):
                     full[i] = vals[j]
@@ -316,7 +316,7 @@ class Trend:
 def _rebalance(bk, targets, band=0.01, risk=None):
     """Market orders moving the book to ``targets`` (absent held coins → 0); |Δw| < band skipped."""
     orders = {}
-    for s in set(targets) | {s for s, q in bk.qty.items() if q}:
+    for s in sorted(set(targets) | {s for s, q in bk.qty.items() if q}):
         tgt, cur = targets.get(s, 0.0), bk.weight(s)
         if (tgt == 0.0 and cur != 0.0) or abs(tgt - cur) >= band:
             orders[s] = {"w": tgt, "type": "market", "risk": (risk or {}).get(s), "tag": "rebalance"}
