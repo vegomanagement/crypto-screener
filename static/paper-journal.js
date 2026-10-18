@@ -17,6 +17,8 @@
   const STATE_LABEL = { pending: 'pending (limit resting)', filled: 'filled', be: 'filled · stop at BE', target: 'target', stop: 'stop',
     breakeven: 'break-even', timeout: 'time exit', expired: 'expired' };
   const OPEN = ['pending', 'filled', 'be'];
+  const OPEN_COLS = [['symbol', 'Coin'], ['side', 'Side'], ['state', 'State'], ['knowable', 'Knowable at (bar close)'], ['poi', 'POI'],
+    ['entry', 'Entry'], ['stop', 'Stop'], ['target', 'Target 2R'], ['fill', 'Filled'], ['tag', '']];
 
   /** Rows of the open-setups table (pending + filled), newest first. Warm-up rows flagged. */
   function openRows(trades) {
@@ -25,7 +27,7 @@
       knowable: utc(t.knowable_ts), recorded: utc(t.recorded_ts), poi: t.inputs && t.inputs.poi ? `${t.inputs.poi.kind.toUpperCase()} ${price(t.inputs.poi.bottom)}–${price(t.inputs.poi.top)}` : '—',
       entry: price(isNum(t.entry) ? t.entry : t.planned_entry), stop: price(isNum(t.stop) ? t.stop : t.planned_stop),
       target: price(isNum(t.target) ? t.target : t.planned_target), fill: utc(t.fill_ts),
-      tag: t.seen_at_start ? 'seen at start (not counted)' : t.late ? 'late (recorded after a gap)' : '' }));
+      warm: Boolean(t.seen_at_start), tag: t.seen_at_start ? 'seen at start (not counted)' : t.late ? 'late (recorded after a gap)' : '' }));
   }
 
   function closedRows(trades) {
@@ -74,6 +76,7 @@
     const eq = equityPath((data.stats || {}).equity, 640, 160);
     const coins = Object.entries((data.stats || {}).per_coin || {}).map(([k, v]) => ({ symbol: k, n: v.n, hit: pct(v.hit), mean: signed(v.mean_r, 3, 'R'), sum: signed(v.sum_r, 2, 'R') }));
     const w = data.worker || {};
+    const open = openRows(data.trades || []);
     el.innerHTML = `
       <div class="banner">PAPER TRADING · forward test · <b>not a signal</b> · no orders, no exchange keys</div>
       <h2>${esc(strat.title || strat.id || 'strategy')} <small>v${esc(strat.version)} · ${esc(strat.params_hash || '')}</small></h2>
@@ -91,7 +94,9 @@
       <h3>Equity curve (net R, counted trades)</h3>
       <svg class="equity" viewBox="0 0 640 160" role="img" aria-label="Cumulative net R">${eq.zeroY === null ? '<text x="10" y="80">no closed counted trades yet</text>'
         : `<line x1="0" x2="640" y1="${eq.zeroY.toFixed(1)}" y2="${eq.zeroY.toFixed(1)}" class="zero"/><path d="${eq.d}"/>`}</svg>
-      <h3>Open setups</h3>${table([['symbol', 'Coin'], ['side', 'Side'], ['state', 'State'], ['knowable', 'Knowable at (bar close)'], ['poi', 'POI'], ['entry', 'Entry'], ['stop', 'Stop'], ['target', 'Target 2R'], ['fill', 'Filled'], ['tag', '']], openRows(data.trades || []), 'No open setups.')}
+      <h3>Open setups (recorded live)</h3>${table(OPEN_COLS, open.filter(r => !r.warm), 'No live setups yet — new ones appear when a setup becomes knowable at a 4h close.')}
+      <details><summary>Seen at start — ${open.filter(r => r.warm).length} setups that already existed when the journal started (followed, never counted)</summary>
+      ${table(OPEN_COLS, open.filter(r => r.warm), 'None.')}</details>
       <h3>Closed trades</h3>${table([['symbol', 'Coin'], ['side', 'Side'], ['exit', 'Exit'], ['fill', 'Filled'], ['exitTs', 'Closed'], ['entry', 'Entry'], ['gross', 'Gross'], ['fee', 'Fees'], ['fund', 'Funding'], ['net', 'Net'], ['netPct', 'Net %'], ['tag', '']], closedRows(data.trades || []), 'No closed trades yet.')}
       <h3>Per coin</h3>${table([['symbol', 'Coin'], ['n', 'n'], ['hit', 'Hit'], ['mean', 'Mean'], ['sum', 'Sum']], coins, 'No counted trades yet.')}`;
   }

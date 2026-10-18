@@ -64,6 +64,7 @@ test('render: paper banner, escaped content, empty states', () => {
   assert.ok(!el.innerHTML.includes('<img>') && el.innerHTML.includes('&lt;img&gt;'));
   assert.match(el.innerHTML, /off \(set PAPER_JOURNAL=1\)/);
   assert.match(el.innerHTML, /No closed trades yet/);
+  assert.match(el.innerHTML, /Seen at start — 0 setups/);
   assert.match(el.innerHTML, /no closed counted trades yet/);
 });
 
