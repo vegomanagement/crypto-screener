@@ -1,0 +1,16 @@
+.git
+.venv
+venv
+__pycache__
+*.pyc
+docs
+tests
+.data
+*.db
+*.db-*
+*.db.lock
+*.sqlite3
+*.sqlite3-*
+config.py
+.env
+.env.*
