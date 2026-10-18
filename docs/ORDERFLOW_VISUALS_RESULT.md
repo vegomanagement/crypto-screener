@@ -115,8 +115,8 @@ of its member aggTrades (rel. 1e-9), first-trade time and side (maker flag) equa
 independent 10, 0 disagreements; BTC 15m 11 flags (5/6), 0 disagreements; ETH 5s 186 bars,
 volumes rebuilt from 4,370 aggTrades into 5 s buckets: 0 volume mismatches, 1 flag = 1;
 Bybit SOL 1m (v5 kline) 9 flags (8/1), 0 disagreements.
-Delta: BTC 1m 07:42 UTC flagged bar shows "+80.6 % initiative, complete"; Binance kline
-taker-buy gives 2·144.151 − 159.653 = 128.649 → +80.58 % (`delta-crosscheck-btc1m-0742.txt`).
+Delta: BTC 1m 08:02 UTC flagged bar (open 1792310520) shows "+80.6 % initiative, complete"; Binance kline
+taker-buy gives 2·144.151 − 159.653 = 128.649 → +80.58 % (`delta-crosscheck-btc1m-0802.txt`).
 
 **Frame time with 1,000+ bubbles** (`perf-1000-bubbles.json`): fixed $1K threshold, BTC 1m,
 30-min backfill → 2,032 stored, 1,878–2,032 drawn per frame while panning every frame for 300
