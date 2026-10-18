@@ -1,7 +1,8 @@
 """Funding-carry panel (/carry, /api/carry): delta-neutral long spot + short perp, research only.
 
-Per coin of the 20-coin universe: the current funding rate annualised per venue (Binance last
-settled ``lastFundingRate`` from /fapi/v1/premiumIndex with the interval from /fapi/v1/fundingInfo;
+Per coin of the 20-coin universe: the current funding rate annualised per venue (Binance
+``lastFundingRate`` from /fapi/v1/premiumIndex = the running estimate for the NEXT settlement, not the
+last settled print, with the interval from /fapi/v1/fundingInfo;
 Bybit ``fundingRate`` from /v5/market/tickers (the predicted next rate) with ``fundingIntervalHour``;
 Hyperliquid ``funding`` from metaAndAssetCtxs, hourly), the trailing 7/30/90-day Binance carry
 (sum of prints × 365 / days), the share of negative prints over 90 days, and an ESTIMATED net APR
@@ -127,7 +128,7 @@ class CarryService:
                 "label": "ESTIMATE: trailing 30-day Binance funding annualised × L/(L+1) minus a round trip "
                          "(both legs, entry + exit) amortised over 30 days; ignores basis moves, rebalancing and "
                          "spot borrow; past funding does not predict future funding. Research only, no orders.",
-                "sources": {"binance": "GET /fapi/v1/premiumIndex (lastFundingRate), /fapi/v1/fundingInfo, "
+                "sources": {"binance": "GET /fapi/v1/premiumIndex (lastFundingRate = estimate for the next settlement), /fapi/v1/fundingInfo, "
                                        "/fapi/v1/fundingRate (90 days)",
                             "bybit": "GET /v5/market/tickers?category=linear (fundingRate = predicted next)",
                             "hyperliquid": "POST /info metaAndAssetCtxs (funding, hourly)"},

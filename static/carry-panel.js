@@ -32,7 +32,7 @@
     return `${apr(xs[xs.length - 1][1] - xs[0][1])} (${xs[xs.length - 1][0]} − ${xs[0][0]})`;
   }
 
-  const COLS = [['symbol', 'Coin'], ['binance', 'Binance now'], ['bybit', 'Bybit next'], ['hyperliquid', 'HL now'], ['spread', 'Venue gap'],
+  const COLS = [['symbol', 'Coin'], ['binance', 'Binance next (est.)'], ['bybit', 'Bybit next'], ['hyperliquid', 'HL current'], ['spread', 'Venue gap'],
     ['d7', '7d'], ['d30', '30d'], ['d90', '90d'], ['neg', 'Neg. prints 90d'], ['net', 'Est. net APR*'], ['netBnb', 'w/ BNB fee']];
 
   function render(el, data) {

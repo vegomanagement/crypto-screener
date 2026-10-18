@@ -166,6 +166,12 @@ def test_observer_follows_top_k_without_look_ahead():
     rows = {r["horizon_d"]: r for r in store.q("SELECT * FROM paper_follow")}
     assert len(rows) == 3 and rows[1]["state"] == "closed" and rows[3]["state"] == "open"
     assert max(prices.asked) <= clock["t"] * 1000 - MIN                # never priced a minute not yet closed
+    rec(whales, T + 60 * MIN, {"0xa": {"BTC": P("-1")}, "0xb": {"ETH": P("-1")}})       # flip within 24 h
+    rec(whales, T + 25 * 3_600_000, {"0xa": {"BTC": P("1")}, "0xb": {"ETH": P("-1")}},  # flip after 24 h
+        lb=dict(LB, fetched_at=(T + 24 * 3_600_000) / 1000))                            # 0xa top-1 again
+    wo.cycle(store, strat, clock=lambda: (T + 26 * 3_600_000) / 1000, whales=whales, prices=prices)
+    followed = [r["knowable_ts"] for r in store.q("SELECT DISTINCT knowable_ts FROM paper_follow ORDER BY 1")]
+    assert followed == [T + 5 * MIN + 1234, T + 25 * 3_600_000]          # one per wallet+coin per 24 h
     r = rows[1]
     gross = r["exit_px"] / r["entry_px"] - 1
     assert abs(r["ret_net"] - (gross - 2 * 0.00045 - 0.0001 * 24)) < 1e-12

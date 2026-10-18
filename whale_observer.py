@@ -8,6 +8,9 @@ Rules (frozen in PARAMS, part of the strategy version hash):
     knowable_ts ≥ the observer's first cycle (older events are warm-up, never followed);
   * wallets: the top-K (K = 10) of the tracked accounts by trailing 30-day PnL in the last
     leaderboard snapshot fetched at or before the event's knowable_ts;
+  * de-duplication: at most one followed event per (wallet, coin) per 24 h — a later event within
+    24 h of the last followed one is skipped (knowable at the time; stops one fast-flipping wallet
+    from filling the sample: on the first live run one wallet flipped 65 times in 37 minutes);
   * entry: the OPEN of the first 1-minute Hyperliquid candle starting after knowable_ts, same
     side as the whale's new position; one unit of notional; exits at the open of the 1-minute
     candle exactly 1, 3 and 7 days after the entry (three rows per event);
@@ -24,7 +27,7 @@ import time
 from paper_strategies import REGISTRY, register
 
 OBS_ID = "obs_hl_whale_follow_top10_30d"
-PARAMS = {"events": ["open", "flip"], "top_k": 10, "rank_by": "pnl_month", "horizons_d": [1, 3, 7],
+PARAMS = {"events": ["open", "flip"], "top_k": 10, "rank_by": "pnl_month", "horizons_d": [1, 3, 7], "dedupe_h": 24,
           "entry": "next_1m_open", "taker": 0.00045, "funding": "hyperliquid_hourly", "tracked": "top50_account_value"}
 MIN, DAY = 60_000, 86_400_000
 MAX_REQUESTS = 40                  # Hyperliquid info requests per cycle (paced ≤ 1/s by HttpClient)
@@ -100,13 +103,20 @@ def cycle(store, strat, reason="interval", clock=time.time, whales=None, prices=
     prices = prices or HLPrices()
     done = {r["event_id"] for r in store.q("SELECT DISTINCT event_id FROM paper_follow WHERE strategy_id=? AND version=?",
                                            (sid, version))}
+    last = {(r["address"], r["coin"]): r["t"] for r in store.q(
+        "SELECT address, coin, MAX(knowable_ts) AS t FROM paper_follow WHERE strategy_id=? AND version=? "
+        "GROUP BY address, coin", (sid, version))}
     new = 0
     for e in whales.events(since_ts=st["started_as_of"], kinds=p["events"]):
         if e["id"] in done or e["knowable_ts"] > now:
             continue
+        prev = last.get((e["address"], e["coin"]))
+        if prev is not None and e["knowable_ts"] - prev < p.get("dedupe_h", 0) * 3_600_000:
+            continue
         top = top_wallets(whales.leaderboard_at(e["knowable_ts"]), p["top_k"])
         if e["address"] not in top:
             continue
+        last[(e["address"], e["coin"])] = e["knowable_ts"]
         rank, pnl = top[e["address"]]
         t0 = entry_minute(e["knowable_ts"])
         for h in p["horizons_d"]:

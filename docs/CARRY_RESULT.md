@@ -276,7 +276,8 @@ Survives = pump < 1/L − maintenance. '1d' assumes the leg is re-margined every
 ## 7. Live panel
 
 `/carry` (and `/api/carry?L=1|2|3`) shows the current annualised funding per coin and venue:
-- Binance: last settled rate.
+- Binance: the running estimate for the next settlement (`premiumIndex.lastFundingRate`; despite the
+  name it is not the last settled print).
 - Bybit: predicted next rate.
 - Hyperliquid: current hourly rate.
 

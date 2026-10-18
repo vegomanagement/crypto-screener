@@ -60,12 +60,11 @@ A_EXPECT = {"dev": {"cagr": 0.4069, "vol": 0.3337, "sharpe": 1.192, "max_dd": 0.
             "holdout_2026": {"total_return": 0.2169, "cagr": 0.2802, "sharpe": 0.918, "max_dd": 0.1567},
             **band(0.4069, 0.3337), "source": SOURCE,
             "caveat": "no finalist passed the pre-registered gates (DSR 0.51; did not beat same-exposure random "
-                      "timing); the band is the dev drift ± 1.96 σ √days, not a forecast"}
+                      "timing)"}
 D_EXPECT = {"dev": {"cagr": 0.1043, "vol": 0.1056, "sharpe": 0.991, "max_dd": 0.0946},
             "holdout_2026": {"total_return": 0.118, "cagr": 0.1508, "sharpe": 1.291, "max_dd": 0.0398},
             **band(0.1043, 0.1056), "source": SOURCE,
-            "caveat": "no finalist passed the pre-registered gates (DSR 0.32; ZEC 38 % of P&L); the band is the "
-                      "dev drift ± 1.96 σ √days, not a forecast"}
+            "caveat": "no finalist passed the pre-registered gates (DSR 0.32; ZEC 38 % of P&L)"}
 CODE = (pe, pst.Ind, pst.Trend, pst.FundingTS, pst.funding_z, pst.daily_funding, pst._gross_scale,
         pst._allow_all, band)
 
