@@ -14,7 +14,7 @@
   const VENUE_LABEL = { binance: 'Binance', bybit: 'Bybit', hyperliquid: 'Hyperliquid' };
   const UNIT_LABEL = { binance: 'aggTrades', bybit: 'trades', hyperliquid: 'trades' };
   const schema = [
-    { key: 'mode', label: 'Large means', type: 'select', options: ['both', 'fixed', 'adaptive'], optionLabels: { both: 'Fixed USD AND top percentile', fixed: 'Fixed USD notional', adaptive: 'Top percentile (adaptive)' }, default: 'both', group: 'Threshold' },
+    { key: 'mode', label: 'Large means', type: 'select', options: ['both', 'fixed', 'adaptive'], optionLabels: { both: 'USD and percentile', fixed: 'Fixed USD', adaptive: 'Percentile' }, default: 'both', group: 'Threshold' },
     { key: 'minUsd', label: 'Min notional, USD', type: 'number', min: 100, max: 100000000, step: 100, default: 50000, group: 'Threshold' },
     { key: 'percentile', label: 'Percentile of print sizes', type: 'number', min: 50, max: 99.99, step: 0.01, default: 99.5, group: 'Threshold' },
     { key: 'windowMin', label: 'Percentile window, minutes', type: 'number', min: 1, max: 240, step: 1, default: 30, group: 'Threshold' },
@@ -25,11 +25,11 @@
     { key: 'backfillMin', label: 'Backfill, minutes', type: 'number', min: 1, max: 60, step: 1, default: 15, group: 'History' },
     { key: 'budget', label: 'Backfill request budget (Binance)', type: 'number', min: 1, max: 20, step: 1, default: 10, group: 'History' },
     { key: 'maxStored', label: 'Max stored bubbles per chart', type: 'number', min: 100, max: 20000, step: 1, default: 5000, group: 'History' },
-    { key: 'rMin', label: 'Min radius, px', type: 'number', min: 1, max: 20, step: 1, default: 3, group: 'Display' },
-    { key: 'rMax', label: 'Max radius, px', type: 'number', min: 4, max: 80, step: 1, default: 26, group: 'Display' },
+    { key: 'rMin', label: 'Min radius, px', type: 'number', min: 1, max: 20, step: 1, default: 5, group: 'Display' },
+    { key: 'rMax', label: 'Max radius, px', type: 'number', min: 4, max: 80, step: 1, default: 30, group: 'Display' },
     { key: 'maxVisible', label: 'Max bubbles drawn (largest first)', type: 'number', min: 10, max: 10000, step: 1, default: 1500, group: 'Display' },
-    { key: 'minOpacity', label: 'Opacity (smallest)', type: 'number', min: 0.05, max: 1, step: 0.05, default: 0.3, group: 'Display' },
-    { key: 'maxOpacity', label: 'Opacity (largest)', type: 'number', min: 0.05, max: 1, step: 0.05, default: 0.75, group: 'Display' },
+    { key: 'minOpacity', label: 'Opacity (smallest)', type: 'number', min: 0.05, max: 1, step: 0.05, default: 0.45, group: 'Display' },
+    { key: 'maxOpacity', label: 'Opacity (largest)', type: 'number', min: 0.05, max: 1, step: 0.05, default: 0.85, group: 'Display' },
     { key: 'fitBar', label: 'Shrink to bar width when zoomed out', type: 'boolean', default: true, group: 'Display' },
     { key: 'glyphs', label: 'Show ▲/▼ inside larger bubbles', type: 'boolean', default: true, group: 'Display' },
     { key: 'buyColor', label: 'Taker buy colour (filled)', type: 'color', default: '#2ea8ff', group: 'Display' },

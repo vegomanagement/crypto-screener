@@ -70,7 +70,8 @@ test('bubble radius: area ∝ notional (sqrt), clamped to [rMin, rMax]', () => {
   const a = B.radius(2000, 1000, 3, 30) ** 2, b = B.radius(8000, 1000, 3, 30) ** 2;
   assert.ok(Math.abs(b / a - 4) < 1e-9, 'area ratio = notional ratio');
   assert.equal(B.radius(1e9, 1000, 3, 30), 30); assert.equal(B.radius(10, 1000, 3, 30), 3);
-  assert.equal(R.effectiveMaxRadius(S({ rMin: 3, rMax: 26 }), 6), 9, 'zoomed out: shrink to ~bar width');
+  assert.ok(Math.abs(R.effectiveMaxRadius(S({ rMin: 3, rMax: 26 }), 6) - 5.4) < 1e-9, 'zoomed out: diameter ≤ ~2 bars');
+  assert.equal(R.effectiveMaxRadius(S({ rMin: 3, rMax: 26 }), 2), 4, 'never below rMin + 1');
   assert.equal(R.effectiveMaxRadius(S({ rMin: 3, rMax: 26, fitBar: false }), 6), 26);
 });
 

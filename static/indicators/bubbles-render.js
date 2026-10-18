@@ -16,7 +16,7 @@
   }
   function effectiveMaxRadius(s, barSpacing) {
     if (!s.fitBar) return s.rMax;
-    return Math.max(s.rMin + 1, Math.min(s.rMax, barSpacing * 1.5));
+    return Math.max(s.rMin + 1, Math.min(s.rMax, barSpacing * 0.9)); // diameter ≈ 2 bars at most
   }
   /** view: { fromMs, toMs, xForMs(ms), y(price), barSpacing, plotWidth, plotHeight } */
   function draw(ctx, store, view, settings) {
@@ -37,9 +37,11 @@
       hits.push({ x, y, r, p });
     }
     const TAU = Math.PI * 2;
+    // Dense views fade so candles stay readable (1,000+ bubbles stay drawable, never hide the bars).
+    const density = hits.length > 300 ? Math.max(0.35, Math.sqrt(300 / hits.length)) : 1;
     ctx.save();
     for (let b = 0; b < buckets; b += 1) {
-      const alpha = s.minOpacity + (s.maxOpacity - s.minOpacity) * (b + 0.5) / buckets;
+      const alpha = (s.minOpacity + (s.maxOpacity - s.minOpacity) * (b + 0.5) / buckets) * density;
       for (const side of ['1', '-1']) {
         const circles = paths[side][b];
         if (!circles.length) continue;
@@ -47,7 +49,7 @@
         ctx.beginPath();
         for (const [x, y, r] of circles) { ctx.moveTo(x + r, y); ctx.arc(x, y, r, 0, TAU); }
         // Non-colour cue: buys are solid discs, sells are rings with a faint fill.
-        ctx.fillStyle = rgba(color, side === '1' ? alpha : alpha * 0.18); ctx.fill();
+        ctx.fillStyle = rgba(color, side === '1' ? alpha * 0.65 : alpha * 0.15); ctx.fill();
         ctx.lineWidth = side === '1' ? 1 : 1.8; ctx.strokeStyle = rgba(color, Math.min(1, alpha + 0.25)); ctx.stroke();
       }
     }

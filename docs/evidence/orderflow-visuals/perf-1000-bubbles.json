@@ -1,0 +1,25 @@
+{
+ "stored": 2032,
+ "drawnMin": 1878,
+ "drawnMax": 2032,
+ "frames": 300,
+ "frameMs": {
+  "mean": 16.67,
+  "p50": 16.6,
+  "p95": 18.4,
+  "max": 22.7
+ },
+ "bubbleDrawMs": {
+  "mean": 1.53,
+  "p95": 2.1,
+  "max": 5.6
+ },
+ "overlayTotalMs": {
+  "mean": 1.83,
+  "p95": 2.6
+ },
+ "overlayCalls": 299,
+ "fpsFromMeanFrame": 60,
+ "status": "Big trades · Binance aggTrades · exact history since 07:44:35 + live · threshold now $1K (fixed) · 2032 stored · Abnormal volume: delta from footprint (recent bars only; ? = partial/forming)",
+ "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/155.0.0.0 Safari/537.36"
+}
