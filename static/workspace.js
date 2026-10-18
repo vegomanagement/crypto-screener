@@ -226,7 +226,8 @@
   const grid = $('#chart-grid');
   const footer = $('#workspace-status');
   const panes = new Map();
-  let analyst = null; // static/analyst-panel.js controller (right sidebar)
+  let analyst = null; // static/analyst-panel.js controller (compact sidebar summary + analysis state)
+  let dashboard = null, disposeWheelGuard = null; // static/analysis-dashboard.js (full width, below the charts)
   // Seconds intervals are trade-built in the browser (static/seconds-candles.js); never fabricated.
   const SECONDS_API = window.WorkspaceSeconds || null;
   let intervals = FAVORITES.map(([value, label]) => ({ value, label, available: !/s$/.test(value) || Boolean(SECONDS_API), reason: /s$/.test(value) ? (SECONDS_API ? 'Built from real trades (live stream; Binance also backfills recent minutes)' : 'Seconds candles module did not load') : '' }));
@@ -2020,6 +2021,23 @@
       levels: window.ScreenerLevels || null,
       visible: () => document.visibilityState === 'visible'
     });
+    mountDashboard();
+  }
+  function scrollToAnalysis() { $('#analysis-dashboard')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+  function mountDashboard() {
+    const api = window.AnalysisDashboard, el = $('#analysis-dashboard');
+    if (!api || !el || !analyst) return;
+    dashboard = api.mount(el, {
+      analyst,
+      getFunding: () => panes.get(state.active)?.fundingData || null,
+      fetch: (url, options) => fetch(url, options),
+      IntersectionObserver: window.IntersectionObserver || null,
+      pageVisible: () => document.visibilityState === 'visible',
+      scrollToCharts: () => window.scrollTo({ top: 0, behavior: 'smooth' })
+    });
+    // Wheel over a chart zooms it and never scrolls the (now scrollable) page.
+    disposeWheelGuard = api.installWheelGuard(grid);
+    document.querySelectorAll('[data-jump="analysis"], .analyst-open').forEach(link => link.addEventListener('click', event => { event.preventDefault(); scrollToAnalysis(); }));
   }
   // Funding: refetch visible panes every 30 s (server caches 30 s too); tick countdowns every second.
   const fundingTimer = setInterval(() => {
@@ -2030,13 +2048,13 @@
     if (document.visibilityState !== 'visible') return;
     const now = Date.now();
     panes.forEach(pane => pane.renderFundingChip(now));
-    analyst?.setFunding(panes.get(state.active)?.fundingData || null, now);
+    dashboard?.tick(now);
   }, 1000);
   const refreshTimer = setInterval(autoRefresh, 60000);
   // pagehide also covers browser navigation with bfcache; pageshow reconstructs
   // disposed instances without leaving their requests or observers alive.
   window.addEventListener('pagehide', () => {
-    clearInterval(refreshTimer); clearInterval(fundingTimer); clearInterval(fundingTick); analyst?.destroy();
+    clearInterval(refreshTimer); clearInterval(fundingTimer); clearInterval(fundingTick); dashboard?.destroy(); disposeWheelGuard?.(); analyst?.destroy();
     pricesGeneration += 1; pricesController?.abort(); clearTimeout(pricesTimeout);
     panes.forEach(pane => pane.destroy()); panes.clear();
   });
@@ -2044,6 +2062,6 @@
   // Debug/test surface only (no prod secrets, read/write of already-exposed
   // state): lets the Playwright pixel regressions drive settings and read
   // Pane internals precisely instead of poking at private closures.
-  window.__workspaceDebug = { state, panes, INDICATOR_DEFS, INDICATOR_BY_ID, getIndicatorSettings, setIndicatorSettings, resetIndicatorSettings, setIndicatorEnabled, fvgZones, defaultIndicatorSettings };
+  window.__workspaceDebug = { state, panes, get analyst() { return analyst; }, get dashboard() { return dashboard; }, INDICATOR_DEFS, INDICATOR_BY_ID, getIndicatorSettings, setIndicatorSettings, resetIndicatorSettings, setIndicatorEnabled, fvgZones, defaultIndicatorSettings };
   init();
 })();

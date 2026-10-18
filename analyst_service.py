@@ -166,6 +166,9 @@ class AnalystService:
             "raw_output": [r[:RAW_KEEP_CHARS] for r in (hermes or {}).get("raw", [])],
             "evaluation": {"horizon_bars": EVAL_HORIZON_BARS,
                            "rule": "±1 ATR from the analysis price, bias side first"},
+            # The exact snapshot Hermes saw: the /ui Analysis dashboard resolves the cited
+            # source_fields to their values and shows the market metrics from it.
+            "snapshot": snap,
         }
         if self.store is not None:
             result["id"] = self.store.record({

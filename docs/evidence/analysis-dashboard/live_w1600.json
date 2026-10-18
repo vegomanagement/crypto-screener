@@ -1,0 +1,622 @@
+{
+ "load": {
+  "title": "Research workspace · Crypto Screener",
+  "panes": 2,
+  "docHeight": 3362,
+  "viewport": [
+   1600,
+   1000
+  ]
+ },
+ "analyze_binance_BTCUSDT_15": {
+  "active": {
+   "id": 0,
+   "exchange": "binance",
+   "symbol": "BTCUSDT",
+   "interval": "15",
+   "precision": 2
+  },
+  "wall_ms": 23201,
+  "error": "",
+  "status": "ok",
+  "source": "hermes",
+  "latency_ms": 20482,
+  "snapshot_ms": 2694,
+  "long": 58,
+  "short": 42,
+  "bias": "long",
+  "factors": 12,
+  "levels": 8,
+  "scenarios": 3,
+  "has_snapshot": true,
+  "key": "binance:BTCUSDT:15",
+  "stale": false
+ },
+ "shots": {
+  "full": {
+   "file": "w1600_full_btc.png",
+   "height": 5409
+  },
+  "verdict": "w1600_section_verdict.png",
+  "summary": "w1600_section_summary.png",
+  "levels": "w1600_section_levels.png",
+  "factors": "w1600_section_factors.png",
+  "metrics": "w1600_section_metrics.png",
+  "risks": "w1600_section_risks.png",
+  "sticky": {
+   "top": 0,
+   "text": "Analysis\nBinance · BTCUSDT · 15m\nanalysed 26s ago · last closed bar 2m ago\n↑ Charts"
+  }
+ },
+ "sidebar": "Hermes analyst\nbinance · BTCUSDT · 15m\n▲ 58%\nLONG · LOW\n42% ▼\n\nHermes analysis\n\nAnalyze\nOpen full analysis ↓",
+ "wheel": {
+  "chart_point": {
+   "x": 330,
+   "y": 549
+  },
+  "before": {
+   "scrollY": 0,
+   "bars": 130
+  },
+  "afterChart": {
+   "scrollY": 0,
+   "bars": 220.85
+  },
+  "footer_point": {
+   "x": 200,
+   "y": 987
+  },
+  "afterOutside": {
+   "scrollY": 600
+  },
+  "price_axis_point": {
+   "x": 630,
+   "y": 549
+  },
+  "afterPriceAxis": {
+   "scrollY": 0
+  }
+ },
+ "pane_switch": {
+  "header": "Analysis\nBybit · ETHUSDT · 1h\nshowing BTCUSDT 15m — re-analyze\n↑ Charts",
+  "stale_note": "Previous analysis for BTCUSDT 15m — re-analyze",
+  "verdict_stale": true,
+  "sidebar_status": "Shown: BTCUSDT 15m — re-analyze for this chart"
+ },
+ "shots_stale": "w1600_stale_verdict_eth.png",
+ "analyze_bybit_ETHUSDT_60": {
+  "active": {
+   "id": 1,
+   "exchange": "bybit",
+   "symbol": "ETHUSDT",
+   "interval": "60",
+   "precision": 2
+  },
+  "wall_ms": 22919,
+  "error": "",
+  "status": "ok",
+  "source": "hermes",
+  "latency_ms": 21510,
+  "snapshot_ms": 1339,
+  "long": 13,
+  "short": 87,
+  "bias": "short",
+  "factors": 12,
+  "levels": 8,
+  "scenarios": 3,
+  "has_snapshot": true,
+  "key": "bybit:ETHUSDT:60",
+  "stale": false
+ },
+ "after_eth": {
+  "result": {
+   "error": "",
+   "status": "ok",
+   "source": "hermes",
+   "latency_ms": 21510,
+   "snapshot_ms": 1339,
+   "long": 13,
+   "short": 87,
+   "bias": "short",
+   "factors": 12,
+   "levels": 8,
+   "scenarios": 3,
+   "has_snapshot": true,
+   "key": "bybit:ETHUSDT:60",
+   "stale": false
+  },
+  "header": "Analysis\nBybit · ETHUSDT · 1h\nanalysed 26s ago · last closed bar 33m ago\n↑ Charts"
+ },
+ "shots_eth": {
+  "file": "w1600_full_eth.png",
+  "height": 5450
+ },
+ "shot_eth_verdict": "w1600_eth_section_verdict.png",
+ "shot_eth_levels": "w1600_eth_section_levels.png",
+ "shot_eth_factors": "w1600_eth_section_factors.png",
+ "shot_eth_metrics": "w1600_eth_section_metrics.png",
+ "layouts": [
+  {
+   "i": 0,
+   "heapUsedMB": 5.54,
+   "dom": {
+    "documents": 1,
+    "nodes": 16709,
+    "jsEventListeners": 2845
+   },
+   "panes": 2,
+   "analystSubscribers": 1,
+   "dashboard": {
+    "visible": true,
+    "polling": true,
+    "observer": true,
+    "renders": 19,
+    "alive": true
+   },
+   "listeners": {
+    "document": 21,
+    "window": 7
+   }
+  },
+  {
+   "i": 1,
+   "layout": "2cols",
+   "heapUsedMB": 5.55,
+   "dom": {
+    "documents": 1,
+    "nodes": 16695,
+    "jsEventListeners": 2845
+   },
+   "panes": 2,
+   "analystSubscribers": 1,
+   "dashboard": {
+    "visible": true,
+    "polling": true,
+    "observer": true,
+    "renders": 20,
+    "alive": true
+   },
+   "listeners": {
+    "document": 21,
+    "window": 7
+   }
+  },
+  {
+   "i": 2,
+   "layout": "2rows",
+   "heapUsedMB": 6.29,
+   "dom": {
+    "documents": 1,
+    "nodes": 16703,
+    "jsEventListeners": 2845
+   },
+   "panes": 2,
+   "analystSubscribers": 1,
+   "dashboard": {
+    "visible": true,
+    "polling": true,
+    "observer": true,
+    "renders": 21,
+    "alive": true
+   },
+   "listeners": {
+    "document": 21,
+    "window": 7
+   }
+  },
+  {
+   "i": 3,
+   "layout": "3cols",
+   "heapUsedMB": 6.38,
+   "dom": {
+    "documents": 1,
+    "nodes": 17079,
+    "jsEventListeners": 2932
+   },
+   "panes": 3,
+   "analystSubscribers": 1,
+   "dashboard": {
+    "visible": true,
+    "polling": true,
+    "observer": true,
+    "renders": 22,
+    "alive": true
+   },
+   "listeners": {
+    "document": 30,
+    "window": 9
+   }
+  },
+  {
+   "i": 4,
+   "layout": "4grid",
+   "heapUsedMB": 7.06,
+   "dom": {
+    "documents": 1,
+    "nodes": 17441,
+    "jsEventListeners": 3019
+   },
+   "panes": 4,
+   "analystSubscribers": 1,
+   "dashboard": {
+    "visible": true,
+    "polling": true,
+    "observer": true,
+    "renders": 23,
+    "alive": true
+   },
+   "listeners": {
+    "document": 39,
+    "window": 11
+   }
+  },
+  {
+   "i": 5,
+   "layout": "6grid",
+   "heapUsedMB": 8.63,
+   "dom": {
+    "documents": 1,
+    "nodes": 18161,
+    "jsEventListeners": 3193
+   },
+   "panes": 6,
+   "analystSubscribers": 1,
+   "dashboard": {
+    "visible": true,
+    "polling": true,
+    "observer": true,
+    "renders": 24,
+    "alive": true
+   },
+   "listeners": {
+    "document": 57,
+    "window": 15
+   }
+  },
+  {
+   "i": 6,
+   "layout": "1",
+   "heapUsedMB": 5.87,
+   "dom": {
+    "documents": 1,
+    "nodes": 11948,
+    "jsEventListeners": 2758
+   },
+   "panes": 1,
+   "analystSubscribers": 1,
+   "dashboard": {
+    "visible": true,
+    "polling": true,
+    "observer": true,
+    "renders": 27,
+    "alive": true
+   },
+   "listeners": {
+    "document": 12,
+    "window": 5
+   }
+  },
+  {
+   "i": 7,
+   "layout": "2cols",
+   "heapUsedMB": 5.71,
+   "dom": {
+    "documents": 1,
+    "nodes": 12298,
+    "jsEventListeners": 2845
+   },
+   "panes": 2,
+   "analystSubscribers": 1,
+   "dashboard": {
+    "visible": true,
+    "polling": true,
+    "observer": true,
+    "renders": 28,
+    "alive": true
+   },
+   "listeners": {
+    "document": 21,
+    "window": 7
+   }
+  },
+  {
+   "i": 8,
+   "layout": "2rows",
+   "heapUsedMB": 6.49,
+   "dom": {
+    "documents": 1,
+    "nodes": 12302,
+    "jsEventListeners": 2845
+   },
+   "panes": 2,
+   "analystSubscribers": 1,
+   "dashboard": {
+    "visible": true,
+    "polling": true,
+    "observer": true,
+    "renders": 29,
+    "alive": true
+   },
+   "listeners": {
+    "document": 21,
+    "window": 7
+   }
+  },
+  {
+   "i": 9,
+   "layout": "3cols",
+   "heapUsedMB": 6.31,
+   "dom": {
+    "documents": 1,
+    "nodes": 12654,
+    "jsEventListeners": 2932
+   },
+   "panes": 3,
+   "analystSubscribers": 1,
+   "dashboard": {
+    "visible": true,
+    "polling": true,
+    "observer": true,
+    "renders": 30,
+    "alive": true
+   },
+   "listeners": {
+    "document": 30,
+    "window": 9
+   }
+  },
+  {
+   "i": 10,
+   "layout": "4grid",
+   "heapUsedMB": 7.47,
+   "dom": {
+    "documents": 1,
+    "nodes": 13014,
+    "jsEventListeners": 3019
+   },
+   "panes": 4,
+   "analystSubscribers": 1,
+   "dashboard": {
+    "visible": true,
+    "polling": true,
+    "observer": true,
+    "renders": 31,
+    "alive": true
+   },
+   "listeners": {
+    "document": 39,
+    "window": 11
+   }
+  },
+  {
+   "i": 11,
+   "layout": "6grid",
+   "heapUsedMB": 9.9,
+   "dom": {
+    "documents": 1,
+    "nodes": 14022,
+    "jsEventListeners": 3193
+   },
+   "panes": 6,
+   "analystSubscribers": 1,
+   "dashboard": {
+    "visible": true,
+    "polling": true,
+    "observer": true,
+    "renders": 33,
+    "alive": true
+   },
+   "listeners": {
+    "document": 57,
+    "window": 15
+   }
+  },
+  {
+   "i": 12,
+   "layout": "1",
+   "heapUsedMB": 6.26,
+   "dom": {
+    "documents": 1,
+    "nodes": 11944,
+    "jsEventListeners": 2758
+   },
+   "panes": 1,
+   "analystSubscribers": 1,
+   "dashboard": {
+    "visible": true,
+    "polling": true,
+    "observer": true,
+    "renders": 35,
+    "alive": true
+   },
+   "listeners": {
+    "document": 12,
+    "window": 5
+   }
+  },
+  {
+   "i": 13,
+   "layout": "2cols",
+   "heapUsedMB": 6.64,
+   "dom": {
+    "documents": 1,
+    "nodes": 12306,
+    "jsEventListeners": 2845
+   },
+   "panes": 2,
+   "analystSubscribers": 1,
+   "dashboard": {
+    "visible": true,
+    "polling": true,
+    "observer": true,
+    "renders": 36,
+    "alive": true
+   },
+   "listeners": {
+    "document": 21,
+    "window": 7
+   }
+  },
+  {
+   "i": 14,
+   "layout": "2rows",
+   "heapUsedMB": 6.88,
+   "dom": {
+    "documents": 1,
+    "nodes": 12306,
+    "jsEventListeners": 2845
+   },
+   "panes": 2,
+   "analystSubscribers": 1,
+   "dashboard": {
+    "visible": true,
+    "polling": true,
+    "observer": true,
+    "renders": 37,
+    "alive": true
+   },
+   "listeners": {
+    "document": 21,
+    "window": 7
+   }
+  },
+  {
+   "i": 15,
+   "layout": "3cols",
+   "heapUsedMB": 7.35,
+   "dom": {
+    "documents": 1,
+    "nodes": 12662,
+    "jsEventListeners": 2932
+   },
+   "panes": 3,
+   "analystSubscribers": 1,
+   "dashboard": {
+    "visible": true,
+    "polling": true,
+    "observer": true,
+    "renders": 38,
+    "alive": true
+   },
+   "listeners": {
+    "document": 30,
+    "window": 9
+   }
+  },
+  {
+   "i": 16,
+   "layout": "4grid",
+   "heapUsedMB": 7.95,
+   "dom": {
+    "documents": 1,
+    "nodes": 13291,
+    "jsEventListeners": 3019
+   },
+   "panes": 4,
+   "analystSubscribers": 1,
+   "dashboard": {
+    "visible": true,
+    "polling": true,
+    "observer": true,
+    "renders": 39,
+    "alive": true
+   },
+   "listeners": {
+    "document": 39,
+    "window": 11
+   }
+  },
+  {
+   "i": 17,
+   "layout": "6grid",
+   "heapUsedMB": 9,
+   "dom": {
+    "documents": 1,
+    "nodes": 13748,
+    "jsEventListeners": 3193
+   },
+   "panes": 6,
+   "analystSubscribers": 1,
+   "dashboard": {
+    "visible": true,
+    "polling": true,
+    "observer": true,
+    "renders": 40,
+    "alive": true
+   },
+   "listeners": {
+    "document": 57,
+    "window": 15
+   }
+  },
+  {
+   "i": 18,
+   "layout": "1",
+   "heapUsedMB": 6.32,
+   "dom": {
+    "documents": 1,
+    "nodes": 11944,
+    "jsEventListeners": 2758
+   },
+   "panes": 1,
+   "analystSubscribers": 1,
+   "dashboard": {
+    "visible": true,
+    "polling": true,
+    "observer": true,
+    "renders": 41,
+    "alive": true
+   },
+   "listeners": {
+    "document": 12,
+    "window": 5
+   }
+  },
+  {
+   "i": 19,
+   "layout": "2cols",
+   "heapUsedMB": 6.87,
+   "dom": {
+    "documents": 1,
+    "nodes": 12303,
+    "jsEventListeners": 2845
+   },
+   "panes": 2,
+   "analystSubscribers": 1,
+   "dashboard": {
+    "visible": true,
+    "polling": true,
+    "observer": true,
+    "renders": 42,
+    "alive": true
+   },
+   "listeners": {
+    "document": 21,
+    "window": 7
+   }
+  },
+  {
+   "i": 20,
+   "layout": "2rows",
+   "heapUsedMB": 6.88,
+   "dom": {
+    "documents": 1,
+    "nodes": 12314,
+    "jsEventListeners": 2845
+   },
+   "panes": 2,
+   "analystSubscribers": 1,
+   "dashboard": {
+    "visible": true,
+    "polling": true,
+    "observer": true,
+    "renders": 43,
+    "alive": true
+   },
+   "listeners": {
+    "document": 21,
+    "window": 7
+   }
+  }
+ ]
+}

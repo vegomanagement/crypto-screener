@@ -154,8 +154,22 @@
       invalid_output: 'Hermes output failed validation — baseline shown' }[result.status] || result.status;
   }
 
+  /** 'long' → 'Long'; anything else → 'Neutral'. */
+  function verdictWord(bias) { return bias === 'long' ? 'Long' : bias === 'short' ? 'Short' : 'Neutral'; }
+  /** Chart interval code → short label: '15' → '15m', '60' → '1h', 'D' → '1D', '5s' → '5s'. */
+  function intervalLabel(iv) {
+    const s = String(iv ?? '');
+    if (/^\d+$/.test(s)) { const m = Number(s); return m % 60 === 0 ? `${m / 60}h` : `${m}m`; }
+    return /^\d*[DWM]$/.test(s) ? (/^\d/.test(s) ? s : `1${s}`) : s;
+  }
+  /** 'binance:BTCUSDT:15' → 'BTCUSDT 15m' (stale-analysis label). */
+  function keyLabel(key) {
+    const [, symbol, iv] = String(key || '').split(':');
+    return symbol ? `${symbol} ${intervalLabel(iv)}` : '';
+  }
+
   const model = { AUTO_MIN_MS, TYPE_COLORS, TYPE_LABELS, POSITIONING_PERIOD, POSITIONING_REFRESH_MS, positioningTarget, requestFor, keyOf, gauge, factorChips, splitLine, disagreementText, levelRows, freshness, statsLine,
-    autoDue, toStoreLevel, statusText, fmtPrice, decimals, ago };
+    autoDue, toStoreLevel, statusText, fmtPrice, decimals, ago, verdictWord, intervalLabel, keyLabel };
 
   // ── DOM controller ─────────────────────────────────────────────────────────
   function esc(value) {
@@ -163,25 +177,23 @@
   }
 
   /**
+   * Owns the analysis state (run, stats, auto refresh, chart lines) and renders the compact
+   * sidebar summary. The full read lives in static/analysis-dashboard.js, which subscribes.
    * deps: { fetch, getActive(): {id, exchange, symbol, interval, precision} | null,
-   *         drawLines(paneId, rows) , clearLines(paneId), centerOn(paneId, price),
+   *         drawLines(paneId, rows), clearLines(paneId), centerOn(paneId, price),
    *         levels (ScreenerLevels or null), visible(): bool, now(): ms }
+   * A result for another pane/symbol/interval is kept (shown greyed as stale) until a new one arrives.
    */
   function mount(el, deps) {
     const now = deps.now || (() => Date.now());
-    const st = { key: '', result: null, stats: null, error: '', busy: false, auto: false, lastRun: NaN,
-      showLines: true, linesPane: null, generation: 0 };
+    const st = { key: '', activeKey: '', result: null, stats: null, error: '', busy: false, auto: false, lastRun: NaN,
+      showLines: true, linesPane: null, generation: 0, added: {} };
+    const listeners = new Set();
     el.innerHTML = `<div class="analyst-head"><h2>Hermes analyst</h2><span class="analyst-target" data-role="target">—</span></div>
-      <div class="analyst-actions"><button type="button" data-role="run">Analyze</button>
-        <label title="Re-run at most every 2 minutes while the page is visible"><input type="checkbox" data-role="auto"> Auto · 2m</label>
-        <label title="Draw agent levels on the active chart"><input type="checkbox" data-role="lines" checked> Lines</label></div>
+      <div data-role="summary" class="analyst-mini"></div>
       <p class="analyst-status" data-role="status" role="status">Analyze the blue-bordered chart from its real data.</p>
-      <div data-role="body"></div>
-      <div class="analyst-funding" data-role="funding"></div>
-      <details class="analyst-section analyst-positioning" data-role="positioning"><summary>Positioning <small data-role="posTarget"></small></summary>
-        <p class="analyst-empty">Top traders, crowd, taker flow, OI, liquidations (lower bound), HL whales · refresh 60 s while open</p><div data-role="posBody"></div></details>
-      <p class="analyst-stats" data-role="stats"></p>
-      <p class="analyst-disclaimer">Not financial advice. Research only — no orders are placed.</p>`;
+      <div class="analyst-actions"><button type="button" data-role="run">Analyze</button>
+        <a class="analyst-open" data-role="open" href="#analysis-dashboard">Open full analysis ↓</a></div>`;
     const $ = role => el.querySelector(`[data-role="${role}"]`);
 
     function clearLines() {
@@ -195,37 +207,26 @@
       try { deps.drawLines(active.id, levelRows(st.result)); st.linesPane = active.id; } catch (_) { /* pane not ready */ }
     }
 
+    /** Read-only view for the dashboard (stale = the shown result belongs to another chart). */
+    function view() {
+      return { active: deps.getActive(), activeKey: st.activeKey, resultKey: st.key, result: st.result, stats: st.stats,
+        error: st.error, busy: st.busy, auto: st.auto, showLines: st.showLines, lastRun: st.lastRun, added: st.added,
+        stale: !!st.result && st.key !== st.activeKey };
+    }
+
     function render() {
-      const active = deps.getActive();
-      $('target').textContent = active ? `${active.exchange} · ${active.symbol} · ${active.interval}` : '—';
+      const active = deps.getActive(), v = view();
+      $('target').textContent = active ? `${active.exchange} · ${active.symbol} · ${intervalLabel(active.interval)}` : '—';
       $('run').disabled = st.busy;
       $('run').textContent = st.busy ? 'Analyzing…' : 'Analyze';
-      $('status').textContent = st.busy ? 'Building snapshot and asking Hermes (up to ~60 s)…' : st.error || statusText(st.result) || 'Analyze the blue-bordered chart from its real data.';
+      $('status').textContent = st.busy ? 'Building snapshot and asking Hermes (up to ~60 s)…'
+        : st.error || (v.stale ? `Shown: ${keyLabel(st.key)} — re-analyze for this chart` : statusText(st.result)) || 'Analyze the blue-bordered chart from its real data.';
       $('status').classList.toggle('is-error', !!st.error);
-      $('stats').textContent = statsLine(st.stats);
-      const r = st.result, g = gauge(r, st.stats);
-      if (!r || !g) { $('body').innerHTML = ''; return; }
-      const a = r.analysis, chips = factorChips(r), precision = active && keyOf(active) === st.key ? active.precision : undefined;
-      const rows = levelRows(r).map(row => `<li class="analyst-level${row.unanchored ? ' is-unanchored' : ''}">
-          <button type="button" class="analyst-level-go" data-price="${row.price}" title="${esc(row.reason)}\nsource: ${esc(row.sources.join(', '))}">
-            <i style="background:${row.color}"></i><span>${esc(row.label)}</span><b>${esc(fmtPrice(row.price, precision))}</b>
-            <em>${row.distPct === null ? '' : `${row.distPct >= 0 ? '+' : ''}${row.distPct.toFixed(2)}%`}</em></button>
-          <button type="button" class="analyst-level-add" data-index="${row.index}" title="Add to shared levels (source chart, note hermes)" aria-label="Add ${esc(row.label)} ${esc(fmtPrice(row.price))} to levels">＋</button></li>`).join('');
-      const list = (items, fn) => items.length ? `<ul>${items.map(fn).join('')}</ul>` : '<p class="analyst-empty">None</p>';
-      $('body').innerHTML = `
-        <div class="analyst-gauge" role="img" aria-label="Long ${g.long}%, short ${g.short}%">
+      const g = gauge(st.result, st.stats);
+      $('summary').innerHTML = !g ? '' : `<div class="analyst-gauge${v.stale ? ' is-stale' : ''}" role="img" aria-label="${v.stale ? `Previous analysis for ${esc(keyLabel(st.key))}: ` : ''}Long ${g.long}%, short ${g.short}%">
           <div class="analyst-bar"><span class="long" style="width:${g.long}%"></span><span class="short" style="width:${g.short}%"></span></div>
-          <div class="analyst-pcts"><span class="long">LONG ${g.long}%</span><span class="analyst-bias bias-${esc(g.bias)}">${esc(g.bias)} · ${esc(g.confidence)}</span><span class="short">${g.short}% SHORT</span></div>
-          <p class="analyst-caption">${esc(g.caption)}${a.horizon ? ` · horizon ${esc(a.horizon)}` : ''}</p>
-          <p class="analyst-split" title="${esc((a.split && a.split.method) || '')}">${esc(splitLine(r))}</p>
-          ${disagreementText(r) ? `<p class="analyst-disagree" role="alert">⚠ ${esc(disagreementText(r))}</p>` : ''}</div>
-        <div class="analyst-factors" aria-label="Scored factors">${chips.length ? chips.map(c => `<span class="analyst-chip ${c.cls}${c.funding ? ' is-funding' : ''}${c.positioning ? ' is-positioning' : ''}" title="${esc(c.direction)} · strength ${c.strength}\nsource: ${esc(c.sources.join(', '))}"><b>${c.sign}${c.strength}</b> ${esc(c.label)}</span>`).join('') : '<p class="analyst-empty">No scored factors (baseline only)</p>'}</div>
-        ${a.summary_ru ? `<p class="analyst-summary" lang="ru">${esc(a.summary_ru)}</p>` : ''}
-        ${r.warnings && r.warnings.length ? `<details class="analyst-warnings"><summary>⚠ ${r.warnings.length} validation note(s)</summary>${list(r.warnings, w => `<li>${esc(w)}</li>`)}</details>` : ''}
-        <h3>Levels <small>click to centre · ＋ to save</small><button type="button" data-role="fit" title="Restore normal price autoscale">Fit</button></h3><ul class="analyst-levels">${rows || '<li class="analyst-empty">No levels</li>'}</ul>
-        <details class="analyst-section"><summary>Scenarios · ${(a.scenarios || []).length}</summary>${list(a.scenarios || [], s => `<li><b>${esc(s.name)}</b>: ${esc(s.trigger)}${s.target ? ` → ${esc(s.target)}` : ''}${s.invalidation ? ` <span class="inval">✕ ${esc(s.invalidation)}</span>` : ''}</li>`)}</details>
-        <details class="analyst-section"><summary>Risks · ${(a.risks || []).length}</summary>${list(a.risks || [], x => `<li>${esc(x)}</li>`)}</details>
-        <p class="analyst-fresh">${esc(freshness(r, now()))}</p>`;
+          <div class="analyst-pcts"><span class="long">▲ ${g.long}%</span><span class="analyst-bias bias-${esc(g.bias)}">${esc(verdictWord(g.bias))} · ${esc(g.confidence)}</span><span class="short">${g.short}% ▼</span></div></div>`;
+      listeners.forEach(fn => { try { fn(v); } catch (_) { /* subscriber error must not break the card */ } });
     }
 
     async function loadStats() {
@@ -252,7 +253,7 @@
         const data = await resp.json().catch(() => ({}));
         if (generation !== st.generation) return;
         if (!resp.ok) { st.error = resp.status === 429 ? `Rate limited — retry in ${data.retry_after_s || 60}s` : `Analysis failed: ${data.error || resp.status}${data.detail ? ` (${data.detail})` : ''}`; return; }
-        st.key = key; st.result = data;
+        st.key = key; st.result = data; st.added = {};
       } catch (err) {
         if (generation === st.generation) st.error = `Analysis request failed: ${err && err.message || err}`;
       } finally {
@@ -260,65 +261,36 @@
       }
     }
 
-    // Positioning section: static/positioning-panel.js mounted only while the <details> is open;
-    // it follows the active pane and polls every 60 s only while open and the page is visible.
-    let pos = null, posKey = '';
-    function syncPositioning() {
-      const det = $('positioning'), box = $('posBody'), api = deps.positioning || root.PositioningPanel;
-      if (!det || !box) return;
-      if (!det.open) { if (pos) pos.destroy(); pos = null; posKey = ''; return; }
-      const t = positioningTarget(deps.getActive());
-      $('posTarget').textContent = t.error ? '' : `${t.exchange} · ${t.symbol} · ${t.period}`;
-      if (!api || t.error) {
-        if (pos) pos.destroy(); pos = null; posKey = '';
-        box.innerHTML = `<p class="analyst-empty">${esc(t.error || 'positioning-panel.js not loaded')}</p>`;
-        return;
-      }
-      if (pos && posKey === t.key) return;
-      posKey = t.key;
-      const target = { exchange: t.exchange, symbol: t.symbol, period: t.period, coin: t.coin };
-      if (pos) { pos.update(target); return; }
-      box.innerHTML = '';
-      pos = api.mount(box, { ...target, owner: 'analyst-card', intervalMs: POSITIONING_REFRESH_MS, fetch: deps.fetch,
-        visible: () => !!det.open && (!deps.visible || deps.visible()) });
-    }
-    if ($('positioning') && $('positioning').addEventListener) $('positioning').addEventListener('toggle', syncPositioning);
-
     function activeChanged() {
-      syncPositioning();
       const active = deps.getActive(), key = keyOf(active);
-      if (key === st.key && active) {
-        $('target').textContent = `${active.exchange} · ${active.symbol} · ${active.interval}`;
-        if (!st.result || !st.showLines || st.linesPane === active.id) return;
-      }
-      if (key !== st.key) { st.generation += 1; st.busy = false; st.result = null; st.error = ''; st.key = key; st.stats = null; clearLines(); loadStats(); }
+      if (key !== st.activeKey) {
+        // New chart: cancel an in-flight run, keep the old result (rendered as stale), refetch stats.
+        st.activeKey = key; st.generation += 1; st.busy = false; st.error = ''; st.stats = null;
+        clearLines(); loadStats();
+      } else if (st.result && st.showLines && active && st.linesPane === active.id) { render(); return; }
       render(); drawLines();
     }
 
-    el.addEventListener('click', event => {
-      const go = event.target.closest('.analyst-level-go'), add = event.target.closest('.analyst-level-add');
+    function centerOn(price) { const active = deps.getActive(); if (active) deps.centerOn(active.id, price); }
+    /** Save analysis level #index to the shared levels store; true on success. */
+    function addLevel(index) {
       const active = deps.getActive();
-      if (go && active) deps.centerOn(active.id, Number(go.dataset.price));
-      if (event.target.closest('[data-role="fit"]') && active) deps.centerOn(active.id, null);
-      if (add && active && st.result && deps.levels) {
-        const level = st.result.analysis.levels[Number(add.dataset.index)];
-        const input = level && toStoreLevel(level, active, active.precision);
-        try { if (input) { deps.levels.add(input); add.textContent = '✓'; add.disabled = true; } }
-        catch (err) { st.error = `Levels store: ${err.message}`; render(); }
-      }
-    });
+      if (!active || !st.result || !deps.levels || st.key !== keyOf(active)) return false;
+      const level = st.result.analysis.levels[Number(index)];
+      const input = level && toStoreLevel(level, active, active.precision);
+      try { if (!input) return false; deps.levels.add(input); st.added[index] = true; render(); return true; }
+      catch (err) { st.error = `Levels store: ${err.message}`; render(); return false; }
+    }
+
     $('run').addEventListener('click', () => run(true));
-    $('auto').addEventListener('change', e => { st.auto = e.target.checked; });
-    $('lines').addEventListener('change', e => { st.showLines = e.target.checked; drawLines(); });
     const timer = setInterval(() => { if (autoDue(st.auto, deps.visible(), st.lastRun, now(), st.busy)) run(false); }, 15000);
     activeChanged();
-    function setFunding(data, at) {
-      const api = deps.funding || root.WorkspaceFunding, box = $('funding');
-      if (!api || !box) return;
-      box.innerHTML = api.sectionHtml(data, at ?? now());
-    }
-    return { activeChanged, run, redraw: drawLines, setFunding, syncPositioning, positioning: () => pos,
-      destroy() { clearInterval(timer); clearLines(); if (pos) pos.destroy(); pos = null; }, _state: st };
+    return { activeChanged, run, redraw: drawLines, view, centerOn, addLevel, render,
+      setAuto(on) { st.auto = !!on; render(); },
+      setLines(on) { st.showLines = !!on; drawLines(); render(); },
+      subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
+      listenerCount: () => listeners.size,
+      destroy() { clearInterval(timer); clearLines(); listeners.clear(); }, _state: st };
   }
 
   return Object.assign({ mount, esc }, model);

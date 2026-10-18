@@ -1,0 +1,52 @@
+{
+ "load": {
+  "title": "Research workspace · Crypto Screener",
+  "panes": 2,
+  "docHeight": 4814,
+  "viewport": [
+   820,
+   900
+  ]
+ },
+ "analyze_binance_BTCUSDT_15": {
+  "active": {
+   "id": 0,
+   "exchange": "binance",
+   "symbol": "BTCUSDT",
+   "interval": "15",
+   "precision": 2
+  },
+  "wall_ms": 24226,
+  "error": "",
+  "status": "ok",
+  "source": "hermes",
+  "latency_ms": 22499,
+  "snapshot_ms": 1689,
+  "long": 61,
+  "short": 39,
+  "bias": "long",
+  "factors": 12,
+  "levels": 8,
+  "scenarios": 3,
+  "has_snapshot": true,
+  "key": "binance:BTCUSDT:15",
+  "stale": false
+ },
+ "shots": {
+  "full": {
+   "file": "w820_full_btc.png",
+   "height": 8256
+  },
+  "verdict": "w820_section_verdict.png",
+  "summary": "w820_section_summary.png",
+  "levels": "w820_section_levels.png",
+  "factors": "w820_section_factors.png",
+  "metrics": "w820_section_metrics.png",
+  "risks": "w820_section_risks.png",
+  "sticky": {
+   "top": 0,
+   "text": "Analysis\nBinance · BTCUSDT · 15m\nanalysed 27s ago · last closed bar 8m ago\n↑ Charts"
+  }
+ },
+ "sidebar": "Hermes analystbinance · BTCUSDT · 15m\n      \n          \n          ▲ 61%Long · low39% ▼\n      Hermes analysis\n      Analyze\n        Open full analysis ↓"
+}

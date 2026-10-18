@@ -7,6 +7,7 @@
   <title>Research workspace · Crypto Screener</title>
   <link rel="stylesheet" href="/static/workspace.css">
   <link rel="stylesheet" href="/static/indicators/indicators.css">
+  <link rel="stylesheet" href="/static/analysis-dashboard.css">
   <script defer src="/static/vendor/lightweight-charts.standalone.production.js"></script>
   <script defer src="/static/indicator-extras.js"></script>
   <script defer src="/static/indicators/groups.js"></script>
@@ -34,6 +35,11 @@
   <script defer src="/static/funding.js"></script>
   <script defer src="/static/positioning-panel.js"></script>
   <script defer src="/static/analyst-panel.js"></script>
+  <script defer src="/static/analysis-dashboard-model.js"></script>
+  <script defer src="/static/analysis-metrics.js"></script>
+  <script defer src="/static/analysis-metrics-flow.js"></script>
+  <script defer src="/static/analysis-dashboard-render.js"></script>
+  <script defer src="/static/analysis-dashboard.js"></script>
   <script defer src="/static/workspace.js"></script>
 </head>
 <body>
@@ -46,7 +52,7 @@
       <input id="symbol-input" name="symbol" list="symbol-suggestions" autocomplete="off" spellcheck="false" maxlength="80" placeholder="Search symbol" value="BTCUSDT">
       <button type="submit" title="Apply symbol to active chart" aria-label="Apply symbol to active chart">↵</button>
     </form>
-    <div class="topbar-end"><a class="dom-link" href="/scalp" title="Live order book ladder, prints and clusters (view only)">DOM ↗</a><span class="research-badge"><span class="status-dot"></span>RESEARCH ONLY</span><button id="watchlist-toggle" type="button" aria-controls="watchlist" aria-expanded="true" title="Toggle watchlist">☷ <span>Watchlist</span></button></div>
+    <div class="topbar-end"><button type="button" class="analysis-jump" data-jump="analysis" title="Scroll to the full analysis of the active chart">Analysis ↓</button><a class="dom-link" href="/scalp" title="Live order book ladder, prints and clusters (view only)">DOM ↗</a><span class="research-badge"><span class="status-dot"></span>RESEARCH ONLY</span><button id="watchlist-toggle" type="button" aria-controls="watchlist" aria-expanded="true" title="Toggle watchlist">☷ <span>Watchlist</span></button></div>
   </header>
   <nav class="chart-toolbar" aria-label="Chart controls">
     <div id="favorite-intervals" class="favorite-intervals" role="group" aria-label="Favorite intervals"></div>
@@ -79,8 +85,9 @@
       <details class="local-alerts"><summary>LOCAL notifications · <span id="local-alerts-count">0</span></summary><p>Opt-in browser-only feed. Closed bars only. No Telegram, push, or payment.</p><ol id="local-alerts-feed" aria-live="polite"></ol></details>
     </aside>
   </div>
-  <footer class="workspace-footer"><span id="workspace-status" role="status">Independent charts · closed candles only</span><span class="chart-credit">Charts by <a href="https://www.tradingview.com/" target="_blank" rel="noopener noreferrer">TradingView Lightweight Charts™</a><span class="footer-utc"> · UTC</span></span></footer>
+  <footer class="workspace-footer"><span id="workspace-status" role="status">Independent charts · closed candles only</span><a href="#analysis-dashboard" class="footer-analysis" data-jump="analysis">Analysis ↓ scroll for the full read</a><span class="chart-credit">Charts by <a href="https://www.tradingview.com/" target="_blank" rel="noopener noreferrer">TradingView Lightweight Charts™</a><span class="footer-utc"> · UTC</span></span></footer>
 </div>
+<section id="analysis-dashboard" class="analysis-dashboard" aria-label="Analysis of the active chart"></section>
 <datalist id="symbol-suggestions"></datalist>
 <noscript><p class="fatal-message">JavaScript is required to display this chart workspace. No market data is generated locally.</p></noscript>
 </body>

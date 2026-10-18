@@ -274,3 +274,13 @@ def test_close_truncated_refuses_mid_string():
     assert ah.close_truncated('{"a":"x\\"y"') == '{"a":"x\\"y"}'
     assert ah.close_truncated('{"a":1}') is None
     assert ah.close_truncated('{"a":1]') is None
+
+
+def test_response_carries_the_analysed_snapshot(snap):
+    """The /ui Analysis dashboard reads cited values and metrics from the exact snapshot."""
+    out = service(lambda m, deadline=None: (json.dumps(good(snap)), "m")).analyze("binance", "BTCUSDT", "15")
+    s = out["snapshot"]
+    assert s["exchange"] == "binance" and s["interval"] == "15"
+    assert s["indicators"]["atr14"] is not None and "missing" in s
+    assert out["snapshot_hash"] == analyst.snapshot_hash(s)
+    assert len(json.dumps(s, separators=(",", ":"), default=str)) == out["snapshot_bytes"]

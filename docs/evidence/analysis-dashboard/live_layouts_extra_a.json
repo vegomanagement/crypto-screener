@@ -1,0 +1,486 @@
+{
+ "layouts": [
+  {
+   "i": 0,
+   "heapUsedMB": 5.65,
+   "dom": {
+    "documents": 1,
+    "nodes": 12459,
+    "jsEventListeners": 2845
+   },
+   "panes": 2,
+   "analystSubscribers": 1,
+   "dashboard": {
+    "visible": true,
+    "polling": true,
+    "observer": true,
+    "renders": 11,
+    "alive": true
+   },
+   "listeners": {
+    "document": 21,
+    "window": 7
+   }
+  },
+  {
+   "i": 1,
+   "layout": "2cols",
+   "heapUsedMB": 5.99,
+   "dom": {
+    "documents": 1,
+    "nodes": 12420,
+    "jsEventListeners": 2845
+   },
+   "panes": 2,
+   "analystSubscribers": 1,
+   "dashboard": {
+    "visible": true,
+    "polling": true,
+    "observer": true,
+    "renders": 12,
+    "alive": true
+   },
+   "listeners": {
+    "document": 21,
+    "window": 7
+   }
+  },
+  {
+   "i": 2,
+   "layout": "2rows",
+   "heapUsedMB": 6.06,
+   "dom": {
+    "documents": 1,
+    "nodes": 12420,
+    "jsEventListeners": 2845
+   },
+   "panes": 2,
+   "analystSubscribers": 1,
+   "dashboard": {
+    "visible": true,
+    "polling": true,
+    "observer": true,
+    "renders": 13,
+    "alive": true
+   },
+   "listeners": {
+    "document": 21,
+    "window": 7
+   }
+  },
+  {
+   "i": 3,
+   "layout": "3cols",
+   "heapUsedMB": 6.38,
+   "dom": {
+    "documents": 1,
+    "nodes": 12789,
+    "jsEventListeners": 2932
+   },
+   "panes": 3,
+   "analystSubscribers": 1,
+   "dashboard": {
+    "visible": true,
+    "polling": true,
+    "observer": true,
+    "renders": 14,
+    "alive": true
+   },
+   "listeners": {
+    "document": 30,
+    "window": 9
+   }
+  },
+  {
+   "i": 4,
+   "layout": "4grid",
+   "heapUsedMB": 7.32,
+   "dom": {
+    "documents": 1,
+    "nodes": 13139,
+    "jsEventListeners": 3019
+   },
+   "panes": 4,
+   "analystSubscribers": 1,
+   "dashboard": {
+    "visible": true,
+    "polling": true,
+    "observer": true,
+    "renders": 15,
+    "alive": true
+   },
+   "listeners": {
+    "document": 39,
+    "window": 11
+   }
+  },
+  {
+   "i": 5,
+   "layout": "6grid",
+   "heapUsedMB": 8.25,
+   "dom": {
+    "documents": 1,
+    "nodes": 13899,
+    "jsEventListeners": 3193
+   },
+   "panes": 6,
+   "analystSubscribers": 1,
+   "dashboard": {
+    "visible": true,
+    "polling": true,
+    "observer": true,
+    "renders": 16,
+    "alive": true
+   },
+   "listeners": {
+    "document": 57,
+    "window": 15
+   }
+  },
+  {
+   "i": 6,
+   "layout": "1",
+   "heapUsedMB": 5.45,
+   "dom": {
+    "documents": 1,
+    "nodes": 12073,
+    "jsEventListeners": 2758
+   },
+   "panes": 1,
+   "analystSubscribers": 1,
+   "dashboard": {
+    "visible": true,
+    "polling": true,
+    "observer": true,
+    "renders": 17,
+    "alive": true
+   },
+   "listeners": {
+    "document": 12,
+    "window": 5
+   }
+  },
+  {
+   "i": 7,
+   "layout": "2cols",
+   "heapUsedMB": 6.03,
+   "dom": {
+    "documents": 1,
+    "nodes": 12600,
+    "jsEventListeners": 2845
+   },
+   "panes": 2,
+   "analystSubscribers": 1,
+   "dashboard": {
+    "visible": true,
+    "polling": true,
+    "observer": true,
+    "renders": 20,
+    "alive": true
+   },
+   "listeners": {
+    "document": 21,
+    "window": 7
+   }
+  },
+  {
+   "i": 8,
+   "layout": "2rows",
+   "heapUsedMB": 5.82,
+   "dom": {
+    "documents": 1,
+    "nodes": 12419,
+    "jsEventListeners": 2845
+   },
+   "panes": 2,
+   "analystSubscribers": 1,
+   "dashboard": {
+    "visible": true,
+    "polling": true,
+    "observer": true,
+    "renders": 21,
+    "alive": true
+   },
+   "listeners": {
+    "document": 21,
+    "window": 7
+   }
+  },
+  {
+   "i": 9,
+   "layout": "3cols",
+   "heapUsedMB": 6.24,
+   "dom": {
+    "documents": 1,
+    "nodes": 12771,
+    "jsEventListeners": 2932
+   },
+   "panes": 3,
+   "analystSubscribers": 1,
+   "dashboard": {
+    "visible": true,
+    "polling": true,
+    "observer": true,
+    "renders": 22,
+    "alive": true
+   },
+   "listeners": {
+    "document": 30,
+    "window": 9
+   }
+  },
+  {
+   "i": 10,
+   "layout": "4grid",
+   "heapUsedMB": 7.39,
+   "dom": {
+    "documents": 1,
+    "nodes": 13130,
+    "jsEventListeners": 3019
+   },
+   "panes": 4,
+   "analystSubscribers": 1,
+   "dashboard": {
+    "visible": true,
+    "polling": true,
+    "observer": true,
+    "renders": 23,
+    "alive": true
+   },
+   "listeners": {
+    "document": 39,
+    "window": 11
+   }
+  },
+  {
+   "i": 11,
+   "layout": "6grid",
+   "heapUsedMB": 8.92,
+   "dom": {
+    "documents": 1,
+    "nodes": 13858,
+    "jsEventListeners": 3193
+   },
+   "panes": 6,
+   "analystSubscribers": 1,
+   "dashboard": {
+    "visible": true,
+    "polling": true,
+    "observer": true,
+    "renders": 24,
+    "alive": true
+   },
+   "listeners": {
+    "document": 57,
+    "window": 15
+   }
+  },
+  {
+   "i": 12,
+   "layout": "1",
+   "heapUsedMB": 5.42,
+   "dom": {
+    "documents": 1,
+    "nodes": 12053,
+    "jsEventListeners": 2758
+   },
+   "panes": 1,
+   "analystSubscribers": 1,
+   "dashboard": {
+    "visible": true,
+    "polling": true,
+    "observer": true,
+    "renders": 25,
+    "alive": true
+   },
+   "listeners": {
+    "document": 12,
+    "window": 5
+   }
+  },
+  {
+   "i": 13,
+   "layout": "2cols",
+   "heapUsedMB": 6.91,
+   "dom": {
+    "documents": 1,
+    "nodes": 12432,
+    "jsEventListeners": 2845
+   },
+   "panes": 2,
+   "analystSubscribers": 1,
+   "dashboard": {
+    "visible": true,
+    "polling": true,
+    "observer": true,
+    "renders": 26,
+    "alive": true
+   },
+   "listeners": {
+    "document": 21,
+    "window": 7
+   }
+  },
+  {
+   "i": 14,
+   "layout": "2rows",
+   "heapUsedMB": 6.47,
+   "dom": {
+    "documents": 1,
+    "nodes": 12424,
+    "jsEventListeners": 2845
+   },
+   "panes": 2,
+   "analystSubscribers": 1,
+   "dashboard": {
+    "visible": true,
+    "polling": true,
+    "observer": true,
+    "renders": 27,
+    "alive": true
+   },
+   "listeners": {
+    "document": 21,
+    "window": 7
+   }
+  },
+  {
+   "i": 15,
+   "layout": "3cols",
+   "heapUsedMB": 7.29,
+   "dom": {
+    "documents": 1,
+    "nodes": 12914,
+    "jsEventListeners": 2932
+   },
+   "panes": 3,
+   "analystSubscribers": 1,
+   "dashboard": {
+    "visible": true,
+    "polling": true,
+    "observer": true,
+    "renders": 28,
+    "alive": true
+   },
+   "listeners": {
+    "document": 30,
+    "window": 9
+   }
+  },
+  {
+   "i": 16,
+   "layout": "4grid",
+   "heapUsedMB": 7.22,
+   "dom": {
+    "documents": 1,
+    "nodes": 13129,
+    "jsEventListeners": 3019
+   },
+   "panes": 4,
+   "analystSubscribers": 1,
+   "dashboard": {
+    "visible": true,
+    "polling": true,
+    "observer": true,
+    "renders": 29,
+    "alive": true
+   },
+   "listeners": {
+    "document": 39,
+    "window": 11
+   }
+  },
+  {
+   "i": 17,
+   "layout": "6grid",
+   "heapUsedMB": 9.19,
+   "dom": {
+    "documents": 1,
+    "nodes": 13858,
+    "jsEventListeners": 3193
+   },
+   "panes": 6,
+   "analystSubscribers": 1,
+   "dashboard": {
+    "visible": true,
+    "polling": true,
+    "observer": true,
+    "renders": 30,
+    "alive": true
+   },
+   "listeners": {
+    "document": 57,
+    "window": 15
+   }
+  },
+  {
+   "i": 18,
+   "layout": "1",
+   "heapUsedMB": 5.94,
+   "dom": {
+    "documents": 1,
+    "nodes": 12061,
+    "jsEventListeners": 2758
+   },
+   "panes": 1,
+   "analystSubscribers": 1,
+   "dashboard": {
+    "visible": true,
+    "polling": true,
+    "observer": true,
+    "renders": 31,
+    "alive": true
+   },
+   "listeners": {
+    "document": 12,
+    "window": 5
+   }
+  },
+  {
+   "i": 19,
+   "layout": "2cols",
+   "heapUsedMB": 6.78,
+   "dom": {
+    "documents": 1,
+    "nodes": 12420,
+    "jsEventListeners": 2845
+   },
+   "panes": 2,
+   "analystSubscribers": 1,
+   "dashboard": {
+    "visible": true,
+    "polling": true,
+    "observer": true,
+    "renders": 32,
+    "alive": true
+   },
+   "listeners": {
+    "document": 21,
+    "window": 7
+   }
+  },
+  {
+   "i": 20,
+   "layout": "2rows",
+   "heapUsedMB": 6.13,
+   "dom": {
+    "documents": 1,
+    "nodes": 12415,
+    "jsEventListeners": 2845
+   },
+   "panes": 2,
+   "analystSubscribers": 1,
+   "dashboard": {
+    "visible": true,
+    "polling": true,
+    "observer": true,
+    "renders": 33,
+    "alive": true
+   },
+   "listeners": {
+    "document": 21,
+    "window": 7
+   }
+  }
+ ]
+}
