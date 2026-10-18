@@ -168,6 +168,7 @@ def scan(ltf, htf, params=None, filtered=True, atr=None, H=None, L=None):
     zc, zo = _Zones(H), _Zones(H)
     limit = p["entry"] == "limit"
     trades, state, used = [], {"mode": "idle"}, set()
+    idle_from = -1                         # last bar at which a finished trade released the coin
 
     def swept_before(d, j, strict):
         s = sweep_i[d]
@@ -187,7 +188,7 @@ def scan(ltf, htf, params=None, filtered=True, atr=None, H=None, L=None):
         a = atr[t["i_signal"]]
         info = {}
         r, ei, why, part = manage(ltf, j, t["d"], px, t["stop"], t["target"], p, at_close=at_close, info=info)
-        t.update(r=r, i_exit=ei, exit=why, partial=part, partial_i=info.get("partial_i"),
+        t.update(r=r, i_exit=ei, exit=why, partial=part, partial_i=info.get("partial_i"), be_i=info.get("be_i"),
                  exit_ts=ltf[ei]["close_ts"], risk_atr=t["risk"] / a if a else None)
         if why == "open":
             return {"mode": "trade", "until": len(ltf), "t": t}
@@ -202,6 +203,7 @@ def scan(ltf, htf, params=None, filtered=True, atr=None, H=None, L=None):
         if mode == "trade":
             if j >= state["until"]:
                 state = {"mode": "idle"}
+                idle_from = j
             continue
         if mode == "pending":
             t = state["t"]
@@ -272,7 +274,44 @@ def scan(ltf, htf, params=None, filtered=True, atr=None, H=None, L=None):
                          "expiry": j + p["arm_htf_bars"] * ratio, "armed_i": j}
                 break
     state.pop("_zone", None)
+    if limit and state["mode"] == "idle" and ltf:
+        state["resting"] = resting_limits(ltf, H, p, zo, used, filtered, idle_from)
     return trades, state
+
+
+def resting_limits(ltf, H, p, zo, used, filtered, idle_from):
+    """The POI-edge limit orders that ``scan`` would check on the NEXT entry-TF bar (after the last
+    closed one): the same zones, eligibility and plan as the fill loop, from HTF bars closed by the
+    last bar's close. ``knowable_ts`` = the later of the HTF close since which the zone has been
+    continuously eligible and the bar close at which the last trade released the coin."""
+    hct = H["close_ts"]
+    kn = bisect.bisect_right(hct, ltf[-1]["close_ts"]) - 1
+    if kn < 0:
+        return []
+    free_ts = ltf[idle_from]["close_ts"] if idle_from >= 0 else ltf[0]["ts"]
+    out = []
+    for z in zo.at(kn):
+        d = 1 if z["dir"] == "bull" else -1
+        if id(z) in used or not eligible(z, kn, d, H, p, filtered):
+            continue
+        t = _plan(z, d, H, kn, p, None, None)
+        if t is None:
+            continue
+        k0 = kn
+        while k0 - 1 >= z["confirm_i"] and eligible(z, k0 - 1, d, H, p, filtered):
+            k0 -= 1
+        edge = z["top"] if d > 0 else z["bottom"]
+        risk = d * (edge - t["stop"])
+        if risk <= 0:
+            continue
+        target = edge + d * FIXED_R[t["target_kind"]] * risk if t["target_kind"] != "liq" else t["target"]
+        out.append({"poi": _poi(z), "d": d, "edge": edge, "stop": t["stop"], "target": target,
+                    "target_kind": t["target_kind"], "htf_k": kn, "htf_close_ts": hct[kn],
+                    "zone_confirm_ts": hct[z["confirm_i"]], "eligible_from_ts": hct[k0],
+                    "knowable_ts": max(hct[k0], free_ts), "htf_atr": H["atr"][kn], "trend": H["trend"][kn],
+                    "range_lo": H["lo"][kn], "range_hi": H["hi"][kn],
+                    "sweep_required": bool(filtered and p["sweep"])})
+    return out
 
 
 def manage(bars, j0, d, entry, stop, target, p=None, at_close=False, info=None):
