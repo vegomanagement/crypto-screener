@@ -24,6 +24,7 @@ from market_candles import closed_candles, interval_ms
 from liquidity_api import register_liquidity_routes
 from footprint_api import register_footprint_routes
 from seconds_api import register_seconds_routes
+from trades_api import register_trades_routes
 from scalp_api import register_scalp_routes
 from agent_api import register_agent_routes
 from funding_api import register_funding_routes
@@ -79,6 +80,7 @@ app = Flask(__name__)
 register_liquidity_routes(app)
 register_footprint_routes(app)
 register_seconds_routes(app)
+register_trades_routes(app)
 register_scalp_routes(app)
 register_funding_routes(app)
 # Late-bound: fetch_market/compute_confluence_score are defined further down this module.

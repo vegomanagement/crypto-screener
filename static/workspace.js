@@ -176,6 +176,9 @@
     labelForSettings: () => 'Key levels / Opens' });
   if (SESSIONS) INDICATOR_DEFS.push({ id: 'sessions', label: 'Market Sessions', kind: 'sessions', defaultEnabled: false, settingsSchema: SESSIONS.settingsSchema(),
     labelForSettings: () => 'Market Sessions' });
+  // Order-flow overlays (static/indicators/bubbles*.js, volume-anomaly.js, orderflow-pane.js).
+  if (window.WorkspaceBubbles && window.WorkspaceBubblesRender) INDICATOR_DEFS.push(window.WorkspaceBubbles.definition);
+  if (window.WorkspaceVolumeAnomaly) INDICATOR_DEFS.push(window.WorkspaceVolumeAnomaly.definition);
   INDICATOR_DEFS.push(...(window.WorkspaceIndicatorExtras?.definitions || []).map(def => def.kind !== 'band' ? def : ({ ...def, settingsSchema: [...def.settingsSchema,
     { key: 'innerBoundary', label: 'Visible inner boundary', type: 'select', default: def.innerBoundary || 'lower', options: ['upper', 'lower'] },
     { key: 'showOuter', label: 'Show outer boundary', type: 'boolean', default: false }
@@ -615,12 +618,14 @@
       this.groupModels = {}; this.htf = null; this.htfKey = null;
       this.htfLoader = OPENS?.createLoader({ fetch: (url, options) => fetch(url, options) });
       this.initDrawings();
+      this.initOrderflow();
       this.initCountdown();
       this.logicalListener = () => { this.scheduleDraw(); this.queueLiquidityRange(); };
       this.crosshairListener = parameter => {
         const candle = parameter.seriesData?.get(this.series);
         this.updateLegend(candle && typeof candle.close === 'number' ? candle : this.candles.at(-1));
         this.liquidityTooltip(parameter);
+        this.orderflow?.tooltip(parameter.point);
         this.scheduleDraw();
       };
       this.chart.timeScale().subscribeVisibleLogicalRangeChange(this.logicalListener);
@@ -693,6 +698,17 @@
       this.footprint = api.createController({ fetch: (url, options) => fetch(url, options), hub: streamHub,
         visible: () => !this.disposed && document.visibilityState === 'visible' && isVisible(this),
         onChange: () => { this.renderFootprintStatus(); this.scheduleDraw(); } });
+    }
+    initOrderflow() {
+      const api = window.WorkspaceOrderflowPane;
+      if (!api) return;
+      const config = () => state.panes[this.id];
+      this.orderflow = api.attach({ pane: this, hub: streamHub, fetch: (url, options) => fetch(url, options), stage: $('.chart-stage', this.element),
+        statusAfter: this.footprintStatus, isEnabled: isIndicatorEnabled, settings: getIndicatorSettings, config, format: price => this.series.priceFormatter().format(price),
+        step: () => intervalSeconds(config().interval, this.candles.at(-1)?.time || Date.now() / 1000),
+        tickKnown: () => Boolean(this.instrument || this.instrumentError), tick: () => venueTick(this.instrument, this.lastDisplayPrice ?? this.candles.at(-1)?.close),
+        forming: () => (this.seconds ? this.seconds.view().forming : this.forming) || null,
+        mainFootprint: () => (config().footprint ? this.footprint?.store || null : null), requestDraw: () => this.scheduleDraw() });
     }
     // Drawing tools + shared price levels live in static/drawings.js; the pane only maps pixels.
     initDrawings() {
@@ -975,6 +991,7 @@
       this.drawBands(context, plotWidth, plotHeight);
       this.drawGroupedOverlays(context, plotWidth, plotHeight);
       if (state.panes[this.id].footprint) this.drawFootprint(context, plotWidth, plotHeight);
+      this.orderflow?.draw(context, plotWidth, plotHeight);
       this.drawings?.draw(context, plotWidth, plotHeight);
       context.restore();
     }
@@ -1584,7 +1601,7 @@
     }
     destroy() {
       this.stopSeconds(); this.drawings?.dispose(); clearInterval(this.countdownTimer);
-      this.footprint?.disable();
+      this.footprint?.disable(); this.orderflow?.dispose();
       this.liquiditySession?.dispose(); clearInterval(this.liquidityTimer); clearTimeout(this.liquidityRangeTimer);
       this.disposed = true;
       this.generation += 1;
@@ -1917,7 +1934,7 @@
   function initGenericIndicators() {
     const group = $('#extra-indicator-controls');
     // One chip + one ⚙ per indicator; grouped overlays first, liquidity last.
-    const order = def => ['ema-ribbon', 'ema200', 'ma-channel', 'turtle-zone', 'vwap-daily', 'vwap-weekly', 'opens', 'sessions'].indexOf(def.id) + 1 || 99;
+    const order = def => ['ema-ribbon', 'ema200', 'ma-channel', 'turtle-zone', 'vwap-daily', 'vwap-weekly', 'opens', 'sessions', 'big-trades', 'abnormal-volume'].indexOf(def.id) + 1 || 99;
     INDICATOR_DEFS.filter(def => !def.hidden && !$(`.indicator-settings-btn[data-indicator="${def.id}"]`)).sort((a, b) => order(a) - order(b)).forEach(def => {
       const label = document.createElement('label'); label.className = 'toggle-chip'; label.dataset.indicatorChip = def.id;
       const input = document.createElement('input'); input.type = 'checkbox'; input.dataset.indicatorToggle = def.id;

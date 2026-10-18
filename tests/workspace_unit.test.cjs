@@ -365,6 +365,7 @@ function settingsHarness(saved, inputs = []) {
   const storage = new Map([['crypto-screener.workspace.v3', JSON.stringify(saved)]]);
   const extras = require('../static/indicator-extras.js');
   const groups = require('../static/indicators/groups.js'), opens = require('../static/indicators/opens.js'), sessions = require('../static/indicators/sessions.js');
+  const bubbles = require('../static/indicators/bubbles.js'), bubblesRender = require('../static/indicators/bubbles-render.js'), volumeAnomaly = require('../static/indicators/volume-anomaly.js');
   let saves = 0, redraws = 0;
   const code = source.slice(source.indexOf('  const STORAGE_KEY'), source.indexOf('  const $ =')) +
     source.slice(source.indexOf('  const defaultPanes'), source.indexOf('  function resetIndicatorSettings')) +
@@ -372,7 +373,8 @@ function settingsHarness(saved, inputs = []) {
     `\nconst settingsPopoverId = 'ema200', settingsPopover = {}; const $all = () => inputs; const panes = new Map([[0, {applyIndicators() { redraw(); }}]]);\n` +
     source.slice(source.indexOf('  function applySettingsPopover()'), source.indexOf('  function resetSettingsPopover()')) +
     '\n({state, migrationNotes, sanitizeFieldValue, setIndicatorSettings, applySettingsPopover, emaData, smaData, INDICATOR_DEFS, isIndicatorEnabled, getIndicatorSettings})';
-  const api = vm.runInNewContext(code, { window: { WorkspaceIndicatorExtras: extras, WorkspaceIndicatorGroups: groups, WorkspaceOpens: opens, WorkspaceSessions: sessions }, inputs,
+  const api = vm.runInNewContext(code, { window: { WorkspaceIndicatorExtras: extras, WorkspaceIndicatorGroups: groups, WorkspaceOpens: opens, WorkspaceSessions: sessions,
+    WorkspaceBubbles: bubbles, WorkspaceBubblesRender: bubblesRender, WorkspaceVolumeAnomaly: volumeAnomaly }, inputs,
     redraw: () => redraws++, localStorage: { getItem: k => storage.get(k), setItem: (k,v) => { saves++; storage.set(k,v); } } });
   return { api, storage, counts: () => [saves, redraws] };
 }
@@ -437,7 +439,7 @@ test('readState migrates a v4 save with split overlays into grouped indicators (
 test('overlay list renders exactly one toggle + one settings button per indicator', () => {
   const template = fs.readFileSync(path.join(__dirname, '../templates/workspace.html'), 'utf8');
   for (const legacy of ['ema7-toggle', 'ema14-toggle', 'ema28-toggle', 'ema200-toggle', 'ma20-high-toggle', 'ma20-low-toggle']) assert.equal(template.includes(legacy), false, legacy);
-  for (const script of ['indicators/groups.js', 'indicators/opens.js', 'indicators/sessions.js']) assert.ok(template.indexOf(script) < template.indexOf('workspace.js'), script);
+  for (const script of ['indicators/groups.js', 'indicators/opens.js', 'indicators/sessions.js', 'indicators/bubbles.js', 'indicators/bubbles-render.js', 'indicators/volume-anomaly.js', 'indicators/orderflow-pane.js']) assert.ok(template.indexOf(script) < template.indexOf('workspace.js'), script);
   const h = settingsHarness(null);
   const made = [];
   const element = tag => { const el = { tag, dataset: {}, children: [], className: '', append(...kids) { this.children.push(...kids); }, setAttribute() {}, addEventListener() {}, matches: () => false };
@@ -449,7 +451,7 @@ test('overlay list renders exactly one toggle + one settings button per indicato
     $: selector => selector === '#extra-indicator-controls' ? group : selector.includes('data-indicator="fvg"') ? { setAttribute() {}, previousElementSibling: null } : null });
   const toggles = group.children.filter(el => el.tag === 'label').map(el => el.children[0].dataset.indicatorToggle);
   const buttons = group.children.filter(el => el.tag === 'button').map(el => el.dataset.indicator);
-  assert.deepEqual(toggles, ['ema-ribbon', 'ema200', 'ma-channel', 'turtle-zone', 'vwap-daily', 'vwap-weekly', 'opens', 'sessions', 'liquidity']);
+  assert.deepEqual(toggles, ['ema-ribbon', 'ema200', 'ma-channel', 'turtle-zone', 'vwap-daily', 'vwap-weekly', 'opens', 'sessions', 'big-trades', 'abnormal-volume', 'liquidity']);
   assert.deepEqual(buttons, toggles);
   assert.equal(group.children.find(el => el.dataset.indicatorChip === 'ema-ribbon').children[1].textContent, 'EMA 7/14/21');
   assert.equal(group.children.find(el => el.dataset.indicatorChip === 'ma-channel').children[1].textContent, 'MA 20 H/L');
@@ -1024,4 +1026,19 @@ test('venue tick: fixed tickSize from Binance/Bybit metadata, Hyperliquid szDeci
   assert.equal(venueTick({ tick_size: null, sz_decimals: 2 }, 0.5), 0.0001, '6 − 2 = 4 decimals beat 5 sig figs');
   assert.equal(venueTick({ tick_size: null, sz_decimals: 5 }, null), null);
   assert.equal(venueTick(null, 100), null);
+});
+
+test('order-flow indicators: new ids default OFF for old and fresh saves; saved choice and settings survive', () => {
+  const old = settingsHarness({ version: 4, layout: '1', ema: { 7: true }, indicatorEnabled: { 'vwap-daily': true } }).api;
+  const fresh = settingsHarness(null).api;
+  for (const api of [old, fresh]) for (const id of ['big-trades', 'abnormal-volume']) assert.equal(api.isIndicatorEnabled(id), false, id);
+  assert.equal(old.isIndicatorEnabled('vwap-daily'), true, 'unrelated saved choice kept');
+  assert.equal(fresh.getIndicatorSettings('abnormal-volume').lookback, 50);
+  assert.equal(fresh.getIndicatorSettings('abnormal-volume').method, 'zlog');
+  assert.equal(fresh.getIndicatorSettings('big-trades').mode, 'both');
+  const saved = settingsHarness({ version: 5, layout: '1', indicatorEnabled: { 'big-trades': true }, indicatorSettings: { 'big-trades': { minUsd: 250000, percentile: 'bad', bogus: 1 }, 'abnormal-volume': { method: 'nope', lookback: 80 } } }).api;
+  assert.equal(saved.isIndicatorEnabled('big-trades'), true); assert.equal(saved.isIndicatorEnabled('abnormal-volume'), false);
+  assert.equal(saved.getIndicatorSettings('big-trades').minUsd, 250000);
+  assert.equal(saved.getIndicatorSettings('big-trades').percentile, 99.5, 'corrupt value → default');
+  assert.equal(saved.getIndicatorSettings('abnormal-volume').method, 'zlog'); assert.equal(saved.getIndicatorSettings('abnormal-volume').lookback, 80);
 });
