@@ -10,7 +10,7 @@ import mtf_block as B
 import mtf_rules as R
 import smc
 import swing_model as sm
-from tests.mtf_fixtures import H1, T0, brk, htf_bar, live_btc_case, read, wy
+from tests.mtf_fixtures import H1, T0, brk, live_btc_case, read, wy
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 import mtf_data  # noqa: E402

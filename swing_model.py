@@ -84,24 +84,7 @@ def scan(ltf, htf, params=None, filtered=True, atr=None):
                                             or (z["mitigated_i"] is not None and z["mitigated_i"] <= k))]
         mode = state["mode"]
         if mode == "trade":
-            t = state["t"]
-            d, e, risk = t["d"], t["entry"], t["risk"]
-            stop_hit = bar["l"] <= state["stop"] if d > 0 else bar["h"] >= state["stop"]
-            if stop_hit:
-                t["r"] = state["real"] + state["left"] * d * (state["stop"] - e) / risk
-                _close(trades, t, j, "stop", state)
-                state = {"mode": "idle"}
-                continue
-            part = e + d * p["partial_r"] * risk
-            if not state["partial"] and ((bar["h"] >= part) if d > 0 else (bar["l"] <= part)):
-                state.update(partial=True, real=0.5 * p["partial_r"], left=0.5, stop=e)
-            if (bar["h"] >= t["target"]) if d > 0 else (bar["l"] <= t["target"]):
-                t["r"] = state["real"] + state["left"] * t["rt"]
-                _close(trades, t, j, "target", state)
-                state = {"mode": "idle"}
-            elif j - t["i_fill"] >= p["max_hold"]:
-                t["r"] = state["real"] + state["left"] * d * (bar["c"] - e) / risk
-                _close(trades, t, j, "timeout", state)
+            if j >= state["until"]:
                 state = {"mode": "idle"}
             continue
         if mode == "pending":
@@ -113,12 +96,13 @@ def scan(ltf, htf, params=None, filtered=True, atr=None):
                 state = {"mode": "idle", "last": "cancelled: no retest fill"}
             elif (bar["l"] <= t["entry"]) if d > 0 else (bar["h"] >= t["entry"]):
                 t["i_fill"], t["fill_ts"] = j, bar["ts"]
-                if (bar["l"] <= t["stop"]) if d > 0 else (bar["h"] >= t["stop"]):
-                    t["r"] = -1.0
-                    _close(trades, t, j, "stop", {"partial": False})
-                    state = {"mode": "idle"}
+                r, ei, why, part = manage(ltf, j, d, t["entry"], t["stop"], t["target"], p)
+                t.update(r=r, i_exit=ei, exit=why, partial=part)
+                if why == "open":
+                    state = {"mode": "trade", "until": len(ltf), "t": t}
                 else:
-                    state = {"mode": "trade", "t": t, "stop": t["stop"], "partial": False, "real": 0.0, "left": 1.0}
+                    trades.append(t)
+                    state = {"mode": "trade", "until": ei, "t": t}
             continue
         trend = H["trend"][k]
         if mode == "armed" and (j > state["expiry"] or trend != state["d"]):
@@ -173,9 +157,31 @@ def _entry(ltf, j, b, d, zone, H, k, a, p):
             "risk_atr": risk / a, "entry_zone": None if zone is None else zone["kind"]}
 
 
-def _close(trades, t, j, why, state):
-    t.update(i_exit=j, exit=why, partial=bool(state.get("partial")))
-    trades.append(t)
+def manage(bars, j0, d, entry, stop, target, p=None, at_close=False):
+    """Exit of a position filled at ``entry`` on bar j0: (r, exit_i, why, partial_taken).
+
+    Stop first (also on the fill bar); half off at ``partial_r`` R with the stop to break-even;
+    the rest at ``target`` or at the close after ``max_hold`` bars; 'open' when the data ends.
+    ``at_close``: entered at bar j0's close (random control), so bar j0 itself is skipped."""
+    p = {**DEFAULTS, **(p or {})}
+    risk = d * (entry - stop)
+    rt = d * (target - entry) / risk
+    part_px = entry + d * p["partial_r"] * risk
+    real, left, cur, part = 0.0, 1.0, stop, False
+    for q in range(j0 + at_close, min(len(bars), j0 + p["max_hold"] + 1)):
+        b = bars[q]
+        if (b["l"] <= cur) if d > 0 else (b["h"] >= cur):
+            return real + left * d * (cur - entry) / risk, q, "stop", part
+        if q == j0 and not at_close:
+            continue                       # fill bar: only the stop is assumed to trade after the fill
+        if not part and ((b["h"] >= part_px) if d > 0 else (b["l"] <= part_px)):
+            real, left, cur, part = 0.5 * p["partial_r"], 0.5, entry, True
+        if (b["h"] >= target) if d > 0 else (b["l"] <= target):
+            return real + left * rt, q, "target", part
+    q = min(len(bars), j0 + p["max_hold"] + 1) - 1
+    if j0 + p["max_hold"] >= len(bars):
+        return None, q, "open", part
+    return real + left * d * (bars[q]["c"] - entry) / risk, q, "timeout", part
 
 
 def fee_r(t, fee):

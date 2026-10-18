@@ -991,6 +991,7 @@
       this.drawBands(context, plotWidth, plotHeight);
       this.drawGroupedOverlays(context, plotWidth, plotHeight);
       if (this.wyckoff) this.drawWyckoff(context, plotWidth);
+      if (this.smcOverlay) this.drawSmc(context, plotWidth);
       if (state.panes[this.id].footprint) this.drawFootprint(context, plotWidth, plotHeight);
       this.orderflow?.draw(context, plotWidth, plotHeight);
       this.drawings?.draw(context, plotWidth, plotHeight);
@@ -1341,6 +1342,13 @@
       const c = state.panes[this.id], api = window.WorkspaceWyckoff;
       if (!api || !c || this.wyckoff.key !== `${c.exchange}:${c.symbol}:${c.interval}`) return;
       api.draw(context, { x: t => this.edgeCoordinate(t), xc: t => this.edgeCoordinateCenter(t), y: p => this.series.priceToCoordinate(p), plotWidth }, this.wyckoff);
+    }
+    // SMC / HTF overlay (static/indicators/smc.js), driven by the dashboard's Multi-timeframe toggles.
+    setSmc(model) { this.smcOverlay = model || null; this.scheduleDraw(); }
+    drawSmc(context, plotWidth) {
+      const c = state.panes[this.id], api = window.WorkspaceSmc;
+      if (!api || !c || this.smcOverlay.key !== `${c.exchange}:${c.symbol}:${c.interval}`) return;
+      api.draw(context, { x: t => this.edgeCoordinate(t), xc: t => this.edgeCoordinateCenter(t), y: p => this.series.priceToCoordinate(p), plotWidth, first: this.candles[0]?.time }, this.smcOverlay);
     }
     // Hermes analyst levels (static/analyst-panel.js): temporary dashed price lines, never stored.
     setAnalystLines(rows) {
@@ -2064,7 +2072,8 @@
       IntersectionObserver: window.IntersectionObserver || null,
       pageVisible: () => document.visibilityState === 'visible',
       scrollToCharts: () => window.scrollTo({ top: 0, behavior: 'smooth' }),
-      setWyckoffOverlay: model => panes.forEach((pane, id) => pane.setWyckoff(model && id === state.active ? model : null))
+      setWyckoffOverlay: model => panes.forEach((pane, id) => pane.setWyckoff(model && id === state.active ? model : null)),
+      setSmcOverlay: model => panes.forEach((pane, id) => pane.setSmc(model && id === state.active ? model : null))
     });
     // Wheel over a chart zooms it and never scrolls the (now scrollable) page.
     disposeWheelGuard = api.installWheelGuard(grid);
