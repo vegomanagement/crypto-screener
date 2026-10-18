@@ -70,16 +70,11 @@ test('section HTML escapes and labels predicted as an estimate', () => {
   assert.match(F.sectionHtml(null, NOW), /loading/);
 });
 
-test('analyst panel renders the funding section from workspace data', () => {
-  const A = require('../static/analyst-panel.js');
-  const roles = {};
-  const node = () => ({ textContent: '', innerHTML: '', disabled: false, classList: { toggle() {} }, addEventListener() {} });
-  const el = { set innerHTML(html) { for (const m of html.matchAll(/data-role="(\w+)"/g)) roles[m[1]] = roles[m[1]] || node(); },
-    querySelector(sel) { return roles[/data-role="(\w+)"/.exec(sel)[1]]; }, addEventListener() {} };
-  const ctl = A.mount(el, { fetch: async () => ({ ok: false, json: async () => ({}) }), getActive: () => null, drawLines() {}, clearLines() {}, centerOn() {}, visible: () => false, funding: F });
-  try {
-    ctl.setFunding(DATA, NOW);
-    assert.match(roles.funding.innerHTML, /Predicted/);
-    assert.match(roles.funding.innerHTML, /0\.0037%/);
-  } finally { ctl.destroy(); }
+test('Analysis dashboard funding card renders the pane funding cache (moved out of the sidebar card)', () => {
+  const FL = require('../static/analysis-metrics-flow.js');
+  const card = FL.X.fundingCard({ funding: DATA, now: NOW });
+  const html = require('../static/analysis-dashboard-render.js').rowsHtml(card.rows);
+  assert.match(html, /Last → predicted/);
+  assert.match(html, /0\.0037%/);
+  assert.equal(card.cross.length > 0 || !!card.crossNote, true);
 });

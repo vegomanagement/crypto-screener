@@ -33,6 +33,7 @@ test('late stats for the previous symbol are dropped', async () => {
     eth.resolve(); await new Promise(r => setTimeout(r, 0));
     btc.resolve(); await new Promise(r => setTimeout(r, 0));
     assert.equal(ctl._state.stats.total, 222, 'stats belong to the active ETHUSDT chart');
-    assert.match(el.roles.stats.textContent, /222 logged/);
+    // The calibration line now renders in the Analysis dashboard from view().stats.
+    assert.match(A.statsLine(ctl.view().stats), /222 logged/);
   } finally { ctl.destroy(); }
 });

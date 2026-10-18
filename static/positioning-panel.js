@@ -68,7 +68,7 @@
       status: c.connected ? `connected · ${c.events || 0} events stored` : (c.error ? `reconnecting: ${c.error}` : 'connecting…') };
   }
 
-  function whalesVM(w, now) {
+  function whalesVM(w, now, limit) {
     if (!w) return { available: false, reason: 'not loaded', changes: [], positions: [] };
     const a = w.aggregate;
     const head = { label: w.label || 'Hyperliquid top-N accounts by account value', poll: w.last_poll ?
@@ -78,7 +78,7 @@
     return { ...head, available: true, share: t > 0 ? l / t : null, long: fmtUsd(l), short: fmtUsd(s), net: fmtUsd(a.net_notional),
       longCount: a.long_count, shortCount: a.short_count, avgLong: fmtPx(a.avg_entry_long), avgShort: fmtPx(a.avg_entry_short),
       empty: a.long_count + a.short_count === 0,
-      positions: (a.positions || []).slice(0, 6).map(p => ({ who: short(p.address), side: p.side, usd: fmtUsd(p.notional), entry: fmtPx(p.entry), liq: fmtPx(p.liquidation_px), lev: p.leverage })),
+      positions: (a.positions || []).slice(0, limit || 6).map(p => ({ who: short(p.address), side: p.side, usd: fmtUsd(p.notional), entry: fmtPx(p.entry), liq: fmtPx(p.liquidation_px), lev: p.leverage })),
       changes: (w.changes || []).slice(0, 8).map(c => ({ kind: c.kind, side: c.side, who: short(c.address), usd: fmtUsd(c.delta_notional), age: fmtAge(c.ts, now), detail: `${c.from_szi} → ${c.to_szi}` })) };
   }
 
@@ -89,7 +89,7 @@
   }
 
   /** Pure: API snapshot (+ optional whales response) → render-ready strings. */
-  function viewModel(snap, whales, now) {
+  function viewModel(snap, whales, now, opts) {
     if (!snap) return { error: 'no data' };
     if (snap.error) return { error: snap.error };
     const t = snap.top_traders || {}, oi = snap.open_interest || {}, cur = oi.current || {};
@@ -107,7 +107,7 @@
       basis: snap.basis && snap.basis.value != null ? { value: snap.basis.value, funding: fmtSigned(num(snap.basis.funding_rate) * 100, 4, '%'), source: snap.basis.source } : { reason: snap.basis && snap.basis.reason },
       signals: (snap.signals || []).map(s => ({ id: s.id, label: s.label, state: s.state ? s.state.replace(/_/g, ' ') : 'n/a', formula: s.formula, reason: s.reason })),
       liquidations: liquidationsVM(snap.liquidations, now),
-      whales: whalesVM(whales || snap.whales, now),
+      whales: whalesVM(whales || snap.whales, now, opts && opts.whaleRows),
       flows: flowsVM(snap.exchange_flows),
       warnings: snap.warnings || [],
     };
@@ -173,5 +173,5 @@
       destroy() { alive = false; seq += 1; clearInterval(timer); box.remove(); } };
   }
 
-  return { viewModel, renderHtml, mount, fmtUsd, fmtPct, fmtSigned, fmtPx };
+  return { viewModel, renderHtml, mount, fmtUsd, fmtPct, fmtSigned, fmtPx, fmtAge, fmtTime };
 });

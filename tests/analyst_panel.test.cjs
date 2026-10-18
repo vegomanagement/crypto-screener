@@ -118,8 +118,8 @@ function fakeEl() {
   };
 }
 
-test('controller posts the active pane, draws lines and clears them on symbol change', async () => {
-  const calls = [], drawn = [], cleared = [];
+test('controller posts the active pane, draws lines, renders the compact summary and keeps a stale result on symbol change', async () => {
+  const calls = [], drawn = [], cleared = [], seen = [];
   let active = { id: 1, exchange: 'binance', symbol: 'BTCUSDT', interval: '15', precision: 1 };
   const fetch = async (url, options) => {
     calls.push([url, options && JSON.parse(options.body)]);
@@ -129,23 +129,29 @@ test('controller posts the active pane, draws lines and clears them on symbol ch
   const el = fakeEl();
   const ctl = A.mount(el, { fetch, getActive: () => active, drawLines: (id, rows) => drawn.push([id, rows.length]),
     clearLines: id => cleared.push(id), centerOn() {}, levels: null, visible: () => true, now: () => 61000 });
+  const off = ctl.subscribe(v => seen.push(v));
   try {
     await ctl.run(true);
     const post = calls.find(c => c[0] === '/api/agent/analysis');
     assert.deepEqual(post[1], { exchange: 'binance', symbol: 'BTCUSDT', interval: '15', force: true });
     assert.deepEqual(drawn.at(-1), [1, 2]);
-    assert.match(el.roles.body.innerHTML, /LONG 38%/);
-    assert.match(el.roles.body.innerHTML, /analyst-chip is-short"[^>]*><b>−3<\/b> RSI &lt;i&gt;high&lt;\/i&gt;/);
-    assert.match(el.roles.body.innerHTML, /analyst-chip is-long is-funding/);
-    assert.match(el.roles.body.innerHTML, /analyst-disagree[^>]*>⚠ Disagreement/);
-    assert.match(el.roles.body.innerHTML, /p_long 37\.6/);
-    assert.match(el.roles.body.innerHTML, /&lt;b&gt;x&lt;\/b&gt;/);
-    assert.doesNotMatch(el.roles.body.innerHTML, /<b>x<\/b>/);
+    // Sidebar shows only the split + verdict; the full read is the dashboard's job.
+    assert.match(el.roles.summary.innerHTML, /▲ 38%/);
+    assert.match(el.roles.summary.innerHTML, /Short · /);
+    assert.doesNotMatch(el.roles.summary.innerHTML, /analyst-chip|RSI/);
+    assert.ok(el.roles.open, 'Open full analysis link exists');
+    assert.equal(seen.at(-1).stale, false);
     active = { ...active, symbol: 'ETHUSDT' };
     ctl.activeChanged();
     assert.ok(cleared.includes(1));
-    assert.equal(ctl._state.result, null);
-  } finally { ctl.destroy(); }
+    assert.equal(ctl._state.result, RESULT, 'previous analysis is kept');
+    assert.equal(ctl.view().stale, true);
+    assert.equal(ctl.view().resultKey, 'binance:BTCUSDT:15');
+    assert.match(el.roles.status.textContent, /BTCUSDT 15m — re-analyze/);
+    assert.match(el.roles.summary.innerHTML, /is-stale/);
+    assert.equal(ctl.addLevel(0), false, 'cannot save a stale level onto another symbol');
+  } finally { off(); ctl.destroy(); }
+  assert.equal(ctl.listenerCount(), 0);
 });
 
 test('controller shows rate-limit and seconds-chart errors without posting', async () => {
@@ -179,42 +185,12 @@ test('positioningTarget maps the active pane to venue/symbol/period, rejecting w
   assert.ok(A.positioningTarget(null).error);
 });
 
-test('Positioning section mounts positioning-panel only while open, follows the pane, polls only when visible', async () => {
-  const mounts = [], updates = [], destroyed = [];
-  const fakePanel = { mount(box, opts) { mounts.push(opts); return { update(t) { updates.push(t); }, destroy() { destroyed.push(1); } }; } };
-  let active = { id: 1, exchange: 'binance', symbol: 'BTCUSDT', interval: '15' };
-  const fetch = async () => ({ ok: true, json: async () => ({ total: 0, overall: { n: 0 } }) });
+test('sidebar card no longer duplicates positioning, funding or factor detail', () => {
   const el = fakeEl();
-  const ctl = A.mount(el, { fetch, getActive: () => active, drawLines() {}, clearLines() {}, centerOn() {},
-    visible: () => true, positioning: fakePanel });
+  const ctl = A.mount(el, { fetch: async () => ({ ok: false, json: async () => ({}) }), getActive: () => null,
+    drawLines() {}, clearLines() {}, centerOn() {}, visible: () => true });
   try {
-    assert.match(Object.keys(el.roles).join(','), /positioning/);
-    ctl.activeChanged();
-    assert.equal(mounts.length, 0, 'closed section does not mount or poll');
-    el.roles.positioning.open = true;
-    el.roles.positioning.ontoggle();
-    assert.equal(mounts.length, 1);
-    assert.deepEqual([mounts[0].exchange, mounts[0].symbol, mounts[0].period, mounts[0].coin, mounts[0].intervalMs],
-      ['binance', 'BTCUSDT', '15m', 'BTC', 60000]);
-    assert.equal(mounts[0].owner, 'analyst-card');
-    assert.equal(mounts[0].visible(), true);
-    assert.equal(el.roles.posTarget.textContent, 'binance · BTCUSDT · 15m');
-    ctl.activeChanged();
-    assert.equal(updates.length, 0, 'same pane → no refetch');
-    active = { id: 2, exchange: 'bybit', symbol: 'SOLUSDT', interval: '60' };
-    ctl.activeChanged();
-    assert.deepEqual(updates.at(-1), { exchange: 'bybit', symbol: 'SOLUSDT', period: '1h', coin: 'SOL' });
-    active = { id: 3, exchange: 'binance', symbol: 'BTCUSDT', interval: '5s' };
-    ctl.activeChanged();
-    assert.equal(destroyed.length, 1);
-    assert.match(el.roles.posBody.innerHTML, /No positioning period/);
-    active = { id: 1, exchange: 'binance', symbol: 'ETHUSDT', interval: '15' };
-    ctl.activeChanged();
-    assert.equal(mounts.length, 2);
-    el.roles.positioning.open = false;
-    assert.equal(mounts[1].visible(), false, 'closed section → timer ticks skipped');
-    el.roles.positioning.ontoggle();
-    assert.equal(destroyed.length, 2);
+    assert.deepEqual(Object.keys(el.roles).sort(), ['open', 'run', 'status', 'summary', 'target']);
   } finally { ctl.destroy(); }
 });
 
