@@ -162,6 +162,29 @@ def test_restart_with_a_gap_and_idempotency(tmp_path):
         assert pos == [(p["symbol"], p["entry_ts"], p["pnl"], p["exit_ts"]) for p in clean.pf_positions(sid, cv)]
 
 
+def test_run_cycle_fetches_only_when_a_new_close_can_exist():
+    bars, fund = market_data()
+    s = strat(pps.D_ID)
+    store = PaperStore()
+    calls = []
+
+    def candles(sym, tfs):
+        calls.append(sym)
+        return {"D": bars[sym]}
+
+    def funding(sym, a, b):
+        return [r for r in fund[sym] if a < r["time"] <= b]
+    t = {"now": (start_day() + DAY + pp.SETTLE_MS) / 1000}
+    r = pp.run_cycle(store, s, candles, funding, clock=lambda: t["now"])
+    assert r["results"][0]["as_of"] == start_day() and len(calls) == len(SYMS)
+    t["now"] += 6 * 3600
+    assert pp.run_cycle(store, s, candles, funding, clock=lambda: t["now"])["results"][0]["skipped"] and \
+        len(calls) == len(SYMS)                                                  # no venue request
+    t["now"] = (start_day() + 2 * DAY + pp.SETTLE_MS) / 1000
+    r = pp.run_cycle(store, s, candles, funding, clock=lambda: t["now"])
+    assert r["results"][0]["new_days"] == 1 and len(calls) == 2 * len(SYMS)
+
+
 def test_warmup_starts_flat_and_trend_needs_a_fresh_cross():
     bars, _ = market_data()
     for sid in (pps.A_ID, pps.D_ID):

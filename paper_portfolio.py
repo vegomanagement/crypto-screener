@@ -140,6 +140,9 @@ def run_cycle(store, strat, load_candles, load_funding, reason="interval", clock
     bars, fund, errors = {}, {}, {}
     start = strat["params"]["history_start"]
     now = int(clock() * 1000)
+    st = store.pf_state(strat["id"], version)
+    if st is not None and now < st["last_day"] + 2 * DAY + SETTLE_MS:      # next close not settled yet:
+        return {"version": version, "results": [{"skipped": "no new daily close"}], "errors": {}}  # no fetch
     for s in syms:
         try:
             bars[s] = [{k: b[k] for k in ("ts", "o", "h", "l", "c", "v")}
