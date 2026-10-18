@@ -1,0 +1,2 @@
+[{"bar":1792311840,"samples":71,"volFirst":4.66,"volLast":12.431,"tiers":[0],"drawnTiers":[0],"monotonic":true,"drawnMatchesModel":true},{"bar":1792311900,"samples":79,"volFirst":2.494,"volLast":14.101,"tiers":[0],"drawnTiers":[0],"monotonic":true,"drawnMatchesModel":true}]
+[{"iv":"5","candles":300,"step":300,"flags":120,"drawnVolHits":53,"bubblesStored":19,"bubbleHits":19},{"iv":"1","candles":300,"step":60,"flags":115,"drawnVolHits":59,"bubblesStored":19,"bubbleHits":19}]

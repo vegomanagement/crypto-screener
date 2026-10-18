@@ -1,0 +1,1 @@
+vol 159.653 takerBuy 144.151 delta 128.649 pct 80.58 open 81625.50 close 81660.80
