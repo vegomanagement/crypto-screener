@@ -85,6 +85,9 @@ Rules:
   (check covered_min / complete_coverage; strength 1 when coverage is partial), and HL whales
   are top-N accounts by account value that include vaults and market makers (strength at most
   2). Positioning labels are descriptive, not trade signals.
+- EMA ribbon: indicators.ema_fast / ema_mid / ema_slow are the EMAs of indicators.ema_periods
+  (the periods the user's chart draws) and indicators.ema_stack is their order; name those
+  periods in factor text (e.g. "EMA 7/14/21 stack bearish"), never other EMA periods.
 - Do not cite baseline.* in factor_scores: the server blends that deterministic baseline in
   itself, so citing it would count it twice.
 - bias is your own reading and is used only as a cross-check against the computed split.

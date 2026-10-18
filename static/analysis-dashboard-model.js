@@ -132,10 +132,25 @@
     if (!g) return null;
     const a = result.analysis, sp = a.split || {}, w = sp.weights || {};
     const pl = isNum(sp.p_long) ? sp.p_long.toFixed(1) : String(g.long), band = isNum(sp.neutral_band) ? sp.neutral_band : 5;
-    const wa = num(w.agent) || 0, wb = num(w.baseline) || 0, tot = wa + wb || 1;
-    const sentence = result.source === 'baseline' || !isNum(sp.agent_net)
-      ? `Hermes did not answer, so the split comes only from the deterministic confluence baseline (net ${signed(sp.baseline_net)}), turned into ${pl}% long by a logistic curve; within ±${band} points of 50 reads Neutral.`
-      : `The split blends Hermes' scored factors (${sp.agent_long_points} long vs ${sp.agent_short_points} short points, net ${signed(sp.agent_net)}, weight ${Math.round(wa / tot * 100)}%) with the deterministic confluence baseline (net ${signed(sp.baseline_net)}, weight ${Math.round(wb / tot * 100)}%) into net ${signed(sp.net)}, which a logistic curve turns into ${pl}% long; within ±${band} points of 50 reads Neutral.`;
+    const wa = num(w.agent) || 0, wb = num(w.baseline) || 0;
+    const calibrated = isNum(sp.baseline_cap); // split from the calibrated rule (cap + conflict rule)
+    const pct = x => `${Math.round(x * 100)}%`;
+    let sentence;
+    if (!calibrated) { // results computed before the calibration (renormalised weights)
+      const tot = wa + wb || 1;
+      sentence = result.source === 'baseline' || !isNum(sp.agent_net)
+        ? `Hermes did not answer, so the split comes only from the deterministic confluence baseline (net ${signed(sp.baseline_net)}), turned into ${pl}% long by a logistic curve; within ±${band} points of 50 reads Neutral.`
+        : `The split blends Hermes' scored factors (${sp.agent_long_points} long vs ${sp.agent_short_points} short points, net ${signed(sp.agent_net)}, weight ${Math.round(wa / tot * 100)}%) with the deterministic confluence baseline (net ${signed(sp.baseline_net)}, weight ${Math.round(wb / tot * 100)}%) into net ${signed(sp.net)}, which a logistic curve turns into ${pl}% long; within ±${band} points of 50 reads Neutral.`;
+    } else {
+      const cw = sp.configured_weights || {}, cap = sp.baseline_cap;
+      const baseText = isNum(sp.baseline_net) ? `net ${signed(sp.baseline_net)}${isNum(sp.baseline_raw) && sp.baseline_raw !== sp.baseline_net ? ` after the ±${cap} cap (raw ${signed(sp.baseline_raw)})` : `, capped at ±${cap}`}` : 'unavailable';
+      sentence = result.source === 'baseline' || !isNum(sp.agent_net)
+        ? `Hermes did not answer, so only the deterministic confluence baseline contributes (${baseText}, weight ${pct(num(cw.baseline) || wb)}): net ${signed(sp.net)} → ${pl}% long. A backtest found no edge for the baseline, so on its own it cannot leave the ±${band}-point Neutral band.`
+        : `The split weighs Hermes' scored factors (${sp.agent_long_points} long vs ${sp.agent_short_points} short points, net ${signed(sp.agent_net)}, weight ${pct(wa)}) plus the deterministic confluence baseline (${baseText}, weight ${pct(wb)}) into net ${signed(sp.net)}, which a logistic curve turns into ${pl}% long; within ±${band} points of 50 reads Neutral.` +
+          (sp.conflict ? ` The factor tally is clear (|net| ≥ ${sp.conflict_min_agent}) and the baseline points the other way, so the baseline is ignored.` : '') +
+          (sp.flip_guard ? ' The baseline would have flipped the factors\u2019 direction, so the result is held at 50/50.' : '') +
+          ' The baseline is only a tie-breaker: a backtest found no edge for it.';
+    }
     return { long: g.long, short: g.short, word: A.verdictWord(g.bias), bias: g.bias, confidence: a.confidence || '—',
       horizon: a.horizon || '', sentence, maths: A.splitLine(result), calibrated: g.calibrated, calibration: A.statsLine(stats),
       calibrationNote: g.calibrated ? 'calibrated on ≥ 20 scored outcomes' : 'not a calibrated probability',

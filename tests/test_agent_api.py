@@ -104,3 +104,29 @@ def test_screener_registers_routes():
     import screener
     rules = {r.rule for r in screener.app.url_map.iter_rules()}
     assert {"/api/agent/analysis", "/api/agent/stats"} <= rules
+
+
+@pytest.mark.parametrize("periods", [[1, 14, 21], [7, 14, 401], [7, 14, 21, 28], [7.5], ["7"], [], "7,14,21", {"a": 1}])
+def test_rejects_bad_ema_periods(tmp_path, periods):
+    client = make_app(tmp_path, lambda m, deadline=None: ("", "m"))
+    r = post(client, {"exchange": "binance", "symbol": "BTCUSDT", "interval": "15", "ema_periods": periods})
+    assert r.status_code == 400 and "ema_periods" in r.json["error"]
+
+
+def test_ema_periods_reach_the_snapshot_and_split_the_cache(tmp_path):
+    import analyst
+    snap = analyst.build_snapshot("binance", "BTCUSDT", "15", providers())
+    calls = []
+
+    def send(m, deadline=None):
+        calls.append(m)
+        return json.dumps(good(snap)), "hermes-agent"
+    client = make_app(tmp_path, send)
+    body = {"exchange": "binance", "symbol": "BTCUSDT", "interval": "15"}
+    default = post(client, body).json
+    assert default["snapshot"]["indicators"]["ema_periods"] == [7, 14, 21]
+    custom = post(client, {**body, "ema_periods": [55, 9, 21]}).json
+    assert custom["cached"] is False and custom["snapshot"]["indicators"]["ema_periods"] == [9, 21, 55]
+    again = post(client, {**body, "ema_periods": [9, 21, 55]}).json
+    assert again["cached"] is True and len(calls) == 2
+    assert '"ema_periods":[9,21,55]' in calls[1][1]["content"]

@@ -20,9 +20,22 @@
   function requestFor(active) {
     if (!active || !EXCHANGES.includes(active.exchange) || typeof active.symbol !== 'string' || !active.symbol) return { error: 'No active chart' };
     if (/s$/.test(active.interval)) return { error: 'Seconds charts are built in the browser; pick 1m or higher to analyse' };
-    return { body: { exchange: active.exchange, symbol: active.symbol, interval: active.interval } };
+    const body = { exchange: active.exchange, symbol: active.symbol, interval: active.interval };
+    const ema = emaPeriods(active);
+    if (ema.length) body.ema_periods = ema;
+    return { body };
   }
-  function keyOf(active) { return active ? `${active.exchange}:${active.symbol}:${active.interval}` : ''; }
+  /** The pane's EMA ribbon periods as the server accepts them: 1-3 unique integers 2..400, ascending. */
+  function emaPeriods(active) {
+    const raw = active && Array.isArray(active.emaPeriods) ? active.emaPeriods : [];
+    return [...new Set(raw.filter(p => Number.isInteger(p) && p >= 2 && p <= 400))].sort((a, b) => a - b).slice(0, 3);
+  }
+  /** Analysis identity: venue, symbol, interval and the EMA ribbon periods the text describes. */
+  function keyOf(active) {
+    if (!active) return '';
+    const ema = emaPeriods(active);
+    return `${active.exchange}:${active.symbol}:${active.interval}${ema.length ? `:ema${ema.join('-')}` : ''}`;
+  }
 
   /** Gauge model. The split is computed server-side from the scored factors + baseline. */
   function gauge(result, stats) {
@@ -48,15 +61,20 @@
   }
 
   function signed(x) { return !Number.isFinite(x) ? '—' : `${x >= 0 ? '+' : '−'}${Math.abs(x).toFixed(2)}`; }
-  /** "agent +0.33 (L 7 · S 3) ×0.65 · baseline −0.10 ×0.35 → net +0.18 → p_long 63.1" */
+  /** "factors −0.37 (L 6 · S 13) ×0.9 · baseline +0.50 (raw +1.00, cap ±0.5) ×0.1→0 conflict → net −0.33 → p_long 26.9 (k 3, neutral ±5)" */
   function splitLine(result) {
     const sp = result && result.analysis && result.analysis.split;
     if (!sp) return '';
-    const parts = [];
+    const parts = [], cw = sp.configured_weights || {};
     if (sp.agent_net !== null && sp.agent_net !== undefined) parts.push(`factors ${signed(sp.agent_net)} (L ${sp.agent_long_points} · S ${sp.agent_short_points}) ×${sp.weights.agent}`);
-    if (sp.baseline_net !== null && sp.baseline_net !== undefined) parts.push(`baseline ${signed(sp.baseline_net)} ×${sp.weights.baseline}`);
+    if (sp.baseline_net !== null && sp.baseline_net !== undefined) {
+      const capped = Number.isFinite(sp.baseline_cap) ? ` (raw ${signed(sp.baseline_raw)}, cap ±${sp.baseline_cap})` : '';
+      const w = sp.conflict ? `×${cw.baseline}→${sp.weights.baseline} (clear tally against it)` : `×${sp.weights.baseline}`;
+      parts.push(`baseline ${signed(sp.baseline_net)}${capped} ${w}`);
+    }
     if (!parts.length) parts.push('no evidence');
-    return `${parts.join(' · ')} → net ${signed(sp.net)} → p_long ${Number(sp.p_long).toFixed(1)} (k ${sp.k}, neutral ±${sp.neutral_band})`;
+    const guard = sp.flip_guard ? ' → would flip the factors → net 0' : '';
+    return `${parts.join(' · ')}${guard} → net ${signed(sp.net)} → p_long ${Number(sp.p_long).toFixed(1)} (k ${sp.k}, neutral ±${sp.neutral_band})`;
   }
 
   /** Warning when the agent's own bias disagrees with the computed split, else ''. */
@@ -162,13 +180,14 @@
     if (/^\d+$/.test(s)) { const m = Number(s); return m % 60 === 0 ? `${m / 60}h` : `${m}m`; }
     return /^\d*[DWM]$/.test(s) ? (/^\d/.test(s) ? s : `1${s}`) : s;
   }
-  /** 'binance:BTCUSDT:15' → 'BTCUSDT 15m' (stale-analysis label). */
+  /** 'binance:BTCUSDT:15:ema9-21-55' → 'BTCUSDT 15m · EMA 9/21/55' (stale-analysis label). */
   function keyLabel(key) {
-    const [, symbol, iv] = String(key || '').split(':');
-    return symbol ? `${symbol} ${intervalLabel(iv)}` : '';
+    const [, symbol, iv, ema] = String(key || '').split(':');
+    const periods = /^ema[\d-]+$/.test(ema || '') ? ` · EMA ${ema.slice(3).split('-').join('/')}` : '';
+    return symbol ? `${symbol} ${intervalLabel(iv)}${periods}` : '';
   }
 
-  const model = { AUTO_MIN_MS, TYPE_COLORS, TYPE_LABELS, POSITIONING_PERIOD, POSITIONING_REFRESH_MS, positioningTarget, requestFor, keyOf, gauge, factorChips, splitLine, disagreementText, levelRows, freshness, statsLine,
+  const model = { AUTO_MIN_MS, TYPE_COLORS, TYPE_LABELS, POSITIONING_PERIOD, POSITIONING_REFRESH_MS, positioningTarget, requestFor, emaPeriods, keyOf, gauge, factorChips, splitLine, disagreementText, levelRows, freshness, statsLine,
     autoDue, toStoreLevel, statusText, fmtPrice, decimals, ago, verdictWord, intervalLabel, keyLabel };
 
   // ── DOM controller ─────────────────────────────────────────────────────────

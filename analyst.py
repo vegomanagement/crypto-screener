@@ -102,19 +102,52 @@ def candles_section(chart, recent=RECENT_BARS):
     }
 
 
-def indicators_section(candles):
+DEFAULT_EMA_PERIODS = (7, 14, 21)  # the chart's EMA ribbon defaults (static/indicators/groups.js)
+EMA_NAMES = {1: ("ema_fast",), 2: ("ema_fast", "ema_slow"), 3: ("ema_fast", "ema_mid", "ema_slow")}
+
+
+def normalize_ema_periods(value):
+    """Sorted unique EMA ribbon periods (1-3 integers, 2..400), or ValueError."""
+    if value is None:
+        return DEFAULT_EMA_PERIODS
+    if not isinstance(value, (list, tuple)) or not 1 <= len(value) <= 3:
+        raise ValueError("ema_periods must be a list of 1-3 integers")
+    if any(type(p) is not int or not 2 <= p <= 400 for p in value):
+        raise ValueError("ema_periods must be integers between 2 and 400")
+    return tuple(sorted(set(value)))
+
+
+def indicators_section(candles, ema_periods=DEFAULT_EMA_PERIODS):
+    """EMA ribbon (the chart's periods), EMA 200, ATR 14 and RSI 14 from closed candles.
+
+    ``ema_fast``/``ema_mid``/``ema_slow`` are the EMAs of ``ema_periods`` in ascending order;
+    ``ema_stack`` is bullish when they are strictly descending fast→slow, bearish when
+    strictly ascending, else mixed; None with fewer than two periods or too few bars.
+    """
+    periods = normalize_ema_periods(list(ema_periods))
     closes = [c["c"] for c in candles]
-    e = {p: _r(ema(closes, p)) for p in (7, 14, 28, 200)}
-    stack = "mixed"
-    if None not in (e[7], e[14], e[28]):
-        if e[7] > e[14] > e[28]:
-            stack = "bullish"
-        elif e[7] < e[14] < e[28]:
-            stack = "bearish"
-    return {"source": "analyst.py from the same closed candles", "ts": candles[-1]["close_ts"],
-            "ema7": e[7], "ema14": e[14], "ema28": e[28], "ema200": e[200],
-            "ema_stack_7_14_28": stack, "atr14": _r(atr(candles)), "rsi14": _r(rsi(closes), 4),
-            "close": _r(closes[-1])}
+    values = [_r(ema(closes, p)) for p in periods]
+    stack = None  # needs two or more periods, each with enough closed bars
+    if len(values) >= 2 and None not in values:
+        stack = ("bullish" if all(a > b for a, b in pairwise(values))
+                 else "bearish" if all(a < b for a, b in pairwise(values)) else "mixed")
+    out = {"source": "analyst.py from the same closed candles", "ts": candles[-1]["close_ts"],
+           "ema_periods": list(periods),
+           "ema_note": "EMA ribbon with the chart's periods: ema_fast/ema_mid/ema_slow = "
+                       + "/".join(f"EMA {p}" for p in periods),
+           **dict(zip(EMA_NAMES[len(periods)], values)),
+           "ema_stack": stack, "ema200": _r(ema(closes, 200)),
+           "atr14": _r(atr(candles)), "rsi14": _r(rsi(closes), 4), "close": _r(closes[-1])}
+    return out
+
+
+def ema_ribbon(indicators):
+    """[(period, value)] from an indicators section, new or legacy (ema7/ema14/ema28) shape."""
+    ind = indicators or {}
+    if ind.get("ema_periods"):
+        names = EMA_NAMES.get(len(ind["ema_periods"]), ())
+        return [(p, ind.get(n)) for p, n in zip(ind["ema_periods"], names)]
+    return [(p, ind.get(f"ema{p}")) for p in (7, 14, 28) if f"ema{p}" in ind]
 
 
 def structure_section(candles):
@@ -341,8 +374,12 @@ def _reason(exc):
     return text[:160]
 
 
-def build_snapshot(exchange, symbol, interval, providers):
-    """Gather every section in parallel; raise only if the chart candles are unavailable."""
+def build_snapshot(exchange, symbol, interval, providers, *, ema_periods=None):
+    """Gather every section in parallel; raise only if the chart candles are unavailable.
+
+    ``ema_periods``: the active chart's EMA ribbon periods (default 7/14/21).
+    """
+    periods = normalize_ema_periods(ema_periods)
     now = providers["clock"]()
     missing = {}
     msym = market_symbol(exchange, symbol)
@@ -401,7 +438,7 @@ def build_snapshot(exchange, symbol, interval, providers):
     section("candles", candles_section, chart)
     if snap["candles"] is None:
         raise ValueError(f"chart candles unusable: {missing['candles']}")
-    section("indicators", indicators_section, candles)
+    section("indicators", indicators_section, candles, periods)
     price = candles[-1]["c"]
     snap["price"] = {"value": _r(price), "source": "last closed candle close",
                      "ts": candles[-1]["close_ts"]}
@@ -483,19 +520,32 @@ def price_bounds(snapshot):
 # The model never outputs percentages. It returns evidence factors (direction +
 # strength 1-3 + cited snapshot fields); the server turns them into a split:
 #   agent_net    = Σ sign·strength / max(Σ strength, agent_min_total)          ∈ [-1, 1]
-#   baseline_net = clip(score_gain·(L−S)/(L+S) + verdict_bonus·(LONG?) − verdict_bonus·(SHORT?))
+#   baseline_raw = clip(score_gain·(L−S)/(L+S) + verdict_bonus·(LONG?) − verdict_bonus·(SHORT?))
 #                  from snapshot.baseline (confluence scores + decision verdicts) ∈ [-1, 1]
-#   net          = w_agent·agent_net + w_baseline·baseline_net (weights renormalised over the
-#                  components that exist)
+#   baseline_net = clip(baseline_raw, ±baseline_cap)
+#   w_b          = w_baseline, or w_baseline·conflict_scale when sign(agent_net) ≠
+#                  sign(baseline_net) and |agent_net| ≥ conflict_min_agent (clear factor tally)
+#   net          = w_agent·agent_net + w_b·baseline_net   (a missing part contributes 0; the
+#                  weights are NOT renormalised, so the baseline alone stays inside the band)
+#   flip guard   : sign(net) ≠ sign(agent_net) → net = 0 (the baseline never flips the factors)
 #   p_long       = 100 / (1 + exp(−k·net)); neutral when |p_long − 50| < neutral_band
+# Calibration (docs/ANALYST_CALIBRATION_RESULT.md, scripts/backtest_analyst.py): replaying the
+# baseline on 38,778 Binance BTC/ETH/SOL 15m (90 d) + 1h (180 d) bars, its lean's direction hit
+# +1 ATR first on 49.8% of 36,547 decided bars (95% CI 49.3-50.3%), 47.9-51.2% in every
+# bucket incl. the strongest (|lean| ≥ 0.5: 49.9% short, 50.1% long) — no edge. So the
+# baseline is a tie-breaker at most: k·w_baseline·baseline_cap = 3·0.1·0.5 = 0.15 <
+# logit(0.55) = 0.20, i.e. on its own it moves p_long by ≤ 3.7 points (never out of the band).
 SPLIT_CONFIG = {
-    "k": 3.0,                 # logistic slope; |net| ≤ 1 keeps p_long within [4.7, 95.3]
-    "w_agent": 0.65,          # weight of the validated evidence factors
-    "w_baseline": 0.35,       # weight of the deterministic confluence/decision baseline
-    "agent_min_total": 6,     # one strength-3 factor alone moves agent_net by at most 0.5
-    "score_gain": 2.0,        # confluence score difference ratio → baseline_net
-    "verdict_bonus": 0.5,     # decision.make_decision verdict LONG / SHORT
-    "neutral_band": 5.0,      # |p_long − 50| below this → neutral
+    "k": 3.0,                   # logistic slope; |net| ≤ 0.95 keeps p_long within [5.5, 94.5]
+    "w_agent": 0.9,             # weight of the validated evidence factors
+    "w_baseline": 0.1,          # was 0.35; backtest: baseline lean has no edge (≈50% hit rate)
+    "baseline_cap": 0.5,        # |baseline_net| ≤ 0.5 (old rule: |lean| ≥ 0.5 on 48% of bars)
+    "conflict_min_agent": 0.15, # |agent_net| from which the factor tally counts as clear
+    "conflict_scale": 0.0,      # baseline weight multiplier against a clear factor tally
+    "agent_min_total": 6,       # one strength-3 factor alone moves agent_net by at most 0.5
+    "score_gain": 1.0,          # was 2.0 (saturated ±1 on 16% of bars; now 0.6%) → baseline_raw
+    "verdict_bonus": 0.25,      # was 0.5; decision.make_decision verdict LONG / SHORT
+    "neutral_band": 5.0,        # |p_long − 50| below this → neutral
 }
 
 
@@ -503,8 +553,12 @@ def _clip(x, lo=-1.0, hi=1.0):
     return max(lo, min(hi, x))
 
 
-def baseline_net(baseline, cfg=SPLIT_CONFIG):
-    """[-1, 1] lean of the deterministic baseline, or None when it is unavailable."""
+def _sign(x):
+    return (x > 0) - (x < 0)
+
+
+def baseline_raw(baseline, cfg=SPLIT_CONFIG):
+    """[-1, 1] uncapped lean of the deterministic baseline, or None when it is unavailable."""
     if not baseline:
         return None
     lo, sh = _f(baseline.get("long_score")), _f(baseline.get("short_score"))
@@ -515,6 +569,13 @@ def baseline_net(baseline, cfg=SPLIT_CONFIG):
     verdict = (cfg["verdict_bonus"] * (baseline.get("long_verdict") == "LONG")
                - cfg["verdict_bonus"] * (baseline.get("short_verdict") == "SHORT"))
     return _clip(cfg["score_gain"] * ratio + verdict)
+
+
+def baseline_net(baseline, cfg=SPLIT_CONFIG):
+    """Baseline lean capped at ±baseline_cap (cfg without a cap → the raw lean)."""
+    raw = baseline_raw(baseline, cfg)
+    cap = cfg.get("baseline_cap", 1.0)
+    return None if raw is None else _clip(raw, -cap, cap)
 
 
 def agent_net(factors, cfg=SPLIT_CONFIG):
@@ -538,23 +599,35 @@ def round_split(p_long):
 def compute_split(factors, baseline, cfg=SPLIT_CONFIG):
     """Deterministic split from validated factors + snapshot baseline (documented in SPLIT_CONFIG)."""
     a, b = agent_net(factors, cfg), baseline_net(baseline, cfg)
-    parts = [(cfg["w_agent"], a), (cfg["w_baseline"], b)]
-    weight = sum(w for w, v in parts if v is not None)
-    net = sum(w * v for w, v in parts if v is not None) / weight if weight else 0.0
+    w_a = cfg["w_agent"] if a is not None else 0.0
+    w_b = cfg["w_baseline"] if b is not None else 0.0
+    conflict = (a is not None and b is not None and _sign(a) * _sign(b) < 0
+                and abs(a) >= cfg["conflict_min_agent"])
+    if conflict:
+        w_b *= cfg["conflict_scale"]
+    net = w_a * (a or 0.0) + w_b * (b or 0.0)
+    flip_guard = a is not None and _sign(a) != 0 and _sign(net) == -_sign(a)
+    if flip_guard:
+        net = 0.0
     p_long = 100.0 / (1.0 + math.exp(-cfg["k"] * net))
     long_pct, short_pct = round_split(p_long)
     bias = ("neutral" if abs(p_long - 50.0) < cfg["neutral_band"]
             else "long" if p_long > 50 else "short")
     long_pts = sum(f["strength"] for f in factors or [] if f["direction"] == "long")
     short_pts = sum(f["strength"] for f in factors or [] if f["direction"] == "short")
+    raw = baseline_raw(baseline, cfg)
     return {"long_pct": long_pct, "short_pct": short_pct, "p_long": round(p_long, 3), "bias": bias,
             "net": round(net, 4), "agent_net": None if a is None else round(a, 4),
             "baseline_net": None if b is None else round(b, 4),
+            "baseline_raw": None if raw is None else round(raw, 4),
             "agent_long_points": long_pts, "agent_short_points": short_pts,
-            "weights": {"agent": cfg["w_agent"] if a is not None else 0.0,
-                        "baseline": cfg["w_baseline"] if b is not None else 0.0},
+            "weights": {"agent": w_a, "baseline": round(w_b, 4)},
+            "configured_weights": {"agent": cfg["w_agent"], "baseline": cfg["w_baseline"]},
+            "baseline_cap": cfg["baseline_cap"], "conflict": conflict,
+            "conflict_min_agent": cfg["conflict_min_agent"], "flip_guard": flip_guard,
             "k": cfg["k"], "neutral_band": cfg["neutral_band"],
-            "method": "p_long = logistic(k * (w_a*agent_net + w_b*baseline_net)/(w_a+w_b))"}
+            "method": ("p_long = logistic(k * (w_a*agent_net + w_b*clip(baseline, ±cap))); "
+                       "w_b = 0 against a clear factor tally; never flips the factors' sign")}
 
 
 def disagreement(agent_bias, split):

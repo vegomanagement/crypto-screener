@@ -50,18 +50,32 @@
         sec(snap, 'derivatives', now, venue), { reason: miss(snap, 'derivatives') })] };
   }
 
+  /** EMA ribbon of a snapshot's indicators: current shape (ema_periods + ema_fast/mid/slow) or the
+   *  legacy 7/14/28 one (ema7/ema14/ema28 + ema_stack_7_14_28) from older results. */
+  const RIBBON_NAMES = { 1: ['ema_fast'], 2: ['ema_fast', 'ema_slow'], 3: ['ema_fast', 'ema_mid', 'ema_slow'] };
+  function ribbonOf(ind) {
+    const i = ind || {};
+    if (Array.isArray(i.ema_periods) && i.ema_periods.length) {
+      return { periods: i.ema_periods, values: (RIBBON_NAMES[i.ema_periods.length] || []).map(n => i[n]), stack: i.ema_stack };
+    }
+    const legacy = [7, 14, 28].filter(p => `ema${p}` in i);
+    return { periods: legacy, values: legacy.map(p => i[`ema${p}`]), stack: i.ema_stack_7_14_28 };
+  }
+  const ribbonLabel = r => (r.periods.length ? `EMA ribbon ${r.periods.join('/')}` : 'EMA ribbon');
+
   function trendCard(input) {
     const { snap, reason } = snapshotFor(input), now = input.now, venue = VENUES[input.exchange] || input.exchange;
-    if (!snap) return { id: 'trend', title: 'Trend', rows: ['EMA ribbon 7/14/28', 'HTF bias', 'Regime', 'Structure', 'RSI 14'].map(l => row(l, null, null, { reason })) };
+    if (!snap) return { id: 'trend', title: 'Trend', rows: ['EMA ribbon', 'HTF bias', 'Regime', 'Structure', 'RSI 14'].map(l => row(l, null, null, { reason })) };
     const ind = snap.indicators || {}, h = snap.htf_bias, rg = snap.regime, s = snap.structure, prec = input.precision;
-    const stack = ind.ema_stack_7_14_28, stackTone = stack === 'bullish' ? 'up' : stack === 'bearish' ? 'down' : '';
+    const rb = ribbonOf(ind), stack = rb.stack, stackTone = stack === 'bullish' ? 'up' : stack === 'bearish' ? 'down' : '';
     const vs200 = isNum(ind.close) && isNum(ind.ema200) ? (ind.close >= ind.ema200 ? 'above' : 'below') : null;
     const ev = s && s.recent_events && s.recent_events.length ? s.recent_events[s.recent_events.length - 1] : null;
     const dirTone = d => (/bull|long|up/.test(String(d)) ? 'up' : /bear|short|down/.test(String(d)) ? 'down' : '');
     const dirArrow = d => (dirTone(d) === 'up' ? '▲' : dirTone(d) === 'down' ? '▼' : '');
     return { id: 'trend', title: 'Trend', note: `EMA/RSI/structure from ${venue} closed candles; HTF bias and regime from a ${MARKET}.`, rows: [
-      row('EMA ribbon 7/14/28', word(stack), sec(snap, 'indicators', now, venue), { tone: stackTone, arrow: dirArrow(stack),
-        sub: [ind.ema7, ind.ema14, ind.ema28].every(isNum) ? `${A.fmtPrice(ind.ema7, prec)} / ${A.fmtPrice(ind.ema14, prec)} / ${A.fmtPrice(ind.ema28, prec)}` : '' }),
+      row(ribbonLabel(rb), word(stack), sec(snap, 'indicators', now, venue), { tone: stackTone, arrow: dirArrow(stack),
+        sub: rb.values.length && rb.values.every(isNum) ? rb.values.map(v => A.fmtPrice(v, prec)).join(' / ') : '',
+        reason: rb.periods.length < 2 ? 'stack needs at least two ribbon periods' : `fewer than ${Math.max(...rb.periods)} closed bars` }),
       row('Price vs EMA 200', vs200, sec(snap, 'indicators', now, venue), { tone: vs200 === 'above' ? 'up' : vs200 === 'below' ? 'down' : '', arrow: vs200 === 'above' ? '▲' : vs200 === 'below' ? '▼' : '',
         sub: isNum(ind.ema200) ? `EMA200 ${A.fmtPrice(ind.ema200, prec)}` : '', reason: 'fewer than 200 closed bars' }),
       row('HTF bias', h ? `${word(h.direction)}${h.strength !== undefined && h.strength !== null ? ` · strength ${h.strength}` : ''}` : null,
@@ -94,5 +108,5 @@
     spark: F.sparkline(d.history && d.history.items, 300, 40) };
   }
 
-  return { row, sec, snapshotFor, priceCard, trendCard, fundingCard, MARKET, M };
+  return { row, sec, snapshotFor, priceCard, trendCard, fundingCard, ribbonOf, MARKET, M };
 });

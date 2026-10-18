@@ -1890,12 +1890,14 @@
     });
     setIndicatorSettings(settingsPopoverId, patch);
     panes.forEach(pane => pane.applyIndicators());
+    if (settingsPopoverId === 'ema-ribbon') analyst?.activeChanged(); // analysis key includes the periods
   }
   function resetSettingsPopover() {
     if (!settingsPopoverId) return;
     resetIndicatorSettings(settingsPopoverId);
     renderSettingsFields(settingsPopoverId);
     panes.forEach(pane => pane.applyIndicators());
+    if (settingsPopoverId === 'ema-ribbon') analyst?.activeChanged();
   }
   function indicatorLabel(def) {
     const settings = getIndicatorSettings(def.id);
@@ -2012,8 +2014,11 @@
       getActive: () => {
         const config = state.panes[state.active], pane = panes.get(state.active);
         if (!config || !pane) return null;
+        const ribbon = getIndicatorSettings('ema-ribbon') || {};
         return { id: state.active, exchange: config.exchange, symbol: config.symbol, interval: config.interval,
-          precision: pane.series.options().priceFormat?.precision };
+          precision: pane.series.options().priceFormat?.precision,
+          // The analysis describes the same EMA ribbon the chart draws (sent as ema_periods).
+          emaPeriods: [ribbon.period1, ribbon.period2, ribbon.period3] };
       },
       drawLines: (id, rows) => panes.get(id)?.setAnalystLines(rows),
       clearLines: id => panes.get(id)?.clearAnalystLines(),
