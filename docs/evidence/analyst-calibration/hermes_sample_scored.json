@@ -1,0 +1,355 @@
+{
+ "n": 12,
+ "tallies": {
+  "old": {
+   "no call": 1,
+   "loss": 6,
+   "win": 4,
+   "timeout": 1
+  },
+  "new": {
+   "loss": 7,
+   "win": 3,
+   "timeout": 1,
+   "no call": 1
+  },
+  "agent_only": {
+   "loss": 7,
+   "win": 3,
+   "timeout": 1,
+   "no call": 1
+  },
+  "agent_bias": {
+   "loss": 8,
+   "win": 3,
+   "timeout": 1
+  }
+ },
+ "rows": [
+  {
+   "symbol": "BTCUSDT",
+   "interval": "15",
+   "as_of": 1792242000000,
+   "long_points": 5,
+   "short_points": 16,
+   "agent_net": -0.5238,
+   "baseline_net_old": 1.0,
+   "baseline_net_new": 0.5,
+   "old": "neutral 51/49",
+   "new": "short 20/80",
+   "agent_bias": "short",
+   "touch": "up",
+   "outcome": {
+    "old": null,
+    "new": "loss",
+    "agent_only": "loss",
+    "agent_bias": "loss"
+   },
+   "old_opposes_tally": true,
+   "missing": [
+    "derivatives",
+    "footprint",
+    "orderbook",
+    "positioning"
+   ]
+  },
+  {
+   "symbol": "ETHUSDT",
+   "interval": "15",
+   "as_of": 1792235700000,
+   "long_points": 15,
+   "short_points": 6,
+   "agent_net": 0.4286,
+   "baseline_net_old": 0.365,
+   "baseline_net_new": 0.1825,
+   "old": "long 77/23",
+   "new": "long 77/23",
+   "agent_bias": "long",
+   "touch": "down",
+   "outcome": {
+    "old": "loss",
+    "new": "loss",
+    "agent_only": "loss",
+    "agent_bias": "loss"
+   },
+   "old_opposes_tally": false,
+   "missing": [
+    "derivatives",
+    "footprint",
+    "orderbook",
+    "positioning"
+   ]
+  },
+  {
+   "symbol": "SOLUSDT",
+   "interval": "15",
+   "as_of": 1792229400000,
+   "long_points": 11,
+   "short_points": 8,
+   "agent_net": 0.1579,
+   "baseline_net_old": 0.427,
+   "baseline_net_new": 0.2135,
+   "old": "long 68/32",
+   "new": "long 62/38",
+   "agent_bias": "long",
+   "touch": "down",
+   "outcome": {
+    "old": "loss",
+    "new": "loss",
+    "agent_only": "loss",
+    "agent_bias": "loss"
+   },
+   "old_opposes_tally": false,
+   "missing": [
+    "derivatives",
+    "footprint",
+    "orderbook",
+    "positioning"
+   ]
+  },
+  {
+   "symbol": "BTCUSDT",
+   "interval": "60",
+   "as_of": 1792036800000,
+   "long_points": 6,
+   "short_points": 15,
+   "agent_net": -0.4286,
+   "baseline_net_old": 0.3358,
+   "baseline_net_new": 0.1679,
+   "old": "short 38/62",
+   "new": "short 24/76",
+   "agent_bias": "short",
+   "touch": "up",
+   "outcome": {
+    "old": "loss",
+    "new": "loss",
+    "agent_only": "loss",
+    "agent_bias": "loss"
+   },
+   "old_opposes_tally": false,
+   "missing": [
+    "derivatives",
+    "footprint",
+    "orderbook",
+    "positioning"
+   ]
+  },
+  {
+   "symbol": "ETHUSDT",
+   "interval": "60",
+   "as_of": 1792011600000,
+   "long_points": 6,
+   "short_points": 17,
+   "agent_net": -0.4783,
+   "baseline_net_old": 0.5985,
+   "baseline_net_new": 0.2993,
+   "old": "short 42/58",
+   "new": "short 22/78",
+   "agent_bias": "short",
+   "touch": "down",
+   "outcome": {
+    "old": "win",
+    "new": "win",
+    "agent_only": "win",
+    "agent_bias": "win"
+   },
+   "old_opposes_tally": false,
+   "missing": [
+    "derivatives",
+    "footprint",
+    "orderbook",
+    "positioning"
+   ]
+  },
+  {
+   "symbol": "SOLUSDT",
+   "interval": "60",
+   "as_of": 1791986400000,
+   "long_points": 5,
+   "short_points": 17,
+   "agent_net": -0.5455,
+   "baseline_net_old": 0.2051,
+   "baseline_net_new": 0.1026,
+   "old": "short 30/70",
+   "new": "short 19/81",
+   "agent_bias": "short",
+   "touch": "down",
+   "outcome": {
+    "old": "win",
+    "new": "win",
+    "agent_only": "win",
+    "agent_bias": "win"
+   },
+   "old_opposes_tally": false,
+   "missing": [
+    "derivatives",
+    "footprint",
+    "orderbook",
+    "positioning"
+   ]
+  },
+  {
+   "symbol": "BTCUSDT",
+   "interval": "15",
+   "as_of": 1792209600000,
+   "long_points": 2,
+   "short_points": 18,
+   "agent_net": -0.8,
+   "baseline_net_old": -0.4478,
+   "baseline_net_new": -0.2239,
+   "old": "short 12/88",
+   "new": "short 10/90",
+   "agent_bias": "short",
+   "touch": "timeout",
+   "outcome": {
+    "old": "timeout",
+    "new": "timeout",
+    "agent_only": "timeout",
+    "agent_bias": "timeout"
+   },
+   "old_opposes_tally": false,
+   "missing": [
+    "derivatives",
+    "footprint",
+    "orderbook",
+    "positioning"
+   ]
+  },
+  {
+   "symbol": "ETHUSDT",
+   "interval": "15",
+   "as_of": 1792203300000,
+   "long_points": 10,
+   "short_points": 9,
+   "agent_net": 0.0526,
+   "baseline_net_old": -0.5597,
+   "baseline_net_new": -0.2799,
+   "old": "short 38/62",
+   "new": "neutral 51/49",
+   "agent_bias": "long",
+   "touch": "down",
+   "outcome": {
+    "old": "win",
+    "new": null,
+    "agent_only": null,
+    "agent_bias": "loss"
+   },
+   "old_opposes_tally": true,
+   "missing": [
+    "derivatives",
+    "footprint",
+    "orderbook",
+    "positioning"
+   ]
+  },
+  {
+   "symbol": "SOLUSDT",
+   "interval": "15",
+   "as_of": 1792197000000,
+   "long_points": 6,
+   "short_points": 14,
+   "agent_net": -0.4,
+   "baseline_net_old": -0.6102,
+   "baseline_net_new": -0.3051,
+   "old": "short 19/81",
+   "new": "short 24/76",
+   "agent_bias": "short",
+   "touch": "up",
+   "outcome": {
+    "old": "loss",
+    "new": "loss",
+    "agent_only": "loss",
+    "agent_bias": "loss"
+   },
+   "old_opposes_tally": false,
+   "missing": [
+    "derivatives",
+    "footprint",
+    "orderbook",
+    "positioning"
+   ]
+  },
+  {
+   "symbol": "BTCUSDT",
+   "interval": "60",
+   "as_of": 1791907200000,
+   "long_points": 8,
+   "short_points": 11,
+   "agent_net": -0.1579,
+   "baseline_net_old": -0.637,
+   "baseline_net_new": -0.3185,
+   "old": "short 27/73",
+   "new": "short 37/63",
+   "agent_bias": "short",
+   "touch": "up",
+   "outcome": {
+    "old": "loss",
+    "new": "loss",
+    "agent_only": "loss",
+    "agent_bias": "loss"
+   },
+   "old_opposes_tally": false,
+   "missing": [
+    "derivatives",
+    "footprint",
+    "orderbook",
+    "positioning"
+   ]
+  },
+  {
+   "symbol": "ETHUSDT",
+   "interval": "60",
+   "as_of": 1791882000000,
+   "long_points": 5,
+   "short_points": 12,
+   "agent_net": -0.4118,
+   "baseline_net_old": -0.9552,
+   "baseline_net_new": -0.4776,
+   "old": "short 14/86",
+   "new": "short 22/78",
+   "agent_bias": "short",
+   "touch": "down",
+   "outcome": {
+    "old": "win",
+    "new": "win",
+    "agent_only": "win",
+    "agent_bias": "win"
+   },
+   "old_opposes_tally": false,
+   "missing": [
+    "derivatives",
+    "footprint",
+    "orderbook",
+    "positioning"
+   ]
+  },
+  {
+   "symbol": "SOLUSDT",
+   "interval": "60",
+   "as_of": 1791856800000,
+   "long_points": 6,
+   "short_points": 16,
+   "agent_net": -0.4545,
+   "baseline_net_old": -0.7535,
+   "baseline_net_new": -0.3768,
+   "old": "short 16/84",
+   "new": "short 21/79",
+   "agent_bias": "short",
+   "touch": "up",
+   "outcome": {
+    "old": "loss",
+    "new": "loss",
+    "agent_only": "loss",
+    "agent_bias": "loss"
+   },
+   "old_opposes_tally": false,
+   "missing": [
+    "derivatives",
+    "footprint",
+    "orderbook",
+    "positioning"
+   ]
+  }
+ ],
+ "note": "indicative only: small n, overlapping market regime, single model run per bar"
+}
