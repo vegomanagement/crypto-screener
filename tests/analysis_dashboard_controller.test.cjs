@@ -77,12 +77,13 @@ test('follows the active pane and drops a late positioning response for the prev
   const root = fakeRoot();
   const dash = D.mount(root, { analyst, getFunding: () => null, fetch, IntersectionObserver: IO, pageVisible: () => true, ...timers });
   made[0].fire(true);
-  const btc = pending.filter(p => /BTC/.test(p.url));
+  const btc = pending.filter(p => /BTC/.test(p.url) && !/structure/.test(p.url));
   analyst.st.active = { id: 1, exchange: 'bybit', symbol: 'ETHUSDT', interval: '60' };
   analyst.notify();
   assert.equal(dash._state.positioning, null, 'old data cleared on pane switch');
-  const eth = pending.filter(p => /ETH/.test(p.url));
+  const eth = pending.filter(p => /ETH/.test(p.url) && !/structure/.test(p.url));
   assert.equal(eth.length, 2);
+  assert.equal(pending.filter(p => /structure\?exchange=bybit&symbol=ETHUSDT&interval=60/.test(p.url)).length, 1, 'structure follows the pane');
   assert.match(eth[0].url, /exchange=bybit&symbol=ETHUSDT&period=1h/);
   eth.forEach(p => p.resolve({ exchange: 'bybit', symbol: 'ETHUSDT', period: '1h', mark: 'eth' }));
   await flush();
@@ -126,5 +127,38 @@ test('Analyze button routes to the shared analyst controller; tick re-renders wh
   dash.tick();
   assert.ok(root.slots.metrics.writes > before);
   assert.match(root.slots.metrics.innerHTML, /0\.0100% → 0\.0200%/);
+  dash.destroy();
+});
+
+test('Wyckoff + Signals sections: structure fetched for the active pane, late answers dropped, overlay toggle drives the pane', async () => {
+  const timers = fakeTimers(), pending = [], overlays = [];
+  const analyst = fakeAnalyst({ id: 0, exchange: 'binance', symbol: 'BTCUSDT', interval: '60', precision: 1 });
+  const fetch = url => new Promise(resolve => pending.push({ url, resolve: body => resolve({ ok: true, json: async () => body }) }));
+  const root = fakeRoot();
+  const dash = D.mount(root, { analyst, getFunding: () => null, fetch, IntersectionObserver: null, pageVisible: () => true, setWyckoffOverlay: m => overlays.push(m), ...timers });
+  assert.match(root.slots.wyckoff.innerHTML, /Loading the trading-range read/);
+  const btc = pending.find(p => /structure/.test(p.url));
+  analyst.st.active = { id: 0, exchange: 'binance', symbol: 'ETHUSDT', interval: '60', precision: 2 };
+  analyst.notify();
+  const eth = pending.filter(p => /structure/.test(p.url)).at(-1);
+  assert.match(eth.url, /symbol=ETHUSDT/);
+  const block = sym => ({ wyckoff: { status: 'structure', schematic: 'accumulation', phase: 'B', phase_label: 'Phase B — building cause inside the range', confidence: 0.6, confidence_label: 'medium',
+    tr: { support: 100, resistance: 110, height: 10, start_ts: 1e12, end_ts: null, bars: 40 }, creek: 110, ice: null, bars: 300, source: `wyckoff.py ${sym}`,
+    events: [{ event: 'SC', label: 'Selling climax', ts: 1e12, known_at: 1e12 + 3.6e6, price: 100, rule: 'rv 3 ≥ 2', confidence: 0.8, volume_rel: 3, spread_atr: 2, close_pos: 0.5 }],
+    confirm: 'a Spring…', invalidate: 'closes below 100…' },
+  signals: { edge: 'none proven', verdict: 'no candidate passed', events: [], volume_profile: null, session_vwap: null, unavailable: {}, rule: 'stop 1 ATR', stats_timeframe: '1h' }, missing: {} });
+  eth.resolve(block('ETH')); await flush();
+  btc.resolve(block('BTC')); await flush();
+  assert.match(root.slots.wyckoff.innerHTML, /wyckoff\.py ETH/);
+  assert.match(root.slots.wyckoff.innerHTML, /Accumulation · Phase B/);
+  assert.match(root.slots.signals.innerHTML, /no proven edge/);
+  assert.equal(overlays.length, 0, 'overlay off by default');
+  const change = [...root.listeners.change][0];
+  change({ target: { dataset: { act: 'wyckoff-overlay' }, checked: true } });
+  assert.equal(overlays.length, 1);
+  assert.equal(overlays[0].key, 'binance:ETHUSDT:60');
+  assert.equal(overlays[0].top, 110);
+  change({ target: { dataset: { act: 'wyckoff-overlay' }, checked: false } });
+  assert.equal(overlays.at(-1), null);
   dash.destroy();
 });
