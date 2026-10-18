@@ -91,3 +91,29 @@ test('controller: fetches /api/agent/mtf for the active pane only while visible,
   dash.destroy();
   assert.equal(overlays.at(-1), null, 'overlay cleared on destroy');
 });
+
+test('breaker / IDM / EQH-EQL: overlay layer, ladder column, escaped HTML, draw', () => {
+  const extra = { breakers: [{ dir: 'bear', top: 82400, bottom: 82100, ts: T - 12 * H, state: 'unmitigated', confirm_ts: T - 8 * H }],
+    inducement: { side: 'low', price: 81010, ts: T - 3 * H, confirm_ts: T - 1 * H, swept_ts: null, state: 'resting', dir: 'bull' },
+    equal_levels: [{ kind: 'EQH', side: 'high', price: 82880, first_ts: T - 20 * H, ts: T - 10 * H, swept_ts: null, state: 'resting' }] };
+  const body = JSON.parse(JSON.stringify(BODY));
+  Object.assign(body.mtf.tfs['15'].smc, extra);
+  const m = SO.overlayModel(body, 'binance:BTCUSDT:15', { smc: true });
+  const L = m.layers[0];
+  const brk = L.zones.find(z => z.breaker);
+  assert.deepEqual([brk.label, brk.bull, brk.top, brk.bottom], ['Breaker', false, 82400, 82100]);
+  assert.deepEqual(L.liquidity.map(q => [q.label, q.price, q.high, q.end]), [['EQH', 82880, true, null], ['IDM', 81010, false, null]]);
+  const row = MT.mtfView(body, 1).rows.find(r => r.tf === '15');
+  assert.equal(row.liquidity, '▼ Breaker 82100.0–82400.0 · IDM 81010.0 resting · EQH 82880.0');
+  assert.match(MT.mtfHtml(body, { precision: 1 }), /<th>Breaker · IDM · EQH\/EQL<\/th>/);
+  const ops = [];
+  const ctx = new Proxy({}, { get: (_t, k) => (typeof k === 'string' && /^(fill|stroke|move|line|begin|close|save|restore|set|strokeRect|fillRect|fillText)/.test(k) ? (...a) => ops.push([k, ...a]) : undefined), set: () => true });
+  const view = { x: t => (t - (T - 40 * H) / 1000) / 900, xc: t => (t - (T - 40 * H) / 1000) / 900 + 1, y: p => 1000 - (p - 80000) / 3, plotWidth: 400, first: (T - 40 * H) / 1000 };
+  SO.draw(ctx, view, m);
+  for (const lab of ['Breaker', 'IDM', 'EQH']) assert.ok(ops.some(o => o[0] === 'fillText' && o[1] === lab), lab);
+  assert.ok(ops.some(o => o[0] === 'strokeRect'), 'breaker outline');
+  // swept IDM is labelled with a check and ends at the sweep bar
+  body.mtf.tfs['15'].smc.inducement = { ...extra.inducement, swept_ts: T, state: 'swept' };
+  const q = SO.overlayModel(body, 'binance:BTCUSDT:15', { smc: true }).layers[0].liquidity.find(x => x.idm);
+  assert.deepEqual([q.label, q.end], ['IDM ✓', T / 1000]);
+});

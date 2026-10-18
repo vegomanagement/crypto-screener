@@ -35,7 +35,6 @@ sys.path[:0] = [str(ROOT), str(ROOT / "scripts")]
 
 import mtf_data as md  # noqa: E402
 import signal_features as sf  # noqa: E402
-import signals_data as data  # noqa: E402
 import smc  # noqa: E402
 import swing_model as sm  # noqa: E402
 import swing_universe_data as U  # noqa: E402
@@ -69,7 +68,9 @@ def vid(p):
 def load(sym, pair, onboard):
     htf_tf, ltf_tf = PAIRS[pair]
     h1 = U.klines(sym, "1h", END, onboard)
-    agg = (lambda tf: h1 if tf == "60" else md.aggregate(h1, tf, 3_600_000))
+
+    def agg(tf):
+        return h1 if tf == "60" else md.aggregate(h1, tf, 3_600_000)
     ltf = U.klines(sym, "15m", END, onboard) if ltf_tf == "15m" else agg(ltf_tf)
     return ltf, agg(htf_tf)
 

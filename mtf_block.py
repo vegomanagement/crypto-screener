@@ -21,7 +21,8 @@ CLUSTER_ATR = 0.5
 MAX_LEVELS = 12
 WY_CLEAR = 0.45
 PAIRS = (("240", "15"), ("60", "5"), ("D", "60"))
-SETUP_STATS_NOTE = "see docs/MTF_SYNC_RESULT.md — no proven out-of-sample edge"
+SETUP_STATS_NOTE = ("see docs/MTF_SYNC_RESULT.md and docs/SWING_HTF_RESULT.md — no proven out-of-sample edge "
+                    "(0 of 962 variants incl. breaker / IDM / 1d→4h / 1w→1d pass Holm)")
 
 
 def lean(a):
@@ -163,6 +164,7 @@ def compact(block, max_conflicts=6):
     for tf, a in block["tfs"].items():
         w, s, p = a["wyckoff"] or {}, a["smc"], a["profile"] or {}
         ob = (s.get("order_blocks") or [None])[0]
+        brk, idm = (s.get("breakers") or [None])[0], s.get("inducement")
         tfs[TF_LABEL.get(tf, tf)] = {
             "bias": a["bias"]["bias"], "bias_score": a["bias"]["score"], "smc_trend": s["trend"],
             "internal_trend": s["internal_trend"], "last_break": _brk(s["last_break"]),
@@ -173,6 +175,9 @@ def compact(block, max_conflicts=6):
                 "last_event": (w.get("last_event") or {}).get("event")},
             "poc": p.get("poc"), "value_position": p.get("position"), "vwap_position": p.get("vwap_position"),
             "nearest_ob": None if not ob else {k: ob[k] for k in ("dir", "top", "bottom", "state")},
+            "nearest_breaker": None if not brk else {k: brk[k] for k in ("dir", "top", "bottom", "state")},
+            "inducement": None if not idm else {k: idm[k] for k in ("side", "price", "state")},
+            "equal_levels": [{k: q[k] for k in ("kind", "price")} for q in (s.get("equal_levels") or [])[-2:]],
             "position_vs_htf": block["position_vs_htf"].get(tf), "atr14": a["atr14"]}
     lab = lambda t: None if t is None else TF_LABEL.get(t, t)  # noqa: E731
     return {"source": block["source"], "ts": block["ts"], "verdict": block["verdict"],

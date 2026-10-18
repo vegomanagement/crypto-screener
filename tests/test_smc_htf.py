@@ -145,3 +145,21 @@ def test_default_variant_is_the_original_model():
     b, _ = sm.scan(ltf, htf, {"poi": "any", "idm": "none", "sweep": False, "entry": "retest", "stop": "choch",
                               "target": "liq", "be": False})
     assert [(t["i_signal"], t["r"]) for t in a] == [(t["i_signal"], t["r"]) for t in b] and a
+
+
+def test_smc_view_exposes_breakers_idm_and_equal_levels_from_venue_prices():
+    import mtf
+    h1 = walk(24 * 300, 3_600_000, seed=3)
+    c = mtf_data.aggregate(h1, "240", 3_600_000)[-300:]
+    s = mtf.smc_view(c, "240")
+    assert {"breakers", "inducement", "equal_levels"} <= set(s)
+    by_ts = {b["ts"]: {k: smc._r(b[k]) for k in ("h", "l")} for b in c}   # zones carry 10 significant digits
+    for z in s["breakers"]:
+        assert z["state"] != "invalidated" and (z["top"], z["bottom"]) == (by_ts[z["ts"]]["h"], by_ts[z["ts"]]["l"])
+    x = s["inducement"]
+    if x:
+        assert x["price"] == by_ts[x["ts"]]["l" if x["side"] == "low" else "h"]
+        assert (x["state"] == "swept") == (x["swept_ts"] is not None) and x["confirm_ts"] <= c[-1]["close_ts"]
+    for q in s["equal_levels"]:
+        assert q["state"] == "resting" and q["price"] in (by_ts[q["ts"]]["h"], by_ts[q["ts"]]["l"],
+                                                          by_ts[q["first_ts"]]["h"], by_ts[q["first_ts"]]["l"])

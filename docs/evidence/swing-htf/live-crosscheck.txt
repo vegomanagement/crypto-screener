@@ -1,0 +1,65 @@
+OK  BTCUSDT 4h breaker bear 82241.5–82980.0 = venue H/L of bar 1791561600000
+OK  BTCUSDT 4h breaker: a venue close beyond the far edge before its confirmation
+OK  BTCUSDT 4h breaker bear 83277.3–84379.8 = venue H/L of bar 1790827200000
+OK  BTCUSDT 4h breaker: a venue close beyond the far edge before its confirmation
+OK  BTCUSDT 4h IDM high 82639.2 = venue h of bar 1792080000000
+OK  BTCUSDT 4h IDM state swept (first venue bar through it: 1792137600000)
+OK  BTCUSDT 4h EQH 86683.9 = venue h of 1791201600000 / 1791288000000 (gap 19.00)
+OK  BTCUSDT 4h EQH still resting on venue bars
+OK  BTCUSDT 4h EQH 84134.2 = venue h of 1791878400000 / 1791964800000 (gap 16.60)
+OK  BTCUSDT 4h EQH still resting on venue bars
+OK  BTCUSDT 4h EQL 80751.0 = venue l of 1792166400000 / 1792267200000 (gap 29.00)
+OK  BTCUSDT 4h EQL still resting on venue bars
+OK  BTCUSDT 1h breaker bull 81541.9–81733.0 = venue H/L of bar 1792220400000
+OK  BTCUSDT 1h breaker: a venue close beyond the far edge before its confirmation
+OK  BTCUSDT 1h IDM high 81686.4 = venue h of bar 1792270800000
+OK  BTCUSDT 1h IDM state swept (first venue bar through it: 1792285200000)
+OK  BTCUSDT 1h EQH 84134.2 = venue h of 1791878400000 / 1791964800000 (gap 16.60)
+OK  BTCUSDT 1h EQH still resting on venue bars
+OK  BTCUSDT 1d breaker bull 80651.2–82828.7 = venue H/L of bar 1778025600000
+OK  BTCUSDT 1d breaker: a venue close beyond the far edge before its confirmation
+OK  BTCUSDT 1d breaker bull 76927.3–82282.8 = venue H/L of bar 1788393600000
+OK  BTCUSDT 1d breaker: a venue close beyond the far edge before its confirmation
+OK  BTCUSDT 1d IDM high 84340.2 = venue h of bar 1791763200000
+OK  BTCUSDT 1d IDM state resting (first venue bar through it: None)
+OK  BTCUSDT 1d EQH 87385.1 = venue h of 1789948800000 / 1790899200000 (gap 135.50)
+OK  BTCUSDT 1d EQH still resting on venue bars
+OK  BTCUSDT 1w breaker bull 78128.3–82828.7 = venue H/L of bar 1777852800000
+OK  BTCUSDT 1w breaker: a venue close beyond the far edge before its confirmation
+OK  BTCUSDT 1w breaker bear 98115.4–108900.0 = venue H/L of bar 1750032000000
+OK  BTCUSDT 1w breaker: a venue close beyond the far edge before its confirmation
+OK  BTCUSDT 1w IDM high 66924.1 = venue h of bar 1784505600000
+OK  BTCUSDT 1w IDM state swept (first venue bar through it: 1786924800000)
+OK  BTCUSDT 1w EQL 24581.0 = venue l of 1686528000000 / 1691971200000 (gap 196.00)
+OK  BTCUSDT 1w EQL still resting on venue bars
+OK  BTCUSDT 1d breaker bull 80651.2–82828.7 = venue H/L of bar 1778025600000
+OK  BTCUSDT 1d breaker: a venue close beyond the far edge before its confirmation
+OK  BTCUSDT 1d breaker bull 76927.3–82282.8 = venue H/L of bar 1788393600000
+OK  BTCUSDT 1d breaker: a venue close beyond the far edge before its confirmation
+OK  BTCUSDT 1d IDM high 84340.2 = venue h of bar 1791763200000
+OK  BTCUSDT 1d IDM state resting (first venue bar through it: None)
+OK  BTCUSDT 1d EQH 87385.1 = venue h of 1789948800000 / 1790899200000 (gap 135.50)
+OK  BTCUSDT 1d EQH still resting on venue bars
+OK  ETHUSDT 4h breaker bear 2562.31–2631.88 = venue H/L of bar 1789862400000
+OK  ETHUSDT 4h breaker: a venue close beyond the far edge before its confirmation
+OK  ETHUSDT 4h breaker bear 2634.0–2659.5 = venue H/L of bar 1790568000000
+OK  ETHUSDT 4h breaker: a venue close beyond the far edge before its confirmation
+OK  ETHUSDT 4h IDM high 2466.62 = venue h of bar 1792094400000
+OK  ETHUSDT 4h IDM state swept (first venue bar through it: 1792137600000)
+OK  ETHUSDT 1d breaker bull 2344.0–2398.88 = venue H/L of bar 1777939200000
+OK  ETHUSDT 1d breaker: a venue close beyond the far edge before its confirmation
+OK  ETHUSDT 1d breaker bear 3052.43–3183.68 = venue H/L of bar 1767830400000
+OK  ETHUSDT 1d breaker: a venue close beyond the far edge before its confirmation
+OK  ETHUSDT 1d IDM low 2626.01 = venue l of bar 1790208000000
+OK  ETHUSDT 1d IDM state swept (first venue bar through it: 1791331200000)
+OK  ETHUSDT 1d EQL 1503.6 = venue l of 1780704000000 / 1782432000000 (gap -7.27)
+OK  ETHUSDT 1d EQL still resting on venue bars
+OK  ETHUSDT 1w breaker bull 2174.48–2463.86 = venue H/L of bar 1776038400000
+OK  ETHUSDT 1w breaker: a venue close beyond the far edge before its confirmation
+OK  ETHUSDT 1w IDM high 1982.0 = venue h of bar 1785110400000
+OK  ETHUSDT 1w IDM state swept (first venue bar through it: 1786924800000)
+OK  ETHUSDT 1w EQH 3446.12 = venue h of 1765152000000 / 1768176000000 (gap 42.35)
+OK  ETHUSDT 1w EQH still resting on venue bars
+OK  ETHUSDT 1w EQL 1503.6 = venue l of 1780272000000 / 1782086400000 (gap -7.27)
+OK  ETHUSDT 1w EQL still resting on venue bars
+checks 64, mismatches 0

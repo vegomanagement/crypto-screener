@@ -30,7 +30,7 @@ def row(name, o):
 
 
 def render(res, full):
-    L = [f"# Swing HTF universe backtest — raw tables\n",
+    L = ["# Swing HTF universe backtest — raw tables\n",
          f"Split: OOS from {_d(res['oos_start'])} to {_d(res['end'])} (same date for every coin). "
          f"Variant grid per pair: {res['grid_size']}; Holm family (all variants tried incl. references): "
          f"{res['family_size']} (Bonferroni one-sided z ≥ {res['bonferroni_z_one_sided']}); with OOS n ≥ 10: "
