@@ -1,0 +1,8319 @@
+{
+ "universe": {
+  "rule": "Binance USDT-M PERPETUAL, underlyingType COIN, non-stablecoin base, onboardDate \u2265 3 years before the decision date, \u2265 200 trading days in the 365 days before it, top 20 by mean daily quote volume over those 365 days",
+  "main": {
+   "decision_date": "END",
+   "candidates": 143,
+   "coins": [
+    {
+     "symbol": "BTCUSDT",
+     "onboard": 1567965300000,
+     "status": "TRADING",
+     "mean_qv_usd": 12120748710,
+     "days": 365
+    },
+    {
+     "symbol": "ETHUSDT",
+     "onboard": 1574840700000,
+     "status": "TRADING",
+     "mean_qv_usd": 10318588407,
+     "days": 365
+    },
+    {
+     "symbol": "SOLUSDT",
+     "onboard": 1600066800000,
+     "status": "TRADING",
+     "mean_qv_usd": 2300856857,
+     "days": 365
+    },
+    {
+     "symbol": "ZECUSDT",
+     "onboard": 1580889600000,
+     "status": "TRADING",
+     "mean_qv_usd": 1141477191,
+     "days": 365
+    },
+    {
+     "symbol": "XRPUSDT",
+     "onboard": 1578298800000,
+     "status": "TRADING",
+     "mean_qv_usd": 963954342,
+     "days": 365
+    },
+    {
+     "symbol": "DOGEUSDT",
+     "onboard": 1594371600000,
+     "status": "TRADING",
+     "mean_qv_usd": 582746308,
+     "days": 365
+    },
+    {
+     "symbol": "BNBUSDT",
+     "onboard": 1581321600000,
+     "status": "TRADING",
+     "mean_qv_usd": 468024451,
+     "days": 365
+    },
+    {
+     "symbol": "1000PEPEUSDT",
+     "onboard": 1683244800000,
+     "status": "TRADING",
+     "mean_qv_usd": 308390187,
+     "days": 365
+    },
+    {
+     "symbol": "SUIUSDT",
+     "onboard": 1683072000000,
+     "status": "TRADING",
+     "mean_qv_usd": 273007439,
+     "days": 365
+    },
+    {
+     "symbol": "NEARUSDT",
+     "onboard": 1602748800000,
+     "status": "TRADING",
+     "mean_qv_usd": 219721238,
+     "days": 365
+    },
+    {
+     "symbol": "ADAUSDT",
+     "onboard": 1580457600000,
+     "status": "TRADING",
+     "mean_qv_usd": 217420965,
+     "days": 365
+    },
+    {
+     "symbol": "LINKUSDT",
+     "onboard": 1579248000000,
+     "status": "TRADING",
+     "mean_qv_usd": 168433974,
+     "days": 365
+    },
+    {
+     "symbol": "WLDUSDT",
+     "onboard": 1690200000000,
+     "status": "TRADING",
+     "mean_qv_usd": 166970901,
+     "days": 365
+    },
+    {
+     "symbol": "AVAXUSDT",
+     "onboard": 1600844400000,
+     "status": "TRADING",
+     "mean_qv_usd": 162523948,
+     "days": 365
+    },
+    {
+     "symbol": "UNIUSDT",
+     "onboard": 1600412400000,
+     "status": "TRADING",
+     "mean_qv_usd": 141633494,
+     "days": 365
+    },
+    {
+     "symbol": "FILUSDT",
+     "onboard": 1602828000000,
+     "status": "TRADING",
+     "mean_qv_usd": 139098705,
+     "days": 365
+    },
+    {
+     "symbol": "BCHUSDT",
+     "onboard": 1576745700000,
+     "status": "TRADING",
+     "mean_qv_usd": 138259147,
+     "days": 365
+    },
+    {
+     "symbol": "LTCUSDT",
+     "onboard": 1578557100000,
+     "status": "TRADING",
+     "mean_qv_usd": 116086134,
+     "days": 365
+    },
+    {
+     "symbol": "AAVEUSDT",
+     "onboard": 1602831600000,
+     "status": "TRADING",
+     "mean_qv_usd": 106463500,
+     "days": 365
+    },
+    {
+     "symbol": "DASHUSDT",
+     "onboard": 1580803500000,
+     "status": "TRADING",
+     "mean_qv_usd": 100869436,
+     "days": 365
+    }
+   ]
+  },
+  "asof_oos": {
+   "decision_date": "OOS_START (settled/delisted contracts included)",
+   "candidates": 107,
+   "coins": [
+    {
+     "symbol": "BTCUSDT",
+     "onboard": 1567965300000,
+     "status": "TRADING",
+     "mean_qv_usd": 15516647521,
+     "days": 365
+    },
+    {
+     "symbol": "ETHUSDT",
+     "onboard": 1574840700000,
+     "status": "TRADING",
+     "mean_qv_usd": 7427574205,
+     "days": 365
+    },
+    {
+     "symbol": "SOLUSDT",
+     "onboard": 1600066800000,
+     "status": "TRADING",
+     "mean_qv_usd": 2756194101,
+     "days": 365
+    },
+    {
+     "symbol": "DOGEUSDT",
+     "onboard": 1594371600000,
+     "status": "TRADING",
+     "mean_qv_usd": 755868950,
+     "days": 365
+    },
+    {
+     "symbol": "XRPUSDT",
+     "onboard": 1578298800000,
+     "status": "TRADING",
+     "mean_qv_usd": 643169894,
+     "days": 365
+    },
+    {
+     "symbol": "BNBUSDT",
+     "onboard": 1581321600000,
+     "status": "TRADING",
+     "mean_qv_usd": 488082955,
+     "days": 365
+    },
+    {
+     "symbol": "AVAXUSDT",
+     "onboard": 1600844400000,
+     "status": "TRADING",
+     "mean_qv_usd": 432201783,
+     "days": 365
+    },
+    {
+     "symbol": "1000SHIBUSDT",
+     "onboard": 1620630000000,
+     "status": "TRADING",
+     "mean_qv_usd": 360364719,
+     "days": 365
+    },
+    {
+     "symbol": "LINKUSDT",
+     "onboard": 1579248000000,
+     "status": "TRADING",
+     "mean_qv_usd": 346065943,
+     "days": 365
+    },
+    {
+     "symbol": "TRBUSDT",
+     "onboard": 1599116400000,
+     "status": "TRADING",
+     "mean_qv_usd": 335207367,
+     "days": 365
+    },
+    {
+     "symbol": "ADAUSDT",
+     "onboard": 1580457600000,
+     "status": "TRADING",
+     "mean_qv_usd": 275774449,
+     "days": 365
+    },
+    {
+     "symbol": "FILUSDT",
+     "onboard": 1602828000000,
+     "status": "TRADING",
+     "mean_qv_usd": 270264036,
+     "days": 365
+    },
+    {
+     "symbol": "BCHUSDT",
+     "onboard": 1576745700000,
+     "status": "TRADING",
+     "mean_qv_usd": 263146221,
+     "days": 365
+    },
+    {
+     "symbol": "NEARUSDT",
+     "onboard": 1602748800000,
+     "status": "TRADING",
+     "mean_qv_usd": 255914875,
+     "days": 365
+    },
+    {
+     "symbol": "LTCUSDT",
+     "onboard": 1578557100000,
+     "status": "TRADING",
+     "mean_qv_usd": 213871999,
+     "days": 365
+    },
+    {
+     "symbol": "FTMUSDT",
+     "onboard": 1600930800000,
+     "status": "SETTLING",
+     "mean_qv_usd": 198096866,
+     "days": 365
+    },
+    {
+     "symbol": "DOTUSDT",
+     "onboard": 1598079600000,
+     "status": "TRADING",
+     "mean_qv_usd": 193253486,
+     "days": 365
+    },
+    {
+     "symbol": "ETCUSDT",
+     "onboard": 1579161600000,
+     "status": "TRADING",
+     "mean_qv_usd": 192465501,
+     "days": 365
+    },
+    {
+     "symbol": "GALAUSDT",
+     "onboard": 1631862000000,
+     "status": "TRADING",
+     "mean_qv_usd": 165114504,
+     "days": 365
+    },
+    {
+     "symbol": "UNIUSDT",
+     "onboard": 1600412400000,
+     "status": "TRADING",
+     "mean_qv_usd": 135526685,
+     "days": 365
+    }
+   ]
+  },
+  "end": 1792281600000,
+  "oos_start": 1727913600000
+ },
+ "oos_start": 1727913600000,
+ "end": 1792281600000,
+ "grid_size": 480,
+ "costs": {
+  "taker": 0.0005,
+  "maker": 0.0002,
+  "slippage": 0.0001,
+  "funding_fallback_8h": 0.0001
+ },
+ "pairs": {
+  "1d>4h": {
+   "n_variants": 480,
+   "n_is_ge_30": 189,
+   "n_oos_ge_10": 254,
+   "pre_registered": [
+    "breaker|idm=idm|sweep=0|limit|stop=poi|r3",
+    "breaker|idm=idm|sweep=0|limit|stop=poi|r2",
+    "breaker|idm=idm|sweep=0|limit|stop=poi|liq",
+    "breaker|idm=idm|sweep=1|limit|stop=poi|r3",
+    "breaker|idm=idm|sweep=1|limit|stop=poi|r2"
+   ],
+   "closest_to_passing": [
+    "any|idm=none|sweep=0|limit|stop=poi|r2+be",
+    "any|idm=none|sweep=0|limit|stop=poi|r3",
+    "ob|idm=none|sweep=0|limit|stop=poi|r3",
+    "breaker|idm=none|sweep=0|limit|stop=poi|liq",
+    "any|idm=none|sweep=1|limit|stop=poi|liq"
+   ],
+   "factor_means": {
+    "poi": {
+     "any": {
+      "net": -0.014,
+      "trades": 6996
+     },
+     "ob": {
+      "net": -0.01,
+      "trades": 4367
+     },
+     "fvg": {
+      "net": -0.094,
+      "trades": 4343
+     },
+     "breaker": {
+      "net": -0.147,
+      "trades": 627
+     }
+    },
+    "idm": {
+     "none": {
+      "net": 0.055,
+      "trades": 9623
+     },
+     "idm": {
+      "net": -0.084,
+      "trades": 5484
+     },
+     "eq": {
+      "net": -0.575,
+      "trades": 1226
+     }
+    },
+    "sweep": {
+     "False": {
+      "net": -0.046,
+      "trades": 10104
+     },
+     "True": {
+      "net": -0.029,
+      "trades": 6229
+     }
+    },
+    "entry": {
+     "retest": {
+      "net": -0.348,
+      "trades": 2010
+     },
+     "close": {
+      "net": -0.015,
+      "trades": 3666
+     },
+     "limit": {
+      "net": 0.01,
+      "trades": 10657
+     }
+    },
+    "stop": {
+     "choch": {
+      "net": -0.126,
+      "trades": 2972
+     },
+     "poi": {
+      "net": -0.02,
+      "trades": 13361
+     }
+    },
+    "target": {
+     "liq": {
+      "net": -0.037,
+      "trades": 3311
+     },
+     "r2": {
+      "net": -0.044,
+      "trades": 8780
+     },
+     "r3": {
+      "net": -0.031,
+      "trades": 4242
+     }
+    },
+    "be": {
+     "False": {
+      "net": -0.043,
+      "trades": 11906
+     },
+     "True": {
+      "net": -0.029,
+      "trades": 4427
+     }
+    }
+   },
+   "walk_forward_selection": [
+    {
+     "fold": "2022-01-01",
+     "to": "2023-01-01",
+     "chosen": "any|idm=idm|sweep=1|limit|stop=poi|r3",
+     "train_net": 0.266,
+     "n": 60,
+     "net": -0.147
+    },
+    {
+     "fold": "2023-01-01",
+     "to": "2024-01-01",
+     "chosen": "breaker|idm=none|sweep=0|limit|stop=poi|r3",
+     "train_net": 0.442,
+     "n": 29,
+     "net": 0.157
+    },
+    {
+     "fold": "2024-01-01",
+     "to": "2025-01-01",
+     "chosen": "breaker|idm=idm|sweep=0|limit|stop=poi|r3",
+     "train_net": 0.524,
+     "n": 10,
+     "net": -0.409
+    },
+    {
+     "fold": "2025-01-01",
+     "to": "2026-01-01",
+     "chosen": "breaker|idm=idm|sweep=0|limit|stop=poi|r3",
+     "train_net": 0.322,
+     "n": 8,
+     "net": -0.517
+    },
+    {
+     "fold": "2026-01-01",
+     "to": "2026-10-18",
+     "chosen": "breaker|idm=none|sweep=0|limit|stop=poi|liq",
+     "train_net": 0.211,
+     "n": 15,
+     "net": 0.012
+    }
+   ]
+  },
+  "1w>1d": {
+   "n_variants": 480,
+   "n_is_ge_30": 27,
+   "n_oos_ge_10": 97,
+   "pre_registered": [
+    "any|idm=none|sweep=1|limit|stop=poi|liq",
+    "any|idm=none|sweep=1|limit|stop=poi|r3",
+    "any|idm=idm|sweep=1|limit|stop=poi|liq",
+    "any|idm=none|sweep=1|limit|stop=poi|r2",
+    "ob|idm=none|sweep=0|limit|stop=poi|r3"
+   ],
+   "closest_to_passing": [
+    "breaker|idm=none|sweep=0|limit|stop=poi|r2+be",
+    "breaker|idm=none|sweep=0|limit|stop=poi|liq",
+    "breaker|idm=none|sweep=0|limit|stop=poi|r2",
+    "ob|idm=none|sweep=1|limit|stop=poi|liq",
+    "any|idm=none|sweep=1|limit|stop=poi|liq"
+   ],
+   "factor_means": {
+    "poi": {
+     "any": {
+      "net": -0.5,
+      "trades": 1340
+     },
+     "ob": {
+      "net": -0.555,
+      "trades": 913
+     },
+     "fvg": {
+      "net": -0.578,
+      "trades": 821
+     },
+     "breaker": {
+      "net": -0.528,
+      "trades": 442
+     }
+    },
+    "idm": {
+     "none": {
+      "net": -0.55,
+      "trades": 1866
+     },
+     "idm": {
+      "net": -0.505,
+      "trades": 1326
+     },
+     "eq": {
+      "net": -0.577,
+      "trades": 324
+     }
+    },
+    "sweep": {
+     "False": {
+      "net": -0.519,
+      "trades": 2243
+     },
+     "True": {
+      "net": -0.565,
+      "trades": 1273
+     }
+    },
+    "entry": {
+     "retest": {
+      "net": -0.674,
+      "trades": 831
+     },
+     "close": {
+      "net": -0.869,
+      "trades": 956
+     },
+     "limit": {
+      "net": -0.285,
+      "trades": 1729
+     }
+    },
+    "stop": {
+     "choch": {
+      "net": -0.939,
+      "trades": 962
+     },
+     "poi": {
+      "net": -0.384,
+      "trades": 2554
+     }
+    },
+    "target": {
+     "liq": {
+      "net": -0.542,
+      "trades": 692
+     },
+     "r2": {
+      "net": -0.52,
+      "trades": 1902
+     },
+     "r3": {
+      "net": -0.564,
+      "trades": 922
+     }
+    },
+    "be": {
+     "False": {
+      "net": -0.55,
+      "trades": 2558
+     },
+     "True": {
+      "net": -0.498,
+      "trades": 958
+     }
+    }
+   },
+   "walk_forward_selection": [
+    {
+     "fold": "2022-01-01",
+     "to": "2023-01-01",
+     "chosen": null,
+     "train_net": null,
+     "n": 0,
+     "net": null
+    },
+    {
+     "fold": "2023-01-01",
+     "to": "2024-01-01",
+     "chosen": "any|idm=none|sweep=0|limit|stop=poi|liq",
+     "train_net": 0.176,
+     "n": 30,
+     "net": -0.211
+    },
+    {
+     "fold": "2024-01-01",
+     "to": "2025-01-01",
+     "chosen": "any|idm=none|sweep=1|limit|stop=poi|liq",
+     "train_net": 0.392,
+     "n": 13,
+     "net": 0.694
+    },
+    {
+     "fold": "2025-01-01",
+     "to": "2026-01-01",
+     "chosen": "any|idm=none|sweep=1|limit|stop=poi|liq",
+     "train_net": 0.466,
+     "n": 17,
+     "net": 0.309
+    },
+    {
+     "fold": "2026-01-01",
+     "to": "2026-10-18",
+     "chosen": "any|idm=none|sweep=1|limit|stop=poi|liq",
+     "train_net": 0.428,
+     "n": 8,
+     "net": -0.532
+    }
+   ]
+  }
+ },
+ "family_size": 962,
+ "bonferroni_z_one_sided": 3.88,
+ "variants_with_oos_n_ge_10": 353,
+ "candidates": {
+  "1d>4h breaker|idm=idm|sweep=0|limit|stop=poi|r3": {
+   "is": {
+    "n": 45,
+    "coins": 15,
+    "hit": 0.356,
+    "gross": 0.36,
+    "fees": 0.009,
+    "funding": -0.0,
+    "net": 0.351,
+    "net_taker": 0.344,
+    "se": 0.273,
+    "z": 1.28,
+    "p": 0.09955852744769471,
+    "pf": 1.53,
+    "max_dd_r": 10.17,
+    "hold_days": 11.2,
+    "per_coin_year": 0.57,
+    "long_share": 0.51,
+    "ci95": [
+     -0.112,
+     0.925
+    ],
+    "by_coin": {
+     "AAVEUSDT": {
+      "n": 3,
+      "net": -1.004,
+      "sum": -3.01
+     },
+     "ADAUSDT": {
+      "n": 3,
+      "net": 0.329,
+      "sum": 0.99
+     },
+     "AVAXUSDT": {
+      "n": 3,
+      "net": -1.013,
+      "sum": -3.04
+     },
+     "BCHUSDT": {
+      "n": 1,
+      "net": 3.035,
+      "sum": 3.04
+     },
+     "BNBUSDT": {
+      "n": 4,
+      "net": 1.009,
+      "sum": 4.03
+     },
+     "BTCUSDT": {
+      "n": 1,
+      "net": 2.872,
+      "sum": 2.87
+     },
+     "DASHUSDT": {
+      "n": 2,
+      "net": 0.98,
+      "sum": 1.96
+     },
+     "DOGEUSDT": {
+      "n": 3,
+      "net": 1.377,
+      "sum": 4.13
+     },
+     "ETHUSDT": {
+      "n": 6,
+      "net": -0.003,
+      "sum": -0.02
+     },
+     "FILUSDT": {
+      "n": 4,
+      "net": 0.987,
+      "sum": 3.95
+     },
+     "LINKUSDT": {
+      "n": 3,
+      "net": 0.263,
+      "sum": 0.79
+     },
+     "LTCUSDT": {
+      "n": 2,
+      "net": 0.987,
+      "sum": 1.97
+     },
+     "UNIUSDT": {
+      "n": 2,
+      "net": -1.011,
+      "sum": -2.02
+     },
+     "XRPUSDT": {
+      "n": 4,
+      "net": -1.004,
+      "sum": -4.01
+     },
+     "ZECUSDT": {
+      "n": 4,
+      "net": 1.044,
+      "sum": 4.18
+     }
+    },
+    "coins_positive": "10/15",
+    "without_best_coin": {
+     "coin": "ZECUSDT",
+     "n": 41,
+     "net": 0.283
+    },
+    "top2_share_of_total": 0.53
+   },
+   "oos": {
+    "n": 14,
+    "coins": 12,
+    "hit": 0.143,
+    "gross": -0.429,
+    "fees": 0.013,
+    "funding": -0.004,
+    "net": -0.446,
+    "net_taker": -0.453,
+    "se": 0.383,
+    "z": -1.16,
+    "p": 0.8779640442638683,
+    "pf": 0.49,
+    "max_dd_r": 9.2,
+    "hold_days": 3.7,
+    "per_coin_year": 0.34,
+    "long_share": 0.71,
+    "ci95": [
+     -1.011,
+     0.395
+    ],
+    "by_coin": {
+     "AAVEUSDT": {
+      "n": 2,
+      "net": -1.05,
+      "sum": -2.1
+     },
+     "DASHUSDT": {
+      "n": 1,
+      "net": -1.013,
+      "sum": -1.01
+     },
+     "DOGEUSDT": {
+      "n": 1,
+      "net": 2.972,
+      "sum": 2.97
+     },
+     "FILUSDT": {
+      "n": 1,
+      "net": -1.006,
+      "sum": -1.01
+     },
+     "LINKUSDT": {
+      "n": 1,
+      "net": -1.017,
+      "sum": -1.02
+     },
+     "LTCUSDT": {
+      "n": 1,
+      "net": -1.029,
+      "sum": -1.03
+     },
+     "NEARUSDT": {
+      "n": 1,
+      "net": -1.006,
+      "sum": -1.01
+     },
+     "SOLUSDT": {
+      "n": 1,
+      "net": -0.968,
+      "sum": -0.97
+     },
+     "SUIUSDT": {
+      "n": 1,
+      "net": 2.967,
+      "sum": 2.97
+     },
+     "UNIUSDT": {
+      "n": 1,
+      "net": -1.013,
+      "sum": -1.01
+     },
+     "XRPUSDT": {
+      "n": 1,
+      "net": -1.008,
+      "sum": -1.01
+     },
+     "ZECUSDT": {
+      "n": 2,
+      "net": -1.008,
+      "sum": -2.02
+     }
+    },
+    "coins_positive": "2/12",
+    "without_best_coin": {
+     "coin": "DOGEUSDT",
+     "n": 13,
+     "net": -0.708
+    },
+    "top2_share_of_total": null,
+    "p_holm": 1.0
+   },
+   "no_htf_oos": {
+    "n": 385,
+    "coins": 20,
+    "hit": 0.301,
+    "gross": 0.133,
+    "fees": 0.011,
+    "funding": -0.003,
+    "net": 0.118,
+    "net_taker": 0.11,
+    "se": 0.116,
+    "z": 1.02,
+    "p": 0.15457640718224588,
+    "pf": 1.17,
+    "max_dd_r": 38.57,
+    "hold_days": 9.0,
+    "per_coin_year": 9.44,
+    "long_share": 0.5
+   },
+   "asof_universe_oos": {
+    "n": 10,
+    "coins": 10,
+    "hit": 0.1,
+    "gross": -0.6,
+    "fees": 0.015,
+    "funding": 0.001,
+    "net": -0.613,
+    "net_taker": -0.622,
+    "se": 0.413,
+    "z": -1.49,
+    "p": 0.9314061220682884,
+    "pf": 0.33,
+    "max_dd_r": 6.13,
+    "hold_days": 2.6,
+    "per_coin_year": 0.25,
+    "long_share": 0.6,
+    "ci95": [
+     -1.02,
+     0.318
+    ],
+    "by_coin": {
+     "1000SHIBUSDT": {
+      "n": 1,
+      "net": -1.046,
+      "sum": -1.05
+     },
+     "DOGEUSDT": {
+      "n": 1,
+      "net": 2.972,
+      "sum": 2.97
+     },
+     "ETCUSDT": {
+      "n": 1,
+      "net": -1.011,
+      "sum": -1.01
+     },
+     "FILUSDT": {
+      "n": 1,
+      "net": -1.006,
+      "sum": -1.01
+     },
+     "LINKUSDT": {
+      "n": 1,
+      "net": -1.017,
+      "sum": -1.02
+     },
+     "LTCUSDT": {
+      "n": 1,
+      "net": -1.029,
+      "sum": -1.03
+     },
+     "NEARUSDT": {
+      "n": 1,
+      "net": -1.006,
+      "sum": -1.01
+     },
+     "SOLUSDT": {
+      "n": 1,
+      "net": -0.968,
+      "sum": -0.97
+     },
+     "UNIUSDT": {
+      "n": 1,
+      "net": -1.013,
+      "sum": -1.01
+     },
+     "XRPUSDT": {
+      "n": 1,
+      "net": -1.008,
+      "sum": -1.01
+     }
+    },
+    "coins_positive": "1/10",
+    "without_best_coin": {
+     "coin": "DOGEUSDT",
+     "n": 9,
+     "net": -1.012
+    },
+    "top2_share_of_total": null
+   },
+   "random_oos_gross": {
+    "mean": -0.3,
+    "sd_across_seeds": 0.435,
+    "share_seeds_ge_variant": 0.7
+   },
+   "folds": [
+    {
+     "fold": "2021-01-01",
+     "n": 11,
+     "net": 1.166
+    },
+    {
+     "fold": "2022-01-01",
+     "n": 8,
+     "net": 0.494
+    },
+    {
+     "fold": "2023-01-01",
+     "n": 14,
+     "net": -0.191
+    },
+    {
+     "fold": "2024-01-01",
+     "n": 10,
+     "net": -0.409
+    },
+    {
+     "fold": "2025-01-01",
+     "n": 8,
+     "net": -0.517
+    },
+    {
+     "fold": "2026-01-01",
+     "n": 5,
+     "net": -0.219
+    }
+   ],
+   "passes": {
+    "net_gt_0": false,
+    "holm_p_lt_0.05": false,
+    "ci_above_0": false,
+    "not_one_coin": false,
+    "coins_majority_positive": false,
+    "beats_random": false,
+    "beats_no_htf": false,
+    "asof_universe_positive": false,
+    "folds_positive": false,
+    "all": false
+   }
+  },
+  "1d>4h breaker|idm=idm|sweep=0|limit|stop=poi|r2": {
+   "is": {
+    "n": 45,
+    "coins": 15,
+    "hit": 0.422,
+    "gross": 0.267,
+    "fees": 0.009,
+    "funding": 0.005,
+    "net": 0.263,
+    "net_taker": 0.256,
+    "se": 0.239,
+    "z": 1.1,
+    "p": 0.13578928140398483,
+    "pf": 1.45,
+    "max_dd_r": 8.06,
+    "hold_days": 6.4,
+    "per_coin_year": 0.57,
+    "long_share": 0.51,
+    "ci95": [
+     -0.147,
+     0.802
+    ],
+    "by_coin": {
+     "AAVEUSDT": {
+      "n": 3,
+      "net": -1.004,
+      "sum": -3.01
+     },
+     "ADAUSDT": {
+      "n": 3,
+      "net": -0.005,
+      "sum": -0.01
+     },
+     "AVAXUSDT": {
+      "n": 3,
+      "net": -1.013,
+      "sum": -3.04
+     },
+     "BCHUSDT": {
+      "n": 1,
+      "net": 2.035,
+      "sum": 2.03
+     },
+     "BNBUSDT": {
+      "n": 4,
+      "net": 0.509,
+      "sum": 2.03
+     },
+     "BTCUSDT": {
+      "n": 1,
+      "net": 1.908,
+      "sum": 1.91
+     },
+     "DASHUSDT": {
+      "n": 2,
+      "net": 0.48,
+      "sum": 0.96
+     },
+     "DOGEUSDT": {
+      "n": 3,
+      "net": 2.008,
+      "sum": 6.02
+     },
+     "ETHUSDT": {
+      "n": 6,
+      "net": 0.499,
+      "sum": 2.99
+     },
+     "FILUSDT": {
+      "n": 4,
+      "net": 0.507,
+      "sum": 2.03
+     },
+     "LINKUSDT": {
+      "n": 3,
+      "net": 0.984,
+      "sum": 2.95
+     },
+     "LTCUSDT": {
+      "n": 2,
+      "net": 0.495,
+      "sum": 0.99
+     },
+     "UNIUSDT": {
+      "n": 2,
+      "net": -1.011,
+      "sum": -2.02
+     },
+     "XRPUSDT": {
+      "n": 4,
+      "net": -1.004,
+      "sum": -4.01
+     },
+     "ZECUSDT": {
+      "n": 4,
+      "net": 0.506,
+      "sum": 2.02
+     }
+    },
+    "coins_positive": "10/15",
+    "without_best_coin": {
+     "coin": "DOGEUSDT",
+     "n": 42,
+     "net": 0.139
+    },
+    "top2_share_of_total": 0.76
+   },
+   "oos": {
+    "n": 15,
+    "coins": 12,
+    "hit": 0.2,
+    "gross": -0.4,
+    "fees": 0.012,
+    "funding": -0.003,
+    "net": -0.415,
+    "net_taker": -0.423,
+    "se": 0.324,
+    "z": -1.28,
+    "p": 0.900118572069504,
+    "pf": 0.49,
+    "max_dd_r": 10.2,
+    "hold_days": 3.5,
+    "per_coin_year": 0.37,
+    "long_share": 0.73,
+    "ci95": [
+     -0.857,
+     0.289
+    ],
+    "by_coin": {
+     "AAVEUSDT": {
+      "n": 2,
+      "net": -1.05,
+      "sum": -2.1
+     },
+     "DASHUSDT": {
+      "n": 1,
+      "net": -1.013,
+      "sum": -1.01
+     },
+     "DOGEUSDT": {
+      "n": 1,
+      "net": 1.977,
+      "sum": 1.98
+     },
+     "FILUSDT": {
+      "n": 1,
+      "net": -1.006,
+      "sum": -1.01
+     },
+     "LINKUSDT": {
+      "n": 1,
+      "net": -1.017,
+      "sum": -1.02
+     },
+     "LTCUSDT": {
+      "n": 1,
+      "net": -1.029,
+      "sum": -1.03
+     },
+     "NEARUSDT": {
+      "n": 1,
+      "net": -1.006,
+      "sum": -1.01
+     },
+     "SOLUSDT": {
+      "n": 1,
+      "net": -0.968,
+      "sum": -0.97
+     },
+     "SUIUSDT": {
+      "n": 1,
+      "net": 1.984,
+      "sum": 1.98
+     },
+     "UNIUSDT": {
+      "n": 1,
+      "net": -1.013,
+      "sum": -1.01
+     },
+     "XRPUSDT": {
+      "n": 2,
+      "net": 0.489,
+      "sum": 0.98
+     },
+     "ZECUSDT": {
+      "n": 2,
+      "net": -1.008,
+      "sum": -2.02
+     }
+    },
+    "coins_positive": "3/12",
+    "without_best_coin": {
+     "coin": "DOGEUSDT",
+     "n": 14,
+     "net": -0.586
+    },
+    "top2_share_of_total": null,
+    "p_holm": 1.0
+   },
+   "no_htf_oos": {
+    "n": 413,
+    "coins": 20,
+    "hit": 0.366,
+    "gross": 0.074,
+    "fees": 0.011,
+    "funding": -0.001,
+    "net": 0.062,
+    "net_taker": 0.053,
+    "se": 0.087,
+    "z": 0.71,
+    "p": 0.23815913661149385,
+    "pf": 1.1,
+    "max_dd_r": 36.5,
+    "hold_days": 6.9,
+    "per_coin_year": 10.12,
+    "long_share": 0.5
+   },
+   "asof_universe_oos": {
+    "n": 11,
+    "coins": 10,
+    "hit": 0.273,
+    "gross": -0.182,
+    "fees": 0.012,
+    "funding": 0.002,
+    "net": -0.192,
+    "net_taker": -0.202,
+    "se": 0.454,
+    "z": -0.42,
+    "p": 0.6641166227131053,
+    "pf": 0.74,
+    "max_dd_r": 5.07,
+    "hold_days": 2.7,
+    "per_coin_year": 0.27,
+    "long_share": 0.64,
+    "ci95": [
+     -0.805,
+     0.787
+    ],
+    "by_coin": {
+     "1000SHIBUSDT": {
+      "n": 1,
+      "net": 1.982,
+      "sum": 1.98
+     },
+     "DOGEUSDT": {
+      "n": 1,
+      "net": 1.977,
+      "sum": 1.98
+     },
+     "ETCUSDT": {
+      "n": 1,
+      "net": -1.011,
+      "sum": -1.01
+     },
+     "FILUSDT": {
+      "n": 1,
+      "net": -1.006,
+      "sum": -1.01
+     },
+     "LINKUSDT": {
+      "n": 1,
+      "net": -1.017,
+      "sum": -1.02
+     },
+     "LTCUSDT": {
+      "n": 1,
+      "net": -1.029,
+      "sum": -1.03
+     },
+     "NEARUSDT": {
+      "n": 1,
+      "net": -1.006,
+      "sum": -1.01
+     },
+     "SOLUSDT": {
+      "n": 1,
+      "net": -0.968,
+      "sum": -0.97
+     },
+     "UNIUSDT": {
+      "n": 1,
+      "net": -1.013,
+      "sum": -1.01
+     },
+     "XRPUSDT": {
+      "n": 2,
+      "net": 0.489,
+      "sum": 0.98
+     }
+    },
+    "coins_positive": "3/10",
+    "without_best_coin": {
+     "coin": "1000SHIBUSDT",
+     "n": 10,
+     "net": -0.41
+    },
+    "top2_share_of_total": null
+   },
+   "random_oos_gross": {
+    "mean": -0.166,
+    "sd_across_seeds": 0.441,
+    "share_seeds_ge_variant": 0.8
+   },
+   "folds": [
+    {
+     "fold": "2021-01-01",
+     "n": 11,
+     "net": 0.912
+    },
+    {
+     "fold": "2022-01-01",
+     "n": 8,
+     "net": 0.117
+    },
+    {
+     "fold": "2023-01-01",
+     "n": 14,
+     "net": -0.138
+    },
+    {
+     "fold": "2024-01-01",
+     "n": 10,
+     "net": -0.103
+    },
+    {
+     "fold": "2025-01-01",
+     "n": 8,
+     "net": -0.642
+    },
+    {
+     "fold": "2026-01-01",
+     "n": 6,
+     "net": -0.015
+    }
+   ],
+   "passes": {
+    "net_gt_0": false,
+    "holm_p_lt_0.05": false,
+    "ci_above_0": false,
+    "not_one_coin": false,
+    "coins_majority_positive": false,
+    "beats_random": false,
+    "beats_no_htf": false,
+    "asof_universe_positive": false,
+    "folds_positive": false,
+    "all": false
+   }
+  },
+  "1d>4h breaker|idm=idm|sweep=0|limit|stop=poi|liq": {
+   "is": {
+    "n": 41,
+    "coins": 15,
+    "hit": 0.439,
+    "gross": 0.4,
+    "fees": 0.179,
+    "funding": 0.023,
+    "net": 0.244,
+    "net_taker": 0.152,
+    "se": 0.33,
+    "z": 0.74,
+    "p": 0.22989992491601688,
+    "pf": 1.34,
+    "max_dd_r": 14.17,
+    "hold_days": 11.7,
+    "per_coin_year": 0.52,
+    "long_share": 0.54,
+    "ci95": [
+     -0.395,
+     0.931
+    ],
+    "by_coin": {
+     "AAVEUSDT": {
+      "n": 2,
+      "net": -1.03,
+      "sum": -2.06
+     },
+     "ADAUSDT": {
+      "n": 3,
+      "net": -1.811,
+      "sum": -5.43
+     },
+     "AVAXUSDT": {
+      "n": 3,
+      "net": -1.013,
+      "sum": -3.04
+     },
+     "BCHUSDT": {
+      "n": 1,
+      "net": 2.575,
+      "sum": 2.57
+     },
+     "BNBUSDT": {
+      "n": 4,
+      "net": 0.311,
+      "sum": 1.25
+     },
+     "BTCUSDT": {
+      "n": 1,
+      "net": 2.466,
+      "sum": 2.47
+     },
+     "DASHUSDT": {
+      "n": 2,
+      "net": -0.028,
+      "sum": -0.06
+     },
+     "DOGEUSDT": {
+      "n": 3,
+      "net": 1.359,
+      "sum": 4.08
+     },
+     "ETHUSDT": {
+      "n": 4,
+      "net": 0.143,
+      "sum": 0.57
+     },
+     "FILUSDT": {
+      "n": 4,
+      "net": 1.012,
+      "sum": 4.05
+     },
+     "LINKUSDT": {
+      "n": 3,
+      "net": 1.214,
+      "sum": 3.64
+     },
+     "LTCUSDT": {
+      "n": 2,
+      "net": 1.915,
+      "sum": 3.83
+     },
+     "UNIUSDT": {
+      "n": 2,
+      "net": -1.011,
+      "sum": -2.02
+     },
+     "XRPUSDT": {
+      "n": 3,
+      "net": -1.014,
+      "sum": -3.04
+     },
+     "ZECUSDT": {
+      "n": 4,
+      "net": 0.798,
+      "sum": 3.19
+     }
+    },
+    "coins_positive": "9/15",
+    "without_best_coin": {
+     "coin": "DOGEUSDT",
+     "n": 38,
+     "net": 0.156
+    },
+    "top2_share_of_total": 0.81
+   },
+   "oos": {
+    "n": 13,
+    "coins": 11,
+    "hit": 0.154,
+    "gross": -0.412,
+    "fees": 0.013,
+    "funding": -0.009,
+    "net": -0.434,
+    "net_taker": -0.442,
+    "se": 0.426,
+    "z": -1.02,
+    "p": 0.84594592686223,
+    "pf": 0.49,
+    "max_dd_r": 9.15,
+    "hold_days": 6.8,
+    "per_coin_year": 0.32,
+    "long_share": 0.77,
+    "ci95": [
+     -1.012,
+     0.451
+    ],
+    "by_coin": {
+     "AAVEUSDT": {
+      "n": 2,
+      "net": -1.05,
+      "sum": -2.1
+     },
+     "DASHUSDT": {
+      "n": 1,
+      "net": -1.013,
+      "sum": -1.01
+     },
+     "DOGEUSDT": {
+      "n": 1,
+      "net": 4.552,
+      "sum": 4.55
+     },
+     "FILUSDT": {
+      "n": 1,
+      "net": -1.006,
+      "sum": -1.01
+     },
+     "LINKUSDT": {
+      "n": 1,
+      "net": -1.017,
+      "sum": -1.02
+     },
+     "LTCUSDT": {
+      "n": 1,
+      "net": -1.029,
+      "sum": -1.03
+     },
+     "SOLUSDT": {
+      "n": 1,
+      "net": -0.968,
+      "sum": -0.97
+     },
+     "SUIUSDT": {
+      "n": 1,
+      "net": 0.971,
+      "sum": 0.97
+     },
+     "UNIUSDT": {
+      "n": 1,
+      "net": -1.013,
+      "sum": -1.01
+     },
+     "XRPUSDT": {
+      "n": 1,
+      "net": -1.008,
+      "sum": -1.01
+     },
+     "ZECUSDT": {
+      "n": 2,
+      "net": -1.008,
+      "sum": -2.02
+     }
+    },
+    "coins_positive": "2/11",
+    "without_best_coin": {
+     "coin": "DOGEUSDT",
+     "n": 12,
+     "net": -0.85
+    },
+    "top2_share_of_total": null,
+    "p_holm": 1.0
+   },
+   "no_htf_oos": {
+    "n": 223,
+    "coins": 20,
+    "hit": 0.327,
+    "gross": -0.017,
+    "fees": 0.025,
+    "funding": -0.002,
+    "net": -0.045,
+    "net_taker": -0.061,
+    "se": 0.116,
+    "z": -0.39,
+    "p": 0.649958675951882,
+    "pf": 0.94,
+    "max_dd_r": 30.52,
+    "hold_days": 6.4,
+    "per_coin_year": 5.47,
+    "long_share": 0.54
+   },
+   "asof_universe_oos": {
+    "n": 9,
+    "coins": 9,
+    "hit": 0.222,
+    "gross": -0.151,
+    "fees": 0.015,
+    "funding": -0.004,
+    "net": -0.17,
+    "net_taker": -0.18,
+    "se": 0.671,
+    "z": -0.25,
+    "p": 0.6001027940028087,
+    "pf": 0.78,
+    "max_dd_r": 4.06,
+    "hold_days": 6.5,
+    "per_coin_year": 0.22,
+    "long_share": 0.67,
+    "ci95": [
+     -1.009,
+     1.373
+    ],
+    "by_coin": {
+     "1000SHIBUSDT": {
+      "n": 1,
+      "net": 0.968,
+      "sum": 0.97
+     },
+     "DOGEUSDT": {
+      "n": 1,
+      "net": 4.552,
+      "sum": 4.55
+     },
+     "ETCUSDT": {
+      "n": 1,
+      "net": -1.011,
+      "sum": -1.01
+     },
+     "FILUSDT": {
+      "n": 1,
+      "net": -1.006,
+      "sum": -1.01
+     },
+     "LINKUSDT": {
+      "n": 1,
+      "net": -1.017,
+      "sum": -1.02
+     },
+     "LTCUSDT": {
+      "n": 1,
+      "net": -1.029,
+      "sum": -1.03
+     },
+     "SOLUSDT": {
+      "n": 1,
+      "net": -0.968,
+      "sum": -0.97
+     },
+     "UNIUSDT": {
+      "n": 1,
+      "net": -1.013,
+      "sum": -1.01
+     },
+     "XRPUSDT": {
+      "n": 1,
+      "net": -1.008,
+      "sum": -1.01
+     }
+    },
+    "coins_positive": "2/9",
+    "without_best_coin": {
+     "coin": "DOGEUSDT",
+     "n": 8,
+     "net": -0.761
+    },
+    "top2_share_of_total": null
+   },
+   "random_oos_gross": {
+    "mean": -0.215,
+    "sd_across_seeds": 0.475,
+    "share_seeds_ge_variant": 0.7
+   },
+   "folds": [
+    {
+     "fold": "2021-01-01",
+     "n": 10,
+     "net": 1.249
+    },
+    {
+     "fold": "2022-01-01",
+     "n": 8,
+     "net": 0.146
+    },
+    {
+     "fold": "2023-01-01",
+     "n": 13,
+     "net": -0.523
+    },
+    {
+     "fold": "2024-01-01",
+     "n": 9,
+     "net": 0.075
+    },
+    {
+     "fold": "2025-01-01",
+     "n": 7,
+     "net": -0.222
+    },
+    {
+     "fold": "2026-01-01",
+     "n": 5,
+     "net": -0.618
+    }
+   ],
+   "passes": {
+    "net_gt_0": false,
+    "holm_p_lt_0.05": false,
+    "ci_above_0": false,
+    "not_one_coin": false,
+    "coins_majority_positive": false,
+    "beats_random": false,
+    "beats_no_htf": false,
+    "asof_universe_positive": false,
+    "folds_positive": false,
+    "all": false
+   }
+  },
+  "1d>4h breaker|idm=idm|sweep=1|limit|stop=poi|r3": {
+   "is": {
+    "n": 30,
+    "coins": 14,
+    "hit": 0.333,
+    "gross": 0.239,
+    "fees": 0.009,
+    "funding": -0.001,
+    "net": 0.228,
+    "net_taker": 0.222,
+    "se": 0.343,
+    "z": 0.67,
+    "p": 0.252436926298323,
+    "pf": 1.34,
+    "max_dd_r": 10.93,
+    "hold_days": 10.7,
+    "per_coin_year": 0.38,
+    "long_share": 0.47,
+    "ci95": [
+     -0.348,
+     0.922
+    ],
+    "by_coin": {
+     "AAVEUSDT": {
+      "n": 3,
+      "net": -1.004,
+      "sum": -3.01
+     },
+     "ADAUSDT": {
+      "n": 3,
+      "net": 0.329,
+      "sum": 0.99
+     },
+     "AVAXUSDT": {
+      "n": 2,
+      "net": -1.011,
+      "sum": -2.02
+     },
+     "BCHUSDT": {
+      "n": 1,
+      "net": 3.035,
+      "sum": 3.04
+     },
+     "BNBUSDT": {
+      "n": 2,
+      "net": 0.995,
+      "sum": 1.99
+     },
+     "BTCUSDT": {
+      "n": 1,
+      "net": 2.872,
+      "sum": 2.87
+     },
+     "DASHUSDT": {
+      "n": 1,
+      "net": -1.013,
+      "sum": -1.01
+     },
+     "DOGEUSDT": {
+      "n": 3,
+      "net": 1.377,
+      "sum": 4.13
+     },
+     "ETHUSDT": {
+      "n": 3,
+      "net": -0.334,
+      "sum": -1.0
+     },
+     "FILUSDT": {
+      "n": 4,
+      "net": 0.987,
+      "sum": 3.95
+     },
+     "LTCUSDT": {
+      "n": 1,
+      "net": 2.974,
+      "sum": 2.97
+     },
+     "UNIUSDT": {
+      "n": 2,
+      "net": -1.011,
+      "sum": -2.02
+     },
+     "XRPUSDT": {
+      "n": 2,
+      "net": -0.993,
+      "sum": -1.99
+     },
+     "ZECUSDT": {
+      "n": 2,
+      "net": -1.01,
+      "sum": -2.02
+     }
+    },
+    "coins_positive": "7/14",
+    "without_best_coin": {
+     "coin": "DOGEUSDT",
+     "n": 27,
+     "net": 0.101
+    },
+    "top2_share_of_total": 1.18
+   },
+   "oos": {
+    "n": 11,
+    "coins": 10,
+    "hit": 0.091,
+    "gross": -0.636,
+    "fees": 0.013,
+    "funding": 0.002,
+    "net": -0.648,
+    "net_taker": -0.656,
+    "se": 0.386,
+    "z": -1.68,
+    "p": 0.9533656269948932,
+    "pf": 0.29,
+    "max_dd_r": 8.08,
+    "hold_days": 2.1,
+    "per_coin_year": 0.27,
+    "long_share": 0.73,
+    "ci95": [
+     -1.015,
+     0.19
+    ],
+    "by_coin": {
+     "AAVEUSDT": {
+      "n": 1,
+      "net": -1.031,
+      "sum": -1.03
+     },
+     "DASHUSDT": {
+      "n": 1,
+      "net": -1.013,
+      "sum": -1.01
+     },
+     "DOGEUSDT": {
+      "n": 1,
+      "net": 2.972,
+      "sum": 2.97
+     },
+     "FILUSDT": {
+      "n": 1,
+      "net": -1.006,
+      "sum": -1.01
+     },
+     "LINKUSDT": {
+      "n": 1,
+      "net": -1.017,
+      "sum": -1.02
+     },
+     "LTCUSDT": {
+      "n": 1,
+      "net": -1.029,
+      "sum": -1.03
+     },
+     "SOLUSDT": {
+      "n": 1,
+      "net": -0.968,
+      "sum": -0.97
+     },
+     "UNIUSDT": {
+      "n": 1,
+      "net": -1.013,
+      "sum": -1.01
+     },
+     "XRPUSDT": {
+      "n": 1,
+      "net": -1.008,
+      "sum": -1.01
+     },
+     "ZECUSDT": {
+      "n": 2,
+      "net": -1.008,
+      "sum": -2.02
+     }
+    },
+    "coins_positive": "1/10",
+    "without_best_coin": {
+     "coin": "DOGEUSDT",
+     "n": 10,
+     "net": -1.01
+    },
+    "top2_share_of_total": null,
+    "p_holm": 1.0
+   },
+   "no_htf_oos": {
+    "n": 385,
+    "coins": 20,
+    "hit": 0.301,
+    "gross": 0.133,
+    "fees": 0.011,
+    "funding": -0.003,
+    "net": 0.118,
+    "net_taker": 0.11,
+    "se": 0.116,
+    "z": 1.02,
+    "p": 0.15457640718224588,
+    "pf": 1.17,
+    "max_dd_r": 38.57,
+    "hold_days": 9.0,
+    "per_coin_year": 9.44,
+    "long_share": 0.5
+   },
+   "asof_universe_oos": {
+    "n": 8,
+    "coins": 8,
+    "hit": 0.125,
+    "gross": -0.5,
+    "fees": 0.016,
+    "funding": 0.001,
+    "net": -0.514,
+    "net_taker": -0.523,
+    "se": 0.528,
+    "z": -0.97,
+    "p": 0.8351568020058887,
+    "pf": 0.42,
+    "max_dd_r": 5.06,
+    "hold_days": 2.9,
+    "per_coin_year": 0.2,
+    "long_share": 0.75,
+    "ci95": [
+     -1.022,
+     0.699
+    ],
+    "by_coin": {
+     "1000SHIBUSDT": {
+      "n": 1,
+      "net": -1.046,
+      "sum": -1.05
+     },
+     "DOGEUSDT": {
+      "n": 1,
+      "net": 2.972,
+      "sum": 2.97
+     },
+     "FILUSDT": {
+      "n": 1,
+      "net": -1.006,
+      "sum": -1.01
+     },
+     "LINKUSDT": {
+      "n": 1,
+      "net": -1.017,
+      "sum": -1.02
+     },
+     "LTCUSDT": {
+      "n": 1,
+      "net": -1.029,
+      "sum": -1.03
+     },
+     "SOLUSDT": {
+      "n": 1,
+      "net": -0.968,
+      "sum": -0.97
+     },
+     "UNIUSDT": {
+      "n": 1,
+      "net": -1.013,
+      "sum": -1.01
+     },
+     "XRPUSDT": {
+      "n": 1,
+      "net": -1.008,
+      "sum": -1.01
+     }
+    },
+    "coins_positive": "1/8",
+    "without_best_coin": {
+     "coin": "DOGEUSDT",
+     "n": 7,
+     "net": -1.012
+    },
+    "top2_share_of_total": null
+   },
+   "random_oos_gross": {
+    "mean": -0.291,
+    "sd_across_seeds": 0.481,
+    "share_seeds_ge_variant": 0.65
+   },
+   "folds": [
+    {
+     "fold": "2021-01-01",
+     "n": 8,
+     "net": 0.98
+    },
+    {
+     "fold": "2022-01-01",
+     "n": 5,
+     "net": 0.584
+    },
+    {
+     "fold": "2023-01-01",
+     "n": 10,
+     "net": -0.693
+    },
+    {
+     "fold": "2024-01-01",
+     "n": 7,
+     "net": -0.123
+    },
+    {
+     "fold": "2025-01-01",
+     "n": 6,
+     "net": -0.343
+    },
+    {
+     "fold": "2026-01-01",
+     "n": 4,
+     "net": -1.015
+    }
+   ],
+   "passes": {
+    "net_gt_0": false,
+    "holm_p_lt_0.05": false,
+    "ci_above_0": false,
+    "not_one_coin": false,
+    "coins_majority_positive": false,
+    "beats_random": false,
+    "beats_no_htf": false,
+    "asof_universe_positive": false,
+    "folds_positive": false,
+    "all": false
+   }
+  },
+  "1d>4h breaker|idm=idm|sweep=1|limit|stop=poi|r2": {
+   "is": {
+    "n": 30,
+    "coins": 14,
+    "hit": 0.4,
+    "gross": 0.2,
+    "fees": 0.009,
+    "funding": 0.005,
+    "net": 0.197,
+    "net_taker": 0.189,
+    "se": 0.297,
+    "z": 0.66,
+    "p": 0.2534878859967582,
+    "pf": 1.33,
+    "max_dd_r": 9.0,
+    "hold_days": 6.3,
+    "per_coin_year": 0.38,
+    "long_share": 0.47,
+    "ci95": [
+     -0.299,
+     0.803
+    ],
+    "by_coin": {
+     "AAVEUSDT": {
+      "n": 3,
+      "net": -1.004,
+      "sum": -3.01
+     },
+     "ADAUSDT": {
+      "n": 3,
+      "net": -0.005,
+      "sum": -0.01
+     },
+     "AVAXUSDT": {
+      "n": 2,
+      "net": -1.011,
+      "sum": -2.02
+     },
+     "BCHUSDT": {
+      "n": 1,
+      "net": 2.035,
+      "sum": 2.03
+     },
+     "BNBUSDT": {
+      "n": 2,
+      "net": 0.495,
+      "sum": 0.99
+     },
+     "BTCUSDT": {
+      "n": 1,
+      "net": 1.908,
+      "sum": 1.91
+     },
+     "DASHUSDT": {
+      "n": 1,
+      "net": -1.013,
+      "sum": -1.01
+     },
+     "DOGEUSDT": {
+      "n": 3,
+      "net": 2.008,
+      "sum": 6.02
+     },
+     "ETHUSDT": {
+      "n": 3,
+      "net": 1.007,
+      "sum": 3.02
+     },
+     "FILUSDT": {
+      "n": 4,
+      "net": 0.507,
+      "sum": 2.03
+     },
+     "LTCUSDT": {
+      "n": 1,
+      "net": 1.991,
+      "sum": 1.99
+     },
+     "UNIUSDT": {
+      "n": 2,
+      "net": -1.011,
+      "sum": -2.02
+     },
+     "XRPUSDT": {
+      "n": 2,
+      "net": -0.993,
+      "sum": -1.99
+     },
+     "ZECUSDT": {
+      "n": 2,
+      "net": -1.01,
+      "sum": -2.02
+     }
+    },
+    "coins_positive": "7/14",
+    "without_best_coin": {
+     "coin": "DOGEUSDT",
+     "n": 27,
+     "net": -0.004
+    },
+    "top2_share_of_total": 1.53
+   },
+   "oos": {
+    "n": 11,
+    "coins": 10,
+    "hit": 0.091,
+    "gross": -0.727,
+    "fees": 0.013,
+    "funding": 0.002,
+    "net": -0.739,
+    "net_taker": -0.746,
+    "se": 0.29,
+    "z": -2.55,
+    "p": 0.9946193307223822,
+    "pf": 0.2,
+    "max_dd_r": 8.12,
+    "hold_days": 2.0,
+    "per_coin_year": 0.27,
+    "long_share": 0.73,
+    "ci95": [
+     -1.015,
+     -0.109
+    ],
+    "by_coin": {
+     "AAVEUSDT": {
+      "n": 1,
+      "net": -1.031,
+      "sum": -1.03
+     },
+     "DASHUSDT": {
+      "n": 1,
+      "net": -1.013,
+      "sum": -1.01
+     },
+     "DOGEUSDT": {
+      "n": 1,
+      "net": 1.977,
+      "sum": 1.98
+     },
+     "FILUSDT": {
+      "n": 1,
+      "net": -1.006,
+      "sum": -1.01
+     },
+     "LINKUSDT": {
+      "n": 1,
+      "net": -1.017,
+      "sum": -1.02
+     },
+     "LTCUSDT": {
+      "n": 1,
+      "net": -1.029,
+      "sum": -1.03
+     },
+     "SOLUSDT": {
+      "n": 1,
+      "net": -0.968,
+      "sum": -0.97
+     },
+     "UNIUSDT": {
+      "n": 1,
+      "net": -1.013,
+      "sum": -1.01
+     },
+     "XRPUSDT": {
+      "n": 1,
+      "net": -1.008,
+      "sum": -1.01
+     },
+     "ZECUSDT": {
+      "n": 2,
+      "net": -1.008,
+      "sum": -2.02
+     }
+    },
+    "coins_positive": "1/10",
+    "without_best_coin": {
+     "coin": "DOGEUSDT",
+     "n": 10,
+     "net": -1.01
+    },
+    "top2_share_of_total": null,
+    "p_holm": 1.0
+   },
+   "no_htf_oos": {
+    "n": 413,
+    "coins": 20,
+    "hit": 0.366,
+    "gross": 0.074,
+    "fees": 0.011,
+    "funding": -0.001,
+    "net": 0.062,
+    "net_taker": 0.053,
+    "se": 0.087,
+    "z": 0.71,
+    "p": 0.23815913661149385,
+    "pf": 1.1,
+    "max_dd_r": 36.5,
+    "hold_days": 6.9,
+    "per_coin_year": 10.12,
+    "long_share": 0.5
+   },
+   "asof_universe_oos": {
+    "n": 8,
+    "coins": 8,
+    "hit": 0.25,
+    "gross": -0.25,
+    "fees": 0.014,
+    "funding": 0.004,
+    "net": -0.26,
+    "net_taker": -0.271,
+    "se": 0.541,
+    "z": -0.48,
+    "p": 0.6849156086097279,
+    "pf": 0.66,
+    "max_dd_r": 4.06,
+    "hold_days": 2.6,
+    "per_coin_year": 0.2,
+    "long_share": 0.75,
+    "ci95": [
+     -1.008,
+     0.982
+    ],
+    "by_coin": {
+     "1000SHIBUSDT": {
+      "n": 1,
+      "net": 1.982,
+      "sum": 1.98
+     },
+     "DOGEUSDT": {
+      "n": 1,
+      "net": 1.977,
+      "sum": 1.98
+     },
+     "FILUSDT": {
+      "n": 1,
+      "net": -1.006,
+      "sum": -1.01
+     },
+     "LINKUSDT": {
+      "n": 1,
+      "net": -1.017,
+      "sum": -1.02
+     },
+     "LTCUSDT": {
+      "n": 1,
+      "net": -1.029,
+      "sum": -1.03
+     },
+     "SOLUSDT": {
+      "n": 1,
+      "net": -0.968,
+      "sum": -0.97
+     },
+     "UNIUSDT": {
+      "n": 1,
+      "net": -1.013,
+      "sum": -1.01
+     },
+     "XRPUSDT": {
+      "n": 1,
+      "net": -1.008,
+      "sum": -1.01
+     }
+    },
+    "coins_positive": "2/8",
+    "without_best_coin": {
+     "coin": "1000SHIBUSDT",
+     "n": 7,
+     "net": -0.581
+    },
+    "top2_share_of_total": null
+   },
+   "random_oos_gross": {
+    "mean": -0.155,
+    "sd_across_seeds": 0.487,
+    "share_seeds_ge_variant": 0.9
+   },
+   "folds": [
+    {
+     "fold": "2021-01-01",
+     "n": 8,
+     "net": 0.881
+    },
+    {
+     "fold": "2022-01-01",
+     "n": 5,
+     "net": 0.184
+    },
+    {
+     "fold": "2023-01-01",
+     "n": 10,
+     "net": -0.404
+    },
+    {
+     "fold": "2024-01-01",
+     "n": 7,
+     "net": -0.135
+    },
+    {
+     "fold": "2025-01-01",
+     "n": 6,
+     "net": -0.509
+    },
+    {
+     "fold": "2026-01-01",
+     "n": 4,
+     "net": -1.015
+    }
+   ],
+   "passes": {
+    "net_gt_0": false,
+    "holm_p_lt_0.05": false,
+    "ci_above_0": false,
+    "not_one_coin": false,
+    "coins_majority_positive": false,
+    "beats_random": false,
+    "beats_no_htf": false,
+    "asof_universe_positive": false,
+    "folds_positive": false,
+    "all": false
+   }
+  },
+  "1d>4h any|idm=none|sweep=0|limit|stop=poi|r2+be": {
+   "is": {
+    "n": 739,
+    "coins": 20,
+    "hit": 0.318,
+    "gross": 0.01,
+    "fees": 0.025,
+    "funding": -0.001,
+    "net": -0.016,
+    "net_taker": -0.034,
+    "se": 0.046,
+    "z": -0.34,
+    "p": 0.6346489425283677,
+    "pf": 0.97,
+    "max_dd_r": 32.64,
+    "hold_days": 3.6,
+    "per_coin_year": 9.31,
+    "long_share": 0.57,
+    "ci95": [
+     -0.1,
+     0.075
+    ],
+    "by_coin": {
+     "1000PEPEUSDT": {
+      "n": 12,
+      "net": -0.597,
+      "sum": -7.17
+     },
+     "AAVEUSDT": {
+      "n": 43,
+      "net": 0.012,
+      "sum": 0.53
+     },
+     "ADAUSDT": {
+      "n": 54,
+      "net": -0.101,
+      "sum": -5.44
+     },
+     "AVAXUSDT": {
+      "n": 36,
+      "net": -0.153,
+      "sum": -5.5
+     },
+     "BCHUSDT": {
+      "n": 55,
+      "net": 0.072,
+      "sum": 3.96
+     },
+     "BNBUSDT": {
+      "n": 34,
+      "net": 0.347,
+      "sum": 11.79
+     },
+     "BTCUSDT": {
+      "n": 35,
+      "net": -0.479,
+      "sum": -16.76
+     },
+     "DASHUSDT": {
+      "n": 48,
+      "net": -0.087,
+      "sum": -4.18
+     },
+     "DOGEUSDT": {
+      "n": 30,
+      "net": 0.042,
+      "sum": 1.26
+     },
+     "ETHUSDT": {
+      "n": 47,
+      "net": 0.155,
+      "sum": 7.29
+     },
+     "FILUSDT": {
+      "n": 30,
+      "net": 0.255,
+      "sum": 7.66
+     },
+     "LINKUSDT": {
+      "n": 60,
+      "net": -0.268,
+      "sum": -16.07
+     },
+     "LTCUSDT": {
+      "n": 51,
+      "net": -0.009,
+      "sum": -0.44
+     },
+     "NEARUSDT": {
+      "n": 30,
+      "net": 0.042,
+      "sum": 1.25
+     },
+     "SOLUSDT": {
+      "n": 25,
+      "net": 0.053,
+      "sum": 1.32
+     },
+     "SUIUSDT": {
+      "n": 12,
+      "net": -0.435,
+      "sum": -5.22
+     },
+     "UNIUSDT": {
+      "n": 41,
+      "net": -0.015,
+      "sum": -0.61
+     },
+     "WLDUSDT": {
+      "n": 7,
+      "net": 0.409,
+      "sum": 2.86
+     },
+     "XRPUSDT": {
+      "n": 42,
+      "net": 0.197,
+      "sum": 8.26
+     },
+     "ZECUSDT": {
+      "n": 47,
+      "net": 0.074,
+      "sum": 3.48
+     }
+    },
+    "coins_positive": "11/20",
+    "without_best_coin": {
+     "coin": "BNBUSDT",
+     "n": 705,
+     "net": -0.033
+    },
+    "top2_share_of_total": null
+   },
+   "oos": {
+    "n": 422,
+    "coins": 20,
+    "hit": 0.351,
+    "gross": 0.156,
+    "fees": 0.022,
+    "funding": 0.001,
+    "net": 0.136,
+    "net_taker": 0.118,
+    "se": 0.064,
+    "z": 2.11,
+    "p": 0.017426498237391248,
+    "pf": 1.29,
+    "max_dd_r": 14.31,
+    "hold_days": 4.2,
+    "per_coin_year": 10.34,
+    "long_share": 0.5,
+    "ci95": [
+     0.017,
+     0.263
+    ],
+    "by_coin": {
+     "1000PEPEUSDT": {
+      "n": 16,
+      "net": 0.237,
+      "sum": 3.79
+     },
+     "AAVEUSDT": {
+      "n": 19,
+      "net": 0.352,
+      "sum": 6.69
+     },
+     "ADAUSDT": {
+      "n": 15,
+      "net": 0.261,
+      "sum": 3.91
+     },
+     "AVAXUSDT": {
+      "n": 18,
+      "net": 0.152,
+      "sum": 2.73
+     },
+     "BCHUSDT": {
+      "n": 25,
+      "net": 0.11,
+      "sum": 2.75
+     },
+     "BNBUSDT": {
+      "n": 26,
+      "net": -0.037,
+      "sum": -0.95
+     },
+     "BTCUSDT": {
+      "n": 24,
+      "net": 0.496,
+      "sum": 11.9
+     },
+     "DASHUSDT": {
+      "n": 25,
+      "net": -0.025,
+      "sum": -0.63
+     },
+     "DOGEUSDT": {
+      "n": 18,
+      "net": 0.252,
+      "sum": 4.53
+     },
+     "ETHUSDT": {
+      "n": 12,
+      "net": 0.23,
+      "sum": 2.76
+     },
+     "FILUSDT": {
+      "n": 30,
+      "net": -0.158,
+      "sum": -4.73
+     },
+     "LINKUSDT": {
+      "n": 29,
+      "net": 0.111,
+      "sum": 3.23
+     },
+     "LTCUSDT": {
+      "n": 21,
+      "net": 0.025,
+      "sum": 0.52
+     },
+     "NEARUSDT": {
+      "n": 20,
+      "net": -0.012,
+      "sum": -0.24
+     },
+     "SOLUSDT": {
+      "n": 28,
+      "net": -0.131,
+      "sum": -3.66
+     },
+     "SUIUSDT": {
+      "n": 25,
+      "net": 0.143,
+      "sum": 3.58
+     },
+     "UNIUSDT": {
+      "n": 20,
+      "net": 0.183,
+      "sum": 3.66
+     },
+     "WLDUSDT": {
+      "n": 18,
+      "net": 0.821,
+      "sum": 14.78
+     },
+     "XRPUSDT": {
+      "n": 20,
+      "net": -0.111,
+      "sum": -2.23
+     },
+     "ZECUSDT": {
+      "n": 13,
+      "net": 0.377,
+      "sum": 4.9
+     }
+    },
+    "coins_positive": "14/20",
+    "without_best_coin": {
+     "coin": "WLDUSDT",
+     "n": 404,
+     "net": 0.105
+    },
+    "top2_share_of_total": 0.47,
+    "p_holm": 1.0
+   },
+   "no_htf_oos": {
+    "n": 833,
+    "coins": 20,
+    "hit": 0.309,
+    "gross": 0.01,
+    "fees": 0.024,
+    "funding": 0.002,
+    "net": -0.012,
+    "net_taker": -0.029,
+    "se": 0.052,
+    "z": -0.23,
+    "p": 0.5898312617298181,
+    "pf": 0.98,
+    "max_dd_r": 57.88,
+    "hold_days": 4.1,
+    "per_coin_year": 20.42,
+    "long_share": 0.43
+   },
+   "asof_universe_oos": {
+    "n": 409,
+    "coins": 20,
+    "hit": 0.325,
+    "gross": 0.097,
+    "fees": 0.023,
+    "funding": 0.001,
+    "net": 0.076,
+    "net_taker": 0.058,
+    "se": 0.076,
+    "z": 0.99,
+    "p": 0.160328659353044,
+    "pf": 1.16,
+    "max_dd_r": 28.59,
+    "hold_days": 4.5,
+    "per_coin_year": 10.03,
+    "long_share": 0.52,
+    "ci95": [
+     -0.068,
+     0.222
+    ],
+    "by_coin": {
+     "1000SHIBUSDT": {
+      "n": 26,
+      "net": -0.104,
+      "sum": -2.71
+     },
+     "ADAUSDT": {
+      "n": 15,
+      "net": 0.261,
+      "sum": 3.91
+     },
+     "AVAXUSDT": {
+      "n": 18,
+      "net": 0.152,
+      "sum": 2.73
+     },
+     "BCHUSDT": {
+      "n": 25,
+      "net": 0.11,
+      "sum": 2.75
+     },
+     "BNBUSDT": {
+      "n": 26,
+      "net": -0.037,
+      "sum": -0.95
+     },
+     "BTCUSDT": {
+      "n": 24,
+      "net": 0.496,
+      "sum": 11.9
+     },
+     "DOGEUSDT": {
+      "n": 18,
+      "net": 0.252,
+      "sum": 4.53
+     },
+     "DOTUSDT": {
+      "n": 16,
+      "net": -0.245,
+      "sum": -3.92
+     },
+     "ETCUSDT": {
+      "n": 22,
+      "net": -0.182,
+      "sum": -4.0
+     },
+     "ETHUSDT": {
+      "n": 12,
+      "net": 0.23,
+      "sum": 2.76
+     },
+     "FILUSDT": {
+      "n": 30,
+      "net": -0.158,
+      "sum": -4.73
+     },
+     "FTMUSDT": {
+      "n": 4,
+      "net": -0.515,
+      "sum": -2.06
+     },
+     "GALAUSDT": {
+      "n": 17,
+      "net": 0.404,
+      "sum": 6.87
+     },
+     "LINKUSDT": {
+      "n": 29,
+      "net": 0.111,
+      "sum": 3.23
+     },
+     "LTCUSDT": {
+      "n": 21,
+      "net": 0.025,
+      "sum": 0.52
+     },
+     "NEARUSDT": {
+      "n": 20,
+      "net": -0.012,
+      "sum": -0.24
+     },
+     "SOLUSDT": {
+      "n": 28,
+      "net": -0.131,
+      "sum": -3.66
+     },
+     "TRBUSDT": {
+      "n": 18,
+      "net": 0.702,
+      "sum": 12.64
+     },
+     "UNIUSDT": {
+      "n": 20,
+      "net": 0.183,
+      "sum": 3.66
+     },
+     "XRPUSDT": {
+      "n": 20,
+      "net": -0.111,
+      "sum": -2.23
+     }
+    },
+    "coins_positive": "11/20",
+    "without_best_coin": {
+     "coin": "TRBUSDT",
+     "n": 391,
+     "net": 0.047
+    },
+    "top2_share_of_total": 0.79
+   },
+   "random_oos_gross": {
+    "mean": 0.023,
+    "sd_across_seeds": 0.065,
+    "share_seeds_ge_variant": 0.05
+   },
+   "folds": [
+    {
+     "fold": "2021-01-01",
+     "n": 152,
+     "net": -0.04
+    },
+    {
+     "fold": "2022-01-01",
+     "n": 162,
+     "net": 0.029
+    },
+    {
+     "fold": "2023-01-01",
+     "n": 189,
+     "net": 0.037
+    },
+    {
+     "fold": "2024-01-01",
+     "n": 212,
+     "net": -0.048
+    },
+    {
+     "fold": "2025-01-01",
+     "n": 213,
+     "net": 0.084
+    },
+    {
+     "fold": "2026-01-01",
+     "n": 153,
+     "net": 0.193
+    }
+   ],
+   "passes": {
+    "net_gt_0": true,
+    "holm_p_lt_0.05": false,
+    "ci_above_0": true,
+    "not_one_coin": true,
+    "coins_majority_positive": true,
+    "beats_random": true,
+    "beats_no_htf": true,
+    "asof_universe_positive": true,
+    "folds_positive": false,
+    "all": false
+   }
+  },
+  "1d>4h any|idm=none|sweep=0|limit|stop=poi|r3": {
+   "is": {
+    "n": 688,
+    "coins": 20,
+    "hit": 0.262,
+    "gross": 0.012,
+    "fees": 0.027,
+    "funding": -0.005,
+    "net": -0.02,
+    "net_taker": -0.039,
+    "se": 0.072,
+    "z": -0.28,
+    "p": 0.6109126730786064,
+    "pf": 0.97,
+    "max_dd_r": 53.69,
+    "hold_days": 6.7,
+    "per_coin_year": 8.67,
+    "long_share": 0.57,
+    "ci95": [
+     -0.156,
+     0.123
+    ],
+    "by_coin": {
+     "1000PEPEUSDT": {
+      "n": 12,
+      "net": -0.683,
+      "sum": -8.19
+     },
+     "AAVEUSDT": {
+      "n": 38,
+      "net": 0.083,
+      "sum": 3.14
+     },
+     "ADAUSDT": {
+      "n": 51,
+      "net": -0.113,
+      "sum": -5.79
+     },
+     "AVAXUSDT": {
+      "n": 34,
+      "net": -0.396,
+      "sum": -13.45
+     },
+     "BCHUSDT": {
+      "n": 50,
+      "net": 0.067,
+      "sum": 3.33
+     },
+     "BNBUSDT": {
+      "n": 31,
+      "net": 0.384,
+      "sum": 11.91
+     },
+     "BTCUSDT": {
+      "n": 34,
+      "net": -0.557,
+      "sum": -18.92
+     },
+     "DASHUSDT": {
+      "n": 45,
+      "net": -0.122,
+      "sum": -5.48
+     },
+     "DOGEUSDT": {
+      "n": 29,
+      "net": -0.023,
+      "sum": -0.66
+     },
+     "ETHUSDT": {
+      "n": 39,
+      "net": 0.161,
+      "sum": 6.29
+     },
+     "FILUSDT": {
+      "n": 26,
+      "net": 0.685,
+      "sum": 17.81
+     },
+     "LINKUSDT": {
+      "n": 57,
+      "net": -0.314,
+      "sum": -17.92
+     },
+     "LTCUSDT": {
+      "n": 46,
+      "net": 0.184,
+      "sum": 8.48
+     },
+     "NEARUSDT": {
+      "n": 30,
+      "net": -0.098,
+      "sum": -2.94
+     },
+     "SOLUSDT": {
+      "n": 22,
+      "net": -0.041,
+      "sum": -0.9
+     },
+     "SUIUSDT": {
+      "n": 12,
+      "net": -0.026,
+      "sum": -0.32
+     },
+     "UNIUSDT": {
+      "n": 40,
+      "net": -0.034,
+      "sum": -1.38
+     },
+     "WLDUSDT": {
+      "n": 7,
+      "net": 0.703,
+      "sum": 4.92
+     },
+     "XRPUSDT": {
+      "n": 40,
+      "net": 0.212,
+      "sum": 8.49
+     },
+     "ZECUSDT": {
+      "n": 45,
+      "net": -0.051,
+      "sum": -2.3
+     }
+    },
+    "coins_positive": "8/20",
+    "without_best_coin": {
+     "coin": "FILUSDT",
+     "n": 662,
+     "net": -0.048
+    },
+    "top2_share_of_total": null
+   },
+   "oos": {
+    "n": 385,
+    "coins": 20,
+    "hit": 0.304,
+    "gross": 0.195,
+    "fees": 0.023,
+    "funding": 0.0,
+    "net": 0.172,
+    "net_taker": 0.155,
+    "se": 0.089,
+    "z": 1.93,
+    "p": 0.0265200443795683,
+    "pf": 1.24,
+    "max_dd_r": 27.09,
+    "hold_days": 6.9,
+    "per_coin_year": 9.44,
+    "long_share": 0.5,
+    "ci95": [
+     0.002,
+     0.349
+    ],
+    "by_coin": {
+     "1000PEPEUSDT": {
+      "n": 14,
+      "net": -0.571,
+      "sum": -7.99
+     },
+     "AAVEUSDT": {
+      "n": 18,
+      "net": 0.541,
+      "sum": 9.73
+     },
+     "ADAUSDT": {
+      "n": 14,
+      "net": 0.142,
+      "sum": 1.98
+     },
+     "AVAXUSDT": {
+      "n": 15,
+      "net": 0.168,
+      "sum": 2.53
+     },
+     "BCHUSDT": {
+      "n": 24,
+      "net": 0.323,
+      "sum": 7.75
+     },
+     "BNBUSDT": {
+      "n": 25,
+      "net": 0.133,
+      "sum": 3.31
+     },
+     "BTCUSDT": {
+      "n": 22,
+      "net": 0.397,
+      "sum": 8.73
+     },
+     "DASHUSDT": {
+      "n": 21,
+      "net": -0.439,
+      "sum": -9.22
+     },
+     "DOGEUSDT": {
+      "n": 18,
+      "net": 0.529,
+      "sum": 9.52
+     },
+     "ETHUSDT": {
+      "n": 10,
+      "net": 1.613,
+      "sum": 16.13
+     },
+     "FILUSDT": {
+      "n": 27,
+      "net": -0.133,
+      "sum": -3.6
+     },
+     "LINKUSDT": {
+      "n": 25,
+      "net": 0.091,
+      "sum": 2.27
+     },
+     "LTCUSDT": {
+      "n": 19,
+      "net": 0.658,
+      "sum": 12.5
+     },
+     "NEARUSDT": {
+      "n": 20,
+      "net": -0.415,
+      "sum": -8.3
+     },
+     "SOLUSDT": {
+      "n": 25,
+      "net": -0.384,
+      "sum": -9.59
+     },
+     "SUIUSDT": {
+      "n": 24,
+      "net": 0.315,
+      "sum": 7.57
+     },
+     "UNIUSDT": {
+      "n": 18,
+      "net": -0.351,
+      "sum": -6.33
+     },
+     "WLDUSDT": {
+      "n": 17,
+      "net": 1.568,
+      "sum": 26.66
+     },
+     "XRPUSDT": {
+      "n": 17,
+      "net": -0.304,
+      "sum": -5.17
+     },
+     "ZECUSDT": {
+      "n": 12,
+      "net": 0.659,
+      "sum": 7.9
+     }
+    },
+    "coins_positive": "13/20",
+    "without_best_coin": {
+     "coin": "WLDUSDT",
+     "n": 368,
+     "net": 0.108
+    },
+    "top2_share_of_total": 0.64,
+    "p_holm": 1.0
+   },
+   "no_htf_oos": {
+    "n": 723,
+    "coins": 20,
+    "hit": 0.256,
+    "gross": -0.018,
+    "fees": 0.025,
+    "funding": 0.002,
+    "net": -0.04,
+    "net_taker": -0.058,
+    "se": 0.057,
+    "z": -0.71,
+    "p": 0.7610165439977101,
+    "pf": 0.95,
+    "max_dd_r": 66.44,
+    "hold_days": 7.0,
+    "per_coin_year": 17.72,
+    "long_share": 0.43
+   },
+   "asof_universe_oos": {
+    "n": 376,
+    "coins": 20,
+    "hit": 0.319,
+    "gross": 0.231,
+    "fees": 0.023,
+    "funding": 0.001,
+    "net": 0.209,
+    "net_taker": 0.191,
+    "se": 0.085,
+    "z": 2.46,
+    "p": 0.007032803511533298,
+    "pf": 1.3,
+    "max_dd_r": 23.03,
+    "hold_days": 7.6,
+    "per_coin_year": 9.22,
+    "long_share": 0.52,
+    "ci95": [
+     0.04,
+     0.375
+    ],
+    "by_coin": {
+     "1000SHIBUSDT": {
+      "n": 24,
+      "net": 0.028,
+      "sum": 0.68
+     },
+     "ADAUSDT": {
+      "n": 14,
+      "net": 0.142,
+      "sum": 1.98
+     },
+     "AVAXUSDT": {
+      "n": 15,
+      "net": 0.168,
+      "sum": 2.53
+     },
+     "BCHUSDT": {
+      "n": 24,
+      "net": 0.323,
+      "sum": 7.75
+     },
+     "BNBUSDT": {
+      "n": 25,
+      "net": 0.133,
+      "sum": 3.31
+     },
+     "BTCUSDT": {
+      "n": 22,
+      "net": 0.397,
+      "sum": 8.73
+     },
+     "DOGEUSDT": {
+      "n": 18,
+      "net": 0.529,
+      "sum": 9.52
+     },
+     "DOTUSDT": {
+      "n": 15,
+      "net": 0.4,
+      "sum": 6.0
+     },
+     "ETCUSDT": {
+      "n": 21,
+      "net": 0.435,
+      "sum": 9.13
+     },
+     "ETHUSDT": {
+      "n": 10,
+      "net": 1.613,
+      "sum": 16.13
+     },
+     "FILUSDT": {
+      "n": 27,
+      "net": -0.133,
+      "sum": -3.6
+     },
+     "FTMUSDT": {
+      "n": 3,
+      "net": 0.303,
+      "sum": 0.91
+     },
+     "GALAUSDT": {
+      "n": 17,
+      "net": 1.022,
+      "sum": 17.37
+     },
+     "LINKUSDT": {
+      "n": 25,
+      "net": 0.091,
+      "sum": 2.27
+     },
+     "LTCUSDT": {
+      "n": 19,
+      "net": 0.658,
+      "sum": 12.5
+     },
+     "NEARUSDT": {
+      "n": 20,
+      "net": -0.415,
+      "sum": -8.3
+     },
+     "SOLUSDT": {
+      "n": 25,
+      "net": -0.384,
+      "sum": -9.59
+     },
+     "TRBUSDT": {
+      "n": 17,
+      "net": 0.741,
+      "sum": 12.6
+     },
+     "UNIUSDT": {
+      "n": 18,
+      "net": -0.351,
+      "sum": -6.33
+     },
+     "XRPUSDT": {
+      "n": 17,
+      "net": -0.304,
+      "sum": -5.17
+     }
+    },
+    "coins_positive": "15/20",
+    "without_best_coin": {
+     "coin": "GALAUSDT",
+     "n": 359,
+     "net": 0.17
+    },
+    "top2_share_of_total": 0.43
+   },
+   "random_oos_gross": {
+    "mean": -0.003,
+    "sd_across_seeds": 0.1,
+    "share_seeds_ge_variant": 0.0
+   },
+   "folds": [
+    {
+     "fold": "2021-01-01",
+     "n": 139,
+     "net": -0.048
+    },
+    {
+     "fold": "2022-01-01",
+     "n": 154,
+     "net": -0.013
+    },
+    {
+     "fold": "2023-01-01",
+     "n": 176,
+     "net": 0.062
+    },
+    {
+     "fold": "2024-01-01",
+     "n": 196,
+     "net": 0.046
+    },
+    {
+     "fold": "2025-01-01",
+     "n": 195,
+     "net": 0.089
+    },
+    {
+     "fold": "2026-01-01",
+     "n": 141,
+     "net": 0.183
+    }
+   ],
+   "passes": {
+    "net_gt_0": true,
+    "holm_p_lt_0.05": false,
+    "ci_above_0": true,
+    "not_one_coin": true,
+    "coins_majority_positive": true,
+    "beats_random": true,
+    "beats_no_htf": true,
+    "asof_universe_positive": true,
+    "folds_positive": false,
+    "all": false
+   }
+  },
+  "1d>4h ob|idm=none|sweep=0|limit|stop=poi|r3": {
+   "is": {
+    "n": 448,
+    "coins": 20,
+    "hit": 0.221,
+    "gross": -0.165,
+    "fees": 0.011,
+    "funding": -0.009,
+    "net": -0.185,
+    "net_taker": -0.193,
+    "se": 0.083,
+    "z": -2.23,
+    "p": 0.9872385137004867,
+    "pf": 0.76,
+    "max_dd_r": 103.36,
+    "hold_days": 9.8,
+    "per_coin_year": 5.64,
+    "long_share": 0.57,
+    "ci95": [
+     -0.342,
+     -0.019
+    ],
+    "by_coin": {
+     "1000PEPEUSDT": {
+      "n": 7,
+      "net": -1.011,
+      "sum": -7.08
+     },
+     "AAVEUSDT": {
+      "n": 26,
+      "net": 0.135,
+      "sum": 3.51
+     },
+     "ADAUSDT": {
+      "n": 32,
+      "net": -0.557,
+      "sum": -17.84
+     },
+     "AVAXUSDT": {
+      "n": 22,
+      "net": -0.775,
+      "sum": -17.04
+     },
+     "BCHUSDT": {
+      "n": 31,
+      "net": -0.14,
+      "sum": -4.33
+     },
+     "BNBUSDT": {
+      "n": 18,
+      "net": 0.059,
+      "sum": 1.07
+     },
+     "BTCUSDT": {
+      "n": 24,
+      "net": -0.859,
+      "sum": -20.62
+     },
+     "DASHUSDT": {
+      "n": 29,
+      "net": -0.587,
+      "sum": -17.01
+     },
+     "DOGEUSDT": {
+      "n": 26,
+      "net": -0.06,
+      "sum": -1.56
+     },
+     "ETHUSDT": {
+      "n": 34,
+      "net": 0.168,
+      "sum": 5.72
+     },
+     "FILUSDT": {
+      "n": 19,
+      "net": 0.681,
+      "sum": 12.94
+     },
+     "LINKUSDT": {
+      "n": 35,
+      "net": -0.431,
+      "sum": -15.09
+     },
+     "LTCUSDT": {
+      "n": 28,
+      "net": -0.175,
+      "sum": -4.91
+     },
+     "NEARUSDT": {
+      "n": 16,
+      "net": -0.016,
+      "sum": -0.26
+     },
+     "SOLUSDT": {
+      "n": 14,
+      "net": -0.041,
+      "sum": -0.57
+     },
+     "SUIUSDT": {
+      "n": 9,
+      "net": -0.135,
+      "sum": -1.22
+     },
+     "UNIUSDT": {
+      "n": 22,
+      "net": -0.482,
+      "sum": -10.61
+     },
+     "WLDUSDT": {
+      "n": 5,
+      "net": 0.576,
+      "sum": 2.88
+     },
+     "XRPUSDT": {
+      "n": 24,
+      "net": 0.494,
+      "sum": 11.86
+     },
+     "ZECUSDT": {
+      "n": 27,
+      "net": -0.105,
+      "sum": -2.83
+     }
+    },
+    "coins_positive": "6/20",
+    "without_best_coin": {
+     "coin": "FILUSDT",
+     "n": 429,
+     "net": -0.224
+    },
+    "top2_share_of_total": null
+   },
+   "oos": {
+    "n": 251,
+    "coins": 20,
+    "hit": 0.323,
+    "gross": 0.236,
+    "fees": 0.011,
+    "funding": -0.001,
+    "net": 0.224,
+    "net_taker": 0.215,
+    "se": 0.118,
+    "z": 1.9,
+    "p": 0.028675948048290614,
+    "pf": 1.33,
+    "max_dd_r": 25.35,
+    "hold_days": 10.2,
+    "per_coin_year": 6.15,
+    "long_share": 0.51,
+    "ci95": [
+     -0.008,
+     0.449
+    ],
+    "by_coin": {
+     "1000PEPEUSDT": {
+      "n": 11,
+      "net": -0.807,
+      "sum": -8.88
+     },
+     "AAVEUSDT": {
+      "n": 10,
+      "net": -0.201,
+      "sum": -2.01
+     },
+     "ADAUSDT": {
+      "n": 10,
+      "net": 0.609,
+      "sum": 6.09
+     },
+     "AVAXUSDT": {
+      "n": 8,
+      "net": 1.215,
+      "sum": 9.72
+     },
+     "BCHUSDT": {
+      "n": 18,
+      "net": 0.55,
+      "sum": 9.9
+     },
+     "BNBUSDT": {
+      "n": 13,
+      "net": -0.005,
+      "sum": -0.07
+     },
+     "BTCUSDT": {
+      "n": 13,
+      "net": -0.12,
+      "sum": -1.56
+     },
+     "DASHUSDT": {
+      "n": 14,
+      "net": -0.068,
+      "sum": -0.95
+     },
+     "DOGEUSDT": {
+      "n": 10,
+      "net": 0.584,
+      "sum": 5.84
+     },
+     "ETHUSDT": {
+      "n": 6,
+      "net": 2.019,
+      "sum": 12.12
+     },
+     "FILUSDT": {
+      "n": 19,
+      "net": -0.089,
+      "sum": -1.69
+     },
+     "LINKUSDT": {
+      "n": 14,
+      "net": -0.165,
+      "sum": -2.32
+     },
+     "LTCUSDT": {
+      "n": 16,
+      "net": 0.48,
+      "sum": 7.67
+     },
+     "NEARUSDT": {
+      "n": 16,
+      "net": -0.261,
+      "sum": -4.18
+     },
+     "SOLUSDT": {
+      "n": 15,
+      "net": -0.205,
+      "sum": -3.07
+     },
+     "SUIUSDT": {
+      "n": 14,
+      "net": 0.421,
+      "sum": 5.89
+     },
+     "UNIUSDT": {
+      "n": 11,
+      "net": -0.287,
+      "sum": -3.16
+     },
+     "WLDUSDT": {
+      "n": 12,
+      "net": 1.316,
+      "sum": 15.8
+     },
+     "XRPUSDT": {
+      "n": 12,
+      "net": 0.002,
+      "sum": 0.02
+     },
+     "ZECUSDT": {
+      "n": 9,
+      "net": 1.223,
+      "sum": 11.01
+     }
+    },
+    "coins_positive": "10/20",
+    "without_best_coin": {
+     "coin": "WLDUSDT",
+     "n": 239,
+     "net": 0.169
+    },
+    "top2_share_of_total": 0.5,
+    "p_holm": 1.0
+   },
+   "no_htf_oos": {
+    "n": 446,
+    "coins": 20,
+    "hit": 0.258,
+    "gross": -0.049,
+    "fees": 0.012,
+    "funding": 0.0,
+    "net": -0.06,
+    "net_taker": -0.068,
+    "se": 0.08,
+    "z": -0.75,
+    "p": 0.7732098157650525,
+    "pf": 0.92,
+    "max_dd_r": 53.91,
+    "hold_days": 10.2,
+    "per_coin_year": 10.93,
+    "long_share": 0.45
+   },
+   "asof_universe_oos": {
+    "n": 238,
+    "coins": 20,
+    "hit": 0.324,
+    "gross": 0.211,
+    "fees": 0.012,
+    "funding": -0.001,
+    "net": 0.198,
+    "net_taker": 0.19,
+    "se": 0.111,
+    "z": 1.79,
+    "p": 0.03665761429661663,
+    "pf": 1.29,
+    "max_dd_r": 18.47,
+    "hold_days": 11.0,
+    "per_coin_year": 5.83,
+    "long_share": 0.51,
+    "ci95": [
+     -0.023,
+     0.405
+    ],
+    "by_coin": {
+     "1000SHIBUSDT": {
+      "n": 12,
+      "net": -0.242,
+      "sum": -2.9
+     },
+     "ADAUSDT": {
+      "n": 10,
+      "net": 0.609,
+      "sum": 6.09
+     },
+     "AVAXUSDT": {
+      "n": 8,
+      "net": 1.215,
+      "sum": 9.72
+     },
+     "BCHUSDT": {
+      "n": 18,
+      "net": 0.55,
+      "sum": 9.9
+     },
+     "BNBUSDT": {
+      "n": 13,
+      "net": -0.005,
+      "sum": -0.07
+     },
+     "BTCUSDT": {
+      "n": 13,
+      "net": -0.12,
+      "sum": -1.56
+     },
+     "DOGEUSDT": {
+      "n": 10,
+      "net": 0.584,
+      "sum": 5.84
+     },
+     "DOTUSDT": {
+      "n": 9,
+      "net": 0.476,
+      "sum": 4.28
+     },
+     "ETCUSDT": {
+      "n": 14,
+      "net": 0.023,
+      "sum": 0.32
+     },
+     "ETHUSDT": {
+      "n": 6,
+      "net": 2.019,
+      "sum": 12.12
+     },
+     "FILUSDT": {
+      "n": 19,
+      "net": -0.089,
+      "sum": -1.69
+     },
+     "FTMUSDT": {
+      "n": 1,
+      "net": -1.005,
+      "sum": -1.01
+     },
+     "GALAUSDT": {
+      "n": 12,
+      "net": 0.534,
+      "sum": 6.4
+     },
+     "LINKUSDT": {
+      "n": 14,
+      "net": -0.165,
+      "sum": -2.32
+     },
+     "LTCUSDT": {
+      "n": 16,
+      "net": 0.48,
+      "sum": 7.67
+     },
+     "NEARUSDT": {
+      "n": 16,
+      "net": -0.261,
+      "sum": -4.18
+     },
+     "SOLUSDT": {
+      "n": 15,
+      "net": -0.205,
+      "sum": -3.07
+     },
+     "TRBUSDT": {
+      "n": 9,
+      "net": 0.534,
+      "sum": 4.81
+     },
+     "UNIUSDT": {
+      "n": 11,
+      "net": -0.287,
+      "sum": -3.16
+     },
+     "XRPUSDT": {
+      "n": 12,
+      "net": 0.002,
+      "sum": 0.02
+     }
+    },
+    "coins_positive": "11/20",
+    "without_best_coin": {
+     "coin": "ETHUSDT",
+     "n": 232,
+     "net": 0.151
+    },
+    "top2_share_of_total": 0.47
+   },
+   "random_oos_gross": {
+    "mean": 0.034,
+    "sd_across_seeds": 0.076,
+    "share_seeds_ge_variant": 0.0
+   },
+   "folds": [
+    {
+     "fold": "2021-01-01",
+     "n": 91,
+     "net": -0.242
+    },
+    {
+     "fold": "2022-01-01",
+     "n": 88,
+     "net": -0.25
+    },
+    {
+     "fold": "2023-01-01",
+     "n": 119,
+     "net": -0.119
+    },
+    {
+     "fold": "2024-01-01",
+     "n": 140,
+     "net": -0.034
+    },
+    {
+     "fold": "2025-01-01",
+     "n": 126,
+     "net": 0.059
+    },
+    {
+     "fold": "2026-01-01",
+     "n": 87,
+     "net": 0.346
+    }
+   ],
+   "passes": {
+    "net_gt_0": true,
+    "holm_p_lt_0.05": false,
+    "ci_above_0": false,
+    "not_one_coin": true,
+    "coins_majority_positive": false,
+    "beats_random": true,
+    "beats_no_htf": true,
+    "asof_universe_positive": true,
+    "folds_positive": false,
+    "all": false
+   }
+  },
+  "1d>4h breaker|idm=none|sweep=0|limit|stop=poi|liq": {
+   "is": {
+    "n": 80,
+    "coins": 18,
+    "hit": 0.375,
+    "gross": 0.151,
+    "fees": 0.098,
+    "funding": 0.009,
+    "net": 0.062,
+    "net_taker": 0.01,
+    "se": 0.197,
+    "z": 0.31,
+    "p": 0.3776142845948672,
+    "pf": 1.09,
+    "max_dd_r": 20.76,
+    "hold_days": 8.9,
+    "per_coin_year": 1.01,
+    "long_share": 0.59,
+    "ci95": [
+     -0.311,
+     0.463
+    ],
+    "by_coin": {
+     "AAVEUSDT": {
+      "n": 2,
+      "net": -1.03,
+      "sum": -2.06
+     },
+     "ADAUSDT": {
+      "n": 4,
+      "net": -1.611,
+      "sum": -6.44
+     },
+     "AVAXUSDT": {
+      "n": 3,
+      "net": -1.013,
+      "sum": -3.04
+     },
+     "BCHUSDT": {
+      "n": 5,
+      "net": 1.307,
+      "sum": 6.54
+     },
+     "BNBUSDT": {
+      "n": 6,
+      "net": 0.364,
+      "sum": 2.18
+     },
+     "BTCUSDT": {
+      "n": 3,
+      "net": 0.128,
+      "sum": 0.38
+     },
+     "DASHUSDT": {
+      "n": 2,
+      "net": -0.028,
+      "sum": -0.06
+     },
+     "DOGEUSDT": {
+      "n": 7,
+      "net": 0.276,
+      "sum": 1.93
+     },
+     "ETHUSDT": {
+      "n": 6,
+      "net": 0.261,
+      "sum": 1.57
+     },
+     "FILUSDT": {
+      "n": 7,
+      "net": 0.141,
+      "sum": 0.99
+     },
+     "LINKUSDT": {
+      "n": 6,
+      "net": 0.442,
+      "sum": 2.65
+     },
+     "LTCUSDT": {
+      "n": 7,
+      "net": 0.312,
+      "sum": 2.18
+     },
+     "NEARUSDT": {
+      "n": 1,
+      "net": -1.004,
+      "sum": -1.0
+     },
+     "SOLUSDT": {
+      "n": 1,
+      "net": -1.078,
+      "sum": -1.08
+     },
+     "SUIUSDT": {
+      "n": 1,
+      "net": -1.074,
+      "sum": -1.07
+     },
+     "UNIUSDT": {
+      "n": 2,
+      "net": -1.011,
+      "sum": -2.02
+     },
+     "XRPUSDT": {
+      "n": 11,
+      "net": -0.472,
+      "sum": -5.19
+     },
+     "ZECUSDT": {
+      "n": 6,
+      "net": 1.41,
+      "sum": 8.46
+     }
+    },
+    "coins_positive": "9/18",
+    "without_best_coin": {
+     "coin": "ZECUSDT",
+     "n": 74,
+     "net": -0.048
+    },
+    "top2_share_of_total": 3.05
+   },
+   "oos": {
+    "n": 53,
+    "coins": 19,
+    "hit": 0.434,
+    "gross": 0.395,
+    "fees": 0.011,
+    "funding": -0.004,
+    "net": 0.38,
+    "net_taker": 0.371,
+    "se": 0.223,
+    "z": 1.71,
+    "p": 0.044036053954722515,
+    "pf": 1.66,
+    "max_dd_r": 10.19,
+    "hold_days": 10.8,
+    "per_coin_year": 1.3,
+    "long_share": 0.58,
+    "ci95": [
+     -0.127,
+     0.834
+    ],
+    "by_coin": {
+     "1000PEPEUSDT": {
+      "n": 2,
+      "net": 1.203,
+      "sum": 2.41
+     },
+     "AAVEUSDT": {
+      "n": 5,
+      "net": -0.27,
+      "sum": -1.35
+     },
+     "ADAUSDT": {
+      "n": 3,
+      "net": 1.315,
+      "sum": 3.95
+     },
+     "AVAXUSDT": {
+      "n": 3,
+      "net": 0.305,
+      "sum": 0.91
+     },
+     "BCHUSDT": {
+      "n": 1,
+      "net": 2.142,
+      "sum": 2.14
+     },
+     "BNBUSDT": {
+      "n": 1,
+      "net": 3.44,
+      "sum": 3.44
+     },
+     "BTCUSDT": {
+      "n": 3,
+      "net": 0.321,
+      "sum": 0.96
+     },
+     "DASHUSDT": {
+      "n": 5,
+      "net": 0.56,
+      "sum": 2.8
+     },
+     "DOGEUSDT": {
+      "n": 3,
+      "net": 2.179,
+      "sum": 6.54
+     },
+     "ETHUSDT": {
+      "n": 1,
+      "net": -1.016,
+      "sum": -1.02
+     },
+     "FILUSDT": {
+      "n": 3,
+      "net": -1.007,
+      "sum": -3.02
+     },
+     "LINKUSDT": {
+      "n": 1,
+      "net": -1.017,
+      "sum": -1.02
+     },
+     "LTCUSDT": {
+      "n": 4,
+      "net": 0.852,
+      "sum": 3.41
+     },
+     "NEARUSDT": {
+      "n": 2,
+      "net": -0.013,
+      "sum": -0.03
+     },
+     "SOLUSDT": {
+      "n": 3,
+      "net": -1.002,
+      "sum": -3.01
+     },
+     "SUIUSDT": {
+      "n": 5,
+      "net": 1.002,
+      "sum": 5.01
+     },
+     "UNIUSDT": {
+      "n": 4,
+      "net": 0.513,
+      "sum": 2.05
+     },
+     "XRPUSDT": {
+      "n": 2,
+      "net": -1.016,
+      "sum": -2.03
+     },
+     "ZECUSDT": {
+      "n": 2,
+      "net": -1.008,
+      "sum": -2.02
+     }
+    },
+    "coins_positive": "11/19",
+    "without_best_coin": {
+     "coin": "DOGEUSDT",
+     "n": 50,
+     "net": 0.272
+    },
+    "top2_share_of_total": 0.57,
+    "p_holm": 1.0
+   },
+   "no_htf_oos": {
+    "n": 223,
+    "coins": 20,
+    "hit": 0.327,
+    "gross": -0.017,
+    "fees": 0.025,
+    "funding": -0.002,
+    "net": -0.045,
+    "net_taker": -0.061,
+    "se": 0.116,
+    "z": -0.39,
+    "p": 0.649958675951882,
+    "pf": 0.94,
+    "max_dd_r": 30.52,
+    "hold_days": 6.4,
+    "per_coin_year": 5.47,
+    "long_share": 0.54
+   },
+   "asof_universe_oos": {
+    "n": 50,
+    "coins": 19,
+    "hit": 0.42,
+    "gross": 0.226,
+    "fees": 0.012,
+    "funding": -0.005,
+    "net": 0.209,
+    "net_taker": 0.2,
+    "se": 0.248,
+    "z": 0.84,
+    "p": 0.19968373048877458,
+    "pf": 1.36,
+    "max_dd_r": 10.18,
+    "hold_days": 9.4,
+    "per_coin_year": 1.23,
+    "long_share": 0.54,
+    "ci95": [
+     -0.283,
+     0.76
+    ],
+    "by_coin": {
+     "1000SHIBUSDT": {
+      "n": 3,
+      "net": 0.823,
+      "sum": 2.47
+     },
+     "ADAUSDT": {
+      "n": 3,
+      "net": 1.315,
+      "sum": 3.95
+     },
+     "AVAXUSDT": {
+      "n": 3,
+      "net": 0.305,
+      "sum": 0.91
+     },
+     "BCHUSDT": {
+      "n": 1,
+      "net": 2.142,
+      "sum": 2.14
+     },
+     "BNBUSDT": {
+      "n": 1,
+      "net": 3.44,
+      "sum": 3.44
+     },
+     "BTCUSDT": {
+      "n": 3,
+      "net": 0.321,
+      "sum": 0.96
+     },
+     "DOGEUSDT": {
+      "n": 3,
+      "net": 2.179,
+      "sum": 6.54
+     },
+     "DOTUSDT": {
+      "n": 2,
+      "net": -0.034,
+      "sum": -0.07
+     },
+     "ETCUSDT": {
+      "n": 5,
+      "net": -0.23,
+      "sum": -1.15
+     },
+     "ETHUSDT": {
+      "n": 1,
+      "net": -1.016,
+      "sum": -1.02
+     },
+     "FILUSDT": {
+      "n": 3,
+      "net": -1.007,
+      "sum": -3.02
+     },
+     "GALAUSDT": {
+      "n": 2,
+      "net": -0.018,
+      "sum": -0.04
+     },
+     "LINKUSDT": {
+      "n": 1,
+      "net": -1.017,
+      "sum": -1.02
+     },
+     "LTCUSDT": {
+      "n": 4,
+      "net": 0.852,
+      "sum": 3.41
+     },
+     "NEARUSDT": {
+      "n": 2,
+      "net": -0.013,
+      "sum": -0.03
+     },
+     "SOLUSDT": {
+      "n": 3,
+      "net": -1.002,
+      "sum": -3.01
+     },
+     "TRBUSDT": {
+      "n": 4,
+      "net": -1.011,
+      "sum": -4.04
+     },
+     "UNIUSDT": {
+      "n": 4,
+      "net": 0.513,
+      "sum": 2.05
+     },
+     "XRPUSDT": {
+      "n": 2,
+      "net": -1.016,
+      "sum": -2.03
+     }
+    },
+    "coins_positive": "9/19",
+    "without_best_coin": {
+     "coin": "DOGEUSDT",
+     "n": 47,
+     "net": 0.083
+    },
+    "top2_share_of_total": 1.0
+   },
+   "random_oos_gross": {
+    "mean": -0.015,
+    "sd_across_seeds": 0.275,
+    "share_seeds_ge_variant": 0.05
+   },
+   "folds": [
+    {
+     "fold": "2021-01-01",
+     "n": 14,
+     "net": 0.741
+    },
+    {
+     "fold": "2022-01-01",
+     "n": 18,
+     "net": -0.022
+    },
+    {
+     "fold": "2023-01-01",
+     "n": 26,
+     "net": -0.247
+    },
+    {
+     "fold": "2024-01-01",
+     "n": 22,
+     "net": -0.032
+    },
+    {
+     "fold": "2025-01-01",
+     "n": 34,
+     "net": 0.475
+    },
+    {
+     "fold": "2026-01-01",
+     "n": 15,
+     "net": 0.012
+    }
+   ],
+   "passes": {
+    "net_gt_0": true,
+    "holm_p_lt_0.05": false,
+    "ci_above_0": false,
+    "not_one_coin": true,
+    "coins_majority_positive": false,
+    "beats_random": true,
+    "beats_no_htf": true,
+    "asof_universe_positive": true,
+    "folds_positive": false,
+    "all": false
+   }
+  },
+  "1d>4h any|idm=none|sweep=1|limit|stop=poi|liq": {
+   "is": {
+    "n": 379,
+    "coins": 19,
+    "hit": 0.293,
+    "gross": -0.152,
+    "fees": 0.028,
+    "funding": -0.001,
+    "net": -0.181,
+    "net_taker": -0.2,
+    "se": 0.072,
+    "z": -2.5,
+    "p": 0.9938142135979354,
+    "pf": 0.75,
+    "max_dd_r": 77.38,
+    "hold_days": 5.4,
+    "per_coin_year": 4.78,
+    "long_share": 0.53,
+    "ci95": [
+     -0.309,
+     -0.035
+    ],
+    "by_coin": {
+     "1000PEPEUSDT": {
+      "n": 3,
+      "net": -0.444,
+      "sum": -1.33
+     },
+     "AAVEUSDT": {
+      "n": 26,
+      "net": 0.162,
+      "sum": 4.21
+     },
+     "ADAUSDT": {
+      "n": 25,
+      "net": -0.466,
+      "sum": -11.66
+     },
+     "AVAXUSDT": {
+      "n": 17,
+      "net": -0.44,
+      "sum": -7.48
+     },
+     "BCHUSDT": {
+      "n": 26,
+      "net": 0.402,
+      "sum": 10.45
+     },
+     "BNBUSDT": {
+      "n": 25,
+      "net": -0.347,
+      "sum": -8.67
+     },
+     "BTCUSDT": {
+      "n": 23,
+      "net": -0.241,
+      "sum": -5.54
+     },
+     "DASHUSDT": {
+      "n": 25,
+      "net": -0.244,
+      "sum": -6.1
+     },
+     "DOGEUSDT": {
+      "n": 21,
+      "net": -0.442,
+      "sum": -9.28
+     },
+     "ETHUSDT": {
+      "n": 22,
+      "net": 0.097,
+      "sum": 2.13
+     },
+     "FILUSDT": {
+      "n": 17,
+      "net": -0.278,
+      "sum": -4.73
+     },
+     "LINKUSDT": {
+      "n": 33,
+      "net": -0.537,
+      "sum": -17.72
+     },
+     "LTCUSDT": {
+      "n": 20,
+      "net": -0.187,
+      "sum": -3.73
+     },
+     "NEARUSDT": {
+      "n": 18,
+      "net": 0.041,
+      "sum": 0.74
+     },
+     "SOLUSDT": {
+      "n": 6,
+      "net": -0.325,
+      "sum": -1.95
+     },
+     "SUIUSDT": {
+      "n": 6,
+      "net": -0.285,
+      "sum": -1.71
+     },
+     "UNIUSDT": {
+      "n": 28,
+      "net": 0.015,
+      "sum": 0.41
+     },
+     "XRPUSDT": {
+      "n": 14,
+      "net": 0.073,
+      "sum": 1.03
+     },
+     "ZECUSDT": {
+      "n": 24,
+      "net": -0.32,
+      "sum": -7.67
+     }
+    },
+    "coins_positive": "6/19",
+    "without_best_coin": {
+     "coin": "BCHUSDT",
+     "n": 353,
+     "net": -0.224
+    },
+    "top2_share_of_total": null
+   },
+   "oos": {
+    "n": 229,
+    "coins": 20,
+    "hit": 0.376,
+    "gross": 0.258,
+    "fees": 0.027,
+    "funding": -0.002,
+    "net": 0.229,
+    "net_taker": 0.209,
+    "se": 0.144,
+    "z": 1.59,
+    "p": 0.0560457016299751,
+    "pf": 1.36,
+    "max_dd_r": 14.49,
+    "hold_days": 5.5,
+    "per_coin_year": 5.61,
+    "long_share": 0.51,
+    "ci95": [
+     -0.058,
+     0.515
+    ],
+    "by_coin": {
+     "1000PEPEUSDT": {
+      "n": 9,
+      "net": -0.129,
+      "sum": -1.16
+     },
+     "AAVEUSDT": {
+      "n": 14,
+      "net": 0.408,
+      "sum": 5.72
+     },
+     "ADAUSDT": {
+      "n": 10,
+      "net": -0.103,
+      "sum": -1.03
+     },
+     "AVAXUSDT": {
+      "n": 9,
+      "net": -0.0,
+      "sum": -0.0
+     },
+     "BCHUSDT": {
+      "n": 12,
+      "net": 0.821,
+      "sum": 9.86
+     },
+     "BNBUSDT": {
+      "n": 12,
+      "net": 0.067,
+      "sum": 0.81
+     },
+     "BTCUSDT": {
+      "n": 13,
+      "net": 0.989,
+      "sum": 12.85
+     },
+     "DASHUSDT": {
+      "n": 13,
+      "net": -0.12,
+      "sum": -1.57
+     },
+     "DOGEUSDT": {
+      "n": 9,
+      "net": 0.999,
+      "sum": 8.99
+     },
+     "ETHUSDT": {
+      "n": 10,
+      "net": 0.15,
+      "sum": 1.5
+     },
+     "FILUSDT": {
+      "n": 13,
+      "net": -0.624,
+      "sum": -8.12
+     },
+     "LINKUSDT": {
+      "n": 16,
+      "net": 0.416,
+      "sum": 6.66
+     },
+     "LTCUSDT": {
+      "n": 9,
+      "net": -0.13,
+      "sum": -1.17
+     },
+     "NEARUSDT": {
+      "n": 16,
+      "net": -0.185,
+      "sum": -2.97
+     },
+     "SOLUSDT": {
+      "n": 20,
+      "net": 0.117,
+      "sum": 2.34
+     },
+     "SUIUSDT": {
+      "n": 13,
+      "net": 0.08,
+      "sum": 1.04
+     },
+     "UNIUSDT": {
+      "n": 9,
+      "net": 0.711,
+      "sum": 6.4
+     },
+     "WLDUSDT": {
+      "n": 5,
+      "net": 3.593,
+      "sum": 17.96
+     },
+     "XRPUSDT": {
+      "n": 9,
+      "net": -0.693,
+      "sum": -6.24
+     },
+     "ZECUSDT": {
+      "n": 8,
+      "net": 0.077,
+      "sum": 0.62
+     }
+    },
+    "coins_positive": "12/20",
+    "without_best_coin": {
+     "coin": "WLDUSDT",
+     "n": 224,
+     "net": 0.154
+    },
+    "top2_share_of_total": 0.59,
+    "p_holm": 1.0
+   },
+   "no_htf_oos": {
+    "n": 723,
+    "coins": 20,
+    "hit": 0.318,
+    "gross": 0.004,
+    "fees": 0.03,
+    "funding": 0.002,
+    "net": -0.023,
+    "net_taker": -0.043,
+    "se": 0.065,
+    "z": -0.36,
+    "p": 0.6404616784773801,
+    "pf": 0.97,
+    "max_dd_r": 49.37,
+    "hold_days": 5.3,
+    "per_coin_year": 17.72,
+    "long_share": 0.44
+   },
+   "asof_universe_oos": {
+    "n": 217,
+    "coins": 20,
+    "hit": 0.396,
+    "gross": 0.231,
+    "fees": 0.026,
+    "funding": -0.004,
+    "net": 0.201,
+    "net_taker": 0.182,
+    "se": 0.129,
+    "z": 1.56,
+    "p": 0.05930276417086358,
+    "pf": 1.32,
+    "max_dd_r": 16.23,
+    "hold_days": 6.1,
+    "per_coin_year": 5.32,
+    "long_share": 0.54,
+    "ci95": [
+     -0.052,
+     0.451
+    ],
+    "by_coin": {
+     "1000SHIBUSDT": {
+      "n": 15,
+      "net": -0.199,
+      "sum": -2.99
+     },
+     "ADAUSDT": {
+      "n": 10,
+      "net": -0.103,
+      "sum": -1.03
+     },
+     "AVAXUSDT": {
+      "n": 9,
+      "net": -0.0,
+      "sum": -0.0
+     },
+     "BCHUSDT": {
+      "n": 12,
+      "net": 0.821,
+      "sum": 9.86
+     },
+     "BNBUSDT": {
+      "n": 12,
+      "net": 0.067,
+      "sum": 0.81
+     },
+     "BTCUSDT": {
+      "n": 13,
+      "net": 0.989,
+      "sum": 12.85
+     },
+     "DOGEUSDT": {
+      "n": 9,
+      "net": 0.999,
+      "sum": 8.99
+     },
+     "DOTUSDT": {
+      "n": 6,
+      "net": -0.363,
+      "sum": -2.18
+     },
+     "ETCUSDT": {
+      "n": 9,
+      "net": 0.56,
+      "sum": 5.04
+     },
+     "ETHUSDT": {
+      "n": 10,
+      "net": 0.15,
+      "sum": 1.5
+     },
+     "FILUSDT": {
+      "n": 13,
+      "net": -0.624,
+      "sum": -8.12
+     },
+     "FTMUSDT": {
+      "n": 2,
+      "net": -1.022,
+      "sum": -2.04
+     },
+     "GALAUSDT": {
+      "n": 6,
+      "net": 0.291,
+      "sum": 1.74
+     },
+     "LINKUSDT": {
+      "n": 16,
+      "net": 0.416,
+      "sum": 6.66
+     },
+     "LTCUSDT": {
+      "n": 9,
+      "net": -0.13,
+      "sum": -1.17
+     },
+     "NEARUSDT": {
+      "n": 16,
+      "net": -0.185,
+      "sum": -2.97
+     },
+     "SOLUSDT": {
+      "n": 20,
+      "net": 0.117,
+      "sum": 2.34
+     },
+     "TRBUSDT": {
+      "n": 12,
+      "net": 1.18,
+      "sum": 14.16
+     },
+     "UNIUSDT": {
+      "n": 9,
+      "net": 0.711,
+      "sum": 6.4
+     },
+     "XRPUSDT": {
+      "n": 9,
+      "net": -0.693,
+      "sum": -6.24
+     }
+    },
+    "coins_positive": "11/20",
+    "without_best_coin": {
+     "coin": "TRBUSDT",
+     "n": 205,
+     "net": 0.144
+    },
+    "top2_share_of_total": 0.62
+   },
+   "random_oos_gross": {
+    "mean": -0.027,
+    "sd_across_seeds": 0.129,
+    "share_seeds_ge_variant": 0.0
+   },
+   "folds": [
+    {
+     "fold": "2021-01-01",
+     "n": 72,
+     "net": -0.071
+    },
+    {
+     "fold": "2022-01-01",
+     "n": 94,
+     "net": -0.313
+    },
+    {
+     "fold": "2023-01-01",
+     "n": 84,
+     "net": -0.055
+    },
+    {
+     "fold": "2024-01-01",
+     "n": 120,
+     "net": -0.129
+    },
+    {
+     "fold": "2025-01-01",
+     "n": 130,
+     "net": 0.125
+    },
+    {
+     "fold": "2026-01-01",
+     "n": 68,
+     "net": 0.315
+    }
+   ],
+   "passes": {
+    "net_gt_0": true,
+    "holm_p_lt_0.05": false,
+    "ci_above_0": false,
+    "not_one_coin": true,
+    "coins_majority_positive": true,
+    "beats_random": true,
+    "beats_no_htf": true,
+    "asof_universe_positive": true,
+    "folds_positive": false,
+    "all": false
+   }
+  },
+  "1w>1d any|idm=none|sweep=1|limit|stop=poi|liq": {
+   "is": {
+    "n": 50,
+    "coins": 17,
+    "hit": 0.4,
+    "gross": 0.569,
+    "fees": 0.01,
+    "funding": -0.043,
+    "net": 0.516,
+    "net_taker": 0.509,
+    "se": 0.431,
+    "z": 1.2,
+    "p": 0.1156379954385899,
+    "pf": 1.88,
+    "max_dd_r": 14.07,
+    "hold_days": 52.0,
+    "per_coin_year": 0.63,
+    "long_share": 0.68,
+    "ci95": [
+     -0.164,
+     1.503
+    ],
+    "by_coin": {
+     "1000PEPEUSDT": {
+      "n": 1,
+      "net": 1.977,
+      "sum": 1.98
+     },
+     "AAVEUSDT": {
+      "n": 2,
+      "net": -0.023,
+      "sum": -0.05
+     },
+     "ADAUSDT": {
+      "n": 1,
+      "net": -1.01,
+      "sum": -1.01
+     },
+     "AVAXUSDT": {
+      "n": 5,
+      "net": -0.229,
+      "sum": -1.14
+     },
+     "BNBUSDT": {
+      "n": 3,
+      "net": -0.969,
+      "sum": -2.91
+     },
+     "BTCUSDT": {
+      "n": 4,
+      "net": -1.018,
+      "sum": -4.07
+     },
+     "DASHUSDT": {
+      "n": 6,
+      "net": -0.359,
+      "sum": -2.16
+     },
+     "DOGEUSDT": {
+      "n": 2,
+      "net": 1.56,
+      "sum": 3.12
+     },
+     "ETHUSDT": {
+      "n": 1,
+      "net": -1.061,
+      "sum": -1.06
+     },
+     "FILUSDT": {
+      "n": 3,
+      "net": -0.028,
+      "sum": -0.08
+     },
+     "LINKUSDT": {
+      "n": 1,
+      "net": -0.995,
+      "sum": -1.0
+     },
+     "LTCUSDT": {
+      "n": 4,
+      "net": 1.235,
+      "sum": 4.94
+     },
+     "NEARUSDT": {
+      "n": 3,
+      "net": 0.323,
+      "sum": 0.97
+     },
+     "SOLUSDT": {
+      "n": 3,
+      "net": 3.346,
+      "sum": 10.04
+     },
+     "UNIUSDT": {
+      "n": 1,
+      "net": 0.967,
+      "sum": 0.97
+     },
+     "XRPUSDT": {
+      "n": 6,
+      "net": 2.996,
+      "sum": 17.97
+     },
+     "ZECUSDT": {
+      "n": 4,
+      "net": -0.18,
+      "sum": -0.72
+     }
+    },
+    "coins_positive": "7/17",
+    "without_best_coin": {
+     "coin": "XRPUSDT",
+     "n": 44,
+     "net": 0.178
+    },
+    "top2_share_of_total": 1.09
+   },
+   "oos": {
+    "n": 28,
+    "coins": 17,
+    "hit": 0.321,
+    "gross": 0.008,
+    "fees": 0.007,
+    "funding": -0.004,
+    "net": -0.003,
+    "net_taker": -0.008,
+    "se": 0.353,
+    "z": -0.01,
+    "p": 0.5037968194524545,
+    "pf": 1.0,
+    "max_dd_r": 7.29,
+    "hold_days": 36.1,
+    "per_coin_year": 0.69,
+    "long_share": 0.68,
+    "ci95": [
+     -0.563,
+     0.824
+    ],
+    "by_coin": {
+     "1000PEPEUSDT": {
+      "n": 1,
+      "net": -1.009,
+      "sum": -1.01
+     },
+     "AAVEUSDT": {
+      "n": 1,
+      "net": 0.984,
+      "sum": 0.98
+     },
+     "ADAUSDT": {
+      "n": 2,
+      "net": -1.017,
+      "sum": -2.03
+     },
+     "AVAXUSDT": {
+      "n": 1,
+      "net": -0.996,
+      "sum": -1.0
+     },
+     "BCHUSDT": {
+      "n": 2,
+      "net": -0.029,
+      "sum": -0.06
+     },
+     "BNBUSDT": {
+      "n": 1,
+      "net": -1.012,
+      "sum": -1.01
+     },
+     "BTCUSDT": {
+      "n": 1,
+      "net": -0.912,
+      "sum": -0.91
+     },
+     "DASHUSDT": {
+      "n": 2,
+      "net": -0.023,
+      "sum": -0.05
+     },
+     "ETHUSDT": {
+      "n": 5,
+      "net": -1.028,
+      "sum": -5.14
+     },
+     "FILUSDT": {
+      "n": 4,
+      "net": 2.226,
+      "sum": 8.9
+     },
+     "LINKUSDT": {
+      "n": 1,
+      "net": 0.952,
+      "sum": 0.95
+     },
+     "LTCUSDT": {
+      "n": 2,
+      "net": 1.677,
+      "sum": 3.35
+     },
+     "NEARUSDT": {
+      "n": 1,
+      "net": -0.971,
+      "sum": -0.97
+     },
+     "SUIUSDT": {
+      "n": 1,
+      "net": -1.007,
+      "sum": -1.01
+     },
+     "UNIUSDT": {
+      "n": 1,
+      "net": 0.902,
+      "sum": 0.9
+     },
+     "WLDUSDT": {
+      "n": 1,
+      "net": -1.0,
+      "sum": -1.0
+     },
+     "XRPUSDT": {
+      "n": 1,
+      "net": -1.007,
+      "sum": -1.01
+     }
+    },
+    "coins_positive": "5/17",
+    "without_best_coin": {
+     "coin": "FILUSDT",
+     "n": 24,
+     "net": -0.375
+    },
+    "top2_share_of_total": null,
+    "p_holm": 1.0
+   },
+   "no_htf_oos": {
+    "n": 92,
+    "coins": 20,
+    "hit": 0.272,
+    "gross": -0.172,
+    "fees": 0.016,
+    "funding": 0.009,
+    "net": -0.179,
+    "net_taker": -0.189,
+    "se": 0.233,
+    "z": -0.77,
+    "p": 0.7785575917890539,
+    "pf": 0.76,
+    "max_dd_r": 17.96,
+    "hold_days": 30.5,
+    "per_coin_year": 2.26,
+    "long_share": 0.4
+   },
+   "asof_universe_oos": {
+    "n": 30,
+    "coins": 17,
+    "hit": 0.267,
+    "gross": -0.126,
+    "fees": 0.009,
+    "funding": 0.0,
+    "net": -0.135,
+    "net_taker": -0.141,
+    "se": 0.367,
+    "z": -0.37,
+    "p": 0.6438355922273626,
+    "pf": 0.82,
+    "max_dd_r": 9.18,
+    "hold_days": 31.9,
+    "per_coin_year": 0.74,
+    "long_share": 0.53,
+    "ci95": [
+     -0.667,
+     0.724
+    ],
+    "by_coin": {
+     "1000SHIBUSDT": {
+      "n": 1,
+      "net": -0.907,
+      "sum": -0.91
+     },
+     "ADAUSDT": {
+      "n": 2,
+      "net": -1.017,
+      "sum": -2.03
+     },
+     "AVAXUSDT": {
+      "n": 1,
+      "net": -0.996,
+      "sum": -1.0
+     },
+     "BCHUSDT": {
+      "n": 2,
+      "net": -0.029,
+      "sum": -0.06
+     },
+     "BNBUSDT": {
+      "n": 1,
+      "net": -1.012,
+      "sum": -1.01
+     },
+     "BTCUSDT": {
+      "n": 1,
+      "net": -0.912,
+      "sum": -0.91
+     },
+     "DOTUSDT": {
+      "n": 1,
+      "net": -0.997,
+      "sum": -1.0
+     },
+     "ETCUSDT": {
+      "n": 3,
+      "net": -0.366,
+      "sum": -1.1
+     },
+     "ETHUSDT": {
+      "n": 5,
+      "net": -1.028,
+      "sum": -5.14
+     },
+     "FILUSDT": {
+      "n": 4,
+      "net": 2.226,
+      "sum": 8.9
+     },
+     "GALAUSDT": {
+      "n": 1,
+      "net": -1.011,
+      "sum": -1.01
+     },
+     "LINKUSDT": {
+      "n": 1,
+      "net": 0.952,
+      "sum": 0.95
+     },
+     "LTCUSDT": {
+      "n": 2,
+      "net": 1.677,
+      "sum": 3.35
+     },
+     "NEARUSDT": {
+      "n": 1,
+      "net": -0.971,
+      "sum": -0.97
+     },
+     "TRBUSDT": {
+      "n": 2,
+      "net": -1.013,
+      "sum": -2.03
+     },
+     "UNIUSDT": {
+      "n": 1,
+      "net": 0.902,
+      "sum": 0.9
+     },
+     "XRPUSDT": {
+      "n": 1,
+      "net": -1.007,
+      "sum": -1.01
+     }
+    },
+    "coins_positive": "4/17",
+    "without_best_coin": {
+     "coin": "FILUSDT",
+     "n": 26,
+     "net": -0.498
+    },
+    "top2_share_of_total": null
+   },
+   "random_oos_gross": {
+    "mean": 0.043,
+    "sd_across_seeds": 0.415,
+    "share_seeds_ge_variant": 0.4
+   },
+   "folds": [
+    {
+     "fold": "2021-01-01",
+     "n": 3,
+     "net": -0.699
+    },
+    {
+     "fold": "2022-01-01",
+     "n": 11,
+     "net": 0.129
+    },
+    {
+     "fold": "2023-01-01",
+     "n": 21,
+     "net": 0.011
+    },
+    {
+     "fold": "2024-01-01",
+     "n": 13,
+     "net": 0.694
+    },
+    {
+     "fold": "2025-01-01",
+     "n": 17,
+     "net": 0.309
+    },
+    {
+     "fold": "2026-01-01",
+     "n": 8,
+     "net": -0.532
+    }
+   ],
+   "passes": {
+    "net_gt_0": false,
+    "holm_p_lt_0.05": false,
+    "ci_above_0": false,
+    "not_one_coin": false,
+    "coins_majority_positive": false,
+    "beats_random": false,
+    "beats_no_htf": true,
+    "asof_universe_positive": false,
+    "folds_positive": true,
+    "all": false
+   }
+  },
+  "1w>1d any|idm=none|sweep=1|limit|stop=poi|r3": {
+   "is": {
+    "n": 51,
+    "coins": 17,
+    "hit": 0.373,
+    "gross": 0.4,
+    "fees": 0.007,
+    "funding": -0.006,
+    "net": 0.388,
+    "net_taker": 0.382,
+    "se": 0.329,
+    "z": 1.18,
+    "p": 0.11966283024845015,
+    "pf": 1.63,
+    "max_dd_r": 10.1,
+    "hold_days": 56.4,
+    "per_coin_year": 0.64,
+    "long_share": 0.63,
+    "ci95": [
+     -0.21,
+     1.034
+    ],
+    "by_coin": {
+     "1000PEPEUSDT": {
+      "n": 1,
+      "net": 2.956,
+      "sum": 2.96
+     },
+     "AAVEUSDT": {
+      "n": 2,
+      "net": 0.987,
+      "sum": 1.97
+     },
+     "ADAUSDT": {
+      "n": 2,
+      "net": -0.98,
+      "sum": -1.96
+     },
+     "AVAXUSDT": {
+      "n": 6,
+      "net": -0.353,
+      "sum": -2.12
+     },
+     "BNBUSDT": {
+      "n": 3,
+      "net": -0.969,
+      "sum": -2.91
+     },
+     "BTCUSDT": {
+      "n": 3,
+      "net": -1.028,
+      "sum": -3.08
+     },
+     "DASHUSDT": {
+      "n": 6,
+      "net": 0.294,
+      "sum": 1.76
+     },
+     "DOGEUSDT": {
+      "n": 3,
+      "net": 2.644,
+      "sum": 7.93
+     },
+     "ETHUSDT": {
+      "n": 2,
+      "net": -1.006,
+      "sum": -2.01
+     },
+     "FILUSDT": {
+      "n": 1,
+      "net": 0.132,
+      "sum": 0.13
+     },
+     "LINKUSDT": {
+      "n": 1,
+      "net": -0.994,
+      "sum": -0.99
+     },
+     "LTCUSDT": {
+      "n": 4,
+      "net": 0.957,
+      "sum": 3.83
+     },
+     "NEARUSDT": {
+      "n": 3,
+      "net": 0.346,
+      "sum": 1.04
+     },
+     "SOLUSDT": {
+      "n": 2,
+      "net": 1.007,
+      "sum": 2.01
+     },
+     "UNIUSDT": {
+      "n": 1,
+      "net": 2.942,
+      "sum": 2.94
+     },
+     "XRPUSDT": {
+      "n": 6,
+      "net": 1.153,
+      "sum": 6.92
+     },
+     "ZECUSDT": {
+      "n": 5,
+      "net": 0.269,
+      "sum": 1.34
+     }
+    },
+    "coins_positive": "11/17",
+    "without_best_coin": {
+     "coin": "DOGEUSDT",
+     "n": 48,
+     "net": 0.247
+    },
+    "top2_share_of_total": 0.75
+   },
+   "oos": {
+    "n": 34,
+    "coins": 18,
+    "hit": 0.176,
+    "gross": -0.317,
+    "fees": 0.005,
+    "funding": -0.008,
+    "net": -0.33,
+    "net_taker": -0.333,
+    "se": 0.199,
+    "z": -1.66,
+    "p": 0.9511264583424285,
+    "pf": 0.61,
+    "max_dd_r": 12.46,
+    "hold_days": 42.5,
+    "per_coin_year": 0.83,
+    "long_share": 0.71,
+    "ci95": [
+     -0.696,
+     0.082
+    ],
+    "by_coin": {
+     "1000PEPEUSDT": {
+      "n": 1,
+      "net": -1.009,
+      "sum": -1.01
+     },
+     "AAVEUSDT": {
+      "n": 1,
+      "net": 2.999,
+      "sum": 3.0
+     },
+     "ADAUSDT": {
+      "n": 2,
+      "net": -1.004,
+      "sum": -2.01
+     },
+     "AVAXUSDT": {
+      "n": 1,
+      "net": -0.996,
+      "sum": -1.0
+     },
+     "BCHUSDT": {
+      "n": 3,
+      "net": 0.341,
+      "sum": 1.02
+     },
+     "BNBUSDT": {
+      "n": 1,
+      "net": -1.012,
+      "sum": -1.01
+     },
+     "BTCUSDT": {
+      "n": 2,
+      "net": -1.011,
+      "sum": -2.02
+     },
+     "DASHUSDT": {
+      "n": 3,
+      "net": -1.026,
+      "sum": -3.08
+     },
+     "ETHUSDT": {
+      "n": 5,
+      "net": -1.028,
+      "sum": -5.14
+     },
+     "FILUSDT": {
+      "n": 3,
+      "net": 0.057,
+      "sum": 0.17
+     },
+     "LINKUSDT": {
+      "n": 1,
+      "net": 2.917,
+      "sum": 2.92
+     },
+     "LTCUSDT": {
+      "n": 2,
+      "net": 3.045,
+      "sum": 6.09
+     },
+     "NEARUSDT": {
+      "n": 3,
+      "net": -0.994,
+      "sum": -2.98
+     },
+     "SOLUSDT": {
+      "n": 1,
+      "net": -0.988,
+      "sum": -0.99
+     },
+     "SUIUSDT": {
+      "n": 2,
+      "net": -1.02,
+      "sum": -2.04
+     },
+     "UNIUSDT": {
+      "n": 1,
+      "net": -1.129,
+      "sum": -1.13
+     },
+     "WLDUSDT": {
+      "n": 1,
+      "net": -1.0,
+      "sum": -1.0
+     },
+     "XRPUSDT": {
+      "n": 1,
+      "net": -1.007,
+      "sum": -1.01
+     }
+    },
+    "coins_positive": "5/18",
+    "without_best_coin": {
+     "coin": "LTCUSDT",
+     "n": 32,
+     "net": -0.54
+    },
+    "top2_share_of_total": null,
+    "p_holm": 1.0
+   },
+   "no_htf_oos": {
+    "n": 98,
+    "coins": 20,
+    "hit": 0.194,
+    "gross": -0.313,
+    "fees": 0.008,
+    "funding": 0.004,
+    "net": -0.317,
+    "net_taker": -0.323,
+    "se": 0.178,
+    "z": -1.78,
+    "p": 0.962736489199957,
+    "pf": 0.61,
+    "max_dd_r": 33.09,
+    "hold_days": 39.3,
+    "per_coin_year": 2.4,
+    "long_share": 0.43
+   },
+   "asof_universe_oos": {
+    "n": 34,
+    "coins": 18,
+    "hit": 0.176,
+    "gross": -0.317,
+    "fees": 0.007,
+    "funding": -0.003,
+    "net": -0.327,
+    "net_taker": -0.331,
+    "se": 0.224,
+    "z": -1.46,
+    "p": 0.9275509398625075,
+    "pf": 0.61,
+    "max_dd_r": 12.36,
+    "hold_days": 42.7,
+    "per_coin_year": 0.83,
+    "long_share": 0.59,
+    "ci95": [
+     -0.7,
+     0.127
+    ],
+    "by_coin": {
+     "1000SHIBUSDT": {
+      "n": 1,
+      "net": -0.907,
+      "sum": -0.91
+     },
+     "ADAUSDT": {
+      "n": 2,
+      "net": -1.004,
+      "sum": -2.01
+     },
+     "AVAXUSDT": {
+      "n": 1,
+      "net": -0.996,
+      "sum": -1.0
+     },
+     "BCHUSDT": {
+      "n": 3,
+      "net": 0.341,
+      "sum": 1.02
+     },
+     "BNBUSDT": {
+      "n": 1,
+      "net": -1.012,
+      "sum": -1.01
+     },
+     "BTCUSDT": {
+      "n": 2,
+      "net": -1.011,
+      "sum": -2.02
+     },
+     "DOTUSDT": {
+      "n": 1,
+      "net": -0.997,
+      "sum": -1.0
+     },
+     "ETCUSDT": {
+      "n": 3,
+      "net": 0.304,
+      "sum": 0.91
+     },
+     "ETHUSDT": {
+      "n": 5,
+      "net": -1.028,
+      "sum": -5.14
+     },
+     "FILUSDT": {
+      "n": 3,
+      "net": 0.057,
+      "sum": 0.17
+     },
+     "GALAUSDT": {
+      "n": 1,
+      "net": -1.011,
+      "sum": -1.01
+     },
+     "LINKUSDT": {
+      "n": 1,
+      "net": 2.917,
+      "sum": 2.92
+     },
+     "LTCUSDT": {
+      "n": 2,
+      "net": 3.045,
+      "sum": 6.09
+     },
+     "NEARUSDT": {
+      "n": 3,
+      "net": -0.994,
+      "sum": -2.98
+     },
+     "SOLUSDT": {
+      "n": 1,
+      "net": -0.988,
+      "sum": -0.99
+     },
+     "TRBUSDT": {
+      "n": 2,
+      "net": -1.013,
+      "sum": -2.03
+     },
+     "UNIUSDT": {
+      "n": 1,
+      "net": -1.129,
+      "sum": -1.13
+     },
+     "XRPUSDT": {
+      "n": 1,
+      "net": -1.007,
+      "sum": -1.01
+     }
+    },
+    "coins_positive": "5/18",
+    "without_best_coin": {
+     "coin": "LTCUSDT",
+     "n": 32,
+     "net": -0.537
+    },
+    "top2_share_of_total": null
+   },
+   "random_oos_gross": {
+    "mean": -0.007,
+    "sd_across_seeds": 0.291,
+    "share_seeds_ge_variant": 0.9
+   },
+   "folds": [
+    {
+     "fold": "2021-01-01",
+     "n": 4,
+     "net": -0.79
+    },
+    {
+     "fold": "2022-01-01",
+     "n": 10,
+     "net": -0.047
+    },
+    {
+     "fold": "2023-01-01",
+     "n": 20,
+     "net": -0.147
+    },
+    {
+     "fold": "2024-01-01",
+     "n": 16,
+     "net": 1.22
+    },
+    {
+     "fold": "2025-01-01",
+     "n": 23,
+     "net": -0.186
+    },
+    {
+     "fold": "2026-01-01",
+     "n": 7,
+     "net": -0.988
+    }
+   ],
+   "passes": {
+    "net_gt_0": false,
+    "holm_p_lt_0.05": false,
+    "ci_above_0": false,
+    "not_one_coin": false,
+    "coins_majority_positive": false,
+    "beats_random": false,
+    "beats_no_htf": false,
+    "asof_universe_positive": false,
+    "folds_positive": false,
+    "all": false
+   }
+  },
+  "1w>1d any|idm=idm|sweep=1|limit|stop=poi|liq": {
+   "is": {
+    "n": 31,
+    "coins": 12,
+    "hit": 0.323,
+    "gross": 0.381,
+    "fees": 0.011,
+    "funding": -0.043,
+    "net": 0.327,
+    "net_taker": 0.32,
+    "se": 0.613,
+    "z": 0.53,
+    "p": 0.29698112406948285,
+    "pf": 1.48,
+    "max_dd_r": 15.08,
+    "hold_days": 48.3,
+    "per_coin_year": 0.39,
+    "long_share": 0.58,
+    "ci95": [
+     -0.54,
+     2.077
+    ],
+    "by_coin": {
+     "AAVEUSDT": {
+      "n": 2,
+      "net": -0.023,
+      "sum": -0.05
+     },
+     "ADAUSDT": {
+      "n": 1,
+      "net": -1.01,
+      "sum": -1.01
+     },
+     "AVAXUSDT": {
+      "n": 4,
+      "net": -0.507,
+      "sum": -2.03
+     },
+     "BNBUSDT": {
+      "n": 3,
+      "net": -0.969,
+      "sum": -2.91
+     },
+     "BTCUSDT": {
+      "n": 4,
+      "net": -1.018,
+      "sum": -4.07
+     },
+     "DASHUSDT": {
+      "n": 3,
+      "net": -0.346,
+      "sum": -1.04
+     },
+     "DOGEUSDT": {
+      "n": 2,
+      "net": 1.56,
+      "sum": 3.12
+     },
+     "FILUSDT": {
+      "n": 3,
+      "net": -0.028,
+      "sum": -0.08
+     },
+     "LTCUSDT": {
+      "n": 1,
+      "net": 2.702,
+      "sum": 2.7
+     },
+     "NEARUSDT": {
+      "n": 2,
+      "net": -0.016,
+      "sum": -0.03
+     },
+     "XRPUSDT": {
+      "n": 4,
+      "net": 4.386,
+      "sum": 17.54
+     },
+     "ZECUSDT": {
+      "n": 2,
+      "net": -1.009,
+      "sum": -2.02
+     }
+    },
+    "coins_positive": "3/12",
+    "without_best_coin": {
+     "coin": "XRPUSDT",
+     "n": 27,
+     "net": -0.275
+    },
+    "top2_share_of_total": 2.04
+   },
+   "oos": {
+    "n": 22,
+    "coins": 13,
+    "hit": 0.318,
+    "gross": -0.228,
+    "fees": 0.007,
+    "funding": -0.004,
+    "net": -0.24,
+    "net_taker": -0.244,
+    "se": 0.269,
+    "z": -0.89,
+    "p": 0.8136857560309133,
+    "pf": 0.65,
+    "max_dd_r": 7.22,
+    "hold_days": 40.0,
+    "per_coin_year": 0.54,
+    "long_share": 0.68,
+    "ci95": [
+     -0.698,
+     0.417
+    ],
+    "by_coin": {
+     "1000PEPEUSDT": {
+      "n": 1,
+      "net": -1.009,
+      "sum": -1.01
+     },
+     "AAVEUSDT": {
+      "n": 1,
+      "net": 0.984,
+      "sum": 0.98
+     },
+     "ADAUSDT": {
+      "n": 2,
+      "net": -1.017,
+      "sum": -2.03
+     },
+     "AVAXUSDT": {
+      "n": 1,
+      "net": -0.996,
+      "sum": -1.0
+     },
+     "BCHUSDT": {
+      "n": 1,
+      "net": -0.989,
+      "sum": -0.99
+     },
+     "BTCUSDT": {
+      "n": 1,
+      "net": -0.912,
+      "sum": -0.91
+     },
+     "DASHUSDT": {
+      "n": 2,
+      "net": -0.023,
+      "sum": -0.05
+     },
+     "ETHUSDT": {
+      "n": 5,
+      "net": -1.028,
+      "sum": -5.14
+     },
+     "FILUSDT": {
+      "n": 3,
+      "net": 0.221,
+      "sum": 0.66
+     },
+     "LINKUSDT": {
+      "n": 1,
+      "net": 0.952,
+      "sum": 0.95
+     },
+     "LTCUSDT": {
+      "n": 2,
+      "net": 1.677,
+      "sum": 3.35
+     },
+     "UNIUSDT": {
+      "n": 1,
+      "net": 0.902,
+      "sum": 0.9
+     },
+     "XRPUSDT": {
+      "n": 1,
+      "net": -1.007,
+      "sum": -1.01
+     }
+    },
+    "coins_positive": "5/13",
+    "without_best_coin": {
+     "coin": "LTCUSDT",
+     "n": 20,
+     "net": -0.431
+    },
+    "top2_share_of_total": null,
+    "p_holm": 1.0
+   },
+   "no_htf_oos": {
+    "n": 92,
+    "coins": 20,
+    "hit": 0.272,
+    "gross": -0.172,
+    "fees": 0.016,
+    "funding": 0.009,
+    "net": -0.179,
+    "net_taker": -0.189,
+    "se": 0.233,
+    "z": -0.77,
+    "p": 0.7785575917890539,
+    "pf": 0.76,
+    "max_dd_r": 17.96,
+    "hold_days": 30.5,
+    "per_coin_year": 2.26,
+    "long_share": 0.4
+   },
+   "asof_universe_oos": {
+    "n": 24,
+    "coins": 15,
+    "hit": 0.208,
+    "gross": -0.459,
+    "fees": 0.009,
+    "funding": 0.002,
+    "net": -0.465,
+    "net_taker": -0.47,
+    "se": 0.262,
+    "z": -1.77,
+    "p": 0.9619974663321558,
+    "pf": 0.41,
+    "max_dd_r": 11.92,
+    "hold_days": 33.9,
+    "per_coin_year": 0.59,
+    "long_share": 0.54,
+    "ci95": [
+     -0.878,
+     0.209
+    ],
+    "by_coin": {
+     "1000SHIBUSDT": {
+      "n": 1,
+      "net": -0.907,
+      "sum": -0.91
+     },
+     "ADAUSDT": {
+      "n": 2,
+      "net": -1.017,
+      "sum": -2.03
+     },
+     "AVAXUSDT": {
+      "n": 1,
+      "net": -0.996,
+      "sum": -1.0
+     },
+     "BCHUSDT": {
+      "n": 1,
+      "net": -0.989,
+      "sum": -0.99
+     },
+     "BTCUSDT": {
+      "n": 1,
+      "net": -0.912,
+      "sum": -0.91
+     },
+     "DOTUSDT": {
+      "n": 1,
+      "net": -0.997,
+      "sum": -1.0
+     },
+     "ETCUSDT": {
+      "n": 1,
+      "net": -1.025,
+      "sum": -1.03
+     },
+     "ETHUSDT": {
+      "n": 5,
+      "net": -1.028,
+      "sum": -5.14
+     },
+     "FILUSDT": {
+      "n": 3,
+      "net": 0.221,
+      "sum": 0.66
+     },
+     "GALAUSDT": {
+      "n": 1,
+      "net": -1.011,
+      "sum": -1.01
+     },
+     "LINKUSDT": {
+      "n": 1,
+      "net": 0.952,
+      "sum": 0.95
+     },
+     "LTCUSDT": {
+      "n": 2,
+      "net": 1.677,
+      "sum": 3.35
+     },
+     "TRBUSDT": {
+      "n": 2,
+      "net": -1.013,
+      "sum": -2.03
+     },
+     "UNIUSDT": {
+      "n": 1,
+      "net": 0.902,
+      "sum": 0.9
+     },
+     "XRPUSDT": {
+      "n": 1,
+      "net": -1.007,
+      "sum": -1.01
+     }
+    },
+    "coins_positive": "4/15",
+    "without_best_coin": {
+     "coin": "LTCUSDT",
+     "n": 22,
+     "net": -0.66
+    },
+    "top2_share_of_total": null
+   },
+   "random_oos_gross": {
+    "mean": 0.031,
+    "sd_across_seeds": 0.482,
+    "share_seeds_ge_variant": 0.7
+   },
+   "folds": [
+    {
+     "fold": "2021-01-01",
+     "n": 1,
+     "net": -1.009
+    },
+    {
+     "fold": "2022-01-01",
+     "n": 9,
+     "net": -0.428
+    },
+    {
+     "fold": "2023-01-01",
+     "n": 13,
+     "net": -0.623
+    },
+    {
+     "fold": "2024-01-01",
+     "n": 8,
+     "net": 0.482
+    },
+    {
+     "fold": "2025-01-01",
+     "n": 15,
+     "net": -0.133
+    },
+    {
+     "fold": "2026-01-01",
+     "n": 5,
+     "net": -0.253
+    }
+   ],
+   "passes": {
+    "net_gt_0": false,
+    "holm_p_lt_0.05": false,
+    "ci_above_0": false,
+    "not_one_coin": false,
+    "coins_majority_positive": false,
+    "beats_random": false,
+    "beats_no_htf": false,
+    "asof_universe_positive": false,
+    "folds_positive": false,
+    "all": false
+   }
+  },
+  "1w>1d any|idm=none|sweep=1|limit|stop=poi|r2": {
+   "is": {
+    "n": 51,
+    "coins": 17,
+    "hit": 0.412,
+    "gross": 0.206,
+    "fees": 0.007,
+    "funding": -0.001,
+    "net": 0.198,
+    "net_taker": 0.192,
+    "se": 0.23,
+    "z": 0.86,
+    "p": 0.19460670839544023,
+    "pf": 1.35,
+    "max_dd_r": 5.74,
+    "hold_days": 48.5,
+    "per_coin_year": 0.64,
+    "long_share": 0.63,
+    "ci95": [
+     -0.229,
+     0.648
+    ],
+    "by_coin": {
+     "1000PEPEUSDT": {
+      "n": 1,
+      "net": 1.956,
+      "sum": 1.96
+     },
+     "AAVEUSDT": {
+      "n": 2,
+      "net": 0.491,
+      "sum": 0.98
+     },
+     "ADAUSDT": {
+      "n": 2,
+      "net": -0.98,
+      "sum": -1.96
+     },
+     "AVAXUSDT": {
+      "n": 6,
+      "net": -0.014,
+      "sum": -0.08
+     },
+     "BNBUSDT": {
+      "n": 3,
+      "net": -0.969,
+      "sum": -2.91
+     },
+     "BTCUSDT": {
+      "n": 3,
+      "net": -1.028,
+      "sum": -3.08
+     },
+     "DASHUSDT": {
+      "n": 6,
+      "net": -0.037,
+      "sum": -0.22
+     },
+     "DOGEUSDT": {
+      "n": 3,
+      "net": 2.024,
+      "sum": 6.07
+     },
+     "ETHUSDT": {
+      "n": 2,
+      "net": -1.006,
+      "sum": -2.01
+     },
+     "FILUSDT": {
+      "n": 1,
+      "net": 0.132,
+      "sum": 0.13
+     },
+     "LINKUSDT": {
+      "n": 1,
+      "net": -0.994,
+      "sum": -0.99
+     },
+     "LTCUSDT": {
+      "n": 4,
+      "net": 0.471,
+      "sum": 1.88
+     },
+     "NEARUSDT": {
+      "n": 3,
+      "net": 1.016,
+      "sum": 3.05
+     },
+     "SOLUSDT": {
+      "n": 2,
+      "net": 0.511,
+      "sum": 1.02
+     },
+     "UNIUSDT": {
+      "n": 1,
+      "net": 1.982,
+      "sum": 1.98
+     },
+     "XRPUSDT": {
+      "n": 6,
+      "net": 0.653,
+      "sum": 3.92
+     },
+     "ZECUSDT": {
+      "n": 5,
+      "net": 0.075,
+      "sum": 0.37
+     }
+    },
+    "coins_positive": "10/17",
+    "without_best_coin": {
+     "coin": "DOGEUSDT",
+     "n": 48,
+     "net": 0.084
+    },
+    "top2_share_of_total": 0.99
+   },
+   "oos": {
+    "n": 34,
+    "coins": 18,
+    "hit": 0.265,
+    "gross": -0.206,
+    "fees": 0.005,
+    "funding": -0.005,
+    "net": -0.216,
+    "net_taker": -0.219,
+    "se": 0.202,
+    "z": -1.07,
+    "p": 0.8570688258807782,
+    "pf": 0.71,
+    "max_dd_r": 9.09,
+    "hold_days": 29.0,
+    "per_coin_year": 0.83,
+    "long_share": 0.71,
+    "ci95": [
+     -0.616,
+     0.19
+    ],
+    "by_coin": {
+     "1000PEPEUSDT": {
+      "n": 1,
+      "net": -1.009,
+      "sum": -1.01
+     },
+     "AAVEUSDT": {
+      "n": 1,
+      "net": 1.999,
+      "sum": 2.0
+     },
+     "ADAUSDT": {
+      "n": 2,
+      "net": -1.004,
+      "sum": -2.01
+     },
+     "AVAXUSDT": {
+      "n": 1,
+      "net": -0.996,
+      "sum": -1.0
+     },
+     "BCHUSDT": {
+      "n": 3,
+      "net": 0.008,
+      "sum": 0.02
+     },
+     "BNBUSDT": {
+      "n": 1,
+      "net": -1.012,
+      "sum": -1.01
+     },
+     "BTCUSDT": {
+      "n": 2,
+      "net": -1.011,
+      "sum": -2.02
+     },
+     "DASHUSDT": {
+      "n": 3,
+      "net": -0.013,
+      "sum": -0.04
+     },
+     "ETHUSDT": {
+      "n": 5,
+      "net": -1.028,
+      "sum": -5.14
+     },
+     "FILUSDT": {
+      "n": 3,
+      "net": -0.021,
+      "sum": -0.06
+     },
+     "LINKUSDT": {
+      "n": 1,
+      "net": 1.959,
+      "sum": 1.96
+     },
+     "LTCUSDT": {
+      "n": 2,
+      "net": 2.045,
+      "sum": 4.09
+     },
+     "NEARUSDT": {
+      "n": 3,
+      "net": -0.994,
+      "sum": -2.98
+     },
+     "SOLUSDT": {
+      "n": 1,
+      "net": 1.97,
+      "sum": 1.97
+     },
+     "SUIUSDT": {
+      "n": 2,
+      "net": -1.02,
+      "sum": -2.04
+     },
+     "UNIUSDT": {
+      "n": 1,
+      "net": 1.934,
+      "sum": 1.93
+     },
+     "WLDUSDT": {
+      "n": 1,
+      "net": -1.0,
+      "sum": -1.0
+     },
+     "XRPUSDT": {
+      "n": 1,
+      "net": -1.007,
+      "sum": -1.01
+     }
+    },
+    "coins_positive": "6/18",
+    "without_best_coin": {
+     "coin": "LTCUSDT",
+     "n": 32,
+     "net": -0.357
+    },
+    "top2_share_of_total": null,
+    "p_holm": 1.0
+   },
+   "no_htf_oos": {
+    "n": 104,
+    "coins": 20,
+    "hit": 0.25,
+    "gross": -0.298,
+    "fees": 0.008,
+    "funding": 0.004,
+    "net": -0.302,
+    "net_taker": -0.308,
+    "se": 0.156,
+    "z": -1.93,
+    "p": 0.9734228883246477,
+    "pf": 0.6,
+    "max_dd_r": 37.36,
+    "hold_days": 33.2,
+    "per_coin_year": 2.55,
+    "long_share": 0.44
+   },
+   "asof_universe_oos": {
+    "n": 34,
+    "coins": 18,
+    "hit": 0.235,
+    "gross": -0.294,
+    "fees": 0.007,
+    "funding": -0.001,
+    "net": -0.302,
+    "net_taker": -0.307,
+    "se": 0.227,
+    "z": -1.33,
+    "p": 0.9080287823738525,
+    "pf": 0.61,
+    "max_dd_r": 10.27,
+    "hold_days": 29.7,
+    "per_coin_year": 0.83,
+    "long_share": 0.59,
+    "ci95": [
+     -0.664,
+     0.188
+    ],
+    "by_coin": {
+     "1000SHIBUSDT": {
+      "n": 1,
+      "net": -0.907,
+      "sum": -0.91
+     },
+     "ADAUSDT": {
+      "n": 2,
+      "net": -1.004,
+      "sum": -2.01
+     },
+     "AVAXUSDT": {
+      "n": 1,
+      "net": -0.996,
+      "sum": -1.0
+     },
+     "BCHUSDT": {
+      "n": 3,
+      "net": 0.008,
+      "sum": 0.02
+     },
+     "BNBUSDT": {
+      "n": 1,
+      "net": -1.012,
+      "sum": -1.01
+     },
+     "BTCUSDT": {
+      "n": 2,
+      "net": -1.011,
+      "sum": -2.02
+     },
+     "DOTUSDT": {
+      "n": 1,
+      "net": -0.997,
+      "sum": -1.0
+     },
+     "ETCUSDT": {
+      "n": 3,
+      "net": -0.026,
+      "sum": -0.08
+     },
+     "ETHUSDT": {
+      "n": 5,
+      "net": -1.028,
+      "sum": -5.14
+     },
+     "FILUSDT": {
+      "n": 3,
+      "net": -0.021,
+      "sum": -0.06
+     },
+     "GALAUSDT": {
+      "n": 1,
+      "net": -1.011,
+      "sum": -1.01
+     },
+     "LINKUSDT": {
+      "n": 1,
+      "net": 1.959,
+      "sum": 1.96
+     },
+     "LTCUSDT": {
+      "n": 2,
+      "net": 2.045,
+      "sum": 4.09
+     },
+     "NEARUSDT": {
+      "n": 3,
+      "net": -0.994,
+      "sum": -2.98
+     },
+     "SOLUSDT": {
+      "n": 1,
+      "net": 1.97,
+      "sum": 1.97
+     },
+     "TRBUSDT": {
+      "n": 2,
+      "net": -1.013,
+      "sum": -2.03
+     },
+     "UNIUSDT": {
+      "n": 1,
+      "net": 1.934,
+      "sum": 1.93
+     },
+     "XRPUSDT": {
+      "n": 1,
+      "net": -1.007,
+      "sum": -1.01
+     }
+    },
+    "coins_positive": "5/18",
+    "without_best_coin": {
+     "coin": "LTCUSDT",
+     "n": 32,
+     "net": -0.449
+    },
+    "top2_share_of_total": null
+   },
+   "random_oos_gross": {
+    "mean": 0.015,
+    "sd_across_seeds": 0.228,
+    "share_seeds_ge_variant": 0.9
+   },
+   "folds": [
+    {
+     "fold": "2021-01-01",
+     "n": 4,
+     "net": -0.79
+    },
+    {
+     "fold": "2022-01-01",
+     "n": 10,
+     "net": 0.461
+    },
+    {
+     "fold": "2023-01-01",
+     "n": 20,
+     "net": -0.346
+    },
+    {
+     "fold": "2024-01-01",
+     "n": 16,
+     "net": 0.67
+    },
+    {
+     "fold": "2025-01-01",
+     "n": 23,
+     "net": 0.025
+    },
+    {
+     "fold": "2026-01-01",
+     "n": 7,
+     "net": -0.988
+    }
+   ],
+   "passes": {
+    "net_gt_0": false,
+    "holm_p_lt_0.05": false,
+    "ci_above_0": false,
+    "not_one_coin": false,
+    "coins_majority_positive": false,
+    "beats_random": false,
+    "beats_no_htf": true,
+    "asof_universe_positive": false,
+    "folds_positive": false,
+    "all": false
+   }
+  },
+  "1w>1d ob|idm=none|sweep=0|limit|stop=poi|r3": {
+   "is": {
+    "n": 54,
+    "coins": 19,
+    "hit": 0.315,
+    "gross": 0.164,
+    "fees": 0.004,
+    "funding": 0.003,
+    "net": 0.163,
+    "net_taker": 0.161,
+    "se": 0.325,
+    "z": 0.5,
+    "p": 0.3075311251179754,
+    "pf": 1.25,
+    "max_dd_r": 14.58,
+    "hold_days": 69.5,
+    "per_coin_year": 0.68,
+    "long_share": 0.63,
+    "ci95": [
+     -0.397,
+     0.833
+    ],
+    "by_coin": {
+     "1000PEPEUSDT": {
+      "n": 1,
+      "net": 2.956,
+      "sum": 2.96
+     },
+     "AAVEUSDT": {
+      "n": 1,
+      "net": -0.984,
+      "sum": -0.98
+     },
+     "ADAUSDT": {
+      "n": 3,
+      "net": -0.991,
+      "sum": -2.97
+     },
+     "AVAXUSDT": {
+      "n": 5,
+      "net": -1.003,
+      "sum": -5.02
+     },
+     "BCHUSDT": {
+      "n": 1,
+      "net": 3.104,
+      "sum": 3.1
+     },
+     "BNBUSDT": {
+      "n": 3,
+      "net": -1.06,
+      "sum": -3.18
+     },
+     "BTCUSDT": {
+      "n": 2,
+      "net": 0.988,
+      "sum": 1.98
+     },
+     "DASHUSDT": {
+      "n": 5,
+      "net": -0.277,
+      "sum": -1.39
+     },
+     "DOGEUSDT": {
+      "n": 3,
+      "net": 2.644,
+      "sum": 7.93
+     },
+     "ETHUSDT": {
+      "n": 2,
+      "net": -0.982,
+      "sum": -1.96
+     },
+     "FILUSDT": {
+      "n": 2,
+      "net": -0.488,
+      "sum": -0.98
+     },
+     "LINKUSDT": {
+      "n": 1,
+      "net": -0.994,
+      "sum": -0.99
+     },
+     "LTCUSDT": {
+      "n": 5,
+      "net": -0.189,
+      "sum": -0.95
+     },
+     "NEARUSDT": {
+      "n": 3,
+      "net": 0.346,
+      "sum": 1.04
+     },
+     "SOLUSDT": {
+      "n": 2,
+      "net": 1.008,
+      "sum": 2.02
+     },
+     "SUIUSDT": {
+      "n": 1,
+      "net": -1.011,
+      "sum": -1.01
+     },
+     "UNIUSDT": {
+      "n": 2,
+      "net": 1.072,
+      "sum": 2.14
+     },
+     "XRPUSDT": {
+      "n": 6,
+      "net": 1.127,
+      "sum": 6.76
+     },
+     "ZECUSDT": {
+      "n": 6,
+      "net": 0.054,
+      "sum": 0.32
+     }
+    },
+    "coins_positive": "9/19",
+    "without_best_coin": {
+     "coin": "DOGEUSDT",
+     "n": 51,
+     "net": 0.017
+    },
+    "top2_share_of_total": 1.67
+   },
+   "oos": {
+    "n": 37,
+    "coins": 20,
+    "hit": 0.135,
+    "gross": -0.459,
+    "fees": 0.004,
+    "funding": 0.001,
+    "net": -0.463,
+    "net_taker": -0.465,
+    "se": 0.278,
+    "z": -1.67,
+    "p": 0.952096509590783,
+    "pf": 0.47,
+    "max_dd_r": 17.17,
+    "hold_days": 31.1,
+    "per_coin_year": 0.91,
+    "long_share": 0.62,
+    "ci95": [
+     -0.997,
+     0.025
+    ],
+    "by_coin": {
+     "1000PEPEUSDT": {
+      "n": 2,
+      "net": -0.997,
+      "sum": -1.99
+     },
+     "AAVEUSDT": {
+      "n": 1,
+      "net": 2.999,
+      "sum": 3.0
+     },
+     "ADAUSDT": {
+      "n": 3,
+      "net": -1.002,
+      "sum": -3.01
+     },
+     "AVAXUSDT": {
+      "n": 3,
+      "net": 0.332,
+      "sum": 1.0
+     },
+     "BCHUSDT": {
+      "n": 2,
+      "net": -0.983,
+      "sum": -1.97
+     },
+     "BNBUSDT": {
+      "n": 1,
+      "net": -1.012,
+      "sum": -1.01
+     },
+     "BTCUSDT": {
+      "n": 3,
+      "net": -1.001,
+      "sum": -3.0
+     },
+     "DASHUSDT": {
+      "n": 2,
+      "net": -0.994,
+      "sum": -1.99
+     },
+     "DOGEUSDT": {
+      "n": 1,
+      "net": 2.998,
+      "sum": 3.0
+     },
+     "ETHUSDT": {
+      "n": 3,
+      "net": -0.995,
+      "sum": -2.99
+     },
+     "FILUSDT": {
+      "n": 2,
+      "net": -1.024,
+      "sum": -2.05
+     },
+     "LINKUSDT": {
+      "n": 2,
+      "net": 0.957,
+      "sum": 1.91
+     },
+     "LTCUSDT": {
+      "n": 1,
+      "net": 3.096,
+      "sum": 3.1
+     },
+     "NEARUSDT": {
+      "n": 2,
+      "net": -0.988,
+      "sum": -1.98
+     },
+     "SOLUSDT": {
+      "n": 1,
+      "net": -0.988,
+      "sum": -0.99
+     },
+     "SUIUSDT": {
+      "n": 2,
+      "net": -1.02,
+      "sum": -2.04
+     },
+     "UNIUSDT": {
+      "n": 2,
+      "net": -1.049,
+      "sum": -2.1
+     },
+     "WLDUSDT": {
+      "n": 1,
+      "net": -1.0,
+      "sum": -1.0
+     },
+     "XRPUSDT": {
+      "n": 2,
+      "net": -1.003,
+      "sum": -2.01
+     },
+     "ZECUSDT": {
+      "n": 1,
+      "net": -1.007,
+      "sum": -1.01
+     }
+    },
+    "coins_positive": "5/20",
+    "without_best_coin": {
+     "coin": "LTCUSDT",
+     "n": 36,
+     "net": -0.561
+    },
+    "top2_share_of_total": null,
+    "p_holm": 1.0
+   },
+   "no_htf_oos": {
+    "n": 61,
+    "coins": 20,
+    "hit": 0.18,
+    "gross": -0.409,
+    "fees": 0.004,
+    "funding": 0.008,
+    "net": -0.404,
+    "net_taker": -0.407,
+    "se": 0.189,
+    "z": -2.14,
+    "p": 0.983792113716261,
+    "pf": 0.51,
+    "max_dd_r": 25.0,
+    "hold_days": 48.4,
+    "per_coin_year": 1.5,
+    "long_share": 0.49
+   },
+   "asof_universe_oos": {
+    "n": 37,
+    "coins": 19,
+    "hit": 0.162,
+    "gross": -0.351,
+    "fees": 0.004,
+    "funding": 0.005,
+    "net": -0.351,
+    "net_taker": -0.354,
+    "se": 0.361,
+    "z": -0.97,
+    "p": 0.8346891455960737,
+    "pf": 0.58,
+    "max_dd_r": 14.94,
+    "hold_days": 33.4,
+    "per_coin_year": 0.91,
+    "long_share": 0.57,
+    "ci95": [
+     -0.992,
+     0.267
+    ],
+    "by_coin": {
+     "1000SHIBUSDT": {
+      "n": 1,
+      "net": -0.907,
+      "sum": -0.91
+     },
+     "ADAUSDT": {
+      "n": 3,
+      "net": -1.002,
+      "sum": -3.01
+     },
+     "AVAXUSDT": {
+      "n": 3,
+      "net": 0.332,
+      "sum": 1.0
+     },
+     "BCHUSDT": {
+      "n": 2,
+      "net": -0.983,
+      "sum": -1.97
+     },
+     "BNBUSDT": {
+      "n": 1,
+      "net": -1.012,
+      "sum": -1.01
+     },
+     "BTCUSDT": {
+      "n": 3,
+      "net": -1.001,
+      "sum": -3.0
+     },
+     "DOGEUSDT": {
+      "n": 1,
+      "net": 2.998,
+      "sum": 3.0
+     },
+     "DOTUSDT": {
+      "n": 2,
+      "net": -1.0,
+      "sum": -2.0
+     },
+     "ETCUSDT": {
+      "n": 4,
+      "net": 1.006,
+      "sum": 4.02
+     },
+     "ETHUSDT": {
+      "n": 3,
+      "net": -0.995,
+      "sum": -2.99
+     },
+     "FILUSDT": {
+      "n": 2,
+      "net": -1.024,
+      "sum": -2.05
+     },
+     "GALAUSDT": {
+      "n": 1,
+      "net": -1.011,
+      "sum": -1.01
+     },
+     "LINKUSDT": {
+      "n": 2,
+      "net": 0.957,
+      "sum": 1.91
+     },
+     "LTCUSDT": {
+      "n": 1,
+      "net": 3.096,
+      "sum": 3.1
+     },
+     "NEARUSDT": {
+      "n": 2,
+      "net": -0.988,
+      "sum": -1.98
+     },
+     "SOLUSDT": {
+      "n": 1,
+      "net": -0.988,
+      "sum": -0.99
+     },
+     "TRBUSDT": {
+      "n": 1,
+      "net": -1.003,
+      "sum": -1.0
+     },
+     "UNIUSDT": {
+      "n": 2,
+      "net": -1.049,
+      "sum": -2.1
+     },
+     "XRPUSDT": {
+      "n": 2,
+      "net": -1.003,
+      "sum": -2.01
+     }
+    },
+    "coins_positive": "5/19",
+    "without_best_coin": {
+     "coin": "ETCUSDT",
+     "n": 33,
+     "net": -0.515
+    },
+    "top2_share_of_total": null
+   },
+   "random_oos_gross": {
+    "mean": -0.018,
+    "sd_across_seeds": 0.348,
+    "share_seeds_ge_variant": 0.9
+   },
+   "folds": [
+    {
+     "fold": "2021-01-01",
+     "n": 4,
+     "net": -0.773
+    },
+    {
+     "fold": "2022-01-01",
+     "n": 9,
+     "net": -0.38
+    },
+    {
+     "fold": "2023-01-01",
+     "n": 21,
+     "net": -0.191
+    },
+    {
+     "fold": "2024-01-01",
+     "n": 18,
+     "net": 0.549
+    },
+    {
+     "fold": "2025-01-01",
+     "n": 26,
+     "net": -0.242
+    },
+    {
+     "fold": "2026-01-01",
+     "n": 8,
+     "net": -0.986
+    }
+   ],
+   "passes": {
+    "net_gt_0": false,
+    "holm_p_lt_0.05": false,
+    "ci_above_0": false,
+    "not_one_coin": false,
+    "coins_majority_positive": false,
+    "beats_random": false,
+    "beats_no_htf": false,
+    "asof_universe_positive": false,
+    "folds_positive": false,
+    "all": false
+   }
+  },
+  "1w>1d breaker|idm=none|sweep=0|limit|stop=poi|r2+be": {
+   "is": {
+    "n": 2,
+    "coins": 2,
+    "hit": 0.5,
+    "gross": 1.0,
+    "fees": 0.003,
+    "funding": -0.008,
+    "net": 0.988,
+    "net_taker": 0.984,
+    "se": null,
+    "z": null,
+    "p": 1.0,
+    "pf": 102.9,
+    "max_dd_r": 0.02,
+    "hold_days": 20.0,
+    "per_coin_year": 0.03,
+    "long_share": 1.0,
+    "ci95": null,
+    "by_coin": {
+     "BNBUSDT": {
+      "n": 1,
+      "net": 1.996,
+      "sum": 2.0
+     },
+     "DOGEUSDT": {
+      "n": 1,
+      "net": -0.019,
+      "sum": -0.02
+     }
+    },
+    "coins_positive": "1/2",
+    "without_best_coin": {
+     "coin": "BNBUSDT",
+     "n": 1,
+     "net": -0.019
+    },
+    "top2_share_of_total": 1.0
+   },
+   "oos": {
+    "n": 14,
+    "coins": 9,
+    "hit": 0.429,
+    "gross": 0.214,
+    "fees": 0.005,
+    "funding": 0.016,
+    "net": 0.226,
+    "net_taker": 0.222,
+    "se": 0.405,
+    "z": 0.56,
+    "p": 0.28894607921213245,
+    "pf": 1.62,
+    "max_dd_r": 3.92,
+    "hold_days": 19.3,
+    "per_coin_year": 0.34,
+    "long_share": 0.64,
+    "ci95": [
+     -0.501,
+     0.977
+    ],
+    "by_coin": {
+     "ADAUSDT": {
+      "n": 2,
+      "net": -0.524,
+      "sum": -1.05
+     },
+     "AVAXUSDT": {
+      "n": 1,
+      "net": -1.006,
+      "sum": -1.01
+     },
+     "BTCUSDT": {
+      "n": 1,
+      "net": -0.083,
+      "sum": -0.08
+     },
+     "DASHUSDT": {
+      "n": 2,
+      "net": 1.12,
+      "sum": 2.24
+     },
+     "LINKUSDT": {
+      "n": 2,
+      "net": 1.025,
+      "sum": 2.05
+     },
+     "LTCUSDT": {
+      "n": 1,
+      "net": -0.965,
+      "sum": -0.97
+     },
+     "NEARUSDT": {
+      "n": 2,
+      "net": 0.985,
+      "sum": 1.97
+     },
+     "UNIUSDT": {
+      "n": 2,
+      "net": -0.999,
+      "sum": -2.0
+     },
+     "XRPUSDT": {
+      "n": 1,
+      "net": 1.996,
+      "sum": 2.0
+     }
+    },
+    "coins_positive": "4/9",
+    "without_best_coin": {
+     "coin": "DASHUSDT",
+     "n": 12,
+     "net": 0.076
+    },
+    "top2_share_of_total": 1.36,
+    "p_holm": 1.0
+   },
+   "no_htf_oos": {
+    "n": 50,
+    "coins": 19,
+    "hit": 0.28,
+    "gross": -0.166,
+    "fees": 0.004,
+    "funding": 0.009,
+    "net": -0.162,
+    "net_taker": -0.164,
+    "se": 0.183,
+    "z": -0.88,
+    "p": 0.8115623600586472,
+    "pf": 0.67,
+    "max_dd_r": 9.95,
+    "hold_days": 40.7,
+    "per_coin_year": 1.23,
+    "long_share": 0.52
+   },
+   "asof_universe_oos": {
+    "n": 13,
+    "coins": 9,
+    "hit": 0.308,
+    "gross": 0.0,
+    "fees": 0.005,
+    "funding": -0.001,
+    "net": -0.006,
+    "net_taker": -0.01,
+    "se": 0.427,
+    "z": -0.01,
+    "p": 0.5058447860600636,
+    "pf": 0.99,
+    "max_dd_r": 3.92,
+    "hold_days": 19.8,
+    "per_coin_year": 0.32,
+    "long_share": 0.54,
+    "ci95": [
+     -0.696,
+     0.837
+    ],
+    "by_coin": {
+     "ADAUSDT": {
+      "n": 2,
+      "net": -0.524,
+      "sum": -1.05
+     },
+     "AVAXUSDT": {
+      "n": 1,
+      "net": -1.006,
+      "sum": -1.01
+     },
+     "BTCUSDT": {
+      "n": 1,
+      "net": -0.083,
+      "sum": -0.08
+     },
+     "DOTUSDT": {
+      "n": 1,
+      "net": -0.999,
+      "sum": -1.0
+     },
+     "LINKUSDT": {
+      "n": 2,
+      "net": 1.025,
+      "sum": 2.05
+     },
+     "LTCUSDT": {
+      "n": 1,
+      "net": -0.965,
+      "sum": -0.97
+     },
+     "NEARUSDT": {
+      "n": 2,
+      "net": 0.985,
+      "sum": 1.97
+     },
+     "UNIUSDT": {
+      "n": 2,
+      "net": -0.999,
+      "sum": -2.0
+     },
+     "XRPUSDT": {
+      "n": 1,
+      "net": 1.996,
+      "sum": 2.0
+     }
+    },
+    "coins_positive": "3/9",
+    "without_best_coin": {
+     "coin": "LINKUSDT",
+     "n": 11,
+     "net": -0.194
+    },
+    "top2_share_of_total": null
+   },
+   "random_oos_gross": {
+    "mean": -0.025,
+    "sd_across_seeds": 0.315,
+    "share_seeds_ge_variant": 0.15
+   },
+   "folds": [
+    {
+     "fold": "2021-01-01",
+     "n": 0,
+     "net": null
+    },
+    {
+     "fold": "2022-01-01",
+     "n": 0,
+     "net": null
+    },
+    {
+     "fold": "2023-01-01",
+     "n": 0,
+     "net": null
+    },
+    {
+     "fold": "2024-01-01",
+     "n": 4,
+     "net": 0.98
+    },
+    {
+     "fold": "2025-01-01",
+     "n": 6,
+     "net": 0.857
+    },
+    {
+     "fold": "2026-01-01",
+     "n": 6,
+     "net": -0.654
+    }
+   ],
+   "passes": {
+    "net_gt_0": true,
+    "holm_p_lt_0.05": false,
+    "ci_above_0": false,
+    "not_one_coin": true,
+    "coins_majority_positive": false,
+    "beats_random": false,
+    "beats_no_htf": true,
+    "asof_universe_positive": false,
+    "folds_positive": false,
+    "all": false
+   }
+  },
+  "1w>1d breaker|idm=none|sweep=0|limit|stop=poi|liq": {
+   "is": {
+    "n": 2,
+    "coins": 2,
+    "hit": 1.0,
+    "gross": 1.525,
+    "fees": 0.003,
+    "funding": -0.029,
+    "net": 1.492,
+    "net_taker": 1.488,
+    "se": null,
+    "z": null,
+    "p": 1.0,
+    "pf": null,
+    "max_dd_r": 0.0,
+    "hold_days": 74.0,
+    "per_coin_year": 0.03,
+    "long_share": 1.0,
+    "ci95": null,
+    "by_coin": {
+     "BNBUSDT": {
+      "n": 1,
+      "net": 0.994,
+      "sum": 0.99
+     },
+     "DOGEUSDT": {
+      "n": 1,
+      "net": 1.991,
+      "sum": 1.99
+     }
+    },
+    "coins_positive": "2/2",
+    "without_best_coin": {
+     "coin": "DOGEUSDT",
+     "n": 1,
+     "net": 0.994
+    },
+    "top2_share_of_total": 1.0
+   },
+   "oos": {
+    "n": 11,
+    "coins": 8,
+    "hit": 0.455,
+    "gross": 0.102,
+    "fees": 0.005,
+    "funding": 0.028,
+    "net": 0.124,
+    "net_taker": 0.12,
+    "se": 0.328,
+    "z": 0.38,
+    "p": 0.3525901567897167,
+    "pf": 1.24,
+    "max_dd_r": 1.97,
+    "hold_days": 35.5,
+    "per_coin_year": 0.27,
+    "long_share": 0.73,
+    "ci95": [
+     -0.567,
+     0.66
+    ],
+    "by_coin": {
+     "ADAUSDT": {
+      "n": 2,
+      "net": -1.029,
+      "sum": -2.06
+     },
+     "AVAXUSDT": {
+      "n": 1,
+      "net": -1.006,
+      "sum": -1.01
+     },
+     "DASHUSDT": {
+      "n": 2,
+      "net": 0.192,
+      "sum": 0.38
+     },
+     "LINKUSDT": {
+      "n": 1,
+      "net": 0.971,
+      "sum": 0.97
+     },
+     "LTCUSDT": {
+      "n": 1,
+      "net": -0.965,
+      "sum": -0.97
+     },
+     "NEARUSDT": {
+      "n": 2,
+      "net": 2.025,
+      "sum": 4.05
+     },
+     "UNIUSDT": {
+      "n": 1,
+      "net": -1.004,
+      "sum": -1.0
+     },
+     "XRPUSDT": {
+      "n": 1,
+      "net": 0.992,
+      "sum": 0.99
+     }
+    },
+    "coins_positive": "4/8",
+    "without_best_coin": {
+     "coin": "NEARUSDT",
+     "n": 9,
+     "net": -0.299
+    },
+    "top2_share_of_total": 3.7,
+    "p_holm": 1.0
+   },
+   "no_htf_oos": {
+    "n": 22,
+    "coins": 13,
+    "hit": 0.318,
+    "gross": -0.217,
+    "fees": 0.007,
+    "funding": 0.018,
+    "net": -0.206,
+    "net_taker": -0.211,
+    "se": 0.294,
+    "z": -0.7,
+    "p": 0.7587719375289976,
+    "pf": 0.69,
+    "max_dd_r": 6.5,
+    "hold_days": 22.9,
+    "per_coin_year": 0.54,
+    "long_share": 0.68
+   },
+   "asof_universe_oos": {
+    "n": 10,
+    "coins": 8,
+    "hit": 0.4,
+    "gross": 0.012,
+    "fees": 0.005,
+    "funding": -0.008,
+    "net": -0.002,
+    "net_taker": -0.006,
+    "se": 0.403,
+    "z": -0.0,
+    "p": 0.5019029728829772,
+    "pf": 1.0,
+    "max_dd_r": 2.09,
+    "hold_days": 35.7,
+    "per_coin_year": 0.25,
+    "long_share": 0.6,
+    "ci95": [
+     -0.768,
+     0.643
+    ],
+    "by_coin": {
+     "ADAUSDT": {
+      "n": 2,
+      "net": -1.029,
+      "sum": -2.06
+     },
+     "AVAXUSDT": {
+      "n": 1,
+      "net": -1.006,
+      "sum": -1.01
+     },
+     "DOTUSDT": {
+      "n": 1,
+      "net": -0.999,
+      "sum": -1.0
+     },
+     "LINKUSDT": {
+      "n": 1,
+      "net": 0.971,
+      "sum": 0.97
+     },
+     "LTCUSDT": {
+      "n": 1,
+      "net": -0.965,
+      "sum": -0.97
+     },
+     "NEARUSDT": {
+      "n": 2,
+      "net": 2.025,
+      "sum": 4.05
+     },
+     "UNIUSDT": {
+      "n": 1,
+      "net": -1.004,
+      "sum": -1.0
+     },
+     "XRPUSDT": {
+      "n": 1,
+      "net": 0.992,
+      "sum": 0.99
+     }
+    },
+    "coins_positive": "3/8",
+    "without_best_coin": {
+     "coin": "NEARUSDT",
+     "n": 8,
+     "net": -0.509
+    },
+    "top2_share_of_total": null
+   },
+   "random_oos_gross": {
+    "mean": 0.056,
+    "sd_across_seeds": 0.543,
+    "share_seeds_ge_variant": 0.5
+   },
+   "folds": [
+    {
+     "fold": "2021-01-01",
+     "n": 0,
+     "net": null
+    },
+    {
+     "fold": "2022-01-01",
+     "n": 0,
+     "net": null
+    },
+    {
+     "fold": "2023-01-01",
+     "n": 0,
+     "net": null
+    },
+    {
+     "fold": "2024-01-01",
+     "n": 4,
+     "net": 0.73
+    },
+    {
+     "fold": "2025-01-01",
+     "n": 5,
+     "net": 0.27
+    },
+    {
+     "fold": "2026-01-01",
+     "n": 4,
+     "net": 0.02
+    }
+   ],
+   "passes": {
+    "net_gt_0": true,
+    "holm_p_lt_0.05": false,
+    "ci_above_0": false,
+    "not_one_coin": false,
+    "coins_majority_positive": false,
+    "beats_random": false,
+    "beats_no_htf": true,
+    "asof_universe_positive": false,
+    "folds_positive": true,
+    "all": false
+   }
+  },
+  "1w>1d breaker|idm=none|sweep=0|limit|stop=poi|r2": {
+   "is": {
+    "n": 2,
+    "coins": 2,
+    "hit": 1.0,
+    "gross": 2.0,
+    "fees": 0.003,
+    "funding": -0.029,
+    "net": 1.969,
+    "net_taker": 1.964,
+    "se": null,
+    "z": null,
+    "p": 1.0,
+    "pf": null,
+    "max_dd_r": 0.0,
+    "hold_days": 63.5,
+    "per_coin_year": 0.03,
+    "long_share": 1.0,
+    "ci95": null,
+    "by_coin": {
+     "BNBUSDT": {
+      "n": 1,
+      "net": 1.996,
+      "sum": 2.0
+     },
+     "DOGEUSDT": {
+      "n": 1,
+      "net": 1.941,
+      "sum": 1.94
+     }
+    },
+    "coins_positive": "2/2",
+    "without_best_coin": {
+     "coin": "BNBUSDT",
+     "n": 1,
+     "net": 1.941
+    },
+    "top2_share_of_total": 1.0
+   },
+   "oos": {
+    "n": 14,
+    "coins": 9,
+    "hit": 0.357,
+    "gross": 0.071,
+    "fees": 0.005,
+    "funding": 0.022,
+    "net": 0.088,
+    "net_taker": 0.085,
+    "se": 0.407,
+    "z": 0.22,
+    "p": 0.41404388063907993,
+    "pf": 1.14,
+    "max_dd_r": 4.67,
+    "hold_days": 27.5,
+    "per_coin_year": 0.34,
+    "long_share": 0.64,
+    "ci95": [
+     -0.706,
+     0.835
+    ],
+    "by_coin": {
+     "ADAUSDT": {
+      "n": 2,
+      "net": -1.029,
+      "sum": -2.06
+     },
+     "AVAXUSDT": {
+      "n": 1,
+      "net": -1.006,
+      "sum": -1.01
+     },
+     "BTCUSDT": {
+      "n": 1,
+      "net": -1.114,
+      "sum": -1.11
+     },
+     "DASHUSDT": {
+      "n": 2,
+      "net": 0.697,
+      "sum": 1.39
+     },
+     "LINKUSDT": {
+      "n": 2,
+      "net": 0.527,
+      "sum": 1.05
+     },
+     "LTCUSDT": {
+      "n": 1,
+      "net": -0.965,
+      "sum": -0.97
+     },
+     "NEARUSDT": {
+      "n": 2,
+      "net": 1.968,
+      "sum": 3.94
+     },
+     "UNIUSDT": {
+      "n": 2,
+      "net": -0.999,
+      "sum": -2.0
+     },
+     "XRPUSDT": {
+      "n": 1,
+      "net": 1.996,
+      "sum": 2.0
+     }
+    },
+    "coins_positive": "4/9",
+    "without_best_coin": {
+     "coin": "NEARUSDT",
+     "n": 12,
+     "net": -0.225
+    },
+    "top2_share_of_total": 4.8,
+    "p_holm": 1.0
+   },
+   "no_htf_oos": {
+    "n": 48,
+    "coins": 19,
+    "hit": 0.229,
+    "gross": -0.336,
+    "fees": 0.004,
+    "funding": 0.012,
+    "net": -0.327,
+    "net_taker": -0.329,
+    "se": 0.222,
+    "z": -1.47,
+    "p": 0.9293298768423527,
+    "pf": 0.57,
+    "max_dd_r": 17.62,
+    "hold_days": 54.7,
+    "per_coin_year": 1.18,
+    "long_share": 0.5
+   },
+   "asof_universe_oos": {
+    "n": 13,
+    "coins": 9,
+    "hit": 0.308,
+    "gross": -0.077,
+    "fees": 0.005,
+    "funding": -0.007,
+    "net": -0.089,
+    "net_taker": -0.092,
+    "se": 0.453,
+    "z": -0.2,
+    "p": 0.5776682214070122,
+    "pf": 0.87,
+    "max_dd_r": 4.07,
+    "hold_days": 27.5,
+    "per_coin_year": 0.32,
+    "long_share": 0.54,
+    "ci95": [
+     -0.8,
+     0.752
+    ],
+    "by_coin": {
+     "ADAUSDT": {
+      "n": 2,
+      "net": -1.029,
+      "sum": -2.06
+     },
+     "AVAXUSDT": {
+      "n": 1,
+      "net": -1.006,
+      "sum": -1.01
+     },
+     "BTCUSDT": {
+      "n": 1,
+      "net": -1.114,
+      "sum": -1.11
+     },
+     "DOTUSDT": {
+      "n": 1,
+      "net": -0.999,
+      "sum": -1.0
+     },
+     "LINKUSDT": {
+      "n": 2,
+      "net": 0.527,
+      "sum": 1.05
+     },
+     "LTCUSDT": {
+      "n": 1,
+      "net": -0.965,
+      "sum": -0.97
+     },
+     "NEARUSDT": {
+      "n": 2,
+      "net": 1.968,
+      "sum": 3.94
+     },
+     "UNIUSDT": {
+      "n": 2,
+      "net": -0.999,
+      "sum": -2.0
+     },
+     "XRPUSDT": {
+      "n": 1,
+      "net": 1.996,
+      "sum": 2.0
+     }
+    },
+    "coins_positive": "3/9",
+    "without_best_coin": {
+     "coin": "NEARUSDT",
+     "n": 11,
+     "net": -0.463
+    },
+    "top2_share_of_total": null
+   },
+   "random_oos_gross": {
+    "mean": -0.046,
+    "sd_across_seeds": 0.379,
+    "share_seeds_ge_variant": 0.4
+   },
+   "folds": [
+    {
+     "fold": "2021-01-01",
+     "n": 0,
+     "net": null
+    },
+    {
+     "fold": "2022-01-01",
+     "n": 0,
+     "net": null
+    },
+    {
+     "fold": "2023-01-01",
+     "n": 0,
+     "net": null
+    },
+    {
+     "fold": "2024-01-01",
+     "n": 4,
+     "net": 1.221
+    },
+    {
+     "fold": "2025-01-01",
+     "n": 6,
+     "net": 0.542
+    },
+    {
+     "fold": "2026-01-01",
+     "n": 6,
+     "net": -0.493
+    }
+   ],
+   "passes": {
+    "net_gt_0": true,
+    "holm_p_lt_0.05": false,
+    "ci_above_0": false,
+    "not_one_coin": false,
+    "coins_majority_positive": false,
+    "beats_random": false,
+    "beats_no_htf": true,
+    "asof_universe_positive": false,
+    "folds_positive": false,
+    "all": false
+   }
+  },
+  "1w>1d ob|idm=none|sweep=1|limit|stop=poi|liq": {
+   "is": {
+    "n": 29,
+    "coins": 14,
+    "hit": 0.379,
+    "gross": 0.227,
+    "fees": 0.004,
+    "funding": -0.028,
+    "net": 0.195,
+    "net_taker": 0.192,
+    "se": 0.35,
+    "z": 0.56,
+    "p": 0.2887181627883517,
+    "pf": 1.34,
+    "max_dd_r": 5.97,
+    "hold_days": 72.7,
+    "per_coin_year": 0.37,
+    "long_share": 0.69,
+    "ci95": [
+     -0.433,
+     0.887
+    ],
+    "by_coin": {
+     "1000PEPEUSDT": {
+      "n": 1,
+      "net": 1.977,
+      "sum": 1.98
+     },
+     "AAVEUSDT": {
+      "n": 1,
+      "net": -0.984,
+      "sum": -0.98
+     },
+     "ADAUSDT": {
+      "n": 1,
+      "net": -1.01,
+      "sum": -1.01
+     },
+     "AVAXUSDT": {
+      "n": 3,
+      "net": -0.338,
+      "sum": -1.01
+     },
+     "BNBUSDT": {
+      "n": 1,
+      "net": -0.84,
+      "sum": -0.84
+     },
+     "DASHUSDT": {
+      "n": 2,
+      "net": -0.989,
+      "sum": -1.98
+     },
+     "DOGEUSDT": {
+      "n": 2,
+      "net": 1.56,
+      "sum": 3.12
+     },
+     "FILUSDT": {
+      "n": 1,
+      "net": 1.947,
+      "sum": 1.95
+     },
+     "LINKUSDT": {
+      "n": 1,
+      "net": -0.995,
+      "sum": -1.0
+     },
+     "LTCUSDT": {
+      "n": 4,
+      "net": 1.235,
+      "sum": 4.94
+     },
+     "NEARUSDT": {
+      "n": 3,
+      "net": 0.323,
+      "sum": 0.97
+     },
+     "SOLUSDT": {
+      "n": 1,
+      "net": -1.003,
+      "sum": -1.0
+     },
+     "XRPUSDT": {
+      "n": 5,
+      "net": 0.69,
+      "sum": 3.45
+     },
+     "ZECUSDT": {
+      "n": 3,
+      "net": -0.976,
+      "sum": -2.93
+     }
+    },
+    "coins_positive": "6/14",
+    "without_best_coin": {
+     "coin": "LTCUSDT",
+     "n": 25,
+     "net": 0.028
+    },
+    "top2_share_of_total": 1.48
+   },
+   "oos": {
+    "n": 18,
+    "coins": 16,
+    "hit": 0.278,
+    "gross": 0.03,
+    "fees": 0.005,
+    "funding": 0.007,
+    "net": 0.033,
+    "net_taker": 0.029,
+    "se": 0.621,
+    "z": 0.05,
+    "p": 0.4791228911864555,
+    "pf": 1.05,
+    "max_dd_r": 7.05,
+    "hold_days": 43.4,
+    "per_coin_year": 0.44,
+    "long_share": 0.67,
+    "ci95": [
+     -0.812,
+     1.643
+    ],
+    "by_coin": {
+     "1000PEPEUSDT": {
+      "n": 1,
+      "net": -1.009,
+      "sum": -1.01
+     },
+     "AAVEUSDT": {
+      "n": 1,
+      "net": 0.984,
+      "sum": 0.98
+     },
+     "ADAUSDT": {
+      "n": 1,
+      "net": -0.975,
+      "sum": -0.98
+     },
+     "BCHUSDT": {
+      "n": 1,
+      "net": -0.989,
+      "sum": -0.99
+     },
+     "BNBUSDT": {
+      "n": 1,
+      "net": -1.012,
+      "sum": -1.01
+     },
+     "BTCUSDT": {
+      "n": 1,
+      "net": -0.912,
+      "sum": -0.91
+     },
+     "DASHUSDT": {
+      "n": 1,
+      "net": -1.005,
+      "sum": -1.01
+     },
+     "ETHUSDT": {
+      "n": 2,
+      "net": -1.006,
+      "sum": -2.01
+     },
+     "FILUSDT": {
+      "n": 2,
+      "net": 3.62,
+      "sum": 7.24
+     },
+     "LINKUSDT": {
+      "n": 1,
+      "net": 0.952,
+      "sum": 0.95
+     },
+     "LTCUSDT": {
+      "n": 1,
+      "net": 2.406,
+      "sum": 2.41
+     },
+     "NEARUSDT": {
+      "n": 1,
+      "net": -0.971,
+      "sum": -0.97
+     },
+     "SUIUSDT": {
+      "n": 1,
+      "net": -1.007,
+      "sum": -1.01
+     },
+     "UNIUSDT": {
+      "n": 1,
+      "net": 0.902,
+      "sum": 0.9
+     },
+     "WLDUSDT": {
+      "n": 1,
+      "net": -1.0,
+      "sum": -1.0
+     },
+     "XRPUSDT": {
+      "n": 1,
+      "net": -1.007,
+      "sum": -1.01
+     }
+    },
+    "coins_positive": "5/16",
+    "without_best_coin": {
+     "coin": "FILUSDT",
+     "n": 16,
+     "net": -0.416
+    },
+    "top2_share_of_total": 16.49,
+    "p_holm": 1.0
+   },
+   "no_htf_oos": {
+    "n": 45,
+    "coins": 20,
+    "hit": 0.267,
+    "gross": -0.216,
+    "fees": 0.004,
+    "funding": 0.013,
+    "net": -0.207,
+    "net_taker": -0.21,
+    "se": 0.285,
+    "z": -0.73,
+    "p": 0.7665735825408823,
+    "pf": 0.72,
+    "max_dd_r": 12.9,
+    "hold_days": 47.2,
+    "per_coin_year": 1.1,
+    "long_share": 0.51
+   },
+   "asof_universe_oos": {
+    "n": 19,
+    "coins": 16,
+    "hit": 0.211,
+    "gross": -0.129,
+    "fees": 0.005,
+    "funding": 0.015,
+    "net": -0.119,
+    "net_taker": -0.123,
+    "se": 0.598,
+    "z": -0.2,
+    "p": 0.578951541919539,
+    "pf": 0.85,
+    "max_dd_r": 7.97,
+    "hold_days": 40.0,
+    "per_coin_year": 0.47,
+    "long_share": 0.47,
+    "ci95": [
+     -0.978,
+     1.423
+    ],
+    "by_coin": {
+     "1000SHIBUSDT": {
+      "n": 1,
+      "net": -0.907,
+      "sum": -0.91
+     },
+     "ADAUSDT": {
+      "n": 1,
+      "net": -0.975,
+      "sum": -0.98
+     },
+     "BCHUSDT": {
+      "n": 1,
+      "net": -0.989,
+      "sum": -0.99
+     },
+     "BNBUSDT": {
+      "n": 1,
+      "net": -1.012,
+      "sum": -1.01
+     },
+     "BTCUSDT": {
+      "n": 1,
+      "net": -0.912,
+      "sum": -0.91
+     },
+     "DOTUSDT": {
+      "n": 1,
+      "net": -0.997,
+      "sum": -1.0
+     },
+     "ETCUSDT": {
+      "n": 2,
+      "net": -0.984,
+      "sum": -1.97
+     },
+     "ETHUSDT": {
+      "n": 2,
+      "net": -1.006,
+      "sum": -2.01
+     },
+     "FILUSDT": {
+      "n": 2,
+      "net": 3.62,
+      "sum": 7.24
+     },
+     "GALAUSDT": {
+      "n": 1,
+      "net": -1.011,
+      "sum": -1.01
+     },
+     "LINKUSDT": {
+      "n": 1,
+      "net": 0.952,
+      "sum": 0.95
+     },
+     "LTCUSDT": {
+      "n": 1,
+      "net": 2.406,
+      "sum": 2.41
+     },
+     "NEARUSDT": {
+      "n": 1,
+      "net": -0.971,
+      "sum": -0.97
+     },
+     "TRBUSDT": {
+      "n": 1,
+      "net": -1.003,
+      "sum": -1.0
+     },
+     "UNIUSDT": {
+      "n": 1,
+      "net": 0.902,
+      "sum": 0.9
+     },
+     "XRPUSDT": {
+      "n": 1,
+      "net": -1.007,
+      "sum": -1.01
+     }
+    },
+    "coins_positive": "4/16",
+    "without_best_coin": {
+     "coin": "FILUSDT",
+     "n": 17,
+     "net": -0.559
+    },
+    "top2_share_of_total": null
+   },
+   "random_oos_gross": {
+    "mean": 0.181,
+    "sd_across_seeds": 0.399,
+    "share_seeds_ge_variant": 0.55
+   },
+   "folds": [
+    {
+     "fold": "2021-01-01",
+     "n": 2,
+     "net": -0.518
+    },
+    {
+     "fold": "2022-01-01",
+     "n": 7,
+     "net": 0.79
+    },
+    {
+     "fold": "2023-01-01",
+     "n": 10,
+     "net": -0.553
+    },
+    {
+     "fold": "2024-01-01",
+     "n": 8,
+     "net": 0.628
+    },
+    {
+     "fold": "2025-01-01",
+     "n": 12,
+     "net": 0.539
+    },
+    {
+     "fold": "2026-01-01",
+     "n": 5,
+     "net": -0.981
+    }
+   ],
+   "passes": {
+    "net_gt_0": true,
+    "holm_p_lt_0.05": false,
+    "ci_above_0": false,
+    "not_one_coin": false,
+    "coins_majority_positive": false,
+    "beats_random": false,
+    "beats_no_htf": true,
+    "asof_universe_positive": false,
+    "folds_positive": false,
+    "all": false
+   }
+  }
+ },
+ "references": {
+  "1d>1h any|idm=none|sweep=0|retest|stop=choch|liq": {
+   "is": {
+    "n": 268,
+    "coins": 20,
+    "hit": 0.321,
+    "gross": -0.093,
+    "fees": 0.06,
+    "funding": -0.002,
+    "net": -0.154,
+    "net_taker": -0.194,
+    "se": 0.107,
+    "z": -1.44,
+    "p": 0.9247152222735682,
+    "pf": 0.79,
+    "max_dd_r": 49.13,
+    "hold_days": 1.2,
+    "per_coin_year": 3.38,
+    "long_share": 0.6
+   },
+   "oos": {
+    "n": 147,
+    "coins": 20,
+    "hit": 0.32,
+    "gross": -0.054,
+    "fees": 0.06,
+    "funding": 0.001,
+    "net": -0.113,
+    "net_taker": -0.152,
+    "se": 0.153,
+    "z": -0.74,
+    "p": 0.7705600440649435,
+    "pf": 0.84,
+    "max_dd_r": 32.72,
+    "hold_days": 1.3,
+    "per_coin_year": 3.6,
+    "long_share": 0.56,
+    "p_holm": 1.0
+   }
+  },
+  "1d>1h NOHTF": {
+   "is": {
+    "n": 7122,
+    "coins": 20,
+    "hit": 0.341,
+    "gross": 0.02,
+    "fees": 0.066,
+    "funding": 0.001,
+    "net": -0.044,
+    "net_taker": -0.086,
+    "se": 0.035,
+    "z": -1.27,
+    "p": 0.8977856246704519,
+    "pf": 0.94,
+    "max_dd_r": 455.35,
+    "hold_days": 1.4,
+    "per_coin_year": 89.74,
+    "long_share": 0.49
+   },
+   "oos": {
+    "n": 3620,
+    "coins": 20,
+    "hit": 0.342,
+    "gross": 0.036,
+    "fees": 0.067,
+    "funding": -0.001,
+    "net": -0.032,
+    "net_taker": -0.076,
+    "se": 0.044,
+    "z": -0.73,
+    "p": 0.7673685693249883,
+    "pf": 0.95,
+    "max_dd_r": 226.05,
+    "hold_days": 1.5,
+    "per_coin_year": 88.74,
+    "long_share": 0.52
+   }
+  },
+  "4h>15m any|idm=none|sweep=0|retest|stop=choch|liq": {
+   "is": {
+    "n": 1573,
+    "coins": 20,
+    "hit": 0.318,
+    "gross": -0.072,
+    "fees": 0.134,
+    "funding": 0.0,
+    "net": -0.206,
+    "net_taker": -0.291,
+    "se": 0.044,
+    "z": -4.73,
+    "p": 0.9999988636703325,
+    "pf": 0.74,
+    "max_dd_r": 333.96,
+    "hold_days": 0.3,
+    "per_coin_year": 19.82,
+    "long_share": 0.54
+   },
+   "oos": {
+    "n": 758,
+    "coins": 20,
+    "hit": 0.309,
+    "gross": -0.098,
+    "fees": 0.128,
+    "funding": 0.002,
+    "net": -0.224,
+    "net_taker": -0.306,
+    "se": 0.063,
+    "z": -3.56,
+    "p": 0.9998141887930915,
+    "pf": 0.72,
+    "max_dd_r": 189.04,
+    "hold_days": 0.3,
+    "per_coin_year": 18.58,
+    "long_share": 0.57,
+    "p_holm": 1.0
+   }
+  },
+  "4h>15m NOHTF": {
+   "is": {
+    "n": 30986,
+    "coins": 20,
+    "hit": 0.328,
+    "gross": -0.011,
+    "fees": 0.139,
+    "funding": 0.001,
+    "net": -0.148,
+    "net_taker": -0.238,
+    "se": 0.016,
+    "z": -9.48,
+    "p": 1.0,
+    "pf": 0.81,
+    "max_dd_r": 4692.51,
+    "hold_days": 0.3,
+    "per_coin_year": 390.42,
+    "long_share": 0.5
+   },
+   "oos": {
+    "n": 15298,
+    "coins": 20,
+    "hit": 0.327,
+    "gross": -0.013,
+    "fees": 0.147,
+    "funding": 0.001,
+    "net": -0.159,
+    "net_taker": -0.254,
+    "se": 0.019,
+    "z": -8.47,
+    "p": 1.0,
+    "pf": 0.8,
+    "max_dd_r": 2547.85,
+    "hold_days": 0.3,
+    "per_coin_year": 375.01,
+    "long_share": 0.5
+   }
+  }
+ },
+ "closest": {
+  "1d>4h any|idm=none|sweep=0|limit|stop=poi|r2+be": {
+   "n": 422,
+   "coins": 20,
+   "hit": 0.351,
+   "gross": 0.156,
+   "fees": 0.022,
+   "funding": 0.001,
+   "net": 0.136,
+   "net_taker": 0.118,
+   "se": 0.064,
+   "z": 2.11,
+   "p": 0.017426498237391248,
+   "pf": 1.29,
+   "max_dd_r": 14.31,
+   "hold_days": 4.2,
+   "per_coin_year": 10.34,
+   "long_share": 0.5,
+   "p_holm": 1.0,
+   "is_net": -0.016,
+   "is_n": 739
+  },
+  "1d>4h any|idm=none|sweep=0|limit|stop=poi|r3": {
+   "n": 385,
+   "coins": 20,
+   "hit": 0.304,
+   "gross": 0.195,
+   "fees": 0.023,
+   "funding": 0.0,
+   "net": 0.172,
+   "net_taker": 0.155,
+   "se": 0.089,
+   "z": 1.93,
+   "p": 0.0265200443795683,
+   "pf": 1.24,
+   "max_dd_r": 27.09,
+   "hold_days": 6.9,
+   "per_coin_year": 9.44,
+   "long_share": 0.5,
+   "p_holm": 1.0,
+   "is_net": -0.02,
+   "is_n": 688
+  },
+  "1d>4h ob|idm=none|sweep=0|limit|stop=poi|r3": {
+   "n": 251,
+   "coins": 20,
+   "hit": 0.323,
+   "gross": 0.236,
+   "fees": 0.011,
+   "funding": -0.001,
+   "net": 0.224,
+   "net_taker": 0.215,
+   "se": 0.118,
+   "z": 1.9,
+   "p": 0.028675948048290614,
+   "pf": 1.33,
+   "max_dd_r": 25.35,
+   "hold_days": 10.2,
+   "per_coin_year": 6.15,
+   "long_share": 0.51,
+   "p_holm": 1.0,
+   "is_net": -0.185,
+   "is_n": 448
+  },
+  "1d>4h breaker|idm=none|sweep=0|limit|stop=poi|liq": {
+   "n": 53,
+   "coins": 19,
+   "hit": 0.434,
+   "gross": 0.395,
+   "fees": 0.011,
+   "funding": -0.004,
+   "net": 0.38,
+   "net_taker": 0.371,
+   "se": 0.223,
+   "z": 1.71,
+   "p": 0.044036053954722515,
+   "pf": 1.66,
+   "max_dd_r": 10.19,
+   "hold_days": 10.8,
+   "per_coin_year": 1.3,
+   "long_share": 0.58,
+   "p_holm": 1.0,
+   "is_net": 0.062,
+   "is_n": 80
+  },
+  "1d>4h any|idm=none|sweep=1|limit|stop=poi|r2+be": {
+   "n": 251,
+   "coins": 20,
+   "hit": 0.363,
+   "gross": 0.159,
+   "fees": 0.02,
+   "funding": 0.0,
+   "net": 0.14,
+   "net_taker": 0.122,
+   "se": 0.088,
+   "z": 1.59,
+   "p": 0.05560888154656527,
+   "pf": 1.28,
+   "max_dd_r": 11.48,
+   "hold_days": 4.3,
+   "per_coin_year": 6.15,
+   "long_share": 0.51,
+   "p_holm": 1.0,
+   "is_net": -0.107,
+   "is_n": 425
+  },
+  "1d>4h any|idm=none|sweep=1|limit|stop=poi|liq": {
+   "n": 229,
+   "coins": 20,
+   "hit": 0.376,
+   "gross": 0.258,
+   "fees": 0.027,
+   "funding": -0.002,
+   "net": 0.229,
+   "net_taker": 0.209,
+   "se": 0.144,
+   "z": 1.59,
+   "p": 0.0560457016299751,
+   "pf": 1.36,
+   "max_dd_r": 14.49,
+   "hold_days": 5.5,
+   "per_coin_year": 5.61,
+   "long_share": 0.51,
+   "p_holm": 1.0,
+   "is_net": -0.181,
+   "is_n": 379
+  },
+  "1d>4h any|idm=none|sweep=1|limit|stop=poi|r3": {
+   "n": 233,
+   "coins": 20,
+   "hit": 0.313,
+   "gross": 0.23,
+   "fees": 0.02,
+   "funding": -0.001,
+   "net": 0.209,
+   "net_taker": 0.192,
+   "se": 0.134,
+   "z": 1.56,
+   "p": 0.05986361740034751,
+   "pf": 1.3,
+   "max_dd_r": 20.42,
+   "hold_days": 7.0,
+   "per_coin_year": 5.71,
+   "long_share": 0.5,
+   "p_holm": 1.0,
+   "is_net": -0.041,
+   "is_n": 407
+  },
+  "1d>4h any|idm=none|sweep=0|limit|stop=poi|r2": {
+   "n": 405,
+   "coins": 20,
+   "hit": 0.38,
+   "gross": 0.135,
+   "fees": 0.021,
+   "funding": 0.001,
+   "net": 0.115,
+   "net_taker": 0.096,
+   "se": 0.075,
+   "z": 1.53,
+   "p": 0.06306714403084018,
+   "pf": 1.18,
+   "max_dd_r": 16.18,
+   "hold_days": 5.2,
+   "per_coin_year": 9.93,
+   "long_share": 0.5,
+   "p_holm": 1.0,
+   "is_net": -0.056,
+   "is_n": 719
+  },
+  "1d>4h ob|idm=none|sweep=0|limit|stop=poi|r2+be": {
+   "n": 276,
+   "coins": 20,
+   "hit": 0.359,
+   "gross": 0.134,
+   "fees": 0.011,
+   "funding": 0.001,
+   "net": 0.123,
+   "net_taker": 0.115,
+   "se": 0.084,
+   "z": 1.47,
+   "p": 0.07045162729268434,
+   "pf": 1.26,
+   "max_dd_r": 19.75,
+   "hold_days": 6.1,
+   "per_coin_year": 6.77,
+   "long_share": 0.51,
+   "p_holm": 1.0,
+   "is_net": -0.14,
+   "is_n": 474
+  },
+  "1d>4h ob|idm=none|sweep=1|close|stop=poi|r2+be": {
+   "n": 36,
+   "coins": 17,
+   "hit": 0.528,
+   "gross": 0.385,
+   "fees": 0.011,
+   "funding": -0.007,
+   "net": 0.367,
+   "net_taker": 0.366,
+   "se": 0.269,
+   "z": 1.37,
+   "p": 0.0859997042853553,
+   "pf": 1.92,
+   "max_dd_r": 5.14,
+   "hold_days": 19.3,
+   "per_coin_year": 0.88,
+   "long_share": 0.53,
+   "p_holm": 1.0,
+   "is_net": -0.29,
+   "is_n": 41
+  },
+  "1d>4h breaker|idm=none|sweep=0|limit|stop=poi|r2": {
+   "n": 58,
+   "coins": 19,
+   "hit": 0.431,
+   "gross": 0.262,
+   "fees": 0.01,
+   "funding": -0.001,
+   "net": 0.251,
+   "net_taker": 0.241,
+   "se": 0.184,
+   "z": 1.37,
+   "p": 0.08605011220236365,
+   "pf": 1.43,
+   "max_dd_r": 8.15,
+   "hold_days": 6.9,
+   "per_coin_year": 1.42,
+   "long_share": 0.55,
+   "p_holm": 1.0,
+   "is_net": 0.005,
+   "is_n": 95
+  },
+  "1d>4h any|idm=none|sweep=1|limit|stop=poi|r2": {
+   "n": 244,
+   "coins": 20,
+   "hit": 0.381,
+   "gross": 0.14,
+   "fees": 0.019,
+   "funding": -0.0,
+   "net": 0.121,
+   "net_taker": 0.103,
+   "se": 0.093,
+   "z": 1.31,
+   "p": 0.09539447666548778,
+   "pf": 1.19,
+   "max_dd_r": 14.63,
+   "hold_days": 5.3,
+   "per_coin_year": 5.98,
+   "long_share": 0.51,
+   "p_holm": 1.0,
+   "is_net": -0.146,
+   "is_n": 419
+  },
+  "1d>4h ob|idm=none|sweep=1|limit|stop=poi|r3": {
+   "n": 154,
+   "coins": 20,
+   "hit": 0.312,
+   "gross": 0.212,
+   "fees": 0.011,
+   "funding": -0.004,
+   "net": 0.197,
+   "net_taker": 0.188,
+   "se": 0.154,
+   "z": 1.27,
+   "p": 0.10126869735029029,
+   "pf": 1.28,
+   "max_dd_r": 14.55,
+   "hold_days": 9.5,
+   "per_coin_year": 3.78,
+   "long_share": 0.53,
+   "p_holm": 1.0,
+   "is_net": -0.207,
+   "is_n": 267
+  },
+  "1d>4h any|idm=idm|sweep=1|limit|stop=poi|liq": {
+   "n": 145,
+   "coins": 20,
+   "hit": 0.352,
+   "gross": 0.292,
+   "fees": 0.025,
+   "funding": -0.004,
+   "net": 0.263,
+   "net_taker": 0.245,
+   "se": 0.209,
+   "z": 1.26,
+   "p": 0.10454403739227584,
+   "pf": 1.4,
+   "max_dd_r": 19.85,
+   "hold_days": 6.0,
+   "per_coin_year": 3.55,
+   "long_share": 0.5,
+   "p_holm": 1.0,
+   "is_net": -0.134,
+   "is_n": 226
+  },
+  "1d>4h any|idm=none|sweep=0|limit|stop=poi|liq": {
+   "n": 382,
+   "coins": 20,
+   "hit": 0.361,
+   "gross": 0.165,
+   "fees": 0.028,
+   "funding": 0.0,
+   "net": 0.138,
+   "net_taker": 0.118,
+   "se": 0.11,
+   "z": 1.25,
+   "p": 0.10581967863396052,
+   "pf": 1.21,
+   "max_dd_r": 16.53,
+   "hold_days": 5.4,
+   "per_coin_year": 9.36,
+   "long_share": 0.5,
+   "p_holm": 1.0,
+   "is_net": -0.053,
+   "is_n": 662
+  }
+ },
+ "any_pass": false,
+ "elapsed_s": 13
+}
