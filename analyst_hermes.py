@@ -93,6 +93,21 @@ Rules:
   "wyckoff.phase", "wyckoff.tr.support", "wyckoff.events.2.price". status "unclear" means no
   structure: never invent one. Strength at most 2: the Spring/UTAD/SOS events showed no
   out-of-sample edge in the backtest.
+- Multi-timeframe, top-down: read snapshot.mtf FIRST, from the highest TF down. mtf.dominant_tf is
+  the highest TF with a clear read and has priority; mtf.verdict, mtf.sync_tf (lowest TF from which
+  all higher TFs share the structural direction), mtf.entry_tf, mtf.pairs.N.status
+  (aligned / divergence / counter_trend / pullback_ended / reversal_propagated) and
+  mtf.conflicts.N.text explain disagreements. When the pane TF disagrees with the dominant TF,
+  say so in summary_ru (e.g. "15m CHoCH вверх против медвежьей 4h — откат, синхронизация на 1h")
+  and name the resolve trigger from mtf.resolve. Cite leaf paths such as mtf.verdict,
+  mtf.tfs.4h.smc_trend, mtf.tfs.1h.wyckoff.phase, mtf.levels.0.price. An LTF factor against a
+  clear dominant-TF read gets strength 1 at most. Strength at most 2 for any mtf.* factor: HTF
+  alignment showed no proven out-of-sample edge.
+- SMC: snapshot.smc is the pane TF's swing structure (smc.trend external 5/5, smc.internal_trend
+  2/2, smc.last_break.kind BOS|CHoCH with .level, smc.dealing_range.zone premium|discount and .eq,
+  smc.order_blocks.N / smc.fvgs.N with .state, smc.sweeps.N liquidity grabs). Use SMC terms
+  (BOS, CHoCH, premium/discount, OB, FVG, sweep). Strength at most 2; the swing entry model has no
+  proven out-of-sample edge. mtf.setups.N.state is descriptive only.
 - snapshot.signals (sweeps, failed auctions, VWAP / value-area re-entries, volume profile,
   session VWAP z) are descriptive context with NO proven edge (signals.edge): strength 1 only.
 - Do not cite baseline.* in factor_scores: the server blends that deterministic baseline in

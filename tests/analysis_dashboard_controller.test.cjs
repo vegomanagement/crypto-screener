@@ -77,11 +77,11 @@ test('follows the active pane and drops a late positioning response for the prev
   const root = fakeRoot();
   const dash = D.mount(root, { analyst, getFunding: () => null, fetch, IntersectionObserver: IO, pageVisible: () => true, ...timers });
   made[0].fire(true);
-  const btc = pending.filter(p => /BTC/.test(p.url) && !/structure/.test(p.url));
+  const btc = pending.filter(p => /BTC/.test(p.url) && !/structure|mtf/.test(p.url));
   analyst.st.active = { id: 1, exchange: 'bybit', symbol: 'ETHUSDT', interval: '60' };
   analyst.notify();
   assert.equal(dash._state.positioning, null, 'old data cleared on pane switch');
-  const eth = pending.filter(p => /ETH/.test(p.url) && !/structure/.test(p.url));
+  const eth = pending.filter(p => /ETH/.test(p.url) && !/structure|mtf/.test(p.url));
   assert.equal(eth.length, 2);
   assert.equal(pending.filter(p => /structure\?exchange=bybit&symbol=ETHUSDT&interval=60/.test(p.url)).length, 1, 'structure follows the pane');
   assert.match(eth[0].url, /exchange=bybit&symbol=ETHUSDT&period=1h/);

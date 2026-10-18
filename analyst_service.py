@@ -75,6 +75,8 @@ def apply_split(analysis, snapshot):
     """Attach the server-computed split (and the agent cross-check) to a validated analysis."""
     split = compute_split(analysis.get("factor_scores") or [], snapshot.get("baseline"))
     clash = disagreement(analysis.get("agent_bias"), split)
+    from mtf_block import counter_trend_warning
+    split["htf_warning"] = counter_trend_warning(snapshot.get("mtf"), split["bias"])
     return {**analysis, "bias": split["bias"], "long_pct": split["long_pct"],
             "short_pct": split["short_pct"], "split": split, "disagreement": clash}
 
@@ -145,6 +147,8 @@ class AnalystService:
         analysis = apply_split(hermes["analysis"] if status == "ok" else baseline_analysis(snap), snap)
         if analysis["disagreement"]:
             warnings.append("disagreement: " + analysis["disagreement"]["text"])
+        if analysis["split"].get("htf_warning"):
+            warnings.append(analysis["split"]["htf_warning"])
         source = "hermes" if status == "ok" else "baseline"
         if snap.get("baseline") is None and source == "baseline":
             warnings.append("Deterministic baseline unavailable: " +

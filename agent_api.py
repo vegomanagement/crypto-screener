@@ -4,6 +4,8 @@ POST /api/agent/analysis {exchange, symbol, interval[, force][, ema_periods]} �
      ema_periods: the active chart's EMA ribbon periods, 1-3 integers 2..400 (default 7/14/21)
 GET  /api/agent/stats[?exchange&symbol&interval]               → calibration stats
 GET  /api/agent/structure?exchange&symbol&interval → Wyckoff + order-flow context (no LLM, 30 s cache)
+GET  /api/agent/mtf?exchange&symbol&interval[&ema=7,14,21] → multi-timeframe ladder (no LLM;
+     cached per venue/symbol/tf/last closed bar)
 The browser never talks to Hermes; the gateway URL/key stay server-side.
 """
 from __future__ import annotations
@@ -196,6 +198,32 @@ def register_agent_routes(app, *, market=None, confluence=None, funding=None, se
             structure_cache.clear()
         structure_cache[key] = (now, payload)
         return jsonify(payload), 200
+
+    mtf_state = {'svc': None}
+
+    @blueprint.get('/api/agent/mtf')
+    def mtf_route():
+        """TF ladder, reconciliation, SMC sync and merged levels; computed only when requested."""
+        exchange, symbol = request.args.get('exchange'), request.args.get('symbol')
+        interval = request.args.get('interval')
+        if not valid_identity(exchange, symbol) or not valid_interval(interval):
+            return jsonify({'error': 'invalid exchange, symbol or interval'}), 400
+        from analyst import normalize_ema_periods
+        try:
+            raw = request.args.get('ema')
+            periods = normalize_ema_periods([int(x) for x in raw.split(',')] if raw else None)
+        except ValueError as exc:
+            return jsonify({'error': f'invalid ema: {exc}'}), 400
+        import mtf
+        if mtf_state['svc'] is None:
+            mtf_state['svc'] = (mtf.MtfService(structure_chart) if structure_chart
+                                else mtf.default_service())
+        try:
+            block = mtf.build_block(mtf_state['svc'], exchange, symbol, interval, periods)
+        except Exception as exc:  # noqa: BLE001
+            log.warning("mtf unavailable for %s %s %s: %s", exchange, symbol, interval, exc)
+            return jsonify({'error': 'multi-timeframe data unavailable', 'detail': str(exc)[:160]}), 502
+        return jsonify({'exchange': exchange, 'symbol': symbol, 'interval': interval, 'mtf': block}), 200
 
     app.extensions['agent'] = {'path': path, 'get_service': get_service, 'get_store': get_store}
     app.register_blueprint(blueprint)
