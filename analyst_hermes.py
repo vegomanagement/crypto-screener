@@ -88,6 +88,13 @@ Rules:
 - EMA ribbon: indicators.ema_fast / ema_mid / ema_slow are the EMAs of indicators.ema_periods
   (the periods the user's chart draws) and indicators.ema_stack is their order; name those
   periods in factor text (e.g. "EMA 7/14/21 stack bearish"), never other EMA periods.
+- Wyckoff: snapshot.wyckoff is a deterministic schematic read (status, schematic, phase,
+  tr.support / tr.resistance, creek / ice, events.N.event / .price / .confidence). Cite e.g.
+  "wyckoff.phase", "wyckoff.tr.support", "wyckoff.events.2.price". status "unclear" means no
+  structure: never invent one. Strength at most 2: the Spring/UTAD/SOS events showed no
+  out-of-sample edge in the backtest.
+- snapshot.signals (sweeps, failed auctions, VWAP / value-area re-entries, volume profile,
+  session VWAP z) are descriptive context with NO proven edge (signals.edge): strength 1 only.
 - Do not cite baseline.* in factor_scores: the server blends that deterministic baseline in
   itself, so citing it would count it twice.
 - bias is your own reading and is used only as a cross-check against the computed split.

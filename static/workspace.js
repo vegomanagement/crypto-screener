@@ -990,6 +990,7 @@
       if (state.fvg) this.drawZones(context, plotWidth, plotHeight);
       this.drawBands(context, plotWidth, plotHeight);
       this.drawGroupedOverlays(context, plotWidth, plotHeight);
+      if (this.wyckoff) this.drawWyckoff(context, plotWidth);
       if (state.panes[this.id].footprint) this.drawFootprint(context, plotWidth, plotHeight);
       this.orderflow?.draw(context, plotWidth, plotHeight);
       this.drawings?.draw(context, plotWidth, plotHeight);
@@ -1333,6 +1334,13 @@
       el.textContent = model ? model.text : this.fundingData?.error ? 'F n/a' : '';
       el.title = model ? model.title : this.fundingData?.detail || this.fundingData?.error || '';
       el.dataset.sign = model ? model.sign : 'none';
+    }
+    // Wyckoff overlay (static/indicators/wyckoff.js), driven by the analysis dashboard toggle.
+    setWyckoff(model) { this.wyckoff = model || null; this.scheduleDraw(); }
+    drawWyckoff(context, plotWidth) {
+      const c = state.panes[this.id], api = window.WorkspaceWyckoff;
+      if (!api || !c || this.wyckoff.key !== `${c.exchange}:${c.symbol}:${c.interval}`) return;
+      api.draw(context, { x: t => this.edgeCoordinate(t), xc: t => this.edgeCoordinateCenter(t), y: p => this.series.priceToCoordinate(p), plotWidth }, this.wyckoff);
     }
     // Hermes analyst levels (static/analyst-panel.js): temporary dashed price lines, never stored.
     setAnalystLines(rows) {
@@ -2055,7 +2063,8 @@
       fetch: (url, options) => fetch(url, options),
       IntersectionObserver: window.IntersectionObserver || null,
       pageVisible: () => document.visibilityState === 'visible',
-      scrollToCharts: () => window.scrollTo({ top: 0, behavior: 'smooth' })
+      scrollToCharts: () => window.scrollTo({ top: 0, behavior: 'smooth' }),
+      setWyckoffOverlay: model => panes.forEach((pane, id) => pane.setWyckoff(model && id === state.active ? model : null))
     });
     // Wheel over a chart zooms it and never scrolls the (now scrollable) page.
     disposeWheelGuard = api.installWheelGuard(grid);

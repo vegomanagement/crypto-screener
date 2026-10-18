@@ -5,13 +5,13 @@
  * UMD: window.AnalysisDashboard / module.exports.
  */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory(require('./analysis-dashboard-model.js'), require('./analysis-dashboard-render.js'));
-  else root.AnalysisDashboard = factory(root.AnalysisDashboardModel, root.AnalysisDashboardRender);
-})(typeof globalThis !== 'undefined' ? globalThis : this, function (M, R) {
+  if (typeof module === 'object' && module.exports) module.exports = factory(require('./analysis-dashboard-model.js'), require('./analysis-dashboard-render.js'), require('./analysis-wyckoff.js'), require('./indicators/wyckoff.js'));
+  else root.AnalysisDashboard = factory(root.AnalysisDashboardModel, root.AnalysisDashboardRender, root.AnalysisWyckoff, root.WorkspaceWyckoff);
+})(typeof globalThis !== 'undefined' ? globalThis : this, function (M, R, W, WO) {
   'use strict';
   const { A } = M;
   const POLL_MS = 30000;
-  const SLOTS = ['verdict', 'summary', 'levels', 'factors', 'metrics', 'risks'];
+  const SLOTS = ['verdict', 'summary', 'levels', 'factors', 'metrics', 'wyckoff', 'signals', 'risks'];
 
   /** True when a wheel event at `target` lands on a chart (must zoom it, never scroll the page). */
   function isChartWheelTarget(target) {
@@ -28,13 +28,14 @@
   /**
    * deps: { analyst (WorkspaceAnalyst controller), getFunding(): pane funding cache | null,
    *         fetch, now(), IntersectionObserver (ctor or null → always visible),
-   *         pageVisible(): bool, setInterval, clearInterval }
+   *         pageVisible(): bool, setInterval, clearInterval,
+   *         setWyckoffOverlay(model | null): draw/clear the Wyckoff overlay on the active pane }
    */
   function mount(el, deps) {
     const now = deps.now || (() => Date.now());
     const setI = deps.setInterval || setInterval, clearI = deps.clearInterval || clearInterval;
     const st = { visible: !deps.IntersectionObserver, posKey: '', positioning: null, whales: null, seq: 0, poll: null,
-      funding: null, html: {}, alive: true, renders: 0 };
+      funding: null, html: {}, alive: true, renders: 0, structure: null, structSeq: 0, structKey: '', overlay: false, overlaySig: '' };
     el.innerHTML = `<div class="ad-sticky" data-slot="header" role="status"></div><div class="ad-body">${SLOTS.map(s => `<div class="ad-slot" data-slot="${s}"></div>`).join('')}</div>`;
     const slot = name => el.querySelector(`[data-slot="${name}"]`);
 
@@ -58,7 +59,35 @@
       put('levels', R.levelsHtml(view, view.active && view.active.precision));
       put('factors', R.factorsHtml(view));
       put('metrics', R.metricsHtml(input(view)));
+      if (W) {
+        const blocks = W.pickBlocks(st.structure, view.result, view.activeKey, view.resultKey), opts = { precision: view.active && view.active.precision, overlay: st.overlay };
+        put('wyckoff', W.wyckoffHtml(blocks, opts));
+        put('signals', W.signalsHtml(blocks, opts));
+        syncOverlay(blocks);
+      }
       put('risks', R.risksHtml(view));
+    }
+    function syncOverlay(blocks) {
+      if (!deps.setWyckoffOverlay || !WO) return;
+      const model = st.overlay && blocks && blocks.wyckoff ? WO.overlayModel(blocks.wyckoff, blocks.key) : null;
+      const sig = model ? JSON.stringify([model.key, model.start, model.end, model.top, model.bottom, model.marks.length]) : '';
+      if (sig === st.overlaySig) return;
+      st.overlaySig = sig; deps.setWyckoffOverlay(model);
+    }
+    const activeKey = () => { const a = deps.analyst.view().active; return a ? `${a.exchange}:${a.symbol}:${a.interval}` : ''; };
+    async function refreshStructure() {
+      if (!st.alive || !W) return;
+      const a = deps.analyst.view().active, key = activeKey(), my = ++st.structSeq;
+      if (!a) return;
+      st.structKey = key;
+      const q = new URLSearchParams({ exchange: a.exchange, symbol: a.symbol, interval: a.interval });
+      let out;
+      try {
+        const r = await deps.fetch(`/api/agent/structure?${q}`), body = await r.json().catch(() => ({}));
+        out = r.ok ? { key, body } : { key, error: body.error || `HTTP ${r.status}` };
+      } catch (err) { out = { key, error: `request failed: ${err && err.message || err}` }; }
+      if (!st.alive || my !== st.structSeq || key !== activeKey()) return; // pane switched in flight
+      st.structure = out; render();
     }
 
     async function refreshPositioning() {
@@ -80,18 +109,19 @@
       st.posKey = key; st.positioning = null; st.whales = null; st.seq += 1;
       return true;
     }
-    function startPoll() { if (st.poll === null) st.poll = setI(refreshPositioning, POLL_MS); }
+    function startPoll() { if (st.poll === null) st.poll = setI(() => { refreshPositioning(); refreshStructure(); }, POLL_MS); }
     function stopPoll() { if (st.poll !== null) { clearI(st.poll); st.poll = null; } }
 
     function setVisible(on) {
       if (!st.alive || on === st.visible) return;
       st.visible = on;
-      if (on) { syncPosKey(); st.funding = deps.getFunding(); render(); refreshPositioning(); startPoll(); } else stopPoll();
+      if (on) { syncPosKey(); st.funding = deps.getFunding(); render(); refreshPositioning(); refreshStructure(); startPoll(); } else stopPoll();
     }
     const onAnalyst = () => {
       const changed = syncPosKey();
       if (!st.visible) return;
       if (changed) { st.funding = deps.getFunding(); refreshPositioning(); }
+      if (st.structKey !== activeKey()) { st.structure = null; refreshStructure(); }
       render();
     };
     const unsubscribe = deps.analyst.subscribe(onAnalyst);
@@ -109,6 +139,7 @@
       const act = event.target && event.target.dataset && event.target.dataset.act;
       if (act === 'auto') deps.analyst.setAuto(event.target.checked);
       else if (act === 'lines') deps.analyst.setLines(event.target.checked);
+      else if (act === 'wyckoff-overlay') { st.overlay = !!event.target.checked; st.html.wyckoff = null; render(); }
     }
     el.addEventListener('click', onClick);
     el.addEventListener('change', onChange);
@@ -119,7 +150,7 @@
       // intersecting, so require it to be 24 px into the viewport before rendering/polling.
       io = new deps.IntersectionObserver(entries => entries.forEach(e => setVisible(e.isIntersecting)), { rootMargin: '0px 0px -24px 0px' });
       io.observe(el);
-    } else { syncPosKey(); st.funding = deps.getFunding(); render(); refreshPositioning(); startPoll(); }
+    } else { syncPosKey(); st.funding = deps.getFunding(); render(); refreshPositioning(); refreshStructure(); startPoll(); }
 
     /** Called by the workspace's existing 1 s funding tick: no timer of our own. */
     function tick() {
@@ -133,12 +164,13 @@
 
     function destroy() {
       if (!st.alive) return;
-      st.alive = false; st.seq += 1; stopPoll(); unsubscribe();
+      st.alive = false; st.seq += 1; st.structSeq += 1; stopPoll(); unsubscribe();
+      if (deps.setWyckoffOverlay && st.overlaySig) deps.setWyckoffOverlay(null);
       if (io) { io.disconnect(); io = null; }
       el.removeEventListener('click', onClick);
       el.removeEventListener('change', onChange);
     }
-    return { render, tick, destroy, setVisible, refreshPositioning, _state: st,
+    return { render, tick, destroy, setVisible, refreshPositioning, refreshStructure, _state: st,
       debug: () => ({ visible: st.visible, polling: st.poll !== null, observer: !!io, renders: st.renders, alive: st.alive }) };
   }
 

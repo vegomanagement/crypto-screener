@@ -1,0 +1,19 @@
+checked at 2026-10-18T08:16:08+00:00 — /api/agent/structure on :5101 vs fapi.binance.com klines fetched at the same moment
+
+BTCUSDT 1h: structure distribution phase A conf 0.78 TR 80780.0–82900.5
+  BC      82900.5 = venue high (h 82900.50 l 82154.30 c 82598.70); rv api 2.45 venue 2.45
+  AR      80780.0 = venue low (h 82092.10 l 80780.00 c 81185.30); rv api 4.25 venue 4.25
+
+BTCUSDT 15m: structure accumulation phase C conf 0.77 TR 80780.0–82092.1
+  PS      81214.2 = venue low (h 81571.40 l 81214.20 c 81567.60); rv api 1.57 venue 1.57
+  SC      80780.0 = venue low (h 81124.00 l 80780.00 c 80871.30); rv api 2.33 venue 2.33
+  AR      82092.1 = venue high (h 82092.10 l 80860.00 c 81502.90); rv api 5.03 venue 5.03
+  ST      80968.0 = venue low (h 81455.50 l 80968.00 c 81083.80); rv api 0.81 venue 0.81
+  Spring  80751.0 = venue low (h 81210.60 l 80751.00 c 81089.80); rv api 9.23 venue 9.23
+  Test    80982.1 = venue low (h 81271.00 l 80982.10 c 81099.50); rv api 2.3 venue 2.30
+
+ETHUSDT 4h: structure accumulation phase B conf 0.79 TR 2313.39–2493.48
+  PS      2407.0 = venue low (h 2513.40 l 2407.00 c 2508.01); rv api 3.99 venue 3.99
+  SC      2313.39 = venue low (h 2428.68 l 2313.39 c 2358.47); rv api 2.49 venue 2.49
+  AR      2493.48 = venue high (h 2493.48 l 2443.73 c 2476.41); rv api 0.91 venue 0.91
+  ST      2355.0 = venue low (h 2424.24 l 2355.00 c 2401.58); rv api 0.95 venue 0.95

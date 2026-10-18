@@ -1,0 +1,341 @@
+{
+ "days": [
+  "2026-10-04",
+  "2026-10-05",
+  "2026-10-06",
+  "2026-10-07",
+  "2026-10-08",
+  "2026-10-09",
+  "2026-10-10",
+  "2026-10-11",
+  "2026-10-12",
+  "2026-10-13",
+  "2026-10-14",
+  "2026-10-15",
+  "2026-10-16",
+  "2026-10-17"
+ ],
+ "rules": "Stacked-imbalance sample from Binance aggTrades (scripts/backtest_signals.py footprint).\n\nFull-history per-price footprints are too heavy for a stdlib run (BTC alone is ~1\u20132 M\naggTrades per day), so this scores stacked imbalances on the last ``--days`` UTC days only:\nindicative, not part of the multiple-testing pass/fail. Footprint rules are the app's own\n(footprint.analyze: ask@p vs bid@p\u22121 \u2265 300 %, \u2265 3 consecutive levels).",
+ "cells": {
+  "5m:BTCUSDT:continuation": {
+   "n": 240,
+   "hit_rate_decided": 0.5105,
+   "hit_ci95_decided": [
+    0.4472,
+    0.5735
+   ],
+   "hit_rate_all": 0.5042,
+   "rr_win_rate": 0.4292,
+   "rr_win_ci95": [
+    0.3681,
+    0.4924
+   ],
+   "expectancy_r": -0.9813,
+   "expectancy_ci": [
+    -1.1665,
+    -0.7962
+   ],
+   "mean_fee_r": 1.0542
+  },
+  "5m:BTCUSDT:fade": {
+   "n": 240,
+   "hit_rate_decided": 0.4895,
+   "hit_ci95_decided": [
+    0.4265,
+    0.5528
+   ],
+   "hit_rate_all": 0.4833,
+   "rr_win_rate": 0.3958,
+   "rr_win_ci95": [
+    0.3361,
+    0.4589
+   ],
+   "expectancy_r": -1.0612,
+   "expectancy_ci": [
+    -1.2288,
+    -0.8936
+   ],
+   "mean_fee_r": 1.0542
+  },
+  "5m:ETHUSDT:continuation": {
+   "n": 213,
+   "hit_rate_decided": 0.4608,
+   "hit_ci95_decided": [
+    0.3937,
+    0.5293
+   ],
+   "hit_rate_all": 0.4413,
+   "rr_win_rate": 0.3897,
+   "rr_win_ci95": [
+    0.3267,
+    0.4566
+   ],
+   "expectancy_r": -0.7591,
+   "expectancy_ci": [
+    -0.9368,
+    -0.5813
+   ],
+   "mean_fee_r": 0.7332
+  },
+  "5m:ETHUSDT:fade": {
+   "n": 213,
+   "hit_rate_decided": 0.5392,
+   "hit_ci95_decided": [
+    0.4707,
+    0.6063
+   ],
+   "hit_rate_all": 0.5164,
+   "rr_win_rate": 0.4554,
+   "rr_win_ci95": [
+    0.3899,
+    0.5225
+   ],
+   "expectancy_r": -0.599,
+   "expectancy_ci": [
+    -0.7702,
+    -0.4277
+   ],
+   "mean_fee_r": 0.7332
+  },
+  "5m:SOLUSDT:continuation": {
+   "n": 243,
+   "hit_rate_decided": 0.5125,
+   "hit_ci95_decided": [
+    0.4496,
+    0.575
+   ],
+   "hit_rate_all": 0.5062,
+   "rr_win_rate": 0.3992,
+   "rr_win_ci95": [
+    0.3396,
+    0.4619
+   ],
+   "expectancy_r": -0.5311,
+   "expectancy_ci": [
+    -0.6863,
+    -0.376
+   ],
+   "mean_fee_r": 0.5291
+  },
+  "5m:SOLUSDT:fade": {
+   "n": 243,
+   "hit_rate_decided": 0.4875,
+   "hit_ci95_decided": [
+    0.425,
+    0.5504
+   ],
+   "hit_rate_all": 0.4815,
+   "rr_win_rate": 0.4156,
+   "rr_win_ci95": [
+    0.3555,
+    0.4784
+   ],
+   "expectancy_r": -0.49,
+   "expectancy_ci": [
+    -0.6507,
+    -0.3293
+   ],
+   "mean_fee_r": 0.5291
+  },
+  "5m:ALL:continuation": {
+   "n": 696,
+   "hit_rate_decided": 0.4963,
+   "hit_ci95_decided": [
+    0.4589,
+    0.5338
+   ],
+   "hit_rate_all": 0.4856,
+   "rr_win_rate": 0.4066,
+   "rr_win_ci95": [
+    0.3707,
+    0.4435
+   ],
+   "expectancy_r": -0.7561,
+   "expectancy_ci": [
+    -0.8568,
+    -0.6554
+   ],
+   "mean_fee_r": 0.7727
+  },
+  "5m:ALL:fade": {
+   "n": 696,
+   "hit_rate_decided": 0.5037,
+   "hit_ci95_decided": [
+    0.4662,
+    0.5411
+   ],
+   "hit_rate_all": 0.4928,
+   "rr_win_rate": 0.421,
+   "rr_win_ci95": [
+    0.3848,
+    0.458
+   ],
+   "expectancy_r": -0.7203,
+   "expectancy_ci": [
+    -0.8181,
+    -0.6226
+   ],
+   "mean_fee_r": 0.7727
+  },
+  "15m:BTCUSDT:continuation": {
+   "n": 67,
+   "hit_rate_decided": 0.5606,
+   "hit_ci95_decided": [
+    0.4408,
+    0.6737
+   ],
+   "hit_rate_all": 0.5522,
+   "rr_win_rate": 0.403,
+   "rr_win_ci95": [
+    0.2939,
+    0.5226
+   ],
+   "expectancy_r": -0.5158,
+   "expectancy_ci": [
+    -0.8106,
+    -0.2209
+   ],
+   "mean_fee_r": 0.5074
+  },
+  "15m:BTCUSDT:fade": {
+   "n": 67,
+   "hit_rate_decided": 0.4394,
+   "hit_ci95_decided": [
+    0.3263,
+    0.5592
+   ],
+   "hit_rate_all": 0.4328,
+   "rr_win_rate": 0.3433,
+   "rr_win_ci95": [
+    0.2409,
+    0.4627
+   ],
+   "expectancy_r": -0.6492,
+   "expectancy_ci": [
+    -0.9415,
+    -0.357
+   ],
+   "mean_fee_r": 0.5074
+  },
+  "15m:ETHUSDT:continuation": {
+   "n": 47,
+   "hit_rate_decided": 0.4565,
+   "hit_ci95_decided": [
+    0.3215,
+    0.5982
+   ],
+   "hit_rate_all": 0.4468,
+   "rr_win_rate": 0.2766,
+   "rr_win_ci95": [
+    0.1694,
+    0.4176
+   ],
+   "expectancy_r": -0.674,
+   "expectancy_ci": [
+    -1.0105,
+    -0.3375
+   ],
+   "mean_fee_r": 0.3655
+  },
+  "15m:ETHUSDT:fade": {
+   "n": 47,
+   "hit_rate_decided": 0.5435,
+   "hit_ci95_decided": [
+    0.4018,
+    0.6785
+   ],
+   "hit_rate_all": 0.5319,
+   "rr_win_rate": 0.4681,
+   "rr_win_ci95": [
+    0.3333,
+    0.6077
+   ],
+   "expectancy_r": -0.1953,
+   "expectancy_ci": [
+    -0.5535,
+    0.1629
+   ],
+   "mean_fee_r": 0.3655
+  },
+  "15m:SOLUSDT:continuation": {
+   "n": 55,
+   "hit_rate_decided": 0.5,
+   "hit_ci95_decided": [
+    0.3689,
+    0.6311
+   ],
+   "hit_rate_all": 0.4727,
+   "rr_win_rate": 0.3273,
+   "rr_win_ci95": [
+    0.2181,
+    0.459
+   ],
+   "expectancy_r": -0.4586,
+   "expectancy_ci": [
+    -0.766,
+    -0.1511
+   ],
+   "mean_fee_r": 0.2768
+  },
+  "15m:SOLUSDT:fade": {
+   "n": 55,
+   "hit_rate_decided": 0.5,
+   "hit_ci95_decided": [
+    0.3689,
+    0.6311
+   ],
+   "hit_rate_all": 0.4727,
+   "rr_win_rate": 0.3818,
+   "rr_win_ci95": [
+    0.2652,
+    0.5139
+   ],
+   "expectancy_r": -0.3466,
+   "expectancy_ci": [
+    -0.6735,
+    -0.0197
+   ],
+   "mean_fee_r": 0.2768
+  },
+  "15m:ALL:continuation": {
+   "n": 169,
+   "hit_rate_decided": 0.5122,
+   "hit_ci95_decided": [
+    0.4363,
+    0.5875
+   ],
+   "hit_rate_all": 0.497,
+   "rr_win_rate": 0.3432,
+   "rr_win_ci95": [
+    0.2758,
+    0.4175
+   ],
+   "expectancy_r": -0.5412,
+   "expectancy_ci": [
+    -0.7207,
+    -0.3617
+   ],
+   "mean_fee_r": 0.3929
+  },
+  "15m:ALL:fade": {
+   "n": 169,
+   "hit_rate_decided": 0.4878,
+   "hit_ci95_decided": [
+    0.4125,
+    0.5637
+   ],
+   "hit_rate_all": 0.4734,
+   "rr_win_rate": 0.3905,
+   "rr_win_ci95": [
+    0.3202,
+    0.4657
+   ],
+   "expectancy_r": -0.4245,
+   "expectancy_ci": [
+    -0.6118,
+    -0.2372
+   ],
+   "mean_fee_r": 0.3929
+  }
+ }
+}
