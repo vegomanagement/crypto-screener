@@ -161,20 +161,26 @@ def test_agent_net_normalisation():
 
 
 def test_baseline_blending():
+    cfg = SPLIT_CONFIG
     assert baseline_net(None) is None and baseline_net({"long_score": None}) is None
     assert baseline_net(BASE) == 0.0
-    assert baseline_net({**BASE, "long_verdict": "LONG"}) == pytest.approx(0.5)
-    assert baseline_net({**BASE, "long_score": 90, "short_score": 30}) == pytest.approx(1.0)  # clipped
+    assert baseline_net({**BASE, "long_verdict": "LONG"}) == pytest.approx(cfg["verdict_bonus"])
+    assert baseline_net({**BASE, "long_score": 90, "short_score": 30}) == cfg["baseline_cap"]  # capped
     factors = [F("long", 3), F("long", 3, "indicators.rsi14")]       # agent_net = 1
-    bearish = {**BASE, "long_score": 30, "short_score": 90}         # baseline_net = -1
+    bearish = {**BASE, "long_score": 30, "short_score": 90}         # baseline_net = -cap
     s = compute_split(factors, bearish)
-    w = SPLIT_CONFIG["w_agent"] - SPLIT_CONFIG["w_baseline"]
-    assert s["net"] == pytest.approx(w / (SPLIT_CONFIG["w_agent"] + SPLIT_CONFIG["w_baseline"]))
-    assert s["agent_net"] == 1.0 and s["baseline_net"] == -1.0
+    # clear factor tally against the baseline → baseline weight scaled by conflict_scale
+    assert s["conflict"] and s["weights"]["baseline"] == cfg["w_baseline"] * cfg["conflict_scale"]
+    assert s["net"] == pytest.approx(cfg["w_agent"] - cfg["w_baseline"] * cfg["conflict_scale"] * cfg["baseline_cap"])
+    assert s["agent_net"] == 1.0 and s["baseline_net"] == -cfg["baseline_cap"]
+    agreeing = compute_split(factors, mirror_base(bearish))
+    assert not agreeing["conflict"]
+    assert agreeing["net"] == pytest.approx(cfg["w_agent"] + cfg["w_baseline"] * cfg["baseline_cap"])
     only_agent = compute_split(factors, None)
-    assert only_agent["net"] == 1.0 and only_agent["weights"]["baseline"] == 0.0
-    only_base = compute_split([], bearish)
-    assert only_base["net"] == -1.0 and only_base["bias"] == "short" and only_base["weights"]["agent"] == 0.0
+    assert only_agent["net"] == pytest.approx(cfg["w_agent"]) and only_agent["weights"]["baseline"] == 0.0
+    only_base = compute_split([], bearish)  # Hermes failed: the baseline alone stays neutral
+    assert only_base["net"] == pytest.approx(-cfg["w_baseline"] * cfg["baseline_cap"])
+    assert only_base["bias"] == "neutral" and only_base["weights"]["agent"] == 0.0
 
 
 # ── disagreement ───────────────────────────────────────────────────────────

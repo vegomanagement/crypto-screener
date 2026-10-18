@@ -1,6 +1,7 @@
 """Hermes analyst routes; importing performs no network I/O and creates no database.
 
-POST /api/agent/analysis {exchange, symbol, interval[, force]} → validated analysis
+POST /api/agent/analysis {exchange, symbol, interval[, force][, ema_periods]} → validated analysis
+     ema_periods: the active chart's EMA ribbon periods, 1-3 integers 2..400 (default 7/14/21)
 GET  /api/agent/stats[?exchange&symbol&interval]               → calibration stats
 The browser never talks to Hermes; the gateway URL/key stay server-side.
 """
@@ -121,9 +122,15 @@ def register_agent_routes(app, *, market=None, confluence=None, funding=None, se
         if (not valid_identity(exchange, symbol) or not valid_interval(interval)
                 or not isinstance(force, bool)):
             return jsonify({'error': 'invalid exchange, symbol or interval'}), 400
+        from analyst import normalize_ema_periods
+        try:
+            ema_periods = normalize_ema_periods(data.get('ema_periods'))
+        except ValueError as exc:
+            return jsonify({'error': f'invalid ema_periods: {exc}'}), 400
         from analyst_service import RateLimited, SnapshotUnavailable
         try:
-            result = get_service().analyze(exchange, symbol, interval, force=force)
+            result = get_service().analyze(exchange, symbol, interval, force=force,
+                                           ema_periods=ema_periods)
         except RateLimited as exc:
             return (jsonify({'error': 'analyst rate limit reached', 'retry_after_s': exc.retry_after}),
                     429, {'Retry-After': str(exc.retry_after)})

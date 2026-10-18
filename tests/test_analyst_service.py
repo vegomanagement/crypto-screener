@@ -33,7 +33,7 @@ def good(snap, **over):
            "factor_scores": [
                {"factor": "rsi", "direction": "long", "strength": 2, "source_fields": ["indicators.rsi14"]},
                {"factor": "ema stack", "direction": "long", "strength": 3,
-                "source_fields": ["indicators.ema_stack_7_14_28"]},
+                "source_fields": ["indicators.ema_stack"]},
                {"factor": "book", "direction": "short", "strength": 1,
                 "source_fields": ["orderbook.imbalance"]}],
            "risks": ["chop"], "summary_ru": "Лонг"}

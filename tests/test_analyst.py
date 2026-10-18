@@ -104,7 +104,7 @@ def test_failed_providers_are_null_with_reason():
         assert snap["missing"][name]
     assert "venue down" in snap["missing"]["orderbook"]
     assert "240" not in analyst.FOOTPRINT_INTERVALS and "footprint" in snap["missing"]
-    assert snap["indicators"]["ema7"] is not None
+    assert snap["indicators"]["ema_fast"] is not None and snap["indicators"]["ema_periods"] == [7, 14, 21]
 
 
 def test_chart_failure_raises():

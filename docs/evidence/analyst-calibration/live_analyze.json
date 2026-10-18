@@ -1,0 +1,438 @@
+{
+ "started": "2026-10-18T01:28:17.988Z",
+ "runs": [
+  {
+   "tag": "binance_BTCUSDT_15",
+   "key": "binance:BTCUSDT:15:ema7-14-21",
+   "stale": false,
+   "error": "",
+   "status": "ok",
+   "source": "hermes",
+   "latency_ms": 20997,
+   "bias": "long",
+   "agent_bias": "long",
+   "long_pct": 67,
+   "short_pct": 33,
+   "split": {
+    "agent_long_points": 12,
+    "agent_net": 0.2,
+    "agent_short_points": 8,
+    "baseline_cap": 0.5,
+    "baseline_net": 0.4909,
+    "baseline_raw": 0.4909,
+    "bias": "long",
+    "configured_weights": {
+     "agent": 0.9,
+     "baseline": 0.1
+    },
+    "conflict": false,
+    "conflict_min_agent": 0.15,
+    "flip_guard": false,
+    "k": 3,
+    "long_pct": 67,
+    "method": "p_long = logistic(k * (w_a*agent_net + w_b*clip(baseline, ±cap))); w_b = 0 against a clear factor tally; never flips the factors' sign",
+    "net": 0.2291,
+    "neutral_band": 5,
+    "p_long": 66.536,
+    "short_pct": 33,
+    "weights": {
+     "agent": 0.9,
+     "baseline": 0.1
+    }
+   },
+   "n_factors": 12,
+   "snapshot_ema": {
+    "periods": [
+     7,
+     14,
+     21
+    ],
+    "fast": 81454.336,
+    "mid": 81418.376,
+    "slow": 81410.768,
+    "stack": "bullish"
+   },
+   "trend_label": [
+    "EMA ribbon 7/14/21"
+   ],
+   "maths": "factors +0.20 (L 12 · S 8) ×0.9 · baseline +0.49 (raw +0.49, cap ±0.5) ×0.1 → net +0.23 → p_long 66.5 (k 3, neutral ±5)",
+   "verdict_text": "▲ Long\nlow confidence · 4-12 bars of 15m\n▲ Long 67%\nShort 33% ▼\nAnalyze\nAuto-refresh\nLevels on chart\n\nThe split weighs Hermes' scored factors (12 long vs 8 short points, net +0.20, weight 90%) plus the deterministic confluence baseline (net +0.49, capped at ±0.5, weight 10%) into net +0.23, which a logistic curve turns into 66.5% long; within ±5 points of 50 reads Neutral. The baseline is only a tie-breaker: a backtest found no edge for it.\n\nCALIBRATION\n⚠ not a calibrated probability · 1 logged, 1 pending — no outcomes scored yet · p_long 66.54–66.54 over 1 (1 distinct) · funding cited 1/1 · positioning cited 1/1\nSOURCE\nHermes analysis\nGENERATED\n2026-10-18 01:28:26 UTC\nLATENCY\n21.0 s model · 11.0 s snapshot\nExact formula",
+   "check": {
+    "tally_clear": true,
+    "tally_sign": 1,
+    "split_sign": 1,
+    "agrees": true
+   },
+   "chart_ribbon": {
+    "chip": "EMA 7/14/21",
+    "periods": [
+     7,
+     14,
+     21
+    ]
+   },
+   "wall_ms": 34532
+  },
+  {
+   "tag": "binance_BTCUSDT_60",
+   "key": "binance:BTCUSDT:60:ema7-14-21",
+   "stale": false,
+   "error": "",
+   "status": "ok",
+   "source": "hermes",
+   "latency_ms": 24339,
+   "bias": "neutral",
+   "agent_bias": "neutral",
+   "long_pct": 46,
+   "short_pct": 54,
+   "split": {
+    "agent_long_points": 8,
+    "agent_net": -0.1111,
+    "agent_short_points": 10,
+    "baseline_cap": 0.5,
+    "baseline_net": 0.4909,
+    "baseline_raw": 0.4909,
+    "bias": "neutral",
+    "configured_weights": {
+     "agent": 0.9,
+     "baseline": 0.1
+    },
+    "conflict": false,
+    "conflict_min_agent": 0.15,
+    "flip_guard": false,
+    "k": 3,
+    "long_pct": 46,
+    "method": "p_long = logistic(k * (w_a*agent_net + w_b*clip(baseline, ±cap))); w_b = 0 against a clear factor tally; never flips the factors' sign",
+    "net": -0.0509,
+    "neutral_band": 5,
+    "p_long": 46.189,
+    "short_pct": 54,
+    "weights": {
+     "agent": 0.9,
+     "baseline": 0.1
+    }
+   },
+   "n_factors": 12,
+   "snapshot_ema": {
+    "periods": [
+     7,
+     14,
+     21
+    ],
+    "fast": 81427.016,
+    "mid": 81445.365,
+    "slow": 81478.38,
+    "stack": "bearish"
+   },
+   "trend_label": [
+    "EMA ribbon 7/14/21"
+   ],
+   "maths": "factors −0.11 (L 8 · S 10) ×0.9 · baseline +0.49 (raw +0.49, cap ±0.5) ×0.1 → net −0.05 → p_long 46.2 (k 3, neutral ±5)",
+   "verdict_text": "◆ Neutral\nlow confidence · 4-12 bars of 60m\n▲ Long 46%\nShort 54% ▼\nAnalyze\nAuto-refresh\nLevels on chart\n\nThe split weighs Hermes' scored factors (8 long vs 10 short points, net −0.11, weight 90%) plus the deterministic confluence baseline (net +0.49, capped at ±0.5, weight 10%) into net −0.05, which a logistic curve turns into 46.2% long; within ±5 points of 50 reads Neutral. The baseline is only a tie-breaker: a backtest found no edge for it.\n\nCALIBRATION\n⚠ not a calibrated probability · 1 logged, 0 pending — no outcomes scored yet · p_long 46.19–46.19 over 1 (1 distinct) · funding cited 1/1 · positioning cited 1/1\nSOURCE\nHermes analysis\nGENERATED\n2026-10-18 01:29:10 UTC\nLATENCY\n24.3 s model · 11.0 s snapshot\nExact formula",
+   "check": {
+    "tally_clear": false,
+    "tally_sign": -1,
+    "split_sign": 0,
+    "agrees": true
+   },
+   "chart_ribbon": {
+    "chip": "EMA 7/14/21",
+    "periods": [
+     7,
+     14,
+     21
+    ]
+   },
+   "wall_ms": 37913
+  },
+  {
+   "tag": "binance_ETHUSDT_15",
+   "key": "binance:ETHUSDT:15:ema7-14-21",
+   "stale": false,
+   "error": "",
+   "status": "ok",
+   "source": "hermes",
+   "latency_ms": 24452,
+   "bias": "neutral",
+   "agent_bias": "long",
+   "long_pct": 50,
+   "short_pct": 50,
+   "split": {
+    "agent_long_points": 10,
+    "agent_net": -0.0476,
+    "agent_short_points": 11,
+    "baseline_cap": 0.5,
+    "baseline_net": 0.3741,
+    "baseline_raw": 0.3741,
+    "bias": "neutral",
+    "configured_weights": {
+     "agent": 0.9,
+     "baseline": 0.1
+    },
+    "conflict": false,
+    "conflict_min_agent": 0.15,
+    "flip_guard": false,
+    "k": 3,
+    "long_pct": 50,
+    "method": "p_long = logistic(k * (w_a*agent_net + w_b*clip(baseline, ±cap))); w_b = 0 against a clear factor tally; never flips the factors' sign",
+    "net": -0.0054,
+    "neutral_band": 5,
+    "p_long": 49.591,
+    "short_pct": 50,
+    "weights": {
+     "agent": 0.9,
+     "baseline": 0.1
+    }
+   },
+   "n_factors": 12,
+   "snapshot_ema": {
+    "periods": [
+     7,
+     14,
+     21
+    ],
+    "fast": 2401.9091,
+    "mid": 2400.9772,
+    "slow": 2402.1271,
+    "stack": "mixed"
+   },
+   "trend_label": [
+    "EMA ribbon 7/14/21"
+   ],
+   "maths": "factors −0.05 (L 10 · S 11) ×0.9 · baseline +0.37 (raw +0.37, cap ±0.5) ×0.1 → net −0.01 → p_long 49.6 (k 3, neutral ±5)",
+   "verdict_text": "◆ Neutral\nlow confidence · 4-12 bars of 15m\n▲ Long 50%\nShort 50% ▼\nAnalyze\nAuto-refresh\nLevels on chart\n\nThe split weighs Hermes' scored factors (10 long vs 11 short points, net −0.05, weight 90%) plus the deterministic confluence baseline (net +0.37, capped at ±0.5, weight 10%) into net −0.01, which a logistic curve turns into 49.6% long; within ±5 points of 50 reads Neutral. The baseline is only a tie-breaker: a backtest found no edge for it.\n\nCALIBRATION\n⚠ not a calibrated probability · 1 logged, 0 pending — no outcomes scored yet · p_long 49.59–49.59 over 1 (1 distinct) · funding cited 1/1 · positioning cited 1/1\nSOURCE\nHermes analysis\nGENERATED\n2026-10-18 01:29:56 UTC\nLATENCY\n24.5 s model · 16.4 s snapshot\n\n⚠ Partial disagreement: agent says long, scored evidence computes neutral\n\nExact formula",
+   "check": {
+    "tally_clear": false,
+    "tally_sign": -1,
+    "split_sign": 0,
+    "agrees": true
+   },
+   "chart_ribbon": {
+    "chip": "EMA 7/14/21",
+    "periods": [
+     7,
+     14,
+     21
+    ]
+   },
+   "wall_ms": 43432
+  },
+  {
+   "tag": "bybit_SOLUSDT_15",
+   "key": "bybit:SOLUSDT:15:ema7-14-21",
+   "stale": false,
+   "error": "",
+   "status": "ok",
+   "source": "hermes",
+   "latency_ms": 22755,
+   "bias": "short",
+   "agent_bias": "short",
+   "long_pct": 22,
+   "short_pct": 78,
+   "split": {
+    "agent_long_points": 6,
+    "agent_net": -0.4286,
+    "agent_short_points": 15,
+    "baseline_cap": 0.5,
+    "baseline_net": -0.3106,
+    "baseline_raw": -0.3106,
+    "bias": "short",
+    "configured_weights": {
+     "agent": 0.9,
+     "baseline": 0.1
+    },
+    "conflict": false,
+    "conflict_min_agent": 0.15,
+    "flip_guard": false,
+    "k": 3,
+    "long_pct": 22,
+    "method": "p_long = logistic(k * (w_a*agent_net + w_b*clip(baseline, ±cap))); w_b = 0 against a clear factor tally; never flips the factors' sign",
+    "net": -0.4168,
+    "neutral_band": 5,
+    "p_long": 22.264,
+    "short_pct": 78,
+    "weights": {
+     "agent": 0.9,
+     "baseline": 0.1
+    }
+   },
+   "n_factors": 12,
+   "snapshot_ema": {
+    "periods": [
+     7,
+     14,
+     21
+    ],
+    "fast": 103.41436,
+    "mid": 103.3429,
+    "slow": 103.36015,
+    "stack": "mixed"
+   },
+   "trend_label": [
+    "EMA ribbon 7/14/21"
+   ],
+   "maths": "factors −0.43 (L 6 · S 15) ×0.9 · baseline −0.31 (raw −0.31, cap ±0.5) ×0.1 → net −0.42 → p_long 22.3 (k 3, neutral ±5)",
+   "verdict_text": "▼ Short\nmedium confidence · 4-12 bars of 15m\n▲ Long 22%\nShort 78% ▼\nAnalyze\nAuto-refresh\nLevels on chart\n\nThe split weighs Hermes' scored factors (6 long vs 15 short points, net −0.43, weight 90%) plus the deterministic confluence baseline (net −0.31, capped at ±0.5, weight 10%) into net −0.42, which a logistic curve turns into 22.3% long; within ±5 points of 50 reads Neutral. The baseline is only a tie-breaker: a backtest found no edge for it.\n\nCALIBRATION\n⚠ not a calibrated probability · 1 logged, 1 pending — no outcomes scored yet · p_long 22.26–22.26 over 1 (1 distinct) · funding cited 1/1 · positioning cited 1/1\nSOURCE\nHermes analysis\nGENERATED\n2026-10-18 01:30:49 UTC\nLATENCY\n22.8 s model · 1.1 s snapshot\nExact formula",
+   "check": {
+    "tally_clear": true,
+    "tally_sign": -1,
+    "split_sign": -1,
+    "agrees": true
+   },
+   "chart_ribbon": {
+    "chip": "EMA 7/14/21",
+    "periods": [
+     7,
+     14,
+     21
+    ]
+   },
+   "wall_ms": 26383
+  },
+  {
+   "tag": "hyperliquid_BTC_15",
+   "key": "hyperliquid:BTC:15:ema7-14-21",
+   "stale": false,
+   "error": "",
+   "status": "ok",
+   "source": "hermes",
+   "latency_ms": 21554,
+   "bias": "long",
+   "agent_bias": "long",
+   "long_pct": 64,
+   "short_pct": 36,
+   "split": {
+    "agent_long_points": 11,
+    "agent_net": 0.1579,
+    "agent_short_points": 8,
+    "baseline_cap": 0.5,
+    "baseline_net": 0.5,
+    "baseline_raw": 0.5639,
+    "bias": "long",
+    "configured_weights": {
+     "agent": 0.9,
+     "baseline": 0.1
+    },
+    "conflict": false,
+    "conflict_min_agent": 0.15,
+    "flip_guard": false,
+    "k": 3,
+    "long_pct": 64,
+    "method": "p_long = logistic(k * (w_a*agent_net + w_b*clip(baseline, ±cap))); w_b = 0 against a clear factor tally; never flips the factors' sign",
+    "net": 0.1921,
+    "neutral_band": 5,
+    "p_long": 64.022,
+    "short_pct": 36,
+    "weights": {
+     "agent": 0.9,
+     "baseline": 0.1
+    }
+   },
+   "n_factors": 12,
+   "snapshot_ema": {
+    "periods": [
+     7,
+     14,
+     21
+    ],
+    "fast": 81469.887,
+    "mid": 81428.929,
+    "slow": 81418.024,
+    "stack": "bullish"
+   },
+   "trend_label": [
+    "EMA ribbon 7/14/21"
+   ],
+   "maths": "factors +0.16 (L 11 · S 8) ×0.9 · baseline +0.50 (raw +0.56, cap ±0.5) ×0.1 → net +0.19 → p_long 64.0 (k 3, neutral ±5)",
+   "verdict_text": "▲ Long\nlow confidence · 4-12 bars of 15m\n▲ Long 64%\nShort 36% ▼\nAnalyze\nAuto-refresh\nLevels on chart\n\nThe split weighs Hermes' scored factors (11 long vs 8 short points, net +0.16, weight 90%) plus the deterministic confluence baseline (net +0.50 after the ±0.5 cap (raw +0.56), weight 10%) into net +0.19, which a logistic curve turns into 64.0% long; within ±5 points of 50 reads Neutral. The baseline is only a tie-breaker: a backtest found no edge for it.\n\nCALIBRATION\n⚠ not a calibrated probability · 1 logged, 1 pending — no outcomes scored yet · p_long 64.02–64.02 over 1 (1 distinct) · funding cited 1/1 · positioning cited 1/1\nSOURCE\nHermes analysis\nGENERATED\n2026-10-18 01:31:24 UTC\nLATENCY\n21.6 s model · 1.8 s snapshot\nExact formula",
+   "check": {
+    "tally_clear": true,
+    "tally_sign": 1,
+    "split_sign": 1,
+    "agrees": true
+   },
+   "chart_ribbon": {
+    "chip": "EMA 7/14/21",
+    "periods": [
+     7,
+     14,
+     21
+    ]
+   },
+   "wall_ms": 25921
+  },
+  {
+   "tag": "bybit_ETHUSDT_60",
+   "key": "bybit:ETHUSDT:60:ema7-14-21",
+   "stale": false,
+   "error": "",
+   "status": "ok",
+   "source": "hermes",
+   "latency_ms": 21546,
+   "bias": "short",
+   "agent_bias": "short",
+   "long_pct": 20,
+   "short_pct": 80,
+   "split": {
+    "agent_long_points": 5,
+    "agent_net": -0.5238,
+    "agent_short_points": 16,
+    "baseline_cap": 0.5,
+    "baseline_net": 0.3741,
+    "baseline_raw": 0.3741,
+    "bias": "short",
+    "configured_weights": {
+     "agent": 0.9,
+     "baseline": 0.1
+    },
+    "conflict": true,
+    "conflict_min_agent": 0.15,
+    "flip_guard": false,
+    "k": 3,
+    "long_pct": 20,
+    "method": "p_long = logistic(k * (w_a*agent_net + w_b*clip(baseline, ±cap))); w_b = 0 against a clear factor tally; never flips the factors' sign",
+    "net": -0.4714,
+    "neutral_band": 5,
+    "p_long": 19.556,
+    "short_pct": 80,
+    "weights": {
+     "agent": 0.9,
+     "baseline": 0
+    }
+   },
+   "n_factors": 12,
+   "snapshot_ema": {
+    "periods": [
+     7,
+     14,
+     21
+    ],
+    "fast": 2403.8865,
+    "mid": 2409.8399,
+    "slow": 2414.0573,
+    "stack": "bearish"
+   },
+   "trend_label": [
+    "EMA ribbon 7/14/21"
+   ],
+   "maths": "factors −0.52 (L 5 · S 16) ×0.9 · baseline +0.37 (raw +0.37, cap ±0.5) ×0.1→0 (clear tally against it) → net −0.47 → p_long 19.6 (k 3, neutral ±5)",
+   "verdict_text": "▼ Short\nmedium confidence · 4-12 bars of 60m\n▲ Long 20%\nShort 80% ▼\nAnalyze\nAuto-refresh\nLevels on chart\n\nThe split weighs Hermes' scored factors (5 long vs 16 short points, net −0.52, weight 90%) plus the deterministic confluence baseline (net +0.37, capped at ±0.5, weight 0%) into net −0.47, which a logistic curve turns into 19.6% long; within ±5 points of 50 reads Neutral. The factor tally is clear (|net| ≥ 0.15) and the baseline points the other way, so the baseline is ignored. The baseline is only a tie-breaker: a backtest found no edge for it.\n\nCALIBRATION\n⚠ not a calibrated probability · 1 logged, 1 pending — no outcomes scored yet · p_long 19.56–19.56 over 1 (1 distinct) · funding cited 1/1 · positioning cited 1/1\nSOURCE\nHermes analysis\nGENERATED\n2026-10-18 01:31:59 UTC\nLATENCY\n21.5 s model · 1.0 s snapshot\nExact formula",
+   "check": {
+    "tally_clear": true,
+    "tally_sign": -1,
+    "split_sign": -1,
+    "agrees": true
+   },
+   "chart_ribbon": {
+    "chip": "EMA 7/14/21",
+    "periods": [
+     7,
+     14,
+     21
+    ]
+   },
+   "wall_ms": 25092
+  }
+ ],
+ "finished": "2026-10-18T01:32:24.947Z"
+}

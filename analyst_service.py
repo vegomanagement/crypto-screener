@@ -13,6 +13,7 @@ from collections import deque
 from analyst import (
     EVAL_HORIZON_BARS,
     build_snapshot,
+    normalize_ema_periods,
     compute_split,
     disagreement,
     snapshot_hash,
@@ -102,8 +103,10 @@ class AnalystService:
                 raise RateLimited(max(1, int(window - (now - self._calls[0])) + 1))
             self._calls.append(now)
 
-    def analyze(self, exchange, symbol, interval, *, force=False):
-        key = (exchange, symbol, interval)
+    def analyze(self, exchange, symbol, interval, *, force=False, ema_periods=None):
+        # The EMA ribbon periods are part of the key: the text must match the chart shown.
+        periods = normalize_ema_periods(ema_periods)
+        key = (exchange, symbol, interval, periods)
         with self._lock:
             if not force and (hit := self._cached(key)):
                 return hit
@@ -114,15 +117,15 @@ class AnalystService:
             if hit and (not force or hit["age_s"] < 5):
                 return hit
             self._take_rate_slot()
-            result = self._run(exchange, symbol, interval)
+            result = self._run(exchange, symbol, interval, periods)
             with self._lock:
                 self._cache[key] = (self.clock(), result)
             return {**result, "cached": False, "age_s": 0.0}
 
-    def _run(self, exchange, symbol, interval):
+    def _run(self, exchange, symbol, interval, ema_periods=None):
         started = time.monotonic()
         try:
-            snap = build_snapshot(exchange, symbol, interval, self.providers)
+            snap = build_snapshot(exchange, symbol, interval, self.providers, ema_periods=ema_periods)
         except Exception as exc:  # noqa: BLE001
             raise SnapshotUnavailable(str(exc)[:200]) from None
         snapshot_ms = int((time.monotonic() - started) * 1000)

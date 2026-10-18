@@ -928,15 +928,16 @@ def compute_indicators(candles: list) -> dict:
     }
 
 
-def compute_vwap(candles: list) -> dict:
+def compute_vwap(candles: list, now: datetime | None = None) -> dict:
     """
     Daily and Weekly VWAP with ±1σ / ±2σ bands from 1H candles (oldest→newest).
     Uses genuine candle timestamps for UTC resets; never infers time from count.
+    ``now`` (tz-aware) replays the bands as of a past moment (analyst backtest).
     """
     if not candles or any("ts" not in c for c in candles):
         return {}
 
-    now   = datetime.now(timezone.utc)
+    now   = now or datetime.now(timezone.utc)
     price = candles[-1]["c"]
 
     def _bands(window: list) -> dict:
@@ -1004,8 +1005,8 @@ def check_mtf_confluence(biases: dict, direction: str) -> dict:
 
 # ─── SESSION ─────────────────────────────────────────────────────────────────
 
-def get_session() -> dict:
-    h = datetime.now(timezone.utc).hour
+def get_session(now: datetime | None = None) -> dict:
+    h = (now or datetime.now(timezone.utc)).hour
     if 13 <= h < 16:
         return {"name": "NY+London Overlap", "quality": 5, "icon": "🎯"}
     if 13 <= h < 22:
