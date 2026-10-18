@@ -1,0 +1,307 @@
+{
+ "window": [
+  "2026-01-01",
+  "2026-10-17"
+ ],
+ "benchmarks": {
+  "BTC": {
+   "days": 290,
+   "total_return": -0.0708,
+   "cagr": -0.0883,
+   "vol": 0.4502,
+   "sharpe": 0.02,
+   "sortino": 0.029,
+   "max_dd": 0.3953,
+   "dd_days": 276,
+   "calmar": -0.223,
+   "turnover_yr": 1.26,
+   "fee_drag_yr": 0.0008,
+   "funding_yr": 0.0,
+   "avg_gross": 0.997,
+   "exposure": 0.997,
+   "p_mean": 0.4930995103496025,
+   "psr": 0.5072,
+   "sr_daily": 0.0010564521688056158,
+   "per_year": {
+    "2026": -0.0708
+   },
+   "ci_sharpe": [
+    -2.029,
+    2.356
+   ],
+   "ci_mean_ann": [
+    -0.9322,
+    0.9399
+   ],
+   "n_trades": 0
+  },
+  "EW": {
+   "days": 290,
+   "total_return": 0.0393,
+   "cagr": 0.0497,
+   "vol": 0.6478,
+   "sharpe": 0.398,
+   "sortino": 0.593,
+   "max_dd": 0.4786,
+   "dd_days": 255,
+   "calmar": 0.104,
+   "turnover_yr": 2.54,
+   "fee_drag_yr": 0.0015,
+   "funding_yr": 0.0,
+   "avg_gross": 0.997,
+   "exposure": 0.997,
+   "p_mean": 0.3569021929363151,
+   "psr": 0.6386,
+   "sr_daily": 0.02081732016855377,
+   "per_year": {
+    "2026": 0.0393
+   },
+   "ci_sharpe": [
+    -1.458,
+    2.567
+   ],
+   "ci_mean_ann": [
+    -0.9675,
+    1.5753
+   ],
+   "n_trades": 0
+  }
+ },
+ "finalists": {
+  "A": {
+   "id": "A:ema50|long|k5",
+   "metrics": {
+    "days": 290,
+    "total_return": 0.2169,
+    "cagr": 0.2802,
+    "vol": 0.325,
+    "sharpe": 0.918,
+    "sortino": 1.6,
+    "max_dd": 0.1567,
+    "dd_days": 227,
+    "calmar": 1.788,
+    "turnover_yr": 22.98,
+    "fee_drag_yr": 0.0138,
+    "funding_yr": -0.0108,
+    "avg_gross": 0.324,
+    "exposure": 0.848,
+    "p_mean": 0.24776931386510245,
+    "psr": 0.8089,
+    "sr_daily": 0.04804473995379557,
+    "per_year": {
+     "2026": 0.2169
+    },
+    "ci_sharpe": [
+     -2.202,
+     2.88
+    ],
+    "ci_mean_ann": [
+     -0.4377,
+     1.1798
+    ],
+    "n_trades": 206,
+    "hit": 0.223,
+    "avg_win_r": 1.048,
+    "avg_loss_r": -0.148,
+    "top_third_share": 2.0,
+    "top_coin": "NEARUSDT",
+    "top_coin_share": 0.37,
+    "pnl_total": 1.7186,
+    "pnl_without_top_coin": 1.0849,
+    "hold_days": 8.7,
+    "long_share": 1.0,
+    "dev_check": 1.192
+   },
+   "7_holdout": true,
+   "passes_all": false
+  },
+  "ASMC": {
+   "id": "ASMC:ema50|long|k5|market",
+   "metrics": {
+    "days": 290,
+    "total_return": 0.0983,
+    "cagr": 0.1252,
+    "vol": 0.2559,
+    "sharpe": 0.59,
+    "sortino": 0.845,
+    "max_dd": 0.1222,
+    "dd_days": 20,
+    "calmar": 1.025,
+    "turnover_yr": 16.42,
+    "fee_drag_yr": 0.0092,
+    "funding_yr": -0.0104,
+    "avg_gross": 0.281,
+    "exposure": 0.783,
+    "p_mean": 0.34526084070810503,
+    "psr": 0.6991,
+    "sr_daily": 0.030858430769305507,
+    "per_year": {
+     "2026": 0.0983
+    },
+    "ci_sharpe": [
+     -2.081,
+     2.912
+    ],
+    "ci_mean_ann": [
+     -0.4224,
+     0.9379
+    ],
+    "n_trades": 142,
+    "hit": 0.282,
+    "avg_win_r": 0.844,
+    "avg_loss_r": -0.222,
+    "top_third_share": 3.12,
+    "top_coin": "NEARUSDT",
+    "top_coin_share": 0.91,
+    "pnl_total": 0.7309,
+    "pnl_without_top_coin": 0.0626,
+    "hold_days": 10.5,
+    "long_share": 1.0,
+    "dev_check": 1.192
+   },
+   "7_holdout": true,
+   "passes_all": false
+  },
+  "B": {
+   "id": "B:L4|K3|abs",
+   "metrics": {
+    "days": 290,
+    "total_return": -0.3485,
+    "cagr": -0.4168,
+    "vol": 0.7499,
+    "sharpe": -0.346,
+    "sortino": -0.508,
+    "max_dd": 0.5569,
+    "dd_days": 287,
+    "calmar": -0.748,
+    "turnover_yr": 46.3,
+    "fee_drag_yr": 0.0278,
+    "funding_yr": -0.0086,
+    "avg_gross": 0.819,
+    "exposure": 0.9,
+    "p_mean": 0.6169104746462029,
+    "psr": 0.3796,
+    "sr_daily": -0.018110158717578356,
+    "per_year": {
+     "2026": -0.3485
+    },
+    "ci_sharpe": [
+     -2.722,
+     1.585
+    ],
+    "ci_mean_ann": [
+     -1.9008,
+     1.3332
+    ],
+    "n_trades": 45,
+    "hit": 0.378,
+    "avg_win_r": 3.16,
+    "avg_loss_r": -2.223,
+    "top_third_share": null,
+    "top_coin": "ZECUSDT",
+    "top_coin_share": null,
+    "pnl_total": -51.9063,
+    "pnl_without_top_coin": -75.3161,
+    "hold_days": 15.9,
+    "long_share": 1.0,
+    "dev_check": 1.416
+   },
+   "7_holdout": false,
+   "passes_all": false
+  },
+  "C": {
+   "id": "C:B:L4|K3|abs|R4",
+   "metrics": {
+    "days": 290,
+    "total_return": -0.0113,
+    "cagr": -0.0142,
+    "vol": 0.3642,
+    "sharpe": 0.144,
+    "sortino": 0.2,
+    "max_dd": 0.201,
+    "dd_days": 20,
+    "calmar": -0.071,
+    "turnover_yr": 14.32,
+    "fee_drag_yr": 0.0086,
+    "funding_yr": -0.0122,
+    "avg_gross": 0.159,
+    "exposure": 0.159,
+    "p_mean": 0.4309595244951565,
+    "psr": 0.551,
+    "sr_daily": 0.007558490381274381,
+    "per_year": {
+     "2026": -0.0113
+    },
+    "ci_sharpe": [
+     -1.329,
+     1.417
+    ],
+    "ci_mean_ann": [
+     -0.5762,
+     0.6563
+    ],
+    "n_trades": 16,
+    "hit": 0.562,
+    "avg_win_r": 2.282,
+    "avg_loss_r": -1.915,
+    "top_third_share": null,
+    "top_coin": "NEARUSDT",
+    "top_coin_share": null,
+    "pnl_total": -1.1365,
+    "pnl_without_top_coin": -12.8499,
+    "hold_days": 8.6,
+    "long_share": 1.0,
+    "dev_check": 1.536
+   },
+   "7_holdout": false,
+   "passes_all": false
+  },
+  "D": {
+   "id": "D:ts|W90|H7|trend",
+   "metrics": {
+    "days": 290,
+    "total_return": 0.118,
+    "cagr": 0.1508,
+    "vol": 0.1138,
+    "sharpe": 1.291,
+    "sortino": 2.165,
+    "max_dd": 0.0398,
+    "dd_days": 25,
+    "calmar": 3.79,
+    "turnover_yr": 18.9,
+    "fee_drag_yr": 0.0113,
+    "funding_yr": 0.0065,
+    "avg_gross": 0.175,
+    "exposure": 0.517,
+    "p_mean": 0.1416844675228716,
+    "psr": 0.8837,
+    "sr_daily": 0.06758712629677024,
+    "per_year": {
+     "2026": 0.118
+    },
+    "ci_sharpe": [
+     -1.006,
+     3.4
+    ],
+    "ci_mean_ann": [
+     -0.1082,
+     0.4192
+    ],
+    "n_trades": 42,
+    "hit": 0.476,
+    "avg_win_r": 1.679,
+    "avg_loss_r": -0.922,
+    "top_third_share": 2.18,
+    "top_coin": "ETHUSDT",
+    "top_coin_share": 0.57,
+    "pnl_total": 0.2141,
+    "pnl_without_top_coin": 0.0915,
+    "hold_days": 6.8,
+    "long_share": 0.48,
+    "dev_check": 0.991
+   },
+   "7_holdout": true,
+   "passes_all": false
+  }
+ }
+}
