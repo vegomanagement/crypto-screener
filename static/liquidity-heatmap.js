@@ -6,7 +6,7 @@
   else root.WorkspaceLiquidity = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
-  const MAX_FRAMES = 360, MAX_LEVELS = 1000, MAX_RECTS = 40000;
+  const MAX_FRAMES = 360, MAX_LEVELS = 1000, MAX_RECTS = 40000, MIN_ROW_PX = 3;
   function aggregate(frame, step, minimum = 0) {
     const side = name => {
       const bins = new Map();
@@ -30,13 +30,23 @@
     const anchor = Math.round(logical), x = scale.logicalToCoordinate(anchor);
     return x === null || !Number.isFinite(x) ? null : x + (logical - anchor) * scale.options().barSpacing;
   }
-  function automaticStep(frame) {
+  // Price span of `px` CSS pixels near `reference` on the live price scale.
+  function pixelPriceSpan(reference, priceToCoordinate, px) {
+    if (!(reference > 0) || typeof priceToCoordinate !== 'function') return 0;
+    const a = priceToCoordinate(reference), b = priceToCoordinate(reference * 1.001);
+    if (a === null || b === null || !Number.isFinite(a) || !Number.isFinite(b) || a === b) return 0;
+    return px * reference * 0.001 / Math.abs(b - a);
+  }
+  // Automatic bucket: 1/80 of the returned book span, but never thinner than
+  // MIN_ROW_PX on screen. A 200-row BTC book bucketed by span alone gave
+  // 0.04-0.9 px rows (invisible) on 15m-4h charts.
+  function automaticStep(frame, minimumStep = 0) {
     const prices = [...(frame?.bids || []), ...(frame?.asks || [])].map(r=>Number(r[0])).filter(p=>p>0 && Number.isFinite(p));
     if (!prices.length) return 1;
     const span = Math.max(...prices)-Math.min(...prices);
-    const raw = span > 0 ? span / 80 : prices[0] * 0.0001;
+    const raw = Math.max(span > 0 ? span / 80 : prices[0] * 0.0001, minimumStep > 0 && Number.isFinite(minimumStep) ? minimumStep : 0);
     const power = 10 ** Math.floor(Math.log10(raw));
-    return Math.max(Number.MIN_VALUE, Math.ceil(raw / power) * power);
+    return Math.max(Number.MIN_VALUE, Math.ceil(raw / power - 1e-9) * power);
   }
   function color(qty, maximum, settings = {}) {
     const stops = [settings.lowColor || '#632ca6', settings.midColor || '#ed4eaa', settings.highColor || '#ffe66d'];
@@ -49,7 +59,12 @@
   function geometry(data, settings, view) {
     const {candles,scale,interval,priceToCoordinate,width,height,now} = view;
     const frames = [...new Map((data.frames || []).filter(f=>Number.isFinite(f?.observed_at)).map(f=>[f.observed_at,f])).values()].sort((a,b)=>a.observed_at-b.observed_at).slice(-MAX_FRAMES);
-    const step = settings.step > 0 ? settings.step : automaticStep(data.latest || frames.at(-1));
+    const book = data.latest || frames.at(-1);
+    const reference = Number(book?.bids?.[0]?.[0]) || Number(book?.asks?.[0]?.[0]) || 0;
+    // A manual step thinner than one CSS pixel is raised to one pixel (disclosed via stepRaised).
+    const onePixel = pixelPriceSpan(reference, priceToCoordinate, 1);
+    const manual = settings.step > 0 ? Math.max(settings.step, onePixel) : 0;
+    const step = manual || automaticStep(book, pixelPriceSpan(reference, priceToCoordinate, MIN_ROW_PX));
     const period = Math.min(20000, Math.max(1, Number(data.sample_period_ms) || 10000));
     const cells = [], profile = [];
     const x = ms => timeCoordinate(ms,candles,scale,interval);
@@ -82,12 +97,19 @@
     const latest=data.latest;
     if (latest && Number.isFinite(latest.observed_at)) {
       const bins=aggregate(latest,step,settings.minQty || 0), max=Math.max(1,...bins.bids.concat(bins.asks).map(r=>r.qty));
+      // Profile goes into the empty right-offset space after the last candle, so it
+      // no longer covers the newest heatmap columns; old right-edge slot if too narrow.
+      const lastCenter=candles.length ? scale.logicalToCoordinate(candles.length-1) : null;
+      const after=Number.isFinite(lastCenter) ? lastCenter+scale.options().barSpacing/2+2 : Infinity;
+      const left=width-after>=24 ? Math.max(0,after) : Math.max(0,width-82), span=Math.min(80,width-left);
       ['bids','asks'].forEach(side=>bins[side].forEach(row=>{
-        const cell=rect(row,side,Math.max(0,width-82),Math.max(0,width-82)+Math.min(80,width)*row.qty/max,latest.observed_at);
+        const cell=rect(row,side,left,left+span*row.qty/max,latest.observed_at);
         if(cell) profile.push(cell);
       }));
     }
-    return {cells,profile,step,maximum:Math.max(1,...cells.map(c=>c.qty)),truncated:cells.length>=MAX_RECTS};
+    const covered=cells.concat(profile);
+    const bookPx=covered.length ? Math.max(...covered.map(c=>c.y+c.height))-Math.min(...covered.map(c=>c.y)) : 0;
+    return {cells,profile,step,stepRaised:settings.step>0 && step>settings.step,bookPx,maximum:Math.max(1,...cells.map(c=>c.qty)),truncated:cells.length>=MAX_RECTS};
   }
   function hitTest(model,x,y) {
     const contains=c=>x>=c.x && x<c.x+c.width && y>=c.y && y<c.y+c.height;
@@ -164,5 +186,5 @@
     }
     dispose() {this.stop();this.disposed=true;this.config=null;}
   }
-  return {aggregate, timeCoordinate, automaticStep, color, geometry, hitTest, HeatmapPrimitive, CollectionSession, MAX_FRAMES, MAX_LEVELS, MAX_RECTS};
+  return {aggregate, timeCoordinate, automaticStep, pixelPriceSpan, color, geometry, hitTest, HeatmapPrimitive, CollectionSession, MAX_FRAMES, MAX_LEVELS, MAX_RECTS, MIN_ROW_PX};
 });

@@ -850,7 +850,7 @@
       const capacity = [...panes.values()].filter(p => !p.disposed && isVisible(p)).length;
       const mode = status.paused ? 'Paused · invisible' : status.error ? `Collection error: ${status.error}` : status.collecting ? 'Collecting' : 'Connecting collector';
       const warnings = (data?.warnings || []).filter(w => typeof w === 'string');
-      this.liquidityStatus.textContent = `${mode} • ${coverage ? `history from ${coverage}` : 'No history yet'} · no history before collection · 10s snapshots, not tick-complete · last sample ${age} · gaps ${gaps}${gaps ? ' (transparent)' : ''} · depth limited: ${sampled} · native quantity (unit unknown unless venue metadata states otherwise) · ${capacity}/6 pane leases · subpixel samples: 1-device-pixel markers, not duration${this.liquidityModel?.truncated ? ' · draw limit reached' : ''}${warnings.length ? ` · ${warnings.join(' · ')}` : ''}`;
+      this.liquidityStatus.textContent = `${mode} • ${coverage ? `history from ${coverage}` : 'No history yet'} · no history before collection · 10s snapshots, not tick-complete · last sample ${age} · gaps ${gaps}${gaps ? ' (transparent)' : ''} · depth limited: ${sampled} · native quantity (unit unknown unless venue metadata states otherwise) · ${capacity}/6 pane leases · subpixel samples: 1-device-pixel markers, not duration${this.liquidityModel ? ` · bucket ${formatPrice(this.liquidityModel.step)}${this.liquidityModel.stepRaised ? ' (raised to 1px minimum)' : ''} · book spans ${Math.round(this.liquidityModel.bookPx)}px of plot` : ''}${this.liquidityModel?.truncated ? ' · draw limit reached' : ''}${warnings.length ? ` · ${warnings.join(' · ')}` : ''}`;
       this.liquidityStatus.title = this.liquidityStatus.textContent;
     }
     liquidityTooltip(parameter) {
