@@ -24,7 +24,7 @@ def market_data(seed=11):
     rnd = random.Random(seed)
     bars, fund = {}, {}
     for j, s in enumerate(SYMS):
-        px, rows = 100.0 * (j + 1), []
+        px = 100.0 * (j + 1)
         drift = rnd.choice((-1, 1)) * 0.002
         for k in range(N_DAYS):
             if k % 90 == 0:

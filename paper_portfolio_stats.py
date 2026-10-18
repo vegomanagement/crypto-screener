@@ -12,7 +12,7 @@ NOTE = ("Paper results of a daily portfolio strategy — not a signal, no orders
 
 def summarize(days, positions, expectation=None):
     exp = expectation or {}
-    out = {"n_days": max(0, len(days) - 1), "note": NOTE, "curve": [], "positions": {}, "expectation": exp or None}
+    out = {"n_days": max(0, len(days) - 1), "note": NOTE, "curve": [], "position_stats": {}, "expectation": exp or None}
     if not days:
         return out
     b0 = days[0]["btc_close"]
@@ -49,7 +49,7 @@ def summarize(days, positions, expectation=None):
         b["n"] += 1
         b["pnl_pct"] += 100 * p["pnl"]
         b["wins"] += p["pnl"] > 0
-    out["positions"] = {"open": len(opened), "closed": len(closed),
+    out["position_stats"] = {"open": len(opened), "closed": len(closed),
                         "hit": (sum(p["pnl"] > 0 for p in closed) / len(closed)) if closed else None,
                         "per_coin": by}
     last_orders = next((d["orders_json"] for d in reversed(days) if d["orders_json"]), None)

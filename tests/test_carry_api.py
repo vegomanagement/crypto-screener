@@ -87,6 +87,6 @@ def test_paper_portfolio_and_observer_routes():
     r = c.get(f"/api/paper/portfolio?strategy={pps.D_ID}").json
     assert r["n_days"] == 19 and len(r["curve"]) == 20 and r["curve"][0]["ret_pct"] == 0.0
     assert r["curve"][-1]["btc_pct"] is not None and r["curve"][-1]["band_lo_pct"] < r["curve"][-1]["band_hi_pct"]
-    assert "not a signal" in r["note"]
+    assert "not a signal" in r["note"] and isinstance(r["positions"], list) and "open" in r["position_stats"]
     assert c.get("/api/paper/portfolio?strategy=nope").status_code == 404
     assert c.get(f"/api/paper/observer?strategy={pps.D_ID}").status_code == 404
