@@ -72,12 +72,15 @@
 
   function render(el, data) {
     const strat = data.strategy || {};
+    const g = typeof globalThis !== 'undefined' ? globalThis : {};
+    if (data.kind === 'portfolio' && g.PaperPortfolio) return g.PaperPortfolio.render(el, strat, data.worker, data.portfolio, tabsHtml(data.tabs));
+    if (data.kind === 'observer' && g.PaperObserver) return g.PaperObserver.render(el, strat, data.worker, data.observer, tabsHtml(data.tabs));
     const s = summary(data.stats);
     const eq = equityPath((data.stats || {}).equity, 640, 160);
     const coins = Object.entries((data.stats || {}).per_coin || {}).map(([k, v]) => ({ symbol: k, n: v.n, hit: pct(v.hit), mean: signed(v.mean_r, 3, 'R'), sum: signed(v.sum_r, 2, 'R') }));
     const w = data.worker || {};
     const open = openRows(data.trades || []);
-    el.innerHTML = `
+    el.innerHTML = `${tabsHtml(data.tabs)}
       <div class="banner">PAPER TRADING · forward test · <b>not a signal</b> · no orders, no exchange keys</div>
       <h2>${esc(strat.title || strat.id || 'strategy')} <small>v${esc(strat.version)} · ${esc(strat.params_hash || '')}</small></h2>
       <p class="meta">Worker: ${w.enabled ? (w.running ? `running · ${esc(w.cycles)} cycles` : 'enabled, not running in this process') : 'off (set PAPER_JOURNAL=1)'}
@@ -101,15 +104,35 @@
       <h3>Per coin</h3>${table([['symbol', 'Coin'], ['n', 'n'], ['hit', 'Hit'], ['mean', 'Mean'], ['sum', 'Sum']], coins, 'No counted trades yet.')}`;
   }
 
-  async function load(fetchJson, sid) {
-    const meta = await fetchJson('/api/paper/strategies');
-    const versions = (meta.strategies || []).filter(r => !sid || r.id === sid);
-    const strat = versions.filter(r => r.active).pop() || versions.pop() || {};
-    if (!strat.id) return { strategy: {}, worker: meta.worker, trades: [], stats: null };
-    const q = `strategy=${encodeURIComponent(strat.id)}&version=${strat.version}`;
-    const [trades, stats] = await Promise.all([fetchJson(`/api/paper/trades?${q}`), fetchJson(`/api/paper/stats?${q}`)]);
-    return { strategy: strat, worker: meta.worker, trades: trades.trades || [], stats };
+  /** One tab per registered strategy id (latest version), the selected one marked. */
+  function tabs(strategies, selected) {
+    const latest = {};
+    (strategies || []).forEach(r => { if (!latest[r.id] || r.version > latest[r.id].version || (r.active && !latest[r.id].active)) latest[r.id] = r; });
+    return Object.values(latest).map(r => ({ id: r.id, title: r.title || r.id, kind: r.kind || 'setup', active: Boolean(r.active), selected: r.id === selected }));
   }
 
-  return { openRows, closedRows, summary, equityPath, render, load, utc, signed };
+  function tabsHtml(list) {
+    if (!list || list.length < 2) return '';
+    return `<nav class="tabs">${list.map(t => `<a href="?strategy=${encodeURIComponent(t.id)}" class="${t.selected ? 'sel' : ''}" title="${esc(t.title)}">${esc(t.title.split(' · ')[0])} <small>${esc(t.kind)}</small></a>`).join('')}</nav>`;
+  }
+
+  async function load(fetchJson, sid) {
+    const meta = await fetchJson('/api/paper/strategies');
+    const all = meta.strategies || [];
+    const versions = all.filter(r => !sid || r.id === sid);
+    const strat = (sid ? versions : versions.filter(r => (r.kind || 'setup') === 'setup')).filter(r => r.active).pop() || versions.pop() || {};
+    const tabList = tabs(all, strat.id);
+    if (!strat.id) return { strategy: {}, worker: meta.worker, trades: [], stats: null, tabs: tabList };
+    const q = `strategy=${encodeURIComponent(strat.id)}&version=${strat.version}`;
+    if (strat.kind === 'portfolio') {
+      return { kind: 'portfolio', strategy: strat, worker: meta.worker, portfolio: await fetchJson(`/api/paper/portfolio?${q}`), tabs: tabList };
+    }
+    if (strat.kind === 'observer') {
+      return { kind: 'observer', strategy: strat, worker: meta.worker, observer: await fetchJson(`/api/paper/observer?${q}`), tabs: tabList };
+    }
+    const [trades, stats] = await Promise.all([fetchJson(`/api/paper/trades?${q}`), fetchJson(`/api/paper/stats?${q}`)]);
+    return { strategy: strat, worker: meta.worker, trades: trades.trades || [], stats, tabs: tabList };
+  }
+
+  return { openRows, closedRows, summary, equityPath, render, load, tabs, tabsHtml, utc, signed };
 });

@@ -71,13 +71,27 @@ def parse_leaderboard_stream(stream, top_n, chunk_size=65536):
             continue
         if value is None:
             continue
-        item = (value, total, address, row.get("displayName"))
+        item = (value, total, address, row.get("displayName"), _window_pnl(row))
         if len(heap) < top_n:
             heapq.heappush(heap, item)
         elif item > heap[0]:
             heapq.heapreplace(heap, item)
     ranked = sorted(heap, reverse=True)
-    return [{"address": a, "account_value": v, "display_name": n} for v, _, a, n in ranked], total
+    return [{"address": a, "account_value": v, "display_name": n, "pnl": p} for v, _, a, n, p in ranked], total
+
+
+def _window_pnl(row):
+    """{'day'|'week'|'month'|'allTime': Decimal pnl} from the row's windowPerformances (may be empty)."""
+    out = {}
+    for item in row.get("windowPerformances") or ():
+        try:
+            name, perf = item
+            val = dec((perf or {}).get("pnl"))
+        except (TypeError, ValueError, AttributeError, NormaliseError):
+            continue
+        if val is not None:
+            out[str(name)] = val
+    return out
 
 
 def parse_positions(state):

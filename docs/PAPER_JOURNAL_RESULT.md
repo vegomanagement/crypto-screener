@@ -171,6 +171,131 @@ fee R and funding R, with 0 missed fills.
   `/api/paper/*` request (or by the worker) — please review.** Use `PAPER_DB_PATH=` (empty) for in-memory.
 * New SQLite tables, in that new file only. `signals.db` is untouched.
 
+## Portfolio strategies and the whale observer (kind `portfolio` / `observer`)
+
+The journal now runs more than the SMC setup strategy. `paper_strategies.register(..., kind=...)`
+accepts two new kinds, and old databases migrate in place: the `kind` column defaults to `setup`, and
+the SMC version hash is unchanged.
+
+* **`portfolio`** (`paper_portfolio.py`). This kind is for the daily, multi-coin research finalists,
+  registered by `paper_portfolio_strategies.py` with the frozen params of
+  `docs/evidence/strategy-research/dev_selection.json`:
+  * **A** `pf_trend_ema50_long_k5` (`A:ema50|long|k5`): close > EMA50 → long at the next open,
+    5×ATR20 chandelier trail resting intraday, exit on close < EMA50, 1 % risk per position, cap 0.30,
+    gross ≤ 2, 20 coins.
+  * **D** `pf_funding_ts_w90_h7_trend` (`D:ts|W90|H7|trend`): fade a 90-day funding z-score beyond
+    ±2 in the EMA50 trend direction, hold 7 days, vol-sized, gross ≤ 1.5.
+  * **Each cycle:**
+    * The as-of day is the last UTC day closed for every coin, at least 10 minutes after its close.
+      Everything later is cut off, whatever the loader returned.
+    * The strategy is replayed with `portfolio_engine.run` from `start_day` with `decide_last=True`.
+      So the orders for the next open are exactly what the engine decided at this close.
+    * New days are appended and never rewritten: equity relative to 1.0 at the start, fees, real
+      Binance funding, turnover, gross, BTC close and the next-open orders.
+    * A recomputed past day that differs (a revised bar or funding print) is logged as a
+      `divergence` event. Days first written more than a day after their close are flagged `late`.
+    * Positions (`paper_pf_positions`) are one row per engine trade, with entry at the next open,
+      exit price and reason, P&L, fees and funding. Open rows are re-marked every cycle.
+    * Between closes the cycle returns without any venue request.
+  * **Warm-up rule:** the strategy **starts flat at the first daily close** it sees.
+    * A: every coin starts disarmed. A long needs a fresh signal, i.e. a close ≤ EMA50 and then a
+      close > EMA50, so trends already running at the start are not bought.
+    * D: its signals are one-day funding events, so the first close's events are new and tradable.
+  * **/paper** shows a tab per strategy. For a portfolio strategy it shows:
+    * forward equity in % against BTC buy-and-hold from the same start close;
+    * the backtest band: the development drift ± 1.96 σ √days from the dev CAGR and vol;
+    * max DD, vol, Sharpe, fees and funding;
+    * the next-open orders, and the open and closed positions.
+  * API: `/api/paper/portfolio?strategy=…`.
+* **`observer`** (`whale_observer.py`, only when `WHALE_RECORDER=1`). It logs hypothetical follow trades
+  after recorded Hyperliquid whale opens and flips. The rules and the pre-registration are in
+  `docs/WHALE_RECORDER.md`. **No edge is claimed.** API: `/api/paper/observer?strategy=…`.
+
+### Tests
+
+* `tests/test_paper_portfolio.py` (9 tests):
+  * **Replay consistency:** a journal run once per daily close over 80 synthetic days equals one
+    `portfolio_engine` run over the same window **exactly** (`==` on equity, fees and funding), and
+    has the same positions.
+  * Every fill was announced in the previous close's orders.
+  * **No look-ahead:** the loader returns poisoned future bars and funding, and the journal is
+    unchanged. The unsettled 00:00 close is not used.
+  * **Restart and idempotency:** a gap of 3 missed cycles plus a process restart gives the same days
+    and positions, with exactly the late days flagged. The same cycle run twice writes nothing.
+  * Warm-up flat with a fresh EMA cross for A, the `kind` migration of an old DB, the frozen params
+    against `dev_selection.json`, and no fetching between closes.
+* `tests/test_carry_api.py` covers the portfolio and observer routes.
+* `tests/carry_portfolio_views.test.cjs` covers the view models: summary, band chart, positions,
+  tabs, dispatch and the observer.
+
+### Live run (:5105, scratch DBs, 2026-10-18 14:23–15:10 UTC)
+
+* **Worker:** started 4 strategies (SMC, A, D, observer). All cycles reported `ok = 20/20`, no errors.
+  * Steady cycles took ≈ 13 s each for A and D (they reload 20 coins' 1d klines and funding from the
+    local cache) and ≈ 15 s for SMC.
+  * A and D started flat at the 2026-10-17 close (`start_day` = 1792195200000) and recorded day 0
+    with equity 1.0 and no orders.
+  * The next daily close (2026-10-18) was not reached during the run, so **no live forward day
+    exists yet**.
+* **A/D against `portfolio_engine` on the real data** (`scripts/paper_portfolio_replay.py`, run on
+  the live run's own cached native Binance 1d klines and funding):
+
+  | | days | journal == engine (exact) | positions | forward 2026-01-01 → 10-17 | BTC same window | research holdout |
+  |---|---|---|---|---|---|---|
+  | A | 290 | **true** | 205 (197 closed) | +22.03 % | −8.27 % | +21.69 % |
+  | D | 290 | **true** | 42 (40 closed) | +11.84 % | −8.27 % | +11.80 % |
+
+  * The replay starts each strategy flat on 2026-01-01 and calls the journal once per close.
+  * The small gap to the research holdout has two sources: A's warm-up rule (disarmed at the start),
+    and native 1d klines instead of 1h-aggregated bars. Over the full history the engine ends at
+    9.446× (native) vs 9.456× (research cache) for A, and 2.027× vs 2.029× for D.
+  * This replay is a consistency check on past data, **not** a forward result.
+* **Whale recorder:** 16 polls at a 2-min interval (one full poll), 50 addresses, 0 errors, across the
+  restarts.
+  * It recorded 959 events (358 add, 523 reduce, 78 flip, 0 gaps) and 1,236 position rows.
+  * `whales.db` grew from 290 KB after 4 polls to 650 KB after 16.
+  * At 5-minute polls, expect a few MB per day while wallets are this active.
+  * Against a fresh `clearinghouseState` fetched 3–4 s after the recorder's poll, for 3 accounts:
+    * two quiet accounts matched **52/52** and **28/28** positions exactly: size, entry and leverage;
+    * the most active account (224 events in 37 min) matched 78/86. The 8 differences are size
+      changes made in the seconds between the two requests; entry and leverage were equal or moved
+      by the new fill.
+* **Observer:**
+  * Version 1 followed 50 events in its first minutes, **all from one wallet** that flipped six coins
+    65 times. Version 2 adds a 24-hour (wallet, coin) de-duplication. Version 1 was retired before
+    any follow trade closed (150 rows, all still open).
+  * Version 2 started at 15:00 UTC. Within 8 minutes it followed 11 events (33 rows), still all from
+    the same wallet, now at most once per coin per day. The pre-registered test therefore requires
+    ≥ 30 distinct wallets.
+* **Screenshots** (scratch, `~/.hermes/cache/scratch/cw-live/shots/`): `paper-trend-A.png`,
+  `paper-funding-D.png`, `paper-observer.png`, `carry.png`.
+
+### How to enable on :5087 (the user does this; the launcher was not changed)
+
+The journal is already enabled there (`PAPER_JOURNAL=1`), so A and D start flat at the first daily
+close after the restart, with no further setting. For the whale recorder and observer, add these lines
+to `crypto-screener-ui-launch.py` before `import screener`, then restart:
+
+```python
+os.environ['WHALE_RECORDER'] = '1'
+# optional: os.environ['WHALES_DB_PATH'] = '/path/to/whales.db'   (default: whales.db next to DB_PATH)
+# optional: os.environ['WHALE_INTERVAL_MIN'] = '5'
+```
+
+### Config changes for review (this round)
+
+* New env vars, all off or unchanged by default: `WHALE_RECORDER`, `WHALES_DB_PATH`, `WHALE_INTERVAL_MIN`,
+  `WHALE_FULL_EVERY_MIN`, `WHALE_LEADERBOARD_TTL_MIN`.
+* **The default `WHALES_DB_PATH` is a new file `whales.db` next to `DB_PATH`.** It is created only
+  when the recorder runs or on the first `/api/whales/recorder` request — please review.
+* New tables in `paper_journal.db`: `paper_pf_state`, `paper_pf_days`, `paper_pf_positions` and
+  `paper_follow`, plus the column `paper_strategies.kind` (an ALTER with a default, so old DBs keep
+  working).
+* With `PAPER_JOURNAL=1`, A and D are now registered by default (built-in plugins), and the observer
+  is registered only with `WHALE_RECORDER=1`.
+* `paper_data.funding_rows` now fetches only the uncovered tail of the cache, and keeps the cover
+  2 minutes behind the clock so a late print is fetched again.
+
 ## Known limits
 
 * The live journal uses native Binance 4h/1d klines, while the backtest aggregated 1h klines.
@@ -184,5 +309,8 @@ fee R and funding R, with 0 missed fills.
   until a retry succeeds.
 * The scanner allows several resting limits per coin; the first one touched fills, as in the backtest.
   Most of them later expire.
+* Portfolio strategies recompute their indicators over the full history since 2020 and replay from
+  the start day at every new close (deterministic, append-only). On the real data this took ≈ 3 s per
+  strategy per close (the 290-close replay of A and D took 28 min). Cycles between closes do no work.
 * 30–50+ counted trades are needed before any conclusion. At the backtest's rate (422 trades in two years
   on 20 coins), that takes about 2–3 months.

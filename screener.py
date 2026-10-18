@@ -30,6 +30,8 @@ from agent_api import register_agent_routes
 from funding_api import register_funding_routes
 from positioning_api import register_positioning_routes
 from paper_api import register_paper_routes
+from whale_recorder import register_whale_routes
+from carry_api import register_carry_routes
 
 from decision import make_decision, format_decision_header
 from llm_agents import (
@@ -91,6 +93,8 @@ register_agent_routes(app, market=lambda symbol: fetch_market(symbol),
 register_positioning_routes(app)
 # Paper journal (forward test): read-only routes; the worker starts only with PAPER_JOURNAL=1.
 register_paper_routes(app)
+register_whale_routes(app)
+register_carry_routes(app)
 ai  = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
 # ─── SIGNAL LABELS ────────────────────────────────────────────────────────────

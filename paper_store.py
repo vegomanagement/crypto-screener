@@ -52,7 +52,23 @@ CREATE TABLE IF NOT EXISTS paper_funding (
     symbol TEXT NOT NULL, time INTEGER NOT NULL, rate REAL NOT NULL, PRIMARY KEY (symbol, time));
 CREATE TABLE IF NOT EXISTS paper_funding_cover (
     symbol TEXT PRIMARY KEY, start_ms INTEGER NOT NULL, end_ms INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS paper_pf_state (
+    strategy_id TEXT NOT NULL, version INTEGER NOT NULL, start_day INTEGER NOT NULL, started_ts INTEGER NOT NULL,
+    last_day INTEGER NOT NULL, last_run_ts INTEGER NOT NULL, cycles INTEGER NOT NULL DEFAULT 1,
+    PRIMARY KEY (strategy_id, version));
+CREATE TABLE IF NOT EXISTS paper_pf_days (
+    strategy_id TEXT NOT NULL, version INTEGER NOT NULL, day_ts INTEGER NOT NULL, equity REAL NOT NULL,
+    ret REAL NOT NULL, fees REAL NOT NULL, funding REAL NOT NULL, turnover REAL NOT NULL, gross REAL NOT NULL,
+    n_pos INTEGER NOT NULL, btc_close REAL, orders_json TEXT, recorded_ts INTEGER NOT NULL,
+    late INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (strategy_id, version, day_ts));
+CREATE TABLE IF NOT EXISTS paper_pf_positions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, strategy_id TEXT NOT NULL, version INTEGER NOT NULL,
+    symbol TEXT NOT NULL, side TEXT NOT NULL, entry_ts INTEGER NOT NULL, entry_px REAL NOT NULL,
+    weight REAL, notional REAL, risk REAL, tag TEXT, exit_ts INTEGER, exit_px REAL, why TEXT, pnl REAL,
+    fees REAL, funding REAL, recorded_ts INTEGER NOT NULL, updated_ts INTEGER NOT NULL,
+    UNIQUE (strategy_id, version, symbol, entry_ts));
 """
+MIGRATIONS = ("ALTER TABLE paper_strategies ADD COLUMN kind TEXT NOT NULL DEFAULT 'setup'",)
 
 SETUP_COLS = ("id", "strategy_id", "version", "symbol", "key", "side", "state", "seen_at_start", "late",
               "knowable_ts", "recorded_ts", "observed_as_of", "planned_entry", "planned_stop", "planned_target",
@@ -88,6 +104,10 @@ class PaperStore:
         self._lock = threading.RLock()
         with self._lock:
             self._conn.executescript(SCHEMA)
+            cols = {r[1] for r in self._conn.execute("PRAGMA table_info(paper_strategies)")}
+            if "kind" not in cols:                       # backwards-compatible: old rows are 'setup'
+                for sql in MIGRATIONS:
+                    self._conn.execute(sql)
             self._conn.commit()
 
     def q(self, sql, args=()):
@@ -117,10 +137,10 @@ class PaperStore:
             last = self.q("SELECT MAX(version) AS v FROM paper_strategies WHERE id=?", (strat["id"],))[0]["v"]
             version = (last or 0) + 1
             self.x("INSERT INTO paper_strategies (id, version, params_json, params_hash, code_version, title, "
-                   "expectation_json, created_ts) VALUES (?,?,?,?,?,?,?,?)",
+                   "expectation_json, created_ts, kind) VALUES (?,?,?,?,?,?,?,?,?)",
                    (strat["id"], version, json.dumps(strat["params"], sort_keys=True), strat["hash"],
                     strat["code_version"], strat.get("title"), json.dumps(strat.get("expectation")),
-                    ts or now_ms()))
+                    ts or now_ms(), strat.get("kind", "setup")))
             return version
 
     def strategies(self):
@@ -218,3 +238,43 @@ class PaperStore:
     def funding_rows(self, symbol, a, b):
         return self.q("SELECT time, rate FROM paper_funding WHERE symbol=? AND time>? AND time<=? ORDER BY time",
                       (symbol, a, b))
+
+    # portfolio strategies (paper_portfolio.py) ---------------------------------------------------
+    def pf_state(self, sid, version):
+        rows = self.q("SELECT * FROM paper_pf_state WHERE strategy_id=? AND version=?", (sid, version))
+        return rows[0] if rows else None
+
+    def pf_start(self, sid, version, day, ts):
+        self.x("INSERT OR IGNORE INTO paper_pf_state (strategy_id, version, start_day, started_ts, last_day, "
+               "last_run_ts) VALUES (?,?,?,?,?,?)", (sid, version, day, ts, day, ts))
+
+    def pf_advance(self, sid, version, day, ts):
+        self.x("UPDATE paper_pf_state SET last_day=MAX(last_day, ?), last_run_ts=?, cycles=cycles+1 "
+               "WHERE strategy_id=? AND version=?", (day, ts, sid, version))
+
+    def pf_days(self, sid, version):
+        return self.q("SELECT * FROM paper_pf_days WHERE strategy_id=? AND version=? ORDER BY day_ts", (sid, version))
+
+    def pf_insert_day(self, row):
+        cols = list(row)
+        cur = self.x(f"INSERT OR IGNORE INTO paper_pf_days ({','.join(cols)}) VALUES ({','.join('?' * len(cols))})",
+                     [row[c] for c in cols])
+        return bool(cur.rowcount)
+
+    def pf_positions(self, sid, version):
+        return self.q("SELECT * FROM paper_pf_positions WHERE strategy_id=? AND version=? ORDER BY entry_ts, symbol",
+                      (sid, version))
+
+    def pf_upsert_position(self, row, final_cols):
+        """Insert a position once; later calls only move its exit columns (``final_cols``) forward."""
+        cols = list(row)
+        cur = self.x(f"INSERT OR IGNORE INTO paper_pf_positions ({','.join(cols)}) "
+                     f"VALUES ({','.join('?' * len(cols))})", [row[c] for c in cols])
+        if cur.rowcount:
+            return "new"
+        sets = [c for c in final_cols if c in row]
+        cur = self.x(f"UPDATE paper_pf_positions SET {', '.join(c + '=?' for c in sets)}, updated_ts=? "
+                     "WHERE strategy_id=? AND version=? AND symbol=? AND entry_ts=? AND exit_ts IS NULL",
+                     [row[c] for c in sets] + [row["updated_ts"], row["strategy_id"], row["version"], row["symbol"],
+                                               row["entry_ts"]])
+        return "updated" if cur.rowcount else None

@@ -11,7 +11,7 @@ def _esc(s):
     return str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
-def equity_svg(series, title, split_ts=None, width=900, height=420, log=True):
+def equity_svg(series, title, split_ts=None, width=900, height=420, log=True, split_label="holdout"):
     """``series`` = [(label, ts list, equity list, dashed?)]; every curve starts at 1.0."""
     pad_l, pad_r, pad_t = 60, 20, 34
     pad_b = 40 + 16 * len(series)
@@ -74,7 +74,7 @@ def equity_svg(series, title, split_ts=None, width=900, height=420, log=True):
         x = X(split_ts)
         out.append(f'<rect x="{x:.1f}" y="{pad_t}" width="{width - pad_r - x:.1f}" height="{height - pad_t - pad_b}" '
                    f'fill="#fff3cd" opacity="0.6"/>')
-        out.append(f'<text x="{x + 4:.1f}" y="{pad_t + 12}" fill="#8a6d3b">holdout</text>')
+        out.append(f'<text x="{x + 4:.1f}" y="{pad_t + 12}" fill="#8a6d3b">{_esc(split_label)}</text>')
     for j, (label, ts, eq, dashed) in enumerate(series):
         step = max(1, len(ts) // 900)
         pts = " ".join(f"{X(t):.1f},{Y(v):.1f}" for t, v in list(zip(ts, eq))[::step] + [(ts[-1], eq[-1])])
