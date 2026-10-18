@@ -26,6 +26,24 @@ Rules (long side; short is the mirror):
                reaches its bottom. Zones older than ZONE_MAX_AGE (500) bars expire.
   dealing range  the latest confirmed swing high and low, each extended by any later extreme;
                equilibrium = 50 %; price above it = premium, below = discount.
+  breaker      an order block that FAILED: a later close beyond its far edge (below a bull OB's
+               low) plus an opposite BOS/CHoCH no earlier than the OB's confirmation and at most
+               BREAKER_WINDOW bars from that close-through. Polarity flips (a failed bull OB is a
+               bear breaker = resistance on the retest from below); zone = the OB's high/low;
+               confirm_ts = close of the later of the two bars. Mitigated when price trades back
+               into it, invalidated by a close back through its other edge (or expiry).
+  inducement   IDM of a structure break (BOS or CHoCH) = the FIRST internal-structure swing
+               (INTERNAL fractal, i.e. the first minor pullback) against the break that forms
+               after the break bar: a swing low after a bull break, a swing high after a bear
+               break; confirm_ts = that swing's confirmation; swept at the first later bar whose
+               wick or close trades through it. A POI 'with IDM' needs its IDM confirmed beyond the
+               POI (between price and the zone) by the time price taps the zone; the tap then
+               necessarily sweeps it.
+  equal H/L    two internal swings of the same kind within EQ_TOL_ATR × ATR14 (of the later
+               swing's bar) and at most EQ_LOOKBACK bars apart, with no trade beyond the pair's
+               extreme between them: a resting liquidity pool (EQH above, EQL below) at the
+               pair's extreme; confirm_ts = the later swing's confirmation; swept at the first
+               later bar trading beyond it. The alternative inducement.
 """
 from __future__ import annotations
 
@@ -33,6 +51,9 @@ EXTERNAL = (5, 5)
 INTERNAL = (2, 2)
 OB_LOOKBACK = 10
 ZONE_MAX_AGE = 500   # bars after the break; older untouched zones count as expired
+BREAKER_WINDOW = 20  # bars between an OB's close-through and the opposite structure break
+EQ_TOL_ATR = 0.1     # equal highs/lows: within 0.1 ATR14
+EQ_LOOKBACK = 50     # bars between the two swings of a pool
 
 
 def _r(x):
@@ -169,8 +190,114 @@ def structure(candles, left=5, right=5, tf=None, zones=True):
     for s in sw:
         s.update(tf=tf, ts=ts[s["i"]], confirm_ts=cts[s["confirm_i"]], price=_r(s["price"]),
                  rule=f"{left}/{right} fractal {'high' if s['kind'] == 'H' else 'low'}")
-    return {"tf": tf, "left": left, "right": right, "trend": trend, "trend_at": trend_at,
-            "swings": sw, "breaks": breaks, "sweeps": sweeps, "obs": obs, "fvgs": fvgs}
+    out = {"tf": tf, "left": left, "right": right, "trend": trend, "trend_at": trend_at,
+           "swings": sw, "breaks": breaks, "sweeps": sweeps, "obs": obs, "fvgs": fvgs}
+    out["breakers"] = breakers(candles, obs, breaks, tf) if zones else []
+    return out
+
+
+def breakers(candles, obs, breaks, tf=None, window=BREAKER_WINDOW):
+    """Failed order blocks with flipped polarity (see the module rules). Causal: confirm_i is the
+    later of the close-through bar and the opposite structure break."""
+    n = len(candles)
+    cts = [c.get("close_ts", c["ts"]) for c in candles]
+    opp = {"bull": sorted(b["i"] for b in breaks if b["dir"] == "bear"),
+           "bear": sorted(b["i"] for b in breaks if b["dir"] == "bull")}
+    out = []
+    for z in obs:
+        d = 1 if z["dir"] == "bull" else -1
+        q = next((x for x in range(z["confirm_i"] + 1, min(n, z["confirm_i"] + ZONE_MAX_AGE))
+                  if (candles[x]["c"] < z["bottom"] if d > 0 else candles[x]["c"] > z["top"])), None)
+        if q is None:
+            continue
+        lo, hi = max(z["confirm_i"] + 1, q - window), q + window
+        b = next((x for x in opp[z["dir"]] if lo <= x <= hi), None)
+        if b is None:
+            continue
+        j = max(q, b)
+        mit, inv = _zone_state(candles, j, z["bottom"], z["top"], -d)
+        new = "bear" if d > 0 else "bull"
+        out.append({"tf": tf, "dir": new, "ts": z["ts"], "i": z["i"], "top": z["top"], "bottom": z["bottom"],
+                    "confirm_ts": cts[j], "confirm_i": j, "break_i": b, "through_i": q, "ob_confirm_i": z["confirm_i"],
+                    "mitigated_i": mit, "invalidated_i": inv,
+                    "rule": f"{z['dir']} OB closed through and an opposite structure break within {window} bars: "
+                            f"flipped to a {new} breaker"})
+    out.sort(key=lambda z: z["confirm_i"])
+    return out
+
+
+def _first_through(candles, start, price, d):
+    """First bar index > start whose wick trades beyond ``price`` (d=+1: below; d=-1: above)."""
+    for q in range(start + 1, min(len(candles), start + ZONE_MAX_AGE)):
+        if (candles[q]["l"] < price) if d > 0 else (candles[q]["h"] > price):
+            return q
+    return None
+
+
+def inducements(candles, breaks, internal_swings, tf=None):
+    """IDM per structure break: the first internal swing against the break after the break bar."""
+    ts = [c["ts"] for c in candles]
+    cts = [c.get("close_ts", c["ts"]) for c in candles]
+    by_kind = {"H": sorted((s for s in internal_swings if s["kind"] == "H"), key=lambda s: s["i"]),
+               "L": sorted((s for s in internal_swings if s["kind"] == "L"), key=lambda s: s["i"])}
+    out = []
+    for b in breaks:
+        d = 1 if b["dir"] == "bull" else -1
+        s = next((x for x in by_kind["L" if d > 0 else "H"] if x["i"] > b["i"]), None)
+        if s is None:
+            continue
+        sw = _first_through(candles, s["confirm_i"], s["price"], d)
+        out.append({"tf": tf, "dir": b["dir"], "side": "low" if d > 0 else "high", "price": _r(s["price"]),
+                    "i": s["i"], "ts": ts[s["i"]], "confirm_i": s["confirm_i"], "confirm_ts": cts[s["confirm_i"]],
+                    "break_i": b["i"], "break_kind": b["kind"], "swept_i": sw,
+                    "swept_ts": None if sw is None else cts[sw],
+                    "rule": f"first internal swing {'low' if d > 0 else 'high'} after the {b['kind']} "
+                            f"{'up' if d > 0 else 'down'}: inducement, swept when price trades through it"})
+    return out
+
+
+def atr14(candles, n=14):
+    """Simple-average true range over the last ``n`` bars, per bar (None before n bars)."""
+    out, trs = [None] * len(candles), []
+    for i, c in enumerate(candles):
+        pc = candles[i - 1]["c"] if i else c["c"]
+        trs.append(max(c["h"] - c["l"], abs(c["h"] - pc), abs(c["l"] - pc)))
+        if i >= n - 1:
+            out[i] = sum(trs[i - n + 1:i + 1]) / n
+    return out
+
+
+def equal_levels(candles, internal_swings, tf=None, tol=EQ_TOL_ATR, lookback=EQ_LOOKBACK, atr=None):
+    """Equal highs / lows liquidity pools from internal swings (see the module rules)."""
+    atr = atr or atr14(candles)
+    ts = [c["ts"] for c in candles]
+    cts = [c.get("close_ts", c["ts"]) for c in candles]
+    out = []
+    for kind, d in (("H", -1), ("L", 1)):
+        sw = sorted((s for s in internal_swings if s["kind"] == kind), key=lambda s: s["i"])
+        for k, s in enumerate(sw):
+            a = atr[s["i"]]
+            if not a:
+                continue
+            for p in reversed(sw[:k]):
+                if s["i"] - p["i"] > lookback:
+                    break
+                if abs(s["price"] - p["price"]) > tol * a:
+                    continue
+                lvl = max(s["price"], p["price"]) if d < 0 else min(s["price"], p["price"])
+                mid = candles[p["i"] + 1:s["i"]]
+                if any((c["h"] > lvl) if d < 0 else (c["l"] < lvl) for c in mid):
+                    continue
+                sw_i = _first_through(candles, s["confirm_i"], lvl, d)
+                out.append({"tf": tf, "kind": "EQH" if d < 0 else "EQL", "side": "high" if d < 0 else "low",
+                            "price": _r(lvl), "first_ts": ts[p["i"]], "first_i": p["i"], "ts": ts[s["i"]], "i": s["i"],
+                            "confirm_i": s["confirm_i"], "confirm_ts": cts[s["confirm_i"]], "swept_i": sw_i,
+                            "swept_ts": None if sw_i is None else cts[sw_i], "tol_atr": tol,
+                            "rule": f"two internal swing {'highs' if d < 0 else 'lows'} within {tol} ATR14 and "
+                                    f"≤ {lookback} bars apart, untouched between: resting liquidity"})
+                break
+    out.sort(key=lambda z: z["confirm_i"])
+    return out
 
 
 def dealing_range(candles, sw, upto=None):

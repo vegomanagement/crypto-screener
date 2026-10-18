@@ -74,6 +74,15 @@ def smc_view(candles, tf, ext=smc.EXTERNAL, internal=smc.INTERNAL):
         live.sort(key=lambda z: min(abs(price - z["top"]), abs(price - z["bottom"])))
         return live[:3]
     sw = [{k: s[k] for k in ("kind", "label", "price", "ts", "confirm_ts")} for s in e["swings"][-6:]]
+    live_brk = [dict({k: z[k] for k in ("dir", "ts", "top", "bottom", "confirm_ts", "rule")},
+                     state=smc.zone_state(z, last), break_ts=candles[z["break_i"]]["ts"])
+                for z in e["breakers"]]
+    live_brk = [z for z in live_brk if z["state"] != "invalidated"]
+    live_brk.sort(key=lambda z: min(abs(price - z["top"]), abs(price - z["bottom"])))
+    idm = smc.inducements(candles, e["breaks"], i["swings"])
+    pools = smc.equal_levels(candles, i["swings"])
+    liq = lambda x: dict({k: x[k] for k in ("side", "price", "ts", "confirm_ts", "swept_ts", "rule")},  # noqa: E731
+                         state="swept" if x["swept_ts"] else "resting")
     return {"tf": tf, "trend": {1: "bull", -1: "bear", 0: "none"}[e["trend"]],
             "internal_trend": {1: "bull", -1: "bear", 0: "none"}[i["trend"]],
             "last_break": _break(e["breaks"][-1] if e["breaks"] else None),
@@ -82,7 +91,11 @@ def smc_view(candles, tf, ext=smc.EXTERNAL, internal=smc.INTERNAL):
             "swings": sw, "sweeps": [{k: s[k] for k in ("side", "level", "price", "ts", "confirm_ts")}
                                      for s in (e["sweeps"] + i["sweeps"])[-3:]],
             "dealing_range": smc.dealing_range(candles, e["swings"]),
-            "order_blocks": zones(e["obs"]), "fvgs": zones(e["fvgs"]),
+            "order_blocks": zones(e["obs"]), "fvgs": zones(e["fvgs"]), "breakers": live_brk[:2],
+            "inducement": None if not idm else dict(liq(idm[-1]), dir=idm[-1]["dir"],
+                                                    break_kind=idm[-1]["break_kind"]),
+            "equal_levels": [dict(liq(p), kind=p["kind"], first_ts=p["first_ts"]) for p in pools
+                             if not p["swept_ts"]][-3:],
             "params": {"external": list(ext), "internal": list(internal)},
             "_ext": e, "_int": i}
 

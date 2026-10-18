@@ -1,5 +1,7 @@
 /* SMC chart overlay for the active pane: swings (HH/HL/LH/LL), BOS/CHoCH lines, order blocks,
- * FVGs, liquidity sweeps and the dealing-range equilibrium, from GET /api/agent/mtf. Optional
+ * FVGs, breaker blocks (failed OBs, flipped), the inducement (IDM: first internal pullback after
+ * the last break; ✓ once swept), resting equal highs/lows (EQH/EQL liquidity), liquidity sweeps
+ * and the dealing-range equilibrium, from GET /api/agent/mtf. Optional
  * layers: the next higher TF's structure, and the HTF Wyckoff range box. Pure model + canvas
  * draw; UMD: window.WorkspaceSmc / module.exports. Block times are UTC ms; the chart uses s.
  */
@@ -18,9 +20,15 @@
     return { tf, htf, prefix,
       swings: (s.swings || []).filter(x => isNum(x.price) && isNum(x.ts)).map(x => ({ time: sec(x.ts), price: x.price, high: x.kind === 'H', label: prefix + (x.label || (x.kind === 'H' ? 'H' : 'L')) })),
       breaks: (s.breaks || []).filter(b => b && isNum(b.level) && isNum(b.ts) && isNum(b.swing_ts)).map(b => ({ from: sec(b.swing_ts), to: sec(b.ts), price: b.level, bull: b.dir === 'bull', label: prefix + b.kind })),
-      zones: [...(s.order_blocks || []).map(z => ({ ...z, k: 'OB' })), ...(s.fvgs || []).map(z => ({ ...z, k: 'FVG' }))]
+      zones: [...(s.order_blocks || []).map(z => ({ ...z, k: 'OB' })), ...(s.fvgs || []).map(z => ({ ...z, k: 'FVG' })),
+        ...(s.breakers || []).map(z => ({ ...z, k: 'Breaker' }))]
         .filter(z => z.state !== 'invalidated' && isNum(z.top) && isNum(z.bottom) && isNum(z.ts))
-        .map(z => ({ time: sec(z.ts), top: z.top, bottom: z.bottom, bull: z.dir === 'bull', label: `${prefix}${z.k}${z.state === 'mitigated' ? ' (m)' : ''}` })),
+        .map(z => ({ time: sec(z.ts), top: z.top, bottom: z.bottom, bull: z.dir === 'bull', breaker: z.k === 'Breaker',
+          label: `${prefix}${z.k}${z.state === 'mitigated' ? ' (m)' : ''}` })),
+      liquidity: [...(s.equal_levels || []).map(x => ({ ...x, from: x.first_ts, label: x.kind })),
+        ...(s.inducement && isNum(s.inducement.price) ? [{ ...s.inducement, from: s.inducement.ts, label: `IDM${s.inducement.state === 'swept' ? ' ✓' : ''}`, idm: true }] : [])]
+        .filter(x => isNum(x.price) && isNum(x.from))
+        .map(x => ({ time: sec(x.from), end: isNum(x.swept_ts) ? sec(x.swept_ts) : null, price: x.price, high: x.side === 'high', idm: !!x.idm, label: prefix + x.label })),
       sweeps: (s.sweeps || []).filter(x => isNum(x.price) && isNum(x.ts)).map(x => ({ time: sec(x.ts), price: x.price, high: x.side === 'high', label: `${prefix}sweep` })),
       eq: s.dealing_range && isNum(s.dealing_range.eq) ? { price: s.dealing_range.eq, time: sec(Math.max(s.dealing_range.high_ts || 0, s.dealing_range.low_ts || 0)), label: `${prefix}EQ 50%` } : null };
   }
@@ -61,6 +69,8 @@
     const X = t => view.x(clampT(t)), XC = t => view.xc(clampT(t));
     ctx.save();
     ctx.font = '10px SFMono-Regular, Consolas, monospace';
+    const taken = [];   // right-edge zone labels: nudge down so stacked zones stay legible
+    const slot = y => { let v = y; for (let k = 0; k < 6 && taken.some(t => Math.abs(t - v) < 11); k += 1) v += 11; taken.push(v); return v; };
     if (model.box) {
       const b = model.box, x1 = X(b.start), x2 = b.end === null ? view.plotWidth : X(b.end), yt = view.y(b.top), yb = view.y(b.bottom);
       if ([x1, x2, yt, yb].every(isNum)) {
@@ -78,7 +88,11 @@
         const x1 = X(z.time), yt = view.y(z.top), yb = view.y(z.bottom);
         if (![x1, yt, yb].every(isNum)) return;
         ctx.fillStyle = rgba(z.bull ? up : down, L.htf ? 0.06 : 0.07); ctx.fillRect(x1, Math.min(yt, yb), view.plotWidth - x1, Math.abs(yb - yt));
-        ctx.fillStyle = z.bull ? up : down; ctx.textAlign = 'right'; ctx.textBaseline = 'top'; ctx.fillText(z.label, view.plotWidth - 4, Math.min(yt, yb) + 1);
+        if (z.breaker) {   // failed OB: hatched outline so it reads differently from a fresh OB
+          ctx.strokeStyle = rgba(z.bull ? up : down, 0.8); ctx.lineWidth = 1; ctx.setLineDash?.([3, 3]);
+          ctx.strokeRect(x1, Math.min(yt, yb), view.plotWidth - x1, Math.abs(yb - yt)); ctx.setLineDash?.([]);
+        }
+        ctx.fillStyle = z.bull ? up : down; ctx.textAlign = 'right'; ctx.textBaseline = 'top'; ctx.fillText(z.label, view.plotWidth - 4, slot(Math.min(yt, yb) + 1));
         drawn += 1;
       });
       L.breaks.forEach(b => {
@@ -96,6 +110,16 @@
         if (!isNum(x) || !isNum(y)) return;
         ctx.fillStyle = L.htf ? HTF : '#e6e9ef'; ctx.textAlign = 'center'; ctx.textBaseline = s.high ? 'bottom' : 'top';
         ctx.fillText(s.label, x, y + (s.high ? -3 : 3));
+        drawn += 1;
+      });
+      (L.liquidity || []).forEach(q => {
+        const x1 = XC(q.time), x2 = q.end === null ? view.plotWidth : XC(q.end), y = view.y(q.price);
+        if (![x1, x2, y].every(isNum)) return;
+        const c = q.idm ? '#b48cff' : '#4fb3ff';
+        ctx.strokeStyle = c; ctx.lineWidth = L.htf ? 1.5 : 1; ctx.setLineDash?.(q.idm ? [6, 3] : [1, 3]);
+        ctx.beginPath(); ctx.moveTo(x1, y); ctx.lineTo(x2, y); ctx.stroke(); ctx.setLineDash?.([]);
+        ctx.fillStyle = c; ctx.textAlign = 'left'; ctx.textBaseline = q.high ? 'bottom' : 'top';
+        ctx.fillText(q.label, Math.max(x1, isNum(view.first) ? XC(view.first) : x1) + 18, y + (q.high ? -2 : 2));   // clear of the swing label
         drawn += 1;
       });
       L.sweeps.forEach(s => {
