@@ -131,6 +131,55 @@ def aggregator_window(tf: str) -> int:
     return ADAPTIVE_WINDOW_SEC.get(normalize_tf(tf), DEFAULT_WINDOW_SEC)
 
 
+# Ключи в TradingView alert payload, где может лежать timestamp алерта.
+# TV-Pine `{{timenow}}` → ISO UTC. `{{time}}` — Unix ms. Кастомные алерты —
+# любая из этих переменных. Пробуем по очереди.
+_ALERT_TS_KEYS = ("time", "timestamp", "alert_time", "alertTime",
+                  "alertTimestamp", "ts")
+
+
+def parse_alert_ts(payload: dict) -> datetime | None:
+    """
+    Возвращает aware UTC datetime из TradingView alert payload или None,
+    если timestamp отсутствует/неразбираем. None означает, что вызывающая
+    сторона должна fallback'нуть на now() (это поведение по умолчанию в
+    killzones.in_killzone).
+
+    Поддерживаются:
+      • Unix seconds (int/float)
+      • Unix milliseconds (int/float, >= 1e12)
+      • ISO 8601 с 'Z' или offset нотацией ('2026-05-30T19:28:00Z')
+    """
+    if not payload:
+        return None
+    for key in _ALERT_TS_KEYS:
+        v = payload.get(key)
+        if v is None or v == "":
+            continue
+        if isinstance(v, (int, float)) and not isinstance(v, bool):
+            try:
+                secs = float(v) / 1000.0 if v > 1e12 else float(v)
+                return datetime.fromtimestamp(secs, tz=timezone.utc)
+            except (OSError, ValueError, OverflowError):
+                continue
+        if isinstance(v, str):
+            s = v.strip()
+            # Числовая строка — попробуем как epoch
+            try:
+                num = float(s)
+                secs = num / 1000.0 if num > 1e12 else num
+                return datetime.fromtimestamp(secs, tz=timezone.utc)
+            except ValueError:
+                pass
+            # ISO 8601
+            try:
+                iso = s.replace("Z", "+00:00")
+                return datetime.fromisoformat(iso).astimezone(timezone.utc)
+            except ValueError:
+                continue
+    return None
+
+
 def verdict_from_signal_type(sig_type: str) -> str | None:
     """Эвристика для aggregator до запуска decision engine."""
     s = (sig_type or "").upper()

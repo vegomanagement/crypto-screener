@@ -12,6 +12,7 @@ from signal_gate import (
     get_active_dispatch,
     init_schema,
     normalize_tf,
+    parse_alert_ts,
     record_dispatch,
     signal_type_priority,
     tf_priority,
@@ -271,3 +272,63 @@ def test_gate_full_sequence(conn):
 
     g2 = cooldown_check(conn, "BTCUSDT", "SHORT", confidence=90, tf="60")
     assert g2.action == "reversal"
+
+
+# ─── parse_alert_ts ───────────────────────────────────────────────────────
+
+
+from datetime import datetime, timezone  # noqa: E402
+
+
+def test_parse_alert_ts_iso_with_z():
+    ts = parse_alert_ts({"time": "2026-05-28T08:30:00Z"})
+    assert ts == datetime(2026, 5, 28, 8, 30, tzinfo=timezone.utc)
+
+
+def test_parse_alert_ts_iso_with_offset():
+    ts = parse_alert_ts({"timestamp": "2026-05-28T10:30:00+02:00"})
+    assert ts == datetime(2026, 5, 28, 8, 30, tzinfo=timezone.utc)
+
+
+def test_parse_alert_ts_unix_seconds_int():
+    epoch = 1748420400  # 2025-05-28 08:00:00 UTC
+    ts = parse_alert_ts({"time": epoch})
+    assert ts == datetime.fromtimestamp(epoch, tz=timezone.utc)
+
+
+def test_parse_alert_ts_unix_milliseconds():
+    epoch_ms = 1748420400000
+    ts = parse_alert_ts({"time": epoch_ms})
+    assert ts == datetime.fromtimestamp(epoch_ms / 1000, tz=timezone.utc)
+
+
+def test_parse_alert_ts_string_unix_seconds():
+    """Иногда TV шлёт epoch строкой."""
+    ts = parse_alert_ts({"timestamp": "1748420400"})
+    assert ts == datetime.fromtimestamp(1748420400, tz=timezone.utc)
+
+
+def test_parse_alert_ts_multiple_keys_uses_first_match():
+    """time имеет приоритет над timestamp."""
+    ts = parse_alert_ts({
+        "time": "2026-01-01T00:00:00Z",
+        "timestamp": "2030-01-01T00:00:00Z",
+    })
+    assert ts.year == 2026
+
+
+def test_parse_alert_ts_returns_none_when_missing():
+    assert parse_alert_ts({}) is None
+    assert parse_alert_ts({"price": 100}) is None
+
+
+def test_parse_alert_ts_returns_none_on_empty_string():
+    assert parse_alert_ts({"time": ""}) is None
+
+
+def test_parse_alert_ts_returns_none_on_unparseable():
+    assert parse_alert_ts({"time": "not a timestamp"}) is None
+
+
+def test_parse_alert_ts_handles_none_payload():
+    assert parse_alert_ts(None) is None
